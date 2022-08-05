@@ -22,3 +22,11 @@ The -d flag creates a sourceMap in order to debug problems with our code using t
  ```html
 <script src='./bundle.js'><script />
 ```
+
+## Current problems
+1. The original version of the HOCON-parser dynanically loads external libraries with "require" using variables, which is not allowed by browserify (it 
+only allows for strict string literals and not expressions). This problem can be solved if we manually alter the parser in order for it to statically load
+the  requires. 
+
+2. A second problem is that even with the correct requires, the transpiled version throws logical errors that did not happen in the node version --> No solution to this problem yet. 
+
