@@ -1,0 +1,52 @@
+.tableHeader{
+    font-weight: bold;
+}
+
+.buttons{
+   
+   margin: 8px 8px !important;
+}
+
+.search_field{
+    margin: 10px 10px !important;
+    width: 90%;
+}
+
+.data-flow{
+    background-color: lightblue;
+    height: 800px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+}
+
+
+/*Styles for the tables created from the parsed .md files*/
+table, td, th{
+    border: 2px solid #555;
+    border-collapse: collapse;
+    font-family: Arial, Helvetica, sans-serif;
+}
+th, td {
+    padding: 8px;
+    text-align: left;
+  }
+tr:nth-child(even) {background-color: #f2f2f2;}
+
+th {
+    background-color: #1852a3;
+    color: white;
+  }
+
+.parsedTables{
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+
+/*Media styles*/
+@media  screen and (max-width: 1400px) {
+    .data-flow{
+        background-color: lightblue;
+        height: 440px;
+    }
+}
+

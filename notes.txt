@@ -1,0 +1,6 @@
+Initialize:
+- npx create-react-app . --template typescript
+- The defualt also allows for JavaScript covnentions to be used in
+our .ts files (e.g. not specifying a type when declaring a type) --> Decide if we want to
+leave it like that.
+
