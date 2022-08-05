@@ -1,17 +1,19 @@
 import React, { useState, useCallback } from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge } from 'react-flow-renderer';
-import DataObjectsAndActions, { DataObject, Action } from './util/Graphs';
+import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from './util/Graphs';
 import './ComponentsStyles.css';
 
-function createReactFlowNodes(dataObjectsAndActions: DataObjectsAndActions){
+function createReactFlowNodes(dataObjectsAndActions: DAGraph){
   var result: any[] = [];
   dataObjectsAndActions.nodes.forEach((node)=>{
-    const dataObject = node as DataObject; //downcasting in order to be able to access the JSONObject attribute
+    //const dataObject = node as DataObject; //downcasting in order to be able to access the JSONObject attribute
+    const dataObject = node
     result.push({
       id: dataObject.id,
       position: {x: dataObject.position.x, y: dataObject.position.y},
       data: {label: dataObject.id},
-      jsonString: JSON.stringify(dataObject.jsonObject, null, '\t'),
+      style: {background: dataObject.backgroundColor},
+      //jsonString: JSON.stringify(dataObject.jsonObject, null, '\t'), //Do we need this 
     })
   });
   return result;
@@ -22,7 +24,7 @@ function createReactFlowNodes(dataObjectsAndActions: DataObjectsAndActions){
  * of each node in order to layyer them. The method is replaced by the dagre library
  * for the layout functions.
  */
-function createReactFlowNodes_Old(dataObjectsAndActions: DataObjectsAndActions){
+function createReactFlowNodes_Old(dataObjectsAndActions: DAGraph){
   var result: any[] = [];
   var nodeType = 'default';
   for (let currentLevel = 0; currentLevel<dataObjectsAndActions.levels.length; currentLevel++){
@@ -31,7 +33,9 @@ function createReactFlowNodes_Old(dataObjectsAndActions: DataObjectsAndActions){
     else {nodeType = 'default'}
     
     const nodesInLevel = dataObjectsAndActions.nodes.filter(node => node.level === currentLevel);
-    const dataObjectsInLevel = nodesInLevel as DataObject[];
+    //const dataObjectsInLevel = nodesInLevel as DataObject[];
+    const dataObjectsInLevel = nodesInLevel;
+
     for (let i = 0; i<dataObjectsInLevel.length; i++){
       var right_or_left = (i%2)*(i%2)-1;
       var pos_x = 1000 - (right_or_left * 300 * (i+1));
@@ -41,7 +45,7 @@ function createReactFlowNodes_Old(dataObjectsAndActions: DataObjectsAndActions){
         type: nodeType,
         position: {x: pos_x, y: pos_y},
         data: { label: dataObjectsInLevel[i].id },
-        jsonString: JSON.stringify(dataObjectsInLevel[i].jsonObject , null, '\t'),
+        //jsonString: JSON.stringify(dataObjectsInLevel[i].jsonObject , null, '\t'),
       });
     }
   }
@@ -49,10 +53,11 @@ function createReactFlowNodes_Old(dataObjectsAndActions: DataObjectsAndActions){
 }
 
 
-function createReactFlowEdges(dataObjectsAndActions: DataObjectsAndActions){
+function createReactFlowEdges(dataObjectsAndActions: DAGraph){
   var result: any[] = [];
   dataObjectsAndActions.edges.forEach(edge => {
-    const action = edge as Action; //downcasting in order to access jsonObject
+    //const action = edge as Action; //downcasting in order to access jsonObject
+    const action = edge; //downcasting in order to access jsonObject
     result.push({
       id: action.id + action.fromNode.id+action.toNode.id,
       source: action.fromNode.id,
@@ -60,7 +65,7 @@ function createReactFlowEdges(dataObjectsAndActions: DataObjectsAndActions){
       animated: true, 
       label: action.id,
       labelBgPadding: [8, 4],
-      jsonString: JSON.stringify(action.jsonObject, null, '\t'),
+      //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
       style: { stroke: 'red' },
     });
   });
@@ -82,9 +87,24 @@ function FlowChart(props: flowProps) {
 
   const doa = new DataObjectsAndActions(props.data);
   const nodes_init = createReactFlowNodes(doa);
-  const edges_init = createReactFlowEdges(doa);	
+  const edges_init = createReactFlowEdges(doa);
   const [nodes, setNodes] = useState(nodes_init);
   const [edges, setEdges] = useState(edges_init);
+
+
+  function renderPartialGraph(nodeId: string){
+
+    const partialGraphPair = doa.returnPartialGraphInputs(nodeId);
+    const partialNodes = partialGraphPair[0];
+    const partialEdges = partialGraphPair[1];
+    const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges);
+
+    const newNodes = createReactFlowNodes(partialGraph);
+    const newEdges = createReactFlowEdges(partialGraph);
+
+    setNodes(newNodes);
+    setEdges(newEdges);
+  }
 
 
 
@@ -98,12 +118,15 @@ function FlowChart(props: flowProps) {
     [setEdges]
   );
 
+
+
+  //TODO: Change these click actions. 
   function clickOnNode(node: flowNodeWithString){
-    window.alert('This dataObject is defined as: \n '+node.jsonString);
+    renderPartialGraph(node.id);
   }
 
   function clickOnEdge(edge: flowEdgeWithString){
-    window.alert('This action is defined as: \n '+edge.jsonString);
+    window.alert('Click on Edge');
   }
 
 

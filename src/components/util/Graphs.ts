@@ -31,6 +31,7 @@ class Node{
     public width: number;
     public height: number;
     public level: number;
+    public backgroundColor: string;
 
     constructor(id: id, level: number = -1){
         this.id = id;
@@ -38,6 +39,7 @@ class Node{
         this.position = {x:0, y:0};
         this.width = 172;
         this.height = 36;
+        this.backgroundColor = '#FFFFFF';
     }
 } 
 
@@ -50,7 +52,7 @@ class Edge{
 }
 
 
-class DAGraph{ //problem: we're not checking if the graph is acyclic.
+export class DAGraph{ //problem: we're not checking if the graph is acyclic.
 
     public nodes: Node[];
     public edges: Edge[];
@@ -76,7 +78,7 @@ class DAGraph{ //problem: we're not checking if the graph is acyclic.
     }
 
     //Returns the nodes and edges of a partial graph based on a specific node (direct predecessors and succesors) as a pair
-    returnPartialGraphInputs(specificNodeId:id){
+    returnPartialGraphInputs(specificNodeId:id): [Node[], Edge[]]{
         function predecessors(nodeId: id, graph: DAGraph){
             var nodes = new Set<Node>;
             var edges = new Set<Edge>;
@@ -97,7 +99,7 @@ class DAGraph{ //problem: we're not checking if the graph is acyclic.
             var nodes = new Set<Node>;
             var edges = new Set<Edge>;
             graph.edges.forEach(edge =>{
-                if (edge.fromNode.id === specificNodeId){
+                if (edge.fromNode.id === nodeId){
                     let succ = successors(edge.toNode.id, graph);
                     nodes.add(edge.toNode);
                     nodes = union(nodes, succ[0] as Set<Node>);
@@ -108,7 +110,8 @@ class DAGraph{ //problem: we're not checking if the graph is acyclic.
             return [nodes, edges];
         }
 
-        const specificNode = this.nodes.find(node => node.id===specificNodeId);
+        const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
+        specificNode.backgroundColor='#ffc0cb';
         const nodes = setAsArray(union(predecessors(specificNodeId, this)[0] as Set<Node>, successors(specificNodeId, this)[0] as Set<Node>));//merge predeccessors and successors     
         nodes.push(specificNode as Node); //add the central/origin node itself
         const edges = setAsArray(union(predecessors(specificNodeId, this)[1] as Set<Edge>, successors(specificNodeId, this)[1] as Set<Edge>));   
@@ -261,7 +264,14 @@ export default class DataObjectsAndActions extends DAGraph{
         super(dataObjectsWithPosition, actions);
         this.jsonObject = jsonObject;
     }
-  }
+}
+
+export class PartialDataObjectsAndActions extends DAGraph{
+    constructor(public nodes: Node[], public edges: Edge[]){
+        const nodesWithPos = computeNodePositions(nodes, edges);
+        super(nodesWithPos, edges);
+    }
+}
   
 
 
