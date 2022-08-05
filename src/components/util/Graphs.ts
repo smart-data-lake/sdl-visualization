@@ -11,7 +11,7 @@ function union<T>(setA: Set<T>, setB: Set<T>) {
 
 //transform Set to Array
 function setAsArray<T>(set: Set<T>){
-    var arr: any[] = [];
+    var arr: T[] = [];
     set.forEach(elem => {
         arr.push(elem);
     })
@@ -75,13 +75,13 @@ class DAGraph{ //problem: we're not checking if the graph is acyclic.
         
     }
 
-    //Returns the nodes and edges of a partial graph based on a specific node (direct predecessors and succesors)
+    //Returns the nodes and edges of a partial graph based on a specific node (direct predecessors and succesors) as a pair
     returnPartialGraphInputs(specificNodeId:id){
         function predecessors(nodeId: id, graph: DAGraph){
             var nodes = new Set<Node>;
             var edges = new Set<Edge>;
             graph.edges.forEach(edge => {
-                if (edge.toNode.id === specificNodeId){
+                if (edge.toNode.id === nodeId){
                     let pred = predecessors(edge.fromNode.id, graph);
                     nodes.add(edge.fromNode);
                     nodes = union(nodes, pred[0] as Set<Node>);
@@ -109,7 +109,8 @@ class DAGraph{ //problem: we're not checking if the graph is acyclic.
         }
 
         const specificNode = this.nodes.find(node => node.id===specificNodeId);
-        const nodes = setAsArray(union(predecessors(specificNodeId, this)[0] as Set<Node>, successors(specificNodeId, this)[0] as Set<Node>)).push(specificNode); //Merge both predecesssors and successors (and add the vcentral node itself)     
+        const nodes = setAsArray(union(predecessors(specificNodeId, this)[0] as Set<Node>, successors(specificNodeId, this)[0] as Set<Node>));//merge predeccessors and successors     
+        nodes.push(specificNode as Node); //add the central/origin node itself
         const edges = setAsArray(union(predecessors(specificNodeId, this)[1] as Set<Edge>, successors(specificNodeId, this)[1] as Set<Edge>));   
 
         return [nodes, edges];
@@ -267,7 +268,7 @@ export default class DataObjectsAndActions extends DAGraph{
 
 
 
-
+/*
 const n1 = new Node('1')
 const n2 = new Node('2')
 const n3 = new Node('3')
@@ -292,4 +293,4 @@ const e96 = new Edge(n9, n6, "e96")
 
 const g = new DAGraph([n1, n2, n3, n4, n5, n6, n7, n8, n9], [e41, e42, e43, e17, e28, e36, e75, e26, e85, e86, e96])
 const partial = g.returnPartialGraphInputs('5');
-console.log("Hello");
+*/
