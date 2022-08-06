@@ -6,7 +6,8 @@ import Paper from '@mui/material/Paper';
 import React, {useState} from 'react';
 import DataDisplayView from './DataDisplayView';
 import Header from './common/Header';
-import printAGraph from './dagre_test';
+import {parseFileStrict} from './util/HoconParser'
+//import printAGraph from './dagre_test';
 
 
 
@@ -16,7 +17,9 @@ function App() {
   const [selectedElement, setSelectedElement] = React.useState("");
   const [selectedElementType, setSelectedElementType] = React.useState("");
   const [displayMode, setDisplayMode] = useState('dataFlow');
-
+  
+  const data = parseFileStrict("http://localhost:3000/config/exampleFile.conf");
+  console.log("data", data);
 
   /*
   printAGraph(); //remove later
