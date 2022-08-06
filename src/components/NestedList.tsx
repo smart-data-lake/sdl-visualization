@@ -32,9 +32,9 @@ export default function NestedList(props: nestedListProps) {
   const [openDataObjectsList, setOpenDataObjectsList] = React.useState(false);
   const [openActionsList, setOpenActionsList] = React.useState(false);
   const [openGlobalList, setOpenGlobalList] = React.useState(false);
-  const [currentDataObjects, setCurrentDataObjects] = React.useState(Object.keys(props.data['dataObjects']));
-  const [currentActions, setCurrentActions] = React.useState(Object.keys(props.data['actions']));
-  const [currentGlobal, setCurrentGlobal] = React.useState(Object.keys(props.data['global']));
+  const [currentDataObjects, setCurrentDataObjects] = React.useState(Object.keys(props.data.dataObjects));
+  const [currentActions, setCurrentActions] = React.useState(Object.keys(props.data.actions));
+  const [currentGlobal, setCurrentGlobal] = React.useState(Object.keys(props.data.global));
   const [currentSearch, setCurrentSearch] = React.useState('');
 
 
@@ -56,9 +56,9 @@ export default function NestedList(props: nestedListProps) {
     setOpenDataObjectsList(true);
     setOpenGlobalList(true);
     setCurrentSearch(text);
-    var cdo = Object.keys(props.data['dataObjects']).filter(a => a.toLowerCase().includes(text.toLowerCase()));
-    var ca = Object.keys(props.data['actions']).filter(a => a.toLowerCase().includes(text.toLowerCase()));
-    var cg = Object.keys(props.data['global']).filter(a => a.toLowerCase().includes(text.toLowerCase()));
+    var cdo = Object.keys(props.data.dataObjects).filter(a => a.toLowerCase().includes(text.toLowerCase()));
+    var ca = Object.keys(props.data.actions).filter(a => a.toLowerCase().includes(text.toLowerCase()));
+    var cg = Object.keys(props.data.global).filter(a => a.toLowerCase().includes(text.toLowerCase()));
     setCurrentDataObjects(cdo);
     setCurrentActions(ca);
     setCurrentGlobal(cg);
