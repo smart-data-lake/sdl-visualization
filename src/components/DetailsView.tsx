@@ -11,6 +11,7 @@ import MarkdownComponent from "./MarkdownComponent";
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
+import { Box } from "@mui/material";
 
 interface detailsProps {
     data: object;
@@ -20,38 +21,10 @@ interface detailsProps {
 
 export default function DetailsView(props: detailsProps) {
 
-    const [tablesOrMetadata, setTablesOrMetadata] = useState('details');
-    const [switchLabel, setSwitchLabel] = useState('Switch to Metadata');
-
-    const handleSwitchChange = () =>{
-        if (switchLabel==='Switch to Metadata'){
-            setTablesOrMetadata('metadata');
-            setSwitchLabel('Switch to Details');
-        }
-        else{
-            setTablesOrMetadata('details');
-            setSwitchLabel('Switch to Metadata');
-        }
-    }
-
-    let display = null;
-
-    if (tablesOrMetadata === 'details') {
-        display = <MarkdownComponent filename={props.elementName} />;
-    }
-    else if (tablesOrMetadata === 'metadata') {
-        display = <MetadataTable data={props.data} elementName={props.elementName} elementType={props.elementType} />;
-    }
-    else{
-        display = <p>ERROR in rendering. tablesOrMetadata Hook not tuned correctly.</p>
-    }
-
     return (
-        <div>
-            <FormGroup>
-                <FormControlLabel control={<Switch defaultChecked />} label={switchLabel} onChange={handleSwitchChange}/>
-            </FormGroup>
-            {display}
-        </div>
+      <Box>
+        <MetadataTable data={props.data} elementName={props.elementName} elementType={props.elementType} />;
+        <MarkdownComponent filename={props.elementName} />;
+      </Box>
     );
 } 

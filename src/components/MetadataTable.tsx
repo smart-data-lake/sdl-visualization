@@ -98,7 +98,6 @@ export default function MetadataTable(props: detailsTableProps) {
 
   return (
     <div>
-      <h1 style={headerMetadata}>Metadata</h1>
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} aria-label="simple table">
           <TableHead>
