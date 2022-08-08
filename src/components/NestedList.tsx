@@ -20,7 +20,6 @@ import './ComponentsStyles.css';
 
 interface nestedListProps{
   data: any;
-  setDisplayMode: React.Dispatch<React.SetStateAction<string>>;
   sendSelectedElementToParent: React.Dispatch<React.SetStateAction<string>>;
   sendSelectedElementTypeToParent: React.Dispatch<React.SetStateAction<string>>;
   selectedElementToChild?: string;
@@ -29,15 +28,18 @@ interface nestedListProps{
 
 //props.data should be the JsonObject (already parsed from HOCON)
 export default function NestedList(props: nestedListProps) {
+
+  const allDataObjects = Object.keys(props.data.dataObjects).sort();
+  const allActions = Object.keys(props.data.actions).sort();
+  const allGlobal = Object.keys(props.data.global).sort();
+
   const [openDataObjectsList, setOpenDataObjectsList] = React.useState(false);
   const [openActionsList, setOpenActionsList] = React.useState(false);
   const [openGlobalList, setOpenGlobalList] = React.useState(false);
-  const [currentDataObjects, setCurrentDataObjects] = React.useState(Object.keys(props.data['dataObjects']));
-  const [currentActions, setCurrentActions] = React.useState(Object.keys(props.data['actions']));
-  const [currentGlobal, setCurrentGlobal] = React.useState(Object.keys(props.data['global']));
+  const [currentDataObjects, setCurrentDataObjects] = React.useState(allDataObjects);
+  const [currentActions, setCurrentActions] = React.useState(allActions);
+  const [currentGlobal, setCurrentGlobal] = React.useState(allGlobal);
   const [currentSearch, setCurrentSearch] = React.useState('');
-
-
 
   const handleClickDataObjectsList = () => {
     setOpenDataObjectsList(!openDataObjectsList);
@@ -52,49 +54,63 @@ export default function NestedList(props: nestedListProps) {
   };
 
   const handleTextField = (text: string) => {
-    setOpenActionsList(true);
-    setOpenDataObjectsList(true);
-    setOpenGlobalList(true);
+    if (!openActionsList && !openDataObjectsList && !openGlobalList) {
+      setOpenActionsList(true);
+      setOpenDataObjectsList(true);
+      setOpenGlobalList(true);
+    }
     setCurrentSearch(text);
-    var cdo = Object.keys(props.data['dataObjects']).filter(a => a.toLowerCase().includes(text.toLowerCase()));
-    var ca = Object.keys(props.data['actions']).filter(a => a.toLowerCase().includes(text.toLowerCase()));
-    var cg = Object.keys(props.data['global']).filter(a => a.toLowerCase().includes(text.toLowerCase()));
+    const searchText = text.toLowerCase()
+    const cdo = allDataObjects.filter(a => a.toLowerCase().includes(searchText));
+    const ca = allActions.filter(a => a.toLowerCase().includes(searchText));
+    const cg = allGlobal.filter(a => a.toLowerCase().includes(searchText));
     setCurrentDataObjects(cdo);
     setCurrentActions(ca);
     setCurrentGlobal(cg);
   }
 
   const handleClickOnElement = (element: string, elementType: string) => {
-    props.setDisplayMode('table');
     props.sendSelectedElementToParent(element);
     props.sendSelectedElementTypeToParent(elementType);
   };
 
   const dataObjectsCompleteList = currentDataObjects.map((dataObject) => (
     <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(dataObject, 'dataObjects') }>
-    <ListItemIcon>
-      <TableViewTwoTone />
-    </ListItemIcon>
-    <ListItemText primary={dataObject} />
-  </ListItemButton>
+      <ListItemIcon>
+        <TableViewTwoTone />
+      </ListItemIcon>
+      <ListItemText primary={dataObject}                   
+        primaryTypographyProps={{
+          lineHeight: '16px',
+          noWrap: true,
+        }}/>
+    </ListItemButton>
   ));
 
   const actionsCompleteList = currentActions.map((action) => (
     <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(action, 'actions') }>
-    <ListItemIcon>
-      <RocketLaunchOutlined />
-    </ListItemIcon>
-    <ListItemText primary={action} />
-  </ListItemButton>
+      <ListItemIcon>
+        <RocketLaunchOutlined />
+      </ListItemIcon>
+      <ListItemText primary={action}
+        primaryTypographyProps={{
+          lineHeight: '16px',
+          noWrap: true,
+        }}/>    
+    </ListItemButton>
   ));
 
   const optionsCompleteList = currentGlobal.map((option) => (
     <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(option, 'global') }>
-    <ListItemIcon>
-      <TravelExplore />
-    </ListItemIcon>
-    <ListItemText primary={option} />
-  </ListItemButton>
+      <ListItemIcon>
+        <TravelExplore />
+      </ListItemIcon>
+      <ListItemText primary={option} 
+        primaryTypographyProps={{
+          lineHeight: '16px',
+          noWrap: true,
+        }}/>
+    </ListItemButton>
   ));
 
 
@@ -103,6 +119,7 @@ export default function NestedList(props: nestedListProps) {
       <TextField
         className="search_field"
         variant="outlined"
+        size="small"
         label="Search element"
         value={currentSearch}
         onChange={(e) => handleTextField(e.target.value)} //e is the event Object triggered by the onChange
@@ -112,21 +129,21 @@ export default function NestedList(props: nestedListProps) {
         sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
         component="nav"
         aria-labelledby="nested-list-subheader"
-        subheader={
+        /*subheader={
           <ListSubheader component="div" id="nested-list-subheader">
             Configuration File
           </ListSubheader>
-        }
+        }*/
       >
         <ListItemButton onClick={handleClickDataObjectsList}>
           <ListItemIcon>
             <TableView />
           </ListItemIcon>
-          <ListItemText primary="Data Objects" />
+          <ListItemText primary="Data Objects" primaryTypographyProps={{noWrap: true}}/>
           {openDataObjectsList ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
         <Collapse in={openDataObjectsList} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
+          <List component="div" disablePadding dense={true}>
             {dataObjectsCompleteList}
           </List>
         </Collapse>
@@ -134,11 +151,11 @@ export default function NestedList(props: nestedListProps) {
           <ListItemIcon>
             <RocketLaunch />
           </ListItemIcon>
-          <ListItemText primary="Actions" />
+          <ListItemText primary="Actions" primaryTypographyProps={{noWrap: true}}/>
           {openActionsList ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
         <Collapse in={openActionsList} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
+          <List component="div" disablePadding dense={true}>
             {actionsCompleteList}
           </List>
         </Collapse>
@@ -146,11 +163,11 @@ export default function NestedList(props: nestedListProps) {
           <ListItemIcon>
             <Public />
           </ListItemIcon>
-          <ListItemText primary="Global Options" />
+          <ListItemText primary="Global Options" primaryTypographyProps={{noWrap: true}}/>
           {openGlobalList ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
         <Collapse in={openGlobalList} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
+          <List component="div" disablePadding dense={true}>
             {optionsCompleteList}
           </List>
         </Collapse>
