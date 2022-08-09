@@ -19,6 +19,10 @@ function createRow(key: string | number, value: string | number) {
 
 //elementType can be 'actions', 'dataObjects' or 'global'. Returns a list of "simple" rows. 
 function createElementRows(jsonObject: any, elementName: string, elementType: string) {
+  if (elementType==='global'){
+    var keyList = Object.keys(jsonObject[elementType]);
+    return keyList.map(key => createRow(key, JSON.stringify(jsonObject[elementType][key], null, '\t')));
+  }
   var keyList = Object.keys(jsonObject[elementType][elementName]);
   return keyList.map(key => createRow(key, JSON.stringify(jsonObject[elementType][elementName][key], null, '\t')));
 }

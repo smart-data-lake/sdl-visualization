@@ -56,16 +56,18 @@ export default function NestedList(props: nestedListProps) {
     setOpenActionsList(!openActionsList);
   };
 
+  /*
   const handleClickGlobalList = () => {
     setOpenGlobalList(!openGlobalList);
   };
+  */
 
   const handleClickConnectionsList = () => {
     setOpenConnectionsList(!openConnectionsList);
   };
 
   const handleTextField = (text: string) => {
-    if (!openActionsList && !openDataObjectsList && !openGlobalList && !openConnectionsList) {
+    if (!openActionsList && !openDataObjectsList && !openConnectionsList) {
       setOpenActionsList(true);
       setOpenDataObjectsList(true);
       setOpenGlobalList(true);
@@ -136,6 +138,7 @@ export default function NestedList(props: nestedListProps) {
     </ListItemButton>
   ));
 
+  /*
   const optionsCompleteList = currentGlobal.map((option) => (
     <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(option, 'global') }>
       <ListItemIcon>
@@ -148,6 +151,7 @@ export default function NestedList(props: nestedListProps) {
         }}/>
     </ListItemButton>
   ));
+  */
 
 
   return (
@@ -207,18 +211,12 @@ export default function NestedList(props: nestedListProps) {
             {connectionsCompleteList}
           </List>
         </Collapse>
-        <ListItemButton onClick={handleClickGlobalList}>
+        <ListItemButton onClick={() => handleClickOnElement('global', 'global')}>
           <ListItemIcon>
             <Public />
           </ListItemIcon>
           <ListItemText primary="Global Options" primaryTypographyProps={{noWrap: true}}/>
-          {openGlobalList ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
-        <Collapse in={openGlobalList} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding dense={true}>
-            {optionsCompleteList}
-          </List>
-        </Collapse>
       </List>
     </div>
   );
