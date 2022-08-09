@@ -1,18 +1,20 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App';
-import Test from './components/Test';
 import MarkdownComponent from './components/MarkdownComponent';
-import FileDisplay from './components/FileDisplay';
-import LayoutFlowTest from './components/LayoutFlowTest';
+import FileDisplay from './util/FileDisplay';
+import LayoutFlowTest from './archiv/LayoutFlowTest';
+import { BrowserRouter } from "react-router-dom";
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  <BrowserRouter>
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  </BrowserRouter>
 );
 
 // If you want to start measuring performance in your app, pass a function

@@ -4,8 +4,7 @@ import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
-import Header from './common/Header';
-import {parseFileStrict} from './util/HoconParser';
+import {parseFileStrict} from '../util/HoconParser';
 import {Box, AppBar, Toolbar, IconButton, Typography, Drawer, CssBaseline, Icon} from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import ReactFlow, { addEdge, ConnectionLineType, useNodesState, useEdgesState } from 'react-flow-renderer';
 import { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge } from 'react-flow-renderer';
-import DataObjectsAndActions, { DataObject, Action } from './util/Graphs';
+import DataObjectsAndActions, { DataObject, Action } from '../util/Graphs';
 import dagre from 'dagre';
 
 

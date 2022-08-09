@@ -1,7 +1,0 @@
-- Change "jsonObject: object" and "jsonObject: any" to a more precise jsonObject data type for the parsed config file?
-
-
-TypeScript Questions: 
-1. How to deal with unknown/potentially deeply nested structures / objects? Define them as "any" or as "object"?
- --> change to object | any (also try with undefined)
-  Simon Sharp --> Ask Webpack. 

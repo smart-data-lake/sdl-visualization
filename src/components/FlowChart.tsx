@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType } from 'react-flow-renderer';
-import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from './util/Graphs';
+import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
 import './ComponentsStyles.css';
 import Switch from '@mui/material/Switch';
 
