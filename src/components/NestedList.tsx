@@ -14,8 +14,11 @@ import TableView from '@mui/icons-material/TableView';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
 import Public from '@mui/icons-material/Public';
 import TravelExplore from '@mui/icons-material/TravelExplore';
+import LanIcon from '@mui/icons-material/Lan';
+import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import TextField from '@mui/material/TextField';
 import './ComponentsStyles.css';
+import { connect } from 'http2';
 
 
 interface nestedListProps{
@@ -32,14 +35,18 @@ export default function NestedList(props: nestedListProps) {
   const allDataObjects = Object.keys(props.data.dataObjects).sort();
   const allActions = Object.keys(props.data.actions).sort();
   const allGlobal = Object.keys(props.data.global).sort();
+  const allConnections = Object.keys(props.data.connections);
 
   const [openDataObjectsList, setOpenDataObjectsList] = React.useState(false);
   const [openActionsList, setOpenActionsList] = React.useState(false);
+  const [openConnectionsList, setOpenConnectionsList] = React.useState(false);
   const [openGlobalList, setOpenGlobalList] = React.useState(false);
   const [currentDataObjects, setCurrentDataObjects] = React.useState(allDataObjects);
   const [currentActions, setCurrentActions] = React.useState(allActions);
   const [currentGlobal, setCurrentGlobal] = React.useState(allGlobal);
+  const [currentConnections, setCurrentConnections] = React.useState(allConnections);
   const [currentSearch, setCurrentSearch] = React.useState('');
+  const [selectedElement, setSelectedElement] = React.useState('');
 
   const handleClickDataObjectsList = () => {
     setOpenDataObjectsList(!openDataObjectsList);
@@ -53,26 +60,39 @@ export default function NestedList(props: nestedListProps) {
     setOpenGlobalList(!openGlobalList);
   };
 
+  const handleClickConnectionsList = () => {
+    setOpenConnectionsList(!openConnectionsList);
+  };
+
   const handleTextField = (text: string) => {
-    if (!openActionsList && !openDataObjectsList && !openGlobalList) {
+    if (!openActionsList && !openDataObjectsList && !openGlobalList && !openConnectionsList) {
       setOpenActionsList(true);
       setOpenDataObjectsList(true);
       setOpenGlobalList(true);
+      setOpenConnectionsList(true);
     }
     setCurrentSearch(text);
     const searchText = text.toLowerCase()
     const cdo = allDataObjects.filter(a => a.toLowerCase().includes(searchText));
     const ca = allActions.filter(a => a.toLowerCase().includes(searchText));
     const cg = allGlobal.filter(a => a.toLowerCase().includes(searchText));
+    const cc = allConnections.filter(a => a.toLowerCase().includes(searchText));
     setCurrentDataObjects(cdo);
     setCurrentActions(ca);
     setCurrentGlobal(cg);
+    setCurrentConnections(cc);
   }
 
   const handleClickOnElement = (element: string, elementType: string) => {
     props.sendSelectedElementToParent(element);
     props.sendSelectedElementTypeToParent(elementType);
+    setSelectedElement(element);
   };
+
+  function returnBoldString(dataObjectName: string){
+    if (dataObjectName===selectedElement){return 'bolder';}
+    else {return 'normal'}
+  }
 
   const dataObjectsCompleteList = currentDataObjects.map((dataObject) => (
     <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(dataObject, 'dataObjects') }>
@@ -83,6 +103,7 @@ export default function NestedList(props: nestedListProps) {
         primaryTypographyProps={{
           lineHeight: '16px',
           noWrap: true,
+          fontWeight: returnBoldString(dataObject),
         }}/>
     </ListItemButton>
   ));
@@ -96,6 +117,21 @@ export default function NestedList(props: nestedListProps) {
         primaryTypographyProps={{
           lineHeight: '16px',
           noWrap: true,
+          fontWeight: returnBoldString(action),
+        }}/>    
+    </ListItemButton>
+  ));
+
+  const connectionsCompleteList = currentConnections.map((connection) => (
+    <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(connection, 'connections') }>
+      <ListItemIcon>
+        <LanOutlinedIcon />
+      </ListItemIcon>
+      <ListItemText primary={connection}
+        primaryTypographyProps={{
+          lineHeight: '16px',
+          noWrap: true,
+          fontWeight: returnBoldString(connection),
         }}/>    
     </ListItemButton>
   ));
@@ -157,6 +193,18 @@ export default function NestedList(props: nestedListProps) {
         <Collapse in={openActionsList} timeout="auto" unmountOnExit>
           <List component="div" disablePadding dense={true}>
             {actionsCompleteList}
+          </List>
+        </Collapse>
+        <ListItemButton onClick={handleClickConnectionsList}>
+          <ListItemIcon>
+            <LanIcon />
+          </ListItemIcon>
+          <ListItemText primary="Connections" primaryTypographyProps={{noWrap: true}}/>
+          {openConnectionsList ? <ExpandLess /> : <ExpandMore />}
+        </ListItemButton>
+        <Collapse in={openConnectionsList} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding dense={true}>
+            {connectionsCompleteList}
           </List>
         </Collapse>
         <ListItemButton onClick={handleClickGlobalList}>

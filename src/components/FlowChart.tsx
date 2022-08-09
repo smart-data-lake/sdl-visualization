@@ -13,7 +13,7 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph){
       position: {x: dataObject.position.x, y: dataObject.position.y},
       data: {label: dataObject.id},
       style: {background: dataObject.backgroundColor},
-      //jsonString: JSON.stringify(dataObject.jsonObject, null, '\t'), //Do we need this 
+      //jsonString: JSON.stringify(dataObject.jsonObject, null, '\t'), //Do we need this??
     })
   });
   return result;
@@ -62,7 +62,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
       id: action.id + action.fromNode.id+action.toNode.id,
       source: action.fromNode.id,
       target: action.toNode.id,
-      animated: true, 
+      //animated: true, 
       label: action.id,
       labelBgPadding: [8, 4],
       //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
@@ -113,10 +113,13 @@ function FlowChart(props: flowProps) {
     (changes: any) => setNodes((nds: any) => applyNodeChanges(changes, nds)),
     [setNodes]
   );
+
+  
   const onEdgesChange = useCallback(
     (changes: any) => setEdges((eds: any) => applyEdgeChanges(changes, eds)),
     [setEdges]
   );
+  
 
 
 
@@ -142,6 +145,7 @@ function FlowChart(props: flowProps) {
       onEdgeClick={(event, edge) => clickOnEdge(edge)}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
+      nodesConnectable={false} //prevents adding new edges
     >
        <Background />
        <MiniMap />
