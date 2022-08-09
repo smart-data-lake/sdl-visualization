@@ -23,7 +23,7 @@ interface displayProps {
 
 export default function DataDisplayView(props: displayProps) {
   const [value, setValue] = React.useState('description');
-
+  
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
   };
@@ -47,7 +47,7 @@ export default function DataDisplayView(props: displayProps) {
         <MetadataTable data={props.data} elementName={props.selectedElementToChild} elementType={props.selectedElementTypeToChild} />;
       </TabPanel>
       <TabPanel value="lineage">
-        <FlowChart data={props.data}/>
+        <FlowChart data={props.data} elementName={props.selectedElementToChild} elementType={props.selectedElementTypeToChild} />
       </TabPanel>
     </TabContext>      
   );

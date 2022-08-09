@@ -28,7 +28,6 @@ function App() {
       .then(newData => {
         setData(newData);
         setLoading(false);
-        console.log("data", newData);
     })
   }, []); // only once
   

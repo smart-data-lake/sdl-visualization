@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
-import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge } from 'react-flow-renderer';
+import React, { useState, useCallback, useEffect } from 'react';
+import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType } from 'react-flow-renderer';
 import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from './util/Graphs';
 import './ComponentsStyles.css';
+import Switch from '@mui/material/Switch';
 
 function createReactFlowNodes(dataObjectsAndActions: DAGraph){
   var result: any[] = [];
@@ -64,6 +65,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
       target: action.toNode.id,
       //animated: true, 
       label: action.id,
+      label_copy: action.id,
       labelBgPadding: [8, 4],
       //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
       style: { stroke: 'red' },
@@ -74,7 +76,9 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
 
 
 interface flowProps {
-  data: object;
+  data: object,
+  elementName: string,
+  elementType: string,
 }
 
 type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of ReactFlow with an (optional) String attribute. 
@@ -86,11 +90,42 @@ type flowEdgeWithString = Edge<any> & {jsonString?:string}
 function FlowChart(props: flowProps) {
 
   const doa = new DataObjectsAndActions(props.data);
-  const nodes_init = createReactFlowNodes(doa);
-  const edges_init = createReactFlowEdges(doa);
+  let nodes_init: any[];
+  let edges_init: any[];
+  if (props.elementType==='dataObjects'){
+    const partialGraphPair = doa.returnPartialGraphInputs(props.elementName);
+    const partialNodes = partialGraphPair[0];
+    const partialEdges = partialGraphPair[1];
+    const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges);
+  
+    nodes_init = createReactFlowNodes(partialGraph);
+    edges_init = createReactFlowEdges(partialGraph);
+  }
+  else{ //to be able to see the complete lineage when selecting actions
+    nodes_init = createReactFlowNodes(doa);
+    edges_init = createReactFlowEdges(doa);
+  }
+
   const [nodes, setNodes] = useState(nodes_init);
   const [edges, setEdges] = useState(edges_init);
+  const [hidden, setHidden] = useState(false);
 
+
+  const hide = (hidden: boolean) => (edge: any) => {
+    if (hidden){
+      edge.label = '';
+      edge.markerEnd = {type: MarkerType.ArrowClosed, color: 'red', width: 20, height: 20};
+    }else{
+      edge.label = edge.label_copy;
+      edge.markerEnd = {};
+    }
+
+    return edge;
+  };
+
+  useEffect(() => {
+    setEdges((eds) => eds.map(hide(hidden)));
+  }, [hidden]);
 
   function renderPartialGraph(nodeId: string){
 
@@ -150,6 +185,20 @@ function FlowChart(props: flowProps) {
        <Background />
        <MiniMap />
        <Controls />
+       <div style={{ position: 'absolute', left: 10, top: 10, zIndex: 4 }}>
+        <div>
+          <label htmlFor="ishidden" className="hide_edges_checkbox_text">
+            Hide Action Labels
+            <input
+              id="ishidden"
+              type="checkbox"
+              checked={hidden}
+              onChange={(event) => setHidden(event.target.checked)
+              }
+            />
+          </label>
+        </div>
+      </div>
     </ReactFlow>
     </div>
   );
