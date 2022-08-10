@@ -18,6 +18,7 @@
     "@types/react-dom": "^18.0.6",
     "d3-state-visualizer": "^1.6.0",
     "dagre": "^0.8.5",
+    "github-markdown-css": "^5.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-flow-renderer": "^10.3.10",

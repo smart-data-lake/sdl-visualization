@@ -1,8 +1,9 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import './ComponentsStyles.css';
 import parseCustomMarkdown from '../util/MarkdownParser';
+import 'github-markdown-css/github-markdown.css';
+import { GlobalStyles } from '@mui/material';
 
 
 
@@ -31,6 +32,9 @@ export default function MarkdownComponent(props){
   });
 
   return(
-    <ReactMarkdown className='parsedTables' children={input} remarkPlugins={[remarkGfm]}/>
+    <React.Fragment>
+      <GlobalStyles styles={{ table: { width: '100% !important' } }} />
+      <ReactMarkdown className='markdown-body' children={input} remarkPlugins={[remarkGfm]} />
+    </React.Fragment>
   ); 
 }

@@ -11,12 +11,6 @@ import { useParams } from "react-router-dom";
 interface displayProps {
   data: object;
   globalSelected?: boolean; //true for the url /globalOptions
-  /*
-  selectedElementToChild: string;
-  selectedElementTypeToChild: string;
-  sendSelectedElementToParent: React.Dispatch<React.SetStateAction<string>>;
-  sendSelectedElementTypeToParent: React.Dispatch<React.SetStateAction<string>>;
-  */
 }
 
 export default function DataDisplayView(props: displayProps) {
