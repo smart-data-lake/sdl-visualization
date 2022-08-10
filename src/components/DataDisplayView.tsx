@@ -1,33 +1,56 @@
 import FlowChart from "./FlowChart";
-import React, {Fragment, useEffect, useState} from 'react';
-import Button from '@mui/material/Button';
-import Stack from '@mui/material/Stack';
+import React from 'react';
 import './ComponentsStyles.css';
-import DetailsView from './DetailsView'
 import { Box, Tab, Tabs } from "@mui/material";
 import TabPanel from '@mui/lab/TabPanel';
 import TabContext from '@mui/lab/TabContext';
 import MetadataTable from "./MetadataTable";
 import MarkdownComponent from "./MarkdownComponent";
+import { useParams } from "react-router-dom";
 
 interface displayProps {
   data: object;
+  globalSelected?: boolean; //true for the url /globalOptions
+  /*
   selectedElementToChild: string;
   selectedElementTypeToChild: string;
   sendSelectedElementToParent: React.Dispatch<React.SetStateAction<string>>;
   sendSelectedElementTypeToParent: React.Dispatch<React.SetStateAction<string>>;
+  */
 }
 
 export default function DataDisplayView(props: displayProps) {
+
+  let urlParams = useParams();
+
   const [value, setValue] = React.useState('description');
   
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
   };
 
-  if (!props.selectedElementToChild) {
-    return <Box>Select a component in the drawer on the left to see its configuration.</Box>;
+  if (props.globalSelected){
+    return (
+      <TabContext value={value}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={value} onChange={handleChange} aria-label="element tabs">
+          <Tab label="Description" value="description" sx={{height: "15px"}} />
+          <Tab label="Configuration" value="configuration" sx={{height: "15px"}} />
+        </Tabs>
+      </Box>
+      <TabPanel value="description">
+        <MarkdownComponent filename={urlParams.elementName} />;
+      </TabPanel>
+      <TabPanel value="configuration">
+        <MetadataTable data={props.data} elementName='global' elementType='global' />;
+      </TabPanel>
+    </TabContext>      
+    );
   }
+
+
+  
+
   return (
     <TabContext value={value}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -38,13 +61,13 @@ export default function DataDisplayView(props: displayProps) {
         </Tabs>
       </Box>
       <TabPanel value="description">
-        <MarkdownComponent filename={props.selectedElementToChild} />;
+        <MarkdownComponent filename={urlParams.elementName} />;
       </TabPanel>
       <TabPanel value="configuration">
-        <MetadataTable data={props.data} elementName={props.selectedElementToChild} elementType={props.selectedElementTypeToChild} />;
+        <MetadataTable data={props.data} elementName={urlParams.elementName as string} elementType={urlParams.elementType as string} />;
       </TabPanel>
       <TabPanel value="lineage">
-        <FlowChart data={props.data} elementName={props.selectedElementToChild} elementType={props.selectedElementTypeToChild} />
+        <FlowChart data={props.data} elementName={urlParams.elementName as string} elementType={urlParams.elementType as string} />
       </TabPanel>
     </TabContext>      
   );

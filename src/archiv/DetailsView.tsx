@@ -1,14 +1,13 @@
-import FlowChart from "./FlowChart";
-import MetadataTable from "./MetadataTable";
-import React, { useEffect, useState } from 'react';
-import Button from '@mui/material/Button';
-import Stack from '@mui/material/Stack';
+import MetadataTable from "../components/MetadataTable";
 import './ComponentsStyles.css';
-import MarkdownComponent from "./MarkdownComponent";
-import FormGroup from '@mui/material/FormGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
+import MarkdownComponent from "../components/MarkdownComponent";
+
 import { Box } from "@mui/material";
+
+
+/**
+ * Legacy code that merged both the MetadataTable and the Markdown explanation into a single component. 
+ */
 
 interface detailsProps {
     data: object;
