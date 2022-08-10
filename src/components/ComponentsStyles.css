@@ -47,6 +47,11 @@ th {
     font-weight: bold;
 }
 
+a:link{
+    text-decoration: none;
+    color: black;
+}
+
 input[type=checkbox] {width:20px; height:20px;}
 
 /*Media styles*/

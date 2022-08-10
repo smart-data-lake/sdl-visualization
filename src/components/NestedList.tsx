@@ -1,5 +1,4 @@
 import * as React from 'react';
-import ListSubheader from '@mui/material/ListSubheader';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
@@ -7,18 +6,17 @@ import ListItemText from '@mui/material/ListItemText';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
-import StarBorder from '@mui/icons-material/StarBorder';
 import RocketLaunch from '@mui/icons-material/RocketLaunch';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import TableView from '@mui/icons-material/TableView';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
 import Public from '@mui/icons-material/Public';
-import TravelExplore from '@mui/icons-material/TravelExplore';
 import LanIcon from '@mui/icons-material/Lan';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import TextField from '@mui/material/TextField';
 import './ComponentsStyles.css';
 import { connect } from 'http2';
+import { Link } from "react-router-dom";
 
 
 interface nestedListProps{
@@ -56,12 +54,6 @@ export default function NestedList(props: nestedListProps) {
     setOpenActionsList(!openActionsList);
   };
 
-  /*
-  const handleClickGlobalList = () => {
-    setOpenGlobalList(!openGlobalList);
-  };
-  */
-
   const handleClickConnectionsList = () => {
     setOpenConnectionsList(!openConnectionsList);
   };
@@ -97,61 +89,52 @@ export default function NestedList(props: nestedListProps) {
   }
 
   const dataObjectsCompleteList = currentDataObjects.map((dataObject) => (
-    <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(dataObject, 'dataObjects') }>
-      <ListItemIcon>
-        <TableViewTwoTone />
-      </ListItemIcon>
-      <ListItemText primary={dataObject}                   
-        primaryTypographyProps={{
-          lineHeight: '16px',
-          noWrap: true,
-          fontWeight: returnBoldString(dataObject),
-        }}/>
-    </ListItemButton>
+    <Link to={`/dataObjects/${dataObject}`}>
+      <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(dataObject, 'dataObjects')}>
+        <ListItemIcon>
+          <TableViewTwoTone />
+        </ListItemIcon>
+        <ListItemText primary={dataObject}
+          primaryTypographyProps={{
+            lineHeight: '16px',
+            noWrap: true,
+            fontWeight: returnBoldString(dataObject),
+          }} />
+      </ListItemButton>
+    </Link>
   ));
 
   const actionsCompleteList = currentActions.map((action) => (
-    <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(action, 'actions') }>
-      <ListItemIcon>
-        <RocketLaunchOutlined />
-      </ListItemIcon>
-      <ListItemText primary={action}
-        primaryTypographyProps={{
-          lineHeight: '16px',
-          noWrap: true,
-          fontWeight: returnBoldString(action),
-        }}/>    
-    </ListItemButton>
+    <Link to={`/actions/${action}`}>
+      <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(action, 'actions')}>
+        <ListItemIcon>
+          <RocketLaunchOutlined />
+        </ListItemIcon>
+        <ListItemText primary={action}
+          primaryTypographyProps={{
+            lineHeight: '16px',
+            noWrap: true,
+            fontWeight: returnBoldString(action),
+          }} />
+      </ListItemButton>
+    </Link>
   ));
 
   const connectionsCompleteList = currentConnections.map((connection) => (
-    <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(connection, 'connections') }>
-      <ListItemIcon>
-        <LanOutlinedIcon />
-      </ListItemIcon>
-      <ListItemText primary={connection}
-        primaryTypographyProps={{
-          lineHeight: '16px',
-          noWrap: true,
-          fontWeight: returnBoldString(connection),
-        }}/>    
-    </ListItemButton>
+    <Link to={`/actions/${connection}`}>
+      <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(connection, 'connections')}>
+        <ListItemIcon>
+          <LanOutlinedIcon />
+        </ListItemIcon>
+        <ListItemText primary={connection}
+          primaryTypographyProps={{
+            lineHeight: '16px',
+            noWrap: true,
+            fontWeight: returnBoldString(connection),
+          }} />
+      </ListItemButton>
+    </Link>
   ));
-
-  /*
-  const optionsCompleteList = currentGlobal.map((option) => (
-    <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(option, 'global') }>
-      <ListItemIcon>
-        <TravelExplore />
-      </ListItemIcon>
-      <ListItemText primary={option} 
-        primaryTypographyProps={{
-          lineHeight: '16px',
-          noWrap: true,
-        }}/>
-    </ListItemButton>
-  ));
-  */
 
 
   return (
@@ -211,12 +194,14 @@ export default function NestedList(props: nestedListProps) {
             {connectionsCompleteList}
           </List>
         </Collapse>
-        <ListItemButton onClick={() => handleClickOnElement('global', 'global')}>
-          <ListItemIcon>
-            <Public />
-          </ListItemIcon>
-          <ListItemText primary="Global Options" primaryTypographyProps={{noWrap: true}}/>
-        </ListItemButton>
+        <Link to='/globalOptions'>
+          <ListItemButton onClick={() => handleClickOnElement('global', 'global')}>
+            <ListItemIcon>
+              <Public />
+            </ListItemIcon>
+            <ListItemText primary="Global Options" primaryTypographyProps={{ noWrap: true, fontWeight: returnBoldString('global')}}/>
+          </ListItemButton>
+        </Link>
       </List>
     </div>
   );

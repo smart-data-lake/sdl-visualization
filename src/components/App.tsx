@@ -1,12 +1,11 @@
 import './App.css';
 import NestedList from './NestedList';
-import Grid from '@mui/material/Grid';
-import Paper from '@mui/material/Paper';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
 import {parseFileStrict} from '../util/HoconParser';
-import {Box, AppBar, Toolbar, IconButton, Typography, Drawer, CssBaseline, Icon} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
+import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
+import Header from './Header';
+import { Routes, Route } from "react-router-dom";
 
 export const defaultDrawerWidth = 240;
 const minDrawerWidth = 50;
@@ -52,16 +51,7 @@ function App() {
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      <AppBar component="nav" position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar>
-          <IconButton size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
-            <img src="sdl_logo.png" alt="logo" className="logo" height="32px" />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Configuration Viewer
-          </Typography>
-        </Toolbar>
-      </AppBar>    
+      <Header />
       <Drawer
         variant="permanent"
         sx={{
@@ -89,12 +79,23 @@ function App() {
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
-        <DataDisplayView 
-          data={data} 
-          selectedElementToChild={selectedElement}
-          sendSelectedElementToParent={setSelectedElement} 
-          selectedElementTypeToChild={selectedElementType}
-          sendSelectedElementTypeToParent={setSelectedElementType} />
+        <Routes>
+          <Route index element={<p>Please select a component from the drawer on the left to see its configuration</p>} />
+          <Route
+            path="/:elementType/:elementName"
+            element={
+              <DataDisplayView
+                data={data} />
+            } />
+          <Route
+            path="/globalOptions"
+            element={
+              <DataDisplayView
+                data={data} 
+                globalSelected={true}/>
+            } />
+
+        </Routes>
       </Box>
     </Box>
   );
