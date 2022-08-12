@@ -77,7 +77,7 @@ function App() {
             sendSelectedElementTypeToParent={setSelectedElementType}/>
         </Box>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, "padding-top": "7px" }}>
         <Toolbar />
         <Routes>
           <Route index element={<p>Please select a component from the drawer on the left to see its configuration</p>} />
