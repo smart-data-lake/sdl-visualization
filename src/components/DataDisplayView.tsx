@@ -54,13 +54,13 @@ export default function DataDisplayView(props: displayProps) {
           <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />
         </Tabs>
       </Box>
-      <TabPanel value="description">
+      <TabPanel value="description" className="content-panel">
         <MarkdownComponent filename={urlParams.elementName} />;
       </TabPanel>
-      <TabPanel value="configuration">
+      <TabPanel value="configuration" className="content-panel">
         <MetadataTable data={props.data} elementName={urlParams.elementName as string} elementType={urlParams.elementType as string} />;
       </TabPanel>
-      <TabPanel value="lineage">
+      <TabPanel value="lineage" className="content-panel">
         <FlowChart data={props.data} elementName={urlParams.elementName as string} elementType={urlParams.elementType as string} />
       </TabPanel>
     </TabContext>      

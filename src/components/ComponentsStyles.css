@@ -10,6 +10,10 @@
     font-weight: bold;
 }
 
+.content-panel{
+    padding-left: 0px !important;
+    padding-right: 0px !important
+}
 
 .hide_edges_checkbox_text{
     font-size:large;

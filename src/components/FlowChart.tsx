@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { Box } from '@mui/material';
+import React, { useState, useCallback, useEffect, Fragment } from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType } from 'react-flow-renderer';
 import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
 import './ComponentsStyles.css';
@@ -168,10 +169,8 @@ function FlowChart(props: flowProps) {
 
 
   return (
-    <div className='data-flow'>
+    <Box className='data-flow'>
     <ReactFlow 
-      //nodes={nodes} 
-      //edges={edges}
       nodes={nodes}
       edges={edges} 
       fitView 
@@ -199,7 +198,7 @@ function FlowChart(props: flowProps) {
         </div>
       </div>
     </ReactFlow>
-    </div>
+    </Box>
   );
 }
 
