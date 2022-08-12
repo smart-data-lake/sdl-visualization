@@ -107,8 +107,8 @@ mit x = abs(1/R) (Krümmung)  und y = Fsoll/F_anf (Sollzugkraftauschöpfung gege
 @column `fahrwerke.[].traction_effects_coeff.ersatz_koeff_vonfzg` Beschreibt ob die Koeffizienten von einem anderen Fahrzeug übernommen wurden (Näherung)
 
 @column `fahrzeugart` string
-@column `ist_meterspur` Meterspurfzg (@dataOject rcf-test @column test-col)
-@column `angetrieben` Fahrzeug ist angetrieben (Lok oder Triebwagen)
+@column `ist_meterspur` Meterspurfzg (@dataObject rcf-test @column test-col)
+@column `angetrieben` Fahrzeug ist angetrieben (Lok oder Triebwagen) @dataObject btl-distances . Test für den Parser. @dataObject btl-distances @column xyz. 
 @column `gewicht_kg` {kg} Fahrzeugmasse 
 @column `achsen` Anzahl Achsen des Fahrzuegs 
 @column `laenge` {m} Länge über Kupplung/Puffer
