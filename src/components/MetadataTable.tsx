@@ -85,7 +85,6 @@ export default function MetadataTable(props: detailsTableProps) {
 
   let mdString = '|Property (key) | Value | \n |-----|-----|';
   rows.forEach((row)=> {
-    console.log('KEY', row.key, 'VALUE', row.value);
     row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '');
     mdString = mdString.concat(`\n | ${row.key} | ${row.value} |`);});
 

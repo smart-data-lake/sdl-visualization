@@ -18,23 +18,22 @@ export default function DataDisplayView(props: displayProps) {
   let urlParams = useParams();
 
   const [value, setValue] = React.useState('description');
+
+
   
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
   };
 
+
   if (props.globalSelected){
     return (
-      <TabContext value={value}>
+      <TabContext value={'configuration'}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={value} onChange={handleChange} aria-label="element tabs">
-          <Tab label="Description" value="description" sx={{height: "15px"}} />
+        <Tabs value={'configuration'} onChange={handleChange} aria-label="element tabs">
           <Tab label="Configuration" value="configuration" sx={{height: "15px"}} />
         </Tabs>
       </Box>
-      <TabPanel value="description">
-        <MarkdownComponent filename={urlParams.elementName} />;
-      </TabPanel>
       <TabPanel value="configuration">
         <MetadataTable data={props.data} elementName='global' elementType='global' />;
       </TabPanel>

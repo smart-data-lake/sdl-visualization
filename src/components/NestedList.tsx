@@ -121,7 +121,7 @@ export default function NestedList(props: nestedListProps) {
   ));
 
   const connectionsCompleteList = currentConnections.map((connection) => (
-    <Link to={`/actions/${connection}`}>
+    <Link to={`/connections/${connection}`}>
       <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(connection, 'connections')}>
         <ListItemIcon>
           <LanOutlinedIcon />

@@ -1,5 +1,5 @@
 import { Box } from '@mui/material';
-import React, { useState, useCallback, useEffect, Fragment } from 'react';
+import { useState, useCallback, useEffect, Fragment } from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType } from 'react-flow-renderer';
 import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
 import './ComponentsStyles.css';
@@ -19,6 +19,7 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph){
   });
   return result;
 }
+
 
 /**
  * DEPRECATED: Uses Deprecated class "DAGraph_Old" that calculates the levels
@@ -92,7 +93,9 @@ function FlowChart(props: flowProps) {
   const doa = new DataObjectsAndActions(props.data);
   let nodes_init: any[];
   let edges_init: any[];
-  if (props.elementType==='dataObjects'){
+
+
+  if (props.elementType==='dataObjects'){ //only a partial graph
     const partialGraphPair = doa.returnPartialGraphInputs(props.elementName);
     const partialNodes = partialGraphPair[0];
     const partialEdges = partialGraphPair[1];
@@ -106,9 +109,15 @@ function FlowChart(props: flowProps) {
     edges_init = createReactFlowEdges(doa);
   }
 
+  useEffect(() => {
+    setNodes(nodes_init);
+    setEdges(edges_init);
+  }, [props]); // Only re-run the effect if nodes_init changes
+
   const [nodes, setNodes] = useState(nodes_init);
   const [edges, setEdges] = useState(edges_init);
-  const [hidden, setHidden] = useState(false);
+  let [hidden, setHidden] = useState(false);
+
 
 
   const hide = (hidden: boolean) => (edge: any) => {
@@ -158,13 +167,14 @@ function FlowChart(props: flowProps) {
 
 
 
-  //TODO: Change these click actions. 
+   
   function clickOnNode(node: flowNodeWithString){
-    renderPartialGraph(node.id);
+    //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
+    window.location.href = `/dataObjects/${node.id}`; //Link programmatically
   }
 
   function clickOnEdge(edge: flowEdgeWithString){
-    window.alert('Click on Edge');
+    window.location.href = `/actions/${edge.id}`; //Link programmatically
   }
 
 
