@@ -6,9 +6,7 @@ import 'github-markdown-css/github-markdown.css';
 import { GlobalStyles } from '@mui/material';
 
 
-
-
-export default function MarkdownComponent(props){
+export default function MarkdownComponent(props: {filename: string}){
 
   const filename = "/descriptionFiles/" + props.filename +".md"; //file must be in public/descriptionFiles folder
   const [input, setInput] = React.useState('');
