@@ -1,7 +1,8 @@
 import { Box } from '@mui/material';
-import { useState, useCallback, useEffect, Fragment, useRef, useLayoutEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useLayoutEffect} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType } from 'react-flow-renderer';
 import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
+import { useNavigate } from "react-router-dom";
 import './ComponentsStyles.css';
 
 function createReactFlowNodes(dataObjectsAndActions: DAGraph){
@@ -164,17 +165,14 @@ function FlowChart(props: flowProps) {
     [setEdges]
   );
   
-
-
-
-   
+  // handlers for navigating dataObjects and actions
+  const navigate = useNavigate();   
   function clickOnNode(node: flowNodeWithString){
     //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
-    window.location.href = `/dataObjects/${node.id}`; //Link programmatically
+    navigate(`/dataObjects/${node.id}`); //Link programmatically
   }
-
   function clickOnEdge(edge: flowEdgeWithString){
-    window.location.href = `/actions/${edge.id}`; //Link programmatically
+    navigate(`/actions/${edge.id}`); //Link programmatically
   }
 
   // container holding SVG needs manual height resizing to fill 100%
@@ -189,7 +187,6 @@ function FlowChart(props: flowProps) {
   }
   useEffect(() => window.addEventListener('resize', handleResize), []);
   useLayoutEffect(() => handleResize(), []);
-
 
   return (
     <Box className='data-flow' sx={{height: contentHeight}} ref={chartBox}>
