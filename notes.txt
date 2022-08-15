@@ -4,3 +4,13 @@ Initialize:
 our .ts files (e.g. not specifying a type when declaring a type) --> Decide if we want to
 leave it like that.
 
+Wenn man "yarn start" macht funktioniert es nur wenn man vorher in "node_modules\react-scripts\config\webpackDevServer.config.js" folgende Einträge auskommentiert und zusätzlich "serveIndex: true," hinzufügt:
+
+    //historyApiFallback: {
+      // Paths with dots should still use the history fallback.
+      // See https://github.com/facebook/create-react-app/issues/387.
+    //  disableDotRule: true,
+    //  index: paths.publicUrlOrPath,
+    //},
+    serveIndex: true,
+

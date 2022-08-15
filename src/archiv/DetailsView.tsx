@@ -20,7 +20,7 @@ export default function DetailsView(props: detailsProps) {
     return (
       <Box>
         <MetadataTable data={props.data} elementName={props.elementName} elementType={props.elementType} />;
-        <MarkdownComponent filename={props.elementName} />;
+        <MarkdownComponent filename={props.elementName} data={props.data}/>;
       </Box>
     );
 } 
