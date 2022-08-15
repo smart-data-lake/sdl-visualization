@@ -17,6 +17,7 @@ import TextField from '@mui/material/TextField';
 import './ComponentsStyles.css';
 import { connect } from 'http2';
 import { Link } from "react-router-dom";
+import { Box } from '@mui/material';
 
 
 interface nestedListProps{
@@ -138,7 +139,7 @@ export default function NestedList(props: nestedListProps) {
 
 
   return (
-    <div>
+    <Box sx={{"overflow-x": "clip"}}>
       <TextField
         className="search_field"
         variant="outlined"
@@ -146,10 +147,11 @@ export default function NestedList(props: nestedListProps) {
         label="Search element"
         value={currentSearch}
         onChange={(e) => handleTextField(e.target.value)} //e is the event Object triggered by the onChange
+        sx={{width: "100%", "padding-right": "25px"}}
       />
 
       <List
-        sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
+        sx={{ width: '100%', bgcolor: 'background.paper' }}
         component="nav"
         aria-labelledby="nested-list-subheader"
         /*subheader={
@@ -203,6 +205,6 @@ export default function NestedList(props: nestedListProps) {
           </ListItemButton>
         </Link>
       </List>
-    </div>
+    </Box>
   );
 }

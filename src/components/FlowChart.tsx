@@ -1,7 +1,8 @@
 import { Box } from '@mui/material';
-import { useState, useCallback, useEffect, Fragment } from 'react';
+import { useState, useCallback, useEffect, useRef, useLayoutEffect} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType } from 'react-flow-renderer';
 import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
+import { useNavigate } from "react-router-dom";
 import './ComponentsStyles.css';
 
 function createReactFlowNodes(dataObjectsAndActions: DAGraph){
@@ -164,50 +165,59 @@ function FlowChart(props: flowProps) {
     [setEdges]
   );
   
-
-
-
-   
+  // handlers for navigating dataObjects and actions
+  const navigate = useNavigate();   
   function clickOnNode(node: flowNodeWithString){
     //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
-    window.location.href = `/dataObjects/${node.id}`; //Link programmatically
+    navigate(`/dataObjects/${node.id}`); //Link programmatically
   }
-
   function clickOnEdge(edge: flowEdgeWithString){
-    window.location.href = `/actions/${edge.id}`; //Link programmatically
+    navigate(`/actions/${edge.id}`); //Link programmatically
   }
 
+  // container holding SVG needs manual height resizing to fill 100%
+  const [contentHeight, setContentHeight] = useState(100);
+  const chartBox = useRef<HTMLDivElement>();
+  function handleResize() {
+    if (chartBox.current) {
+      const height = window.innerHeight - chartBox.current.offsetTop - 25; // 25px bottom margin...
+      console.log('resized to: ', height);
+      setContentHeight(height);
+    }
+  }
+  useEffect(() => window.addEventListener('resize', handleResize), []);
+  useLayoutEffect(() => handleResize(), []);
 
   return (
-    <Box className='data-flow'>
-    <ReactFlow 
-      nodes={nodes}
-      edges={edges} 
-      fitView 
-      onNodeClick={(event, node) => clickOnNode(node)}
-      onEdgeClick={(event, edge) => clickOnEdge(edge)}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      nodesConnectable={false} //prevents adding new edges
-    >
-       <Background />
-       <MiniMap />
-       <Controls />
-       <div style={{ position: 'absolute', left: 10, top: 10, zIndex: 4 }}>
-        <div>
-          <label htmlFor="ishidden" className="hide_edges_checkbox_text">
-            Hide Action Labels
-            <input
-              id="ishidden"
-              type="checkbox"
-              checked={hidden}
-              onChange={(event) => setHidden(event.target.checked)
-              }
-            />
-          </label>
+    <Box className='data-flow' sx={{height: contentHeight}} ref={chartBox}>
+      <ReactFlow 
+        nodes={nodes}
+        edges={edges} 
+        fitView 
+        onNodeClick={(event, node) => clickOnNode(node)}
+        onEdgeClick={(event, edge) => clickOnEdge(edge)}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        nodesConnectable={false} //prevents adding new edges
+      >
+        <Background />
+        <MiniMap />
+        <Controls />
+        <div style={{ position: 'absolute', left: 10, top: 10, zIndex: 4 }}>
+          <div>
+            <label htmlFor="ishidden" className="hide_edges_checkbox_text">
+              Hide Action Labels
+              <input
+                id="ishidden"
+                type="checkbox"
+                checked={hidden}
+                onChange={(event) => setHidden(event.target.checked)
+                }
+              />
+            </label>
+          </div>
         </div>
-      </div>
-    </ReactFlow>
+      </ReactFlow>
     </Box>
   );
 }

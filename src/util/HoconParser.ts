@@ -1,4 +1,4 @@
-const {Context, REGISTRY} = require ("@pushcorn/hocon-parser/lib/core/Context");
+const {Context} = require ("@pushcorn/hocon-parser/lib/core/Context");
 
 /**
  * Parse Hocon file from url
@@ -62,14 +62,14 @@ function parseJsonList(text: any): [string[], string[]] {
     var availableDirs: string[] = [];
     // search for <ul> element with name 'files'
     var htmlList = Array.from(el.getElementsByTagName("ul"));
-    var fileList = htmlList.find(e => e.id == "files" || e.className == "files");
+    var fileList = htmlList.find(e => e.id === "files" || e.className === "files");
     if (fileList) {
         Array.from(fileList.children).forEach(child => {
             const links = child.getElementsByTagName("a")
             if (links.length > 0) {
                 const entry = links[0].getAttribute("title");
                 if (entry) {
-                    if (entry.endsWith("/") || Array.from(links[0].classList).some(c => c.includes("directory") && entry!="..")) {
+                    if (entry.endsWith("/") || Array.from(links[0].classList).some(c => c.includes("directory") && entry !== "..")) {
                         availableDirs.push(entry);
                     } else if (entry.endsWith(".conf")) {
                         availableFiles.push(entry);

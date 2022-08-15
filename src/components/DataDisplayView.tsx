@@ -62,6 +62,6 @@ export default function DataDisplayView(props: displayProps) {
       <TabPanel value="lineage" className="content-panel">
         <FlowChart data={props.data} elementName={urlParams.elementName as string} elementType={urlParams.elementType as string} />
       </TabPanel>
-    </TabContext>      
+    </TabContext> 
   );
 } 
