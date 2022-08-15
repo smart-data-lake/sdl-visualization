@@ -1688,6 +1688,13 @@
     commander "8.3.0"
     node-fetch "2.6.7"
 
+"@pushcorn/hocon-parser@git+https://github.com/zzeekk/hocon-parser.git#master":
+  version "1.1.18"
+  resolved "git+https://github.com/zzeekk/hocon-parser.git#a5fa9152e9fed96613e89e323751bd9d4392ea16"
+  dependencies:
+    commander "8.3.0"
+    node-fetch "2.6.7"
+
 "@rollup/plugin-node-resolve@^7.1.1":
   version "7.1.3"
   resolved "https://registry.npmjs.org/@rollup/plugin-node-resolve/-/plugin-node-resolve-7.1.3.tgz"
