@@ -1,5 +1,5 @@
 import { Box } from '@mui/material';
-import { useState, useCallback, useEffect, useRef, useLayoutEffect} from 'react';
+import { useState, useCallback, useEffect, useRef, useLayoutEffect, Dispatch} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType } from 'react-flow-renderer';
 import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
 import { useNavigate } from "react-router-dom";
@@ -81,6 +81,8 @@ interface flowProps {
   data: object,
   elementName: string,
   elementType: string,
+  sendSelectedElementToParent: Dispatch<React.SetStateAction<string>>;
+  sendSelectedElementTypeToParent: Dispatch<React.SetStateAction<string>>; 
 }
 
 type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of ReactFlow with an (optional) String attribute. 
@@ -169,6 +171,8 @@ function FlowChart(props: flowProps) {
   const navigate = useNavigate();   
   function clickOnNode(node: flowNodeWithString){
     //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
+    props.sendSelectedElementToParent(node.id);
+    props.sendSelectedElementTypeToParent('dataObject');
     navigate(`/dataObjects/${node.id}`); //Link programmatically
   }
   function clickOnEdge(edge: flowEdgeWithString){

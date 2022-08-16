@@ -11,7 +11,10 @@ import { useParams } from "react-router-dom";
 interface displayProps {
   data: object;
   globalSelected?: boolean; //true for the url /globalOptions
+  sendSelectedElementToParent: React.Dispatch<React.SetStateAction<string>>;
+  sendSelectedElementTypeToParent: React.Dispatch<React.SetStateAction<string>>;
 }
+
 
 export default function DataDisplayView(props: displayProps) {
 
@@ -40,8 +43,6 @@ export default function DataDisplayView(props: displayProps) {
     </TabContext>      
     );
   }
-
-
   
 
   return (
@@ -60,7 +61,12 @@ export default function DataDisplayView(props: displayProps) {
         <MetadataTable data={props.data} elementName={urlParams.elementName as string} elementType={urlParams.elementType as string} />;
       </TabPanel>
       <TabPanel value="lineage" className="content-panel">
-        <FlowChart data={props.data} elementName={urlParams.elementName as string} elementType={urlParams.elementType as string} />
+        <FlowChart 
+          data={props.data}
+          sendSelectedElementToParent={props.sendSelectedElementToParent}
+          sendSelectedElementTypeToParent={props.sendSelectedElementTypeToParent}  
+          elementName={urlParams.elementName as string} 
+          elementType={urlParams.elementType as string} />
       </TabPanel>
     </TabContext> 
   );

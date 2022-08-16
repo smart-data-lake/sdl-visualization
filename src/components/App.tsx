@@ -20,6 +20,7 @@ function App() {
   const [isLoading, setLoading] = useState(true);
   const [drawerWidth, setDrawerWidth] = useState(defaultDrawerWidth);
 
+
   const routerLocation = useLocation();
   const baseUrl = window.location.href
     .replace(new RegExp("/index.html$"), "")
@@ -106,13 +107,18 @@ function App() {
             path="/:elementType/:elementName"
             element={
               <DataDisplayView
-                data={data} />
+                data={data} 
+                sendSelectedElementToParent={setSelectedElement} 
+                sendSelectedElementTypeToParent={setSelectedElementType}
+                />
             } />
           <Route
             path="/globalOptions"
             element={
               <DataDisplayView
-                data={data} 
+                data={data}
+                sendSelectedElementToParent={setSelectedElement} 
+                sendSelectedElementTypeToParent={setSelectedElementType}
                 globalSelected={true}/>
             } />
 

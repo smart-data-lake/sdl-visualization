@@ -45,7 +45,11 @@ export default function NestedList(props: nestedListProps) {
   const [currentGlobal, setCurrentGlobal] = React.useState(allGlobal);
   const [currentConnections, setCurrentConnections] = React.useState(allConnections);
   const [currentSearch, setCurrentSearch] = React.useState('');
-  const [selectedElement, setSelectedElement] = React.useState('');
+  const [selectedElement, setSelectedElement] = React.useState(props.selectedElementToChild);
+
+  React.useEffect(()=>{
+    setSelectedElement(props.selectedElementToChild);
+  }, [props.selectedElementToChild]);
 
   const handleClickDataObjectsList = () => {
     setOpenDataObjectsList(!openDataObjectsList);

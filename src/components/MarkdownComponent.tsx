@@ -23,7 +23,6 @@ export default function MarkdownComponent(props: {filename: string, data:any}){
       </React.Fragment>
     ); 
   }
-  else{
   
     const filename = "/descriptionFiles/" + props.filename +".md"; //file must be in public/descriptionFiles folder
     const missingInputFile = "# Missing .md file \n"
@@ -46,8 +45,6 @@ export default function MarkdownComponent(props: {filename: string, data:any}){
       console.log(error);
       setInput(missingInputFile);
     });
-
-  }
 
   return(
     <React.Fragment>
