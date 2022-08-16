@@ -20,9 +20,95 @@ import { NumericLiteral } from 'typescript';
 
 
 
+interface KV{
+  key: string, 
+  value: string
+}
 
 function createRow(key: string, value: string) {
   return { key, value };
+}
+
+function getMetadataKV(jsonObject:any, elementName: string, elementType: string){
+  let hasMetadata = 
+    jsonObject[elementType] != undefined 
+    && jsonObject[elementType][elementName] != undefined
+    && jsonObject[elementType][elementName]['metadata'] != undefined;
+  
+  let kv: KV [] = [];
+
+  if (hasMetadata){
+    let list = Object.keys(jsonObject[elementType][elementName]['metadata']);
+    list.forEach((field) => {
+      const obj = {key: field, value: JSON.stringify(jsonObject[elementType][elementName]['metadata'][field])};
+      kv.push(obj);
+    });
+  }
+  return kv; //returns empty list if no metadata found
+}
+
+function getInputOutputIds(jsonObject: any, actionName: string): [string[], string[]]{
+  let inputs: string[] = [];
+  let outputs: string[] = [];
+
+  let action = jsonObject['actions'][actionName];
+  let hasManyInputs = action['inputIds'] != undefined; //we assume that each action has either inputId or InputIds (same for outputs)
+  let hasManyOutputs = action['outputIds'] != undefined;
+  
+  if (hasManyInputs){
+    let inputList = action['inputIds'] as string[];
+    inputList.forEach((item) => inputs.push(item));
+  } else inputs.push(action['inputId'] as string);
+
+  if (hasManyOutputs){
+    let outputList = action['outputIds'] as string[];
+    outputList.forEach((item) => outputs.push(item));
+  } else outputs.push(action['outputId'] as string);
+
+  return [inputs, outputs];
+}
+
+function getTransformers(jsonObject: any, actionName: string){
+  let action = jsonObject['actions'][actionName];
+  if(action['transformers']!= undefined){
+    return action['transformers']; //returns a list of transformer objects
+  }
+  return []; //returns empty list if there are no transformers in the configuration
+}
+
+function formatTransformers(transformerObjects: any[]): string{
+  let mdString = '## Transformers \n';
+  let trNumber = 1;
+  transformerObjects.forEach((tr) =>{
+    mdString = mdString.concat('\n', `### ${trNumber.toString()}. Transformer \n`);
+    trNumber += 1;
+    mdString = mdString.concat('\n |Property (key) | Value | \n |-----|-----|');
+    Object.keys(tr).forEach((key)=>{
+      let value = JSON.stringify(tr[key]).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
+      mdString = mdString.concat(`\n | ${key} | ${value} |`);
+    });
+  });
+  return mdString;
+}
+
+function formatMetadata(keyvalue: KV[]){
+  let mdString = '## Metadata \n';
+  keyvalue.forEach((kv) => {
+    mdString = mdString.concat('\n', `- **${kv.key}** : ${kv.value}`);
+  });
+  return mdString;
+}
+
+function formatInputsOutputs(inputs: string[], outputs: string[]){
+  let mdString = '## Inputs \n';
+  inputs.forEach((input) => {
+    mdString = mdString.concat('\n', `- [${input}](http://${window.location.host}/dataObjects/${input})`);
+  });
+  mdString = mdString.concat('\n', '\n', '## Outputs \n');
+  outputs.forEach((output) => {
+    mdString = mdString.concat('\n', `- [${output}](http://${window.location.host}/dataObjects/${output})`);
+  });
+  return mdString;
 }
 
 //elementType can be 'actions', 'dataObjects' or 'global'. Returns a list of "simple" rows. 
@@ -36,32 +122,6 @@ function createElementRows(jsonObject: any, elementName: string, elementType: st
 }
 
 
-/*
-//TODO
-function createRowComponents(jsonObject, elementName, elementType){
-  var keyList = Object.keys(jsonObject[elementType][elementName]);
-  return keyList.map(key => {
-    if (jsonObject[elementType][elementName]
-  });
-}
-*/
-
-
-
-/*
-1. For each element in the action/dataObject:
-  1.1. Check if it is a single row, a nested object or a nested list.
-    1.1.1 --> If it is a single row, append the row to the result (directly as JSX code)
-    1.1.2 --> If it's a nested element, append a collapsible table where each element in the collapsible table
-        recursively calls the first function. With objects, this should work as they are based on a KV concept. 
-    1.1.3 --> If it's a list, check if it's a list of single elements, a list of objects or a list of lists.
-            i. If it's a list of single elements, append a single row to the result with the name of the list and 
-              all the words as bullet points. 
-            ii. If it's a list of objects, append a collapsible table where each element in the collapsible table
-              recursively calls the first function.
-            iii. If it's a list of lists, append a collapsible table where each element (each list) in the collapsible table
-              recursively calls the first function.
-*/
 
 
 
@@ -79,14 +139,31 @@ interface row{
 export default function MetadataTable(props: detailsTableProps) {
 
 
-  const rows = createElementRows(props.data, props.elementName, props.elementType);
+  let rows = createElementRows(props.data, props.elementName, props.elementType);
 
 
 
-  let mdString = '|Property (key) | Value | \n |-----|-----|';
+  let mdString = '## Configuration table \n \n |Property (key) | Value | \n |-----|-----|';
   rows.forEach((row)=> {
-    row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '');
+    row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
     mdString = mdString.concat(`\n | ${row.key} | ${row.value} |`);});
+
+  let metadataKV = getMetadataKV(props.data, props.elementName, props.elementType);
+
+  if(metadataKV.length > 0){
+    mdString = formatMetadata(metadataKV).concat('\n',  '\n',  mdString);
+  }
+
+  if(props.elementType === 'actions'){
+    let tr = getTransformers(props.data, props.elementName);
+    if(tr.length>0){
+      mdString = formatTransformers(tr).concat('\n', '\n', mdString);
+    }
+    let inputsOutputs = getInputOutputIds(props.data, props.elementName);
+    mdString = formatInputsOutputs(inputsOutputs[0], inputsOutputs[1]).concat('\n', '\n', mdString);
+  }
+
+
 
 
   return (
