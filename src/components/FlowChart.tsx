@@ -62,7 +62,8 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
     //const action = edge as Action; //downcasting in order to access jsonObject
     const action = edge; //downcasting in order to access jsonObject
     result.push({
-      id: action.id + action.fromNode.id+action.toNode.id,
+      old_id: action.id, //what we use for linking
+      id: action.id + action.fromNode.id+action.toNode.id, //because it has to be unique
       source: action.fromNode.id,
       target: action.toNode.id,
       //animated: true, 
@@ -87,7 +88,7 @@ interface flowProps {
 
 type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of ReactFlow with an (optional) String attribute. 
 
-type flowEdgeWithString = Edge<any> & {jsonString?:string}
+type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 
 
 
@@ -107,6 +108,17 @@ function FlowChart(props: flowProps) {
     nodes_init = createReactFlowNodes(partialGraph);
     edges_init = createReactFlowEdges(partialGraph);
   }
+
+  else if(props.elementType==='actions'){
+    const partialGraphPair = doa.returnPartialGraphInputsFromEdge(props.elementName);
+    const partialNodes = partialGraphPair[0];
+    const partialEdges = partialGraphPair[1];
+    const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges);
+  
+    nodes_init = createReactFlowNodes(partialGraph);
+    edges_init = createReactFlowEdges(partialGraph);
+  }
+
   else{ //to be able to see the complete lineage when selecting actions
     nodes_init = createReactFlowNodes(doa);
     edges_init = createReactFlowEdges(doa);
@@ -176,7 +188,9 @@ function FlowChart(props: flowProps) {
     navigate(`/dataObjects/${node.id}`); //Link programmatically
   }
   function clickOnEdge(edge: flowEdgeWithString){
-    navigate(`/actions/${edge.id}`); //Link programmatically
+    props.sendSelectedElementToParent(edge.old_id as string);
+    props.sendSelectedElementTypeToParent('action');
+    navigate(`/actions/${edge.old_id}`); //Link programmatically
   }
 
   // container holding SVG needs manual height resizing to fill 100%

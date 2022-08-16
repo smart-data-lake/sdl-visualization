@@ -55,7 +55,7 @@ export default function DataDisplayView(props: displayProps) {
         </Tabs>
       </Box>
       <TabPanel value="description" className="content-panel">
-        <MarkdownComponent filename={urlParams.elementName as string} data={props.data} />;
+        <MarkdownComponent filename={urlParams.elementName as string} data={props.data} elementType={urlParams.elementType as string}/>;
       </TabPanel>
       <TabPanel value="configuration" className="content-panel">
         <MetadataTable data={props.data} elementName={urlParams.elementName as string} elementType={urlParams.elementType as string} />;

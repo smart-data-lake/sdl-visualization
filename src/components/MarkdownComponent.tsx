@@ -7,18 +7,24 @@ import { GlobalStyles } from '@mui/material';
 
 
 
-export default function MarkdownComponent(props: {filename: string, data:any}){
+export default function MarkdownComponent(props: {elementType: string, filename: string, data:any}){
 
   const [input, setInput] = React.useState('');
 
-  let hasMetadataDescription = props.data['dataObjects'][props.filename]['metadata'] != undefined && props.data['dataObjects'][props.filename]['metadata']['description'] != undefined;
+  let hasMetadataDescription = 
+    props.data[props.elementType] != undefined 
+    && props.data[props.elementType][props.filename] != undefined 
+    && props.data[props.elementType][props.filename]['metadata'] != undefined 
+    && props.data[props.elementType][props.filename]['metadata']['description'] != undefined;
+
+
 
 
   if (hasMetadataDescription){
-    let inputConfig = `# ${props.filename} \n` + String(props.data['dataObjects'][props.filename]['metadata']['description']);
+    let inputConfig = `# ${props.filename} \n` + String(props.data[props.elementType][props.filename]['metadata']['description']);
     return( //Redundant return as a check on objects' properties combined with setState() results in an endless rendering loop. 
       <React.Fragment>
-        <GlobalStyles styles={{ table: { width: '100% !important' } }} />
+        <GlobalStyles styles={{ table: { width: '100% !important' } }} /> 
         <ReactMarkdown className='markdown-body' children={inputConfig} remarkPlugins={[remarkGfm]} />
       </React.Fragment>
     ); 

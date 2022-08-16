@@ -78,7 +78,7 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
     }
 
     //Returns the nodes and edges of a partial graph based on a specific node (direct predecessors and succesors) as a pair
-    returnPartialGraphInputs(specificNodeId:id): [Node[], Edge[]]{
+    returnPartialGraphInputs(specificNodeId:id, colorNode:boolean = true): [Node[], Edge[]]{
         function predecessors(nodeId: id, graph: DAGraph){
             var nodes = new Set<Node>;
             var edges = new Set<Edge>;
@@ -111,12 +111,25 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
         }
 
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
-        specificNode.backgroundColor='#ffc0cb';
+        if(colorNode){specificNode.backgroundColor='#ffc0cb';}
         const nodes = setAsArray(union(predecessors(specificNodeId, this)[0] as Set<Node>, successors(specificNodeId, this)[0] as Set<Node>));//merge predeccessors and successors     
         nodes.push(specificNode as Node); //add the central/origin node itself
         const edges = setAsArray(union(predecessors(specificNodeId, this)[1] as Set<Edge>, successors(specificNodeId, this)[1] as Set<Edge>));   
 
         return [nodes, edges];
+    }
+
+    returnPartialGraphInputsFromEdge(specificEdgeId: id){
+        let edgesWithId = this.edges.filter(edge => edge.id === specificEdgeId);
+        let result: [Node[], Edge[]] = [[], []];
+        for (let i = 0 ; i < edgesWithId.length ; i++){
+            let [nodesNext, edgesNext] = this.returnPartialGraphInputs(edgesWithId[i].toNode.id, false);
+            //let a: Node[] = setAsArray(union(new Set(result[0]), new Set(nodesNext))) as Node[];
+            //let b: Edge[] = setAsArray(union(new Set(result[1]), new Set(edgesNext))) as Edge[];
+            //result = [a,b];
+            result = [setAsArray(union(new Set(result[0]), new Set(nodesNext))), setAsArray(union(new Set(result[1]), new Set(edgesNext)))]
+        }
+        return result;
     }
 
 
