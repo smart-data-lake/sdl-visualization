@@ -85,6 +85,13 @@ function formatTransformers(transformerObjects: any[]): string{
     mdString = mdString.concat('\n |Property (key) | Value | \n |-----|-----|');
     Object.keys(tr).forEach((key)=>{
       let value = JSON.stringify(tr[key]).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
+      if (key != 'code'){
+        value = value.replace(/"/g, '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
+      }
+      else{ //Remove only first and last double quote from code.
+        if (value.charAt(value.length -1 ) === '"'){value = value.substring(0, value.length - 2);}
+        if (value.charAt(0) === '"'){value = value.substring(1, value.length - 1);}
+      }
       mdString = mdString.concat(`\n | ${key} | ${value} |`);
     });
   });
@@ -94,7 +101,7 @@ function formatTransformers(transformerObjects: any[]): string{
 function formatMetadata(keyvalue: KV[]){
   let mdString = '## Metadata \n';
   keyvalue.forEach((kv) => {
-    mdString = mdString.concat('\n', `- **${kv.key}** : ${kv.value}`);
+    mdString = mdString.concat('\n', `- **${kv.key}** : ${kv.value.replaceAll('"', '')}`);
   });
   return mdString;
 }
@@ -146,6 +153,9 @@ export default function MetadataTable(props: detailsTableProps) {
   let mdString = '## Configuration table \n \n |Property (key) | Value | \n |-----|-----|';
   rows.forEach((row)=> {
     row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
+    if (row.key != 'code'){
+      row.value = row.value.replaceAll('"', '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
+    }
     mdString = mdString.concat(`\n | ${row.key} | ${row.value} |`);});
 
   let metadataKV = getMetadataKV(props.data, props.elementName, props.elementType);
