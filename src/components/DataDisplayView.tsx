@@ -11,19 +11,19 @@ import { useParams } from "react-router-dom";
 interface displayProps {
   data: object;
   globalSelected?: boolean; //true for the url /globalOptions
-  sendSelectedElementToParent: React.Dispatch<React.SetStateAction<string>>;
-  sendSelectedElementTypeToParent: React.Dispatch<React.SetStateAction<string>>;
 }
 
 
 export default function DataDisplayView(props: displayProps) {
 
-  let urlParams = useParams();
-
+  const {elementName, elementType} = useParams();
+  
   const [value, setValue] = React.useState('description');
 
+  // reset value on element change
+  React.useEffect(() => setValue('description'), [elementName, elementType]);
 
-  
+  // change selected tab
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
   };
@@ -51,22 +51,20 @@ export default function DataDisplayView(props: displayProps) {
         <Tabs value={value} onChange={handleChange} aria-label="element tabs">
           <Tab label="Description" value="description" sx={{height: "15px"}} />
           <Tab label="Configuration" value="configuration" sx={{height: "15px"}} />
-          <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />
+          {(elementType==="action" || elementType==="dataObjects") && <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />}
         </Tabs>
       </Box>
       <TabPanel value="description" className="content-panel">
-        <MarkdownComponent filename={urlParams.elementName as string} data={props.data} elementType={urlParams.elementType as string}/>;
+        <MarkdownComponent filename={elementName as string} data={props.data} elementType={elementType as string}/>;
       </TabPanel>
       <TabPanel value="configuration" className="content-panel">
-        <MetadataTable data={props.data} elementName={urlParams.elementName as string} elementType={urlParams.elementType as string} />;
+        <MetadataTable data={props.data} elementName={elementName as string} elementType={elementType as string} />;
       </TabPanel>
       <TabPanel value="lineage" className="content-panel">
         <FlowChart 
           data={props.data}
-          sendSelectedElementToParent={props.sendSelectedElementToParent}
-          sendSelectedElementTypeToParent={props.sendSelectedElementTypeToParent}  
-          elementName={urlParams.elementName as string} 
-          elementType={urlParams.elementType as string} />
+          elementName={elementName as string} 
+          elementType={elementType as string} />
       </TabPanel>
     </TabContext> 
   );

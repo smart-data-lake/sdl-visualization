@@ -67,12 +67,13 @@ function parseJsonList(text: any): [string[], string[]] {
         Array.from(fileList.children).forEach(child => {
             const links = child.getElementsByTagName("a")
             if (links.length > 0) {
-                const entry = links[0].getAttribute("title");
-                if (entry) {
-                    if (entry.endsWith("/") || Array.from(links[0].classList).some(c => c.includes("directory") && entry !== "..")) {
-                        availableDirs.push(entry);
-                    } else if (entry.endsWith(".conf")) {
-                        availableFiles.push(entry);
+                const link = links[0];
+                const title = link.getAttribute("title");
+                if (title) {
+                    if ((title.endsWith("/") || Array.from(link.classList).some(c => c.includes("directory"))) && title !== ".." && link.textContent !== "..") {
+                        availableDirs.push(title);
+                    } else if (title.endsWith(".conf")) {
+                        availableFiles.push(title);
                     }
                 }
             }

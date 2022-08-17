@@ -15,17 +15,12 @@ import LanIcon from '@mui/icons-material/Lan';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import TextField from '@mui/material/TextField';
 import './ComponentsStyles.css';
-import { connect } from 'http2';
-import { Link } from "react-router-dom";
+import { Link, useMatch } from "react-router-dom";
 import { Box } from '@mui/material';
 
 
 interface nestedListProps{
   data: any;
-  sendSelectedElementToParent: React.Dispatch<React.SetStateAction<string>>;
-  sendSelectedElementTypeToParent: React.Dispatch<React.SetStateAction<string>>;
-  selectedElementToChild?: string;
-  selectedElementTypeToChild?: string;
 }
 
 //props.data should be the JsonObject (already parsed from HOCON)
@@ -33,23 +28,16 @@ export default function NestedList(props: nestedListProps) {
 
   const allDataObjects = Object.keys(props.data.dataObjects).sort();
   const allActions = Object.keys(props.data.actions).sort();
-  const allGlobal = Object.keys(props.data.global).sort();
   const allConnections = Object.keys(props.data.connections);
 
   const [openDataObjectsList, setOpenDataObjectsList] = React.useState(false);
   const [openActionsList, setOpenActionsList] = React.useState(false);
   const [openConnectionsList, setOpenConnectionsList] = React.useState(false);
-  const [openGlobalList, setOpenGlobalList] = React.useState(false);
   const [currentDataObjects, setCurrentDataObjects] = React.useState(allDataObjects);
   const [currentActions, setCurrentActions] = React.useState(allActions);
-  const [currentGlobal, setCurrentGlobal] = React.useState(allGlobal);
   const [currentConnections, setCurrentConnections] = React.useState(allConnections);
   const [currentSearch, setCurrentSearch] = React.useState('');
-  const [selectedElement, setSelectedElement] = React.useState(props.selectedElementToChild);
-
-  React.useEffect(()=>{
-    setSelectedElement(props.selectedElementToChild);
-  }, [props.selectedElementToChild]);
+  const urlParams = useMatch('/:elementType/:elementName');
 
   const handleClickDataObjectsList = () => {
     setOpenDataObjectsList(!openDataObjectsList);
@@ -67,35 +55,26 @@ export default function NestedList(props: nestedListProps) {
     if (!openActionsList && !openDataObjectsList && !openConnectionsList) {
       setOpenActionsList(true);
       setOpenDataObjectsList(true);
-      setOpenGlobalList(true);
       setOpenConnectionsList(true);
     }
     setCurrentSearch(text);
     const searchText = text.toLowerCase()
     const cdo = allDataObjects.filter(a => a.toLowerCase().includes(searchText));
     const ca = allActions.filter(a => a.toLowerCase().includes(searchText));
-    const cg = allGlobal.filter(a => a.toLowerCase().includes(searchText));
     const cc = allConnections.filter(a => a.toLowerCase().includes(searchText));
     setCurrentDataObjects(cdo);
     setCurrentActions(ca);
-    setCurrentGlobal(cg);
     setCurrentConnections(cc);
   }
 
-  const handleClickOnElement = (element: string, elementType: string) => {
-    props.sendSelectedElementToParent(element);
-    props.sendSelectedElementTypeToParent(elementType);
-    setSelectedElement(element);
-  };
-
-  function returnBoldString(dataObjectName: string){
-    if (dataObjectName===selectedElement){return 'bolder';}
-    else {return 'normal'}
+  function returnBoldString(elementType:string, elementName: string){
+    if (urlParams?.params.elementType===elementType && urlParams?.params.elementName===elementName) return 'bolder';
+    else return 'normal';
   }
 
   const dataObjectsCompleteList = currentDataObjects.map((dataObject) => (
     <Link to={`/dataObjects/${dataObject}`}>
-      <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(dataObject, 'dataObjects')}>
+      <ListItemButton sx={{ pl: 4 }}>
         <ListItemIcon>
           <TableViewTwoTone />
         </ListItemIcon>
@@ -103,7 +82,7 @@ export default function NestedList(props: nestedListProps) {
           primaryTypographyProps={{
             lineHeight: '16px',
             noWrap: true,
-            fontWeight: returnBoldString(dataObject),
+            fontWeight: returnBoldString("dataObjects", dataObject),
           }} />
       </ListItemButton>
     </Link>
@@ -111,7 +90,7 @@ export default function NestedList(props: nestedListProps) {
 
   const actionsCompleteList = currentActions.map((action) => (
     <Link to={`/actions/${action}`}>
-      <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(action, 'actions')}>
+      <ListItemButton sx={{ pl: 4 }}>
         <ListItemIcon>
           <RocketLaunchOutlined />
         </ListItemIcon>
@@ -119,7 +98,7 @@ export default function NestedList(props: nestedListProps) {
           primaryTypographyProps={{
             lineHeight: '16px',
             noWrap: true,
-            fontWeight: returnBoldString(action),
+            fontWeight: returnBoldString("actions", action),
           }} />
       </ListItemButton>
     </Link>
@@ -127,7 +106,7 @@ export default function NestedList(props: nestedListProps) {
 
   const connectionsCompleteList = currentConnections.map((connection) => (
     <Link to={`/connections/${connection}`}>
-      <ListItemButton sx={{ pl: 4 }} onClick={() => handleClickOnElement(connection, 'connections')}>
+      <ListItemButton sx={{ pl: 4 }}>
         <ListItemIcon>
           <LanOutlinedIcon />
         </ListItemIcon>
@@ -135,7 +114,7 @@ export default function NestedList(props: nestedListProps) {
           primaryTypographyProps={{
             lineHeight: '16px',
             noWrap: true,
-            fontWeight: returnBoldString(connection),
+            fontWeight: returnBoldString("connections", connection),
           }} />
       </ListItemButton>
     </Link>
@@ -201,11 +180,11 @@ export default function NestedList(props: nestedListProps) {
           </List>
         </Collapse>
         <Link to='/globalOptions'>
-          <ListItemButton onClick={() => handleClickOnElement('global', 'global')}>
+          <ListItemButton>
             <ListItemIcon>
               <Public />
             </ListItemIcon>
-            <ListItemText primary="Global Options" primaryTypographyProps={{ noWrap: true, fontWeight: returnBoldString('global')}}/>
+            <ListItemText primary="Global Options" primaryTypographyProps={{ noWrap: true}}/>
           </ListItemButton>
         </Link>
       </List>

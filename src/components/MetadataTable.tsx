@@ -102,11 +102,11 @@ function formatMetadata(keyvalue: KV[]){
 function formatInputsOutputs(inputs: string[], outputs: string[]){
   let mdString = '## Inputs \n';
   inputs.forEach((input) => {
-    mdString = mdString.concat('\n', `- [${input}](http://${window.location.host}/dataObjects/${input})`);
+    mdString = mdString.concat('\n', `- [${input}](http://${window.location.host}/#/dataObjects/${input})`);
   });
   mdString = mdString.concat('\n', '\n', '## Outputs \n');
   outputs.forEach((output) => {
-    mdString = mdString.concat('\n', `- [${output}](http://${window.location.host}/dataObjects/${output})`);
+    mdString = mdString.concat('\n', `- [${output}](http://${window.location.host}/#/dataObjects/${output})`);
   });
   return mdString;
 }

@@ -82,8 +82,6 @@ interface flowProps {
   data: object,
   elementName: string,
   elementType: string,
-  sendSelectedElementToParent: Dispatch<React.SetStateAction<string>>;
-  sendSelectedElementTypeToParent: Dispatch<React.SetStateAction<string>>; 
 }
 
 type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of ReactFlow with an (optional) String attribute. 
@@ -183,13 +181,9 @@ function FlowChart(props: flowProps) {
   const navigate = useNavigate();   
   function clickOnNode(node: flowNodeWithString){
     //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
-    props.sendSelectedElementToParent(node.id);
-    props.sendSelectedElementTypeToParent('dataObject');
     navigate(`/dataObjects/${node.id}`); //Link programmatically
   }
   function clickOnEdge(edge: flowEdgeWithString){
-    props.sendSelectedElementToParent(edge.old_id as string);
-    props.sendSelectedElementTypeToParent('action');
     navigate(`/actions/${edge.old_id}`); //Link programmatically
   }
 

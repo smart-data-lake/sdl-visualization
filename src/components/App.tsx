@@ -7,7 +7,7 @@ import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
 import Header from './Header';
 import { Routes, Route, useLocation } from "react-router-dom";
 
-export const defaultDrawerWidth = 240;
+export const defaultDrawerWidth = 300;
 const minDrawerWidth = 50;
 const maxDrawerWidth = 600;
 
@@ -15,8 +15,6 @@ function App() {
 
   // state
   const [data, setData] = React.useState<Object>({dataObjects: {}, actions: {}, connections: {}, global: {}});
-  const [selectedElement, setSelectedElement] = React.useState("");
-  const [selectedElementType, setSelectedElementType] = React.useState("");
   const [isLoading, setLoading] = useState(true);
   const [drawerWidth, setDrawerWidth] = useState(defaultDrawerWidth);
 
@@ -24,7 +22,9 @@ function App() {
   const routerLocation = useLocation();
   const baseUrl = window.location.href
     .replace(new RegExp("/index.html$"), "")
-    .replace(new RegExp(routerLocation.pathname+"$"), "");
+    .replace(new RegExp(routerLocation.pathname+"$"), "")
+    .replace(new RegExp("#$"), "")
+    .replace(new RegExp("/$"), "");
   const configUrl = baseUrl+"/config/";
 
 
@@ -35,13 +35,12 @@ function App() {
     listConfigFiles(configUrl, "")
     .catch(err => {
       // backup - read list from static index.json
-      console.log("Could not list files in URL "+configUrl+", will try reading index.json. Error: "+err);
+      console.log("Could not list files in URL "+configUrl+" ("+err+"), will try reading index.json.");
       return readConfigIndexFile(configUrl);
     })
     .then(files => {
       console.log("config files to read", files);
       const includeText = files.map(f => `include "${configUrl}${f}"`).join("\n");
-      console.log("include text", includeText);
       parseTextStrict(includeText)
       .then(newData => {
         setData(newData);
@@ -91,12 +90,7 @@ function App() {
               position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 100,
           }}/>     
         <Box sx={{ overflow: 'auto' }}>
-          <NestedList 
-            data={data} 
-            selectedElementToChild={selectedElement}
-            sendSelectedElementToParent={setSelectedElement} 
-            selectedElementTypeToChild={selectedElementType}
-            sendSelectedElementTypeToParent={setSelectedElementType}/>
+          <NestedList data={data} />
         </Box>
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3, "padding-top": "7px" }}>
@@ -106,22 +100,13 @@ function App() {
           <Route
             path="/:elementType/:elementName"
             element={
-              <DataDisplayView
-                data={data} 
-                sendSelectedElementToParent={setSelectedElement} 
-                sendSelectedElementTypeToParent={setSelectedElementType}
-                />
+              <DataDisplayView data={data} />
             } />
           <Route
             path="/globalOptions"
             element={
-              <DataDisplayView
-                data={data}
-                sendSelectedElementToParent={setSelectedElement} 
-                sendSelectedElementTypeToParent={setSelectedElementType}
-                globalSelected={true}/>
+              <DataDisplayView data={data} globalSelected={true}/>
             } />
-
         </Routes>
       </Box>
     </Box>
