@@ -51,7 +51,7 @@ export default function DataDisplayView(props: displayProps) {
         <Tabs value={value} onChange={handleChange} aria-label="element tabs">
           <Tab label="Description" value="description" sx={{height: "15px"}} />
           <Tab label="Configuration" value="configuration" sx={{height: "15px"}} />
-          {(elementType==="action" || elementType==="dataObjects") && <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />}
+          {(elementType==="actions" || elementType==="dataObjects") && <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />}
         </Tabs>
       </Box>
       <TabPanel value="description" className="content-panel">
