@@ -32,6 +32,7 @@ class Node{
     public height: number;
     public level: number;
     public backgroundColor: string;
+    public isCenterNode: boolean;
 
     constructor(id: id, level: number = -1){
         this.id = id;
@@ -40,6 +41,7 @@ class Node{
         this.width = 172;
         this.height = 36;
         this.backgroundColor = '#FFFFFF';
+        this.isCenterNode = false;
     }
 } 
 
@@ -111,6 +113,7 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
         }
 
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
+        specificNode.isCenterNode = true;
         if(colorNode){specificNode.backgroundColor='#ffc0cb';}
         const nodes = setAsArray(union(predecessors(specificNodeId, this)[0] as Set<Node>, successors(specificNodeId, this)[0] as Set<Node>));//merge predeccessors and successors     
         nodes.push(specificNode as Node); //add the central/origin node itself
@@ -265,6 +268,23 @@ function computeNodePositions(nodes: Node[], edges: Edge[]){
         };
         return node;
     });
+
+    //If there is one Central Node, then shift its position to [0, 0] and shift all nodes as well
+    let centralNode = nodes.find((node) => node.isCenterNode);
+    if (centralNode != undefined) {
+        let shiftX = centralNode.position.x;
+        let shiftY = centralNode.position.y;
+        let shiftedNodes = nodes.filter((node) => !node.isCenterNode); //See if deep copy needed with strucuturedClone() !!
+        shiftedNodes.forEach((node) => {
+            node.position.x = node.position.x - shiftX;
+            node.position.y = node.position.y - shiftY;
+        });
+        centralNode.position.x = 0; //See if deep copy needed with strucuturedClone(), as we're altering our nodes.
+        centralNode.position.y = 0;
+        shiftedNodes.push(centralNode);
+        nodes = shiftedNodes;
+    } 
+
     return nodes;
 }
 

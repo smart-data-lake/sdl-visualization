@@ -7,6 +7,7 @@ import TabContext from '@mui/lab/TabContext';
 import MetadataTable from "./MetadataTable";
 import MarkdownComponent from "./MarkdownComponent";
 import { useParams } from "react-router-dom";
+import { ReactFlowProvider } from "react-flow-renderer";
 
 interface displayProps {
   data: object;
@@ -61,10 +62,12 @@ export default function DataDisplayView(props: displayProps) {
         <MetadataTable data={props.data} elementName={elementName as string} elementType={elementType as string} />;
       </TabPanel>
       <TabPanel value="lineage" className="content-panel">
+      <ReactFlowProvider>
         <FlowChart 
           data={props.data}
           elementName={elementName as string} 
           elementType={elementType as string} />
+      </ReactFlowProvider>
       </TabPanel>
     </TabContext> 
   );

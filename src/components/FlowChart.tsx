@@ -1,9 +1,10 @@
-import { Box } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import { useState, useCallback, useEffect, useRef, useLayoutEffect, Dispatch} from 'react';
-import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType } from 'react-flow-renderer';
+import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, ReactFlowProvider, useReactFlow } from 'react-flow-renderer';
 import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
 import { useNavigate } from "react-router-dom";
 import './ComponentsStyles.css';
+import { convertCompilerOptionsFromJson } from 'typescript';
 
 function createReactFlowNodes(dataObjectsAndActions: DAGraph){
   var result: any[] = [];
@@ -15,6 +16,7 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph){
       position: {x: dataObject.position.x, y: dataObject.position.y},
       data: {label: dataObject.id},
       style: {background: dataObject.backgroundColor},
+      isCenterNode: dataObject.isCenterNode,
       //jsonString: JSON.stringify(dataObject.jsonObject, null, '\t'), //Do we need this??
     })
   });
@@ -149,6 +151,8 @@ function FlowChart(props: flowProps) {
     setEdges((eds) => eds.map(hide(hidden)));
   }, [hidden]);
 
+
+  //DEPRECATED
   function renderPartialGraph(nodeId: string){
 
     const partialGraphPair = doa.returnPartialGraphInputs(nodeId);
@@ -188,8 +192,12 @@ function FlowChart(props: flowProps) {
   }
 
   // container holding SVG needs manual height resizing to fill 100%
-  const [contentHeight, setContentHeight] = useState(100);
   const chartBox = useRef<HTMLDivElement>();
+  const [contentHeight, setContentHeight] = useState(100);
+
+
+  const reactFlow = useReactFlow();
+
   function handleResize() {
     if (chartBox.current) {
       const height = window.innerHeight - chartBox.current.offsetTop - 25; // 25px bottom margin...
@@ -197,15 +205,25 @@ function FlowChart(props: flowProps) {
       setContentHeight(height);
     }
   }
-  useEffect(() => window.addEventListener('resize', handleResize), []);
-  useLayoutEffect(() => handleResize(), []);
+
+//Asynchronously changes the centering of the lineage
+  function init() {
+    handleResize();
+    setTimeout(() => {
+      reactFlow.setCenter(0, 0, {zoom: 1});
+    }, 1);
+    window.addEventListener('resize', () => handleResize());
+  }
+
+
 
   return (
     <Box className='data-flow' sx={{height: contentHeight}} ref={chartBox}>
       <ReactFlow 
         nodes={nodes}
-        edges={edges} 
-        fitView 
+        edges={edges}
+        onInit={init}
+        defaultPosition={[0,0]} 
         onNodeClick={(event, node) => clickOnNode(node)}
         onEdgeClick={(event, edge) => clickOnEdge(edge)}
         onNodesChange={onNodesChange}
