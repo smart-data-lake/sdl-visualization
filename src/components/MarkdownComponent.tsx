@@ -12,7 +12,7 @@ export default function MarkdownComponent(props: {elementType: string, filename:
   const [input, setInput] = React.useState('');
 
   React.useEffect(() => {
-    const filename = "/descriptionFiles/" + props.filename +".md"; //file must be in public/descriptionFiles folder
+    const filename = "/description/" + props.elementType + "/" + props.filename +".md"; //file must be in public/description/elementType folder
     const missingInputFile = "# Missing .md file \n"
       + "Please provide a Markdown file in the public folder of the project and use the [Commonmark Standard](https://commonmark.org/) \n \n"
       + "The file should be named as <dataObjectId>.md or <actionId>.md.";
