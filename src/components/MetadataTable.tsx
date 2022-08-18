@@ -85,6 +85,33 @@ function getTransformers(jsonObject: any, actionName: string){
   return []; //returns empty list if there are no transformers in the configuration
 }
 
+function getExpectations(jsonObject: any, elementName: string, elementType: string){
+  let element = jsonObject[elementType][elementName];
+  return element['expectations'] !== undefined ? element['expectations'] : [] //if existent, returns a list of expectation objects (empty instead)
+}
+
+function formatExpectations(expectationObjects: any[]): string{
+  let mdString = '## Expectations \n';
+  let exNumber = 1;
+  expectationObjects.forEach((ex) =>{
+    mdString = mdString.concat('\n', `### ${exNumber.toString()}. Expectation \n`);
+    exNumber += 1;
+    //mdString = mdString.concat('\n |Property (key) | Value | \n |-----|-----|');
+    Object.keys(ex).forEach((key)=>{
+      let value = JSON.stringify(ex[key]).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
+      if (key != 'code'){
+        value = value.replace(/"/g, '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
+      }
+      else{ //Remove only first and last double quote from code.
+        if (value.charAt(value.length -1 ) === '"'){value = value.substring(0, value.length - 2);}
+        if (value.charAt(0) === '"'){value = value.substring(1, value.length - 1);}
+      }
+      mdString = mdString.concat(`\n - **${key}**:  ${value} `);
+    });
+  });
+  return mdString;
+}
+
 function formatTransformers(transformerObjects: any[]): string{
   let mdString = '## Transformers \n';
   let trNumber = 1;
@@ -106,6 +133,7 @@ function formatTransformers(transformerObjects: any[]): string{
   });
   return mdString;
 }
+
 
 function formatType(type: any, elementType: string){
   return `## ${elementType.slice(0, -1)} type \n \n ${JSON.stringify(type).replaceAll('"', '')} \n`; //"dataObjects" becomes "dataObject"
@@ -175,6 +203,13 @@ export default function MetadataTable(props: detailsTableProps) {
   if (metadataKV .length > 0){
     createdTables.push('metadata');
     mdString = mdString.concat('\n', '\n', formatMetadata(metadataKV));
+  }
+
+  let expectations = getExpectations(props.data, props.elementName, props.elementType);
+
+  if (expectations.length > 0){
+    createdTables.push('expectations');
+    mdString = mdString.concat('\n', '\n', formatExpectations(expectations));
   }
 
   if(props.elementType === 'actions'){
