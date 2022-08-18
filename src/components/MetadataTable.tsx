@@ -29,6 +29,15 @@ function createRow(key: string, value: string) {
   return { key, value };
 }
 
+function getType(jsonObject: any, elementName: string, elementType: string){
+  let hasType = 
+  jsonObject[elementType] != undefined 
+  && jsonObject[elementType][elementName] != undefined
+  && jsonObject[elementType][elementName]['type'] != undefined;
+
+  return hasType ? jsonObject[elementType][elementName]['type'] : undefined;
+}
+
 function getMetadataKV(jsonObject:any, elementName: string, elementType: string){
   let hasMetadata = 
     jsonObject[elementType] != undefined 
@@ -98,6 +107,10 @@ function formatTransformers(transformerObjects: any[]): string{
   return mdString;
 }
 
+function formatType(type: any, elementType: string){
+  return `## ${elementType.slice(0, -1)} type \n \n ${JSON.stringify(type).replaceAll('"', '')} \n`; //"dataObjects" becomes "dataObject"
+}
+
 function formatMetadata(keyvalue: KV[]){
   let mdString = '## Metadata \n';
   keyvalue.forEach((kv) => {
@@ -147,30 +160,47 @@ export default function MetadataTable(props: detailsTableProps) {
 
 
   let rows = createElementRows(props.data, props.elementName, props.elementType);
+  let createdTables: string[] = [];
 
-
-
-  let mdString = '## Configuration table \n \n |Property (key) | Value | \n |-----|-----|';
-  rows.forEach((row)=> {
-    row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
-    if (row.key != 'code'){
-      row.value = row.value.replaceAll('"', '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
-    }
-    mdString = mdString.concat(`\n | ${row.key} | ${row.value} |`);});
+  let mdString = '';
+  let type = getType(props.data, props.elementName, props.elementType);
+  
+  if(type != undefined){
+    createdTables.push('type');
+    mdString = mdString.concat('\n', '\n', formatType(type, props.elementType));
+  }
 
   let metadataKV = getMetadataKV(props.data, props.elementName, props.elementType);
 
-  if(metadataKV.length > 0){
-    mdString = formatMetadata(metadataKV).concat('\n',  '\n',  mdString);
+  if (metadataKV .length > 0){
+    createdTables.push('metadata');
+    mdString = mdString.concat('\n', '\n', formatMetadata(metadataKV));
   }
 
   if(props.elementType === 'actions'){
     let tr = getTransformers(props.data, props.elementName);
     if(tr.length>0){
-      mdString = formatTransformers(tr).concat('\n', '\n', mdString);
+      createdTables.push('transformers');
+      mdString = mdString.concat('\n', '\n', formatTransformers(tr));
     }
+    createdTables.push('inputId', 'inputIds', 'outputId', 'outputIds');
     let inputsOutputs = getInputOutputIds(props.data, props.elementName);
-    mdString = formatInputsOutputs(inputsOutputs[0], inputsOutputs[1]).concat('\n', '\n', mdString);
+    mdString = mdString.concat('\n', '\n', formatInputsOutputs(inputsOutputs[0], inputsOutputs[1]));
+  }
+
+  
+  if (rows.some((row) => !createdTables.includes(row.key))){ //Check if there are any additional keys
+    let additionalConfigHeader = createdTables.length > 0 ? ' \n ## Addtional configuration attributes' : '## Configuration attributes';
+    mdString = mdString.concat(`${additionalConfigHeader} \n \n |Property (key) | Value | \n |-----|-----|`);
+    rows.forEach((row)=> {
+      row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
+      if (row.key != 'code'){
+        row.value = row.value.replaceAll('"', '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
+      }
+      if (!createdTables.includes(row.key)){
+        mdString = mdString.concat(`\n | ${row.key} | ${row.value} |`);
+      }
+    });
   }
 
 
