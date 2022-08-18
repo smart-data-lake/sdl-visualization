@@ -5,6 +5,10 @@ import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsA
 import { useNavigate } from "react-router-dom";
 import './ComponentsStyles.css';
 import { convertCompilerOptionsFromJson } from 'typescript';
+import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
+import { useParams } from 'react-router-dom';
+
+
 
 function createReactFlowNodes(dataObjectsAndActions: DAGraph){
   var result: any[] = [];
@@ -131,7 +135,7 @@ function FlowChart(props: flowProps) {
 
   const [nodes, setNodes] = useState(nodes_init);
   const [edges, setEdges] = useState(edges_init);
-  let [hidden, setHidden] = useState(false);
+  let [hidden, setHidden] = useState(useParams().elementType === 'dataObjects' ? true : false);
 
 
 
@@ -233,19 +237,8 @@ function FlowChart(props: flowProps) {
         <Background />
         <MiniMap />
         <Controls />
-        <div style={{ position: 'absolute', left: 10, top: 10, zIndex: 4 }}>
-          <div>
-            <label htmlFor="ishidden" className="hide_edges_checkbox_text">
-              Hide Action Labels
-              <input
-                id="ishidden"
-                type="checkbox"
-                checked={hidden}
-                onChange={(event) => setHidden(event.target.checked)
-                }
-              />
-            </label>
-          </div>
+        <div style={{ position: 'absolute', left: 17, bottom: 125, zIndex: 4, cursor: 'pointer' }}>
+            <RocketLaunchOutlined onClick={() => setHidden(!hidden)} color={hidden ? 'inherit' : 'primary'}/>
         </div>
       </ReactFlow>
     </Box>
