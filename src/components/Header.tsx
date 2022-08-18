@@ -1,4 +1,4 @@
-import { NoBackpackSharp, RocketLaunchOutlined, TableViewTwoTone } from '@mui/icons-material';
+import { RocketLaunchOutlined, TableViewTwoTone } from '@mui/icons-material';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import {AppBar, Toolbar, IconButton, Typography, Icon, Box} from '@mui/material';
 import { useMatch } from 'react-router-dom';
@@ -10,7 +10,7 @@ export default function Header() {
   function typeIcon() {
     if (urlParams?.params.elementType === "dataObjects") return <Icon><TableViewTwoTone /></Icon>;
     if (urlParams?.params.elementType === "actions") return <Icon><RocketLaunchOutlined /></Icon>;
-    if (urlParams?.params.elementType === "actions") return <Icon><LanOutlinedIcon /></Icon>;
+    if (urlParams?.params.elementType === "connections") return <Icon><LanOutlinedIcon /></Icon>;
   }
 
   function getElementDesc() {
