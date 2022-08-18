@@ -15,7 +15,7 @@ function formatDataObjectLink(textLine: string){
     textLine.split('@dataObject').forEach((substring, index) => {
       if (index != 0 ){
         let spacesArr = substring.split(' ');
-        spacesArr[1] = `[${spacesArr[1]}](http://${window.location.host}/dataObjects/${spacesArr[1]})`; //index has to be 1 because the first index will contain empty string
+        spacesArr[1] = `[${spacesArr[1]}](http://${window.location.host}/#/dataObjects/${spacesArr[1]})`; //index has to be 1 because the first index will contain empty string
         spacesArr.forEach((word) => result = result.concat(word, ' '));
       }
       else {result = result.concat(substring, ' ');}

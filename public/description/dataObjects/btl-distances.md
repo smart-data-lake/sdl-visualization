@@ -5,4 +5,4 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 @column `mock_column2` This is a column description
 @column `mock_column3` This is a column description
 @column `mock_column4` This is a column description
-@column `mock_column5` This is a column description [LINK](http://localhost:3000/dataObjects/stg-airports)
+@column `mock_column5` This is a column description
