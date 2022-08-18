@@ -46,10 +46,18 @@ class Node{
 } 
 
 class Edge{
-    constructor(public fromNode: Node, public toNode: Node, public id: id){
+
+    public fromNode: Node;
+    public toNode: Node;
+    public id: id;
+    public isCentral: boolean;
+
+    constructor(fromNode: Node, toNode: Node, id: id){
         this.fromNode = fromNode;
         this.toNode = toNode;
         this.id = id; //Ids are not unique identifiers, since we can have the same Edge/Action connecting several Nodes/DataObjects.
+        this.isCentral = false;
+
     }
 }
 
@@ -132,6 +140,10 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
             //result = [a,b];
             result = [setAsArray(union(new Set(result[0]), new Set(nodesNext))), setAsArray(union(new Set(result[1]), new Set(edgesNext)))]
         }
+        const specificEdges: Edge[] = this.edges.filter(edge => edge.id===specificEdgeId);
+        specificEdges.forEach((edge) => {
+            edge.isCentral = true;
+        });
         return result;
     }
 

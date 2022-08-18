@@ -76,6 +76,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
       label: action.id,
       label_copy: action.id,
       labelBgPadding: [8, 4],
+      labelBgStyle: { fill: action.isCentral ? '#ffc0cb' : '#ffffff', color: '#FFF', fillOpacity: 0.7 },
       //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
       style: { stroke: 'red' },
     });
