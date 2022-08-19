@@ -28,6 +28,9 @@ eine Enschätzung der Güte,eine mögliche Quellreferenz und die Angabe ob es Er
 @column `adhaes.amp_nas` DEPRECATED
 @column `adhaes.frollier_hz` DEPRECATED
 @column `adhaes.quellvermerke` DEPRECATED
+@endColumn
+
+This is a test for the endColumn annotation.
 	
 ## Stammdaten zm Gesamtfahrzeug auf Achsebene 
 @column `axs.[]` 

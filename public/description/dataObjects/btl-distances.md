@@ -1,8 +1,13 @@
-# Mock title 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+# Airplanes table
 
-@column `mock_column1` This is a column description
-@column `mock_column2` This is a column description
-@column `mock_column3` This is a column description
-@column `mock_column4` This is a column description
-@column `mock_column5` This is a column description
+This table describes the table used for airplane identification.
+
+
+
+@column `airplane_id`  Describes the id of a plane
+
+@column `airplane_name` Describes the name of the plane
+
+@endColumn
+
+The table should not be used for other purposes.

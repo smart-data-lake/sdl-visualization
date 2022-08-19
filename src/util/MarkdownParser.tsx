@@ -44,7 +44,10 @@ export default function parseCustomMarkdown(text: string){
           let lineArr = line.split('\`');
           currString = currString.concat('\n', '|', lineArr[1], '|', lineArr[2]);
       }
-      else if (line.startsWith('#')){
+      else if (line.startsWith('#') || line.startsWith('@endColumn')){
+        if (line.startsWith('@endColumn')){
+          line = line.replace('@endColumn', '');
+        }
         if (tableParsingActive){
           currString = currString.concat('|'); //close last row of table
           tableParsingActive = false;
