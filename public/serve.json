@@ -1,6 +1,6 @@
 {
-  "directoryListing": {
+  "directoryListing": [
     "config",
     "config/**"
-  }
+  ]
 }
