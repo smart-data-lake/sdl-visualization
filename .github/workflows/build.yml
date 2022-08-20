@@ -36,7 +36,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: sdl-vizualizer-${{ steps.package-version.outputs.current-version}}${{ github.base_ref != 'master' && format('-{branch}', github.base_ref) || '' }}
+        name: sdl-vizualizer-${{ steps.package-version.outputs.current-version}}${{ github.base_ref != 'master' && format('-{0}', github.base_ref) || '' }}
         path: |
           build/*/.js
           build/*/.css
