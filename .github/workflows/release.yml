@@ -1,0 +1,52 @@
+name: Build
+
+on: 
+  pull_request:
+    branches:
+      - 'master'
+    types: [closed]
+
+jobs:
+  build-and-upload-artifact:
+    if: github.event.pull_request.merged == true
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Git Checkout
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ github.base_ref }}
+        fetch-depth: 0
+        token: ${{ secrets.PAT_ACTIONS }}
+
+    - name: Setup node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16
+
+    - name: get-npm-version
+      uses: martinbeentjes/npm-get-version-action@main
+
+    - name: yarn build
+      run: yarn build
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: sdl-vizualizer-${{ steps.package-version.outputs.current-version}}${{ github.base_ref != 'master') && format('-{branch}', github.base_ref) || '' }}
+        path: |
+          build/*/.js
+          build/*/.css
+          build/index.html
+          build/manifest.json
+          build/sdl_logo192.png
+
+    - name:  'If on master branch, bump version on develop'
+      if: ${{ github.base_ref == 'master') }}
+      uses:  'phips28/gh-action-bump-version@v9.0.27'
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT_ACTIONS }}
+      with:
+        target-branch: 'develop'
