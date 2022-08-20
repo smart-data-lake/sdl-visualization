@@ -35,7 +35,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: sdl-vizualizer-${{ steps.package-version.outputs.current-version}}${{ github.ref != 'master' && format('-{0}', github.ref) || '' }}
+        name: sdl-vizualizer-${{ steps.package-version.outputs.current-version}}${{ github.ref_name != 'master' && format('-{0}', github.ref_name) || '' }}
         path: |
           build/*/.js
           build/*/.css
@@ -44,7 +44,7 @@ jobs:
           build/sdl_logo192.png
 
     - name:  'If on master branch, bump version on develop'
-      if: ${{ github.ref == 'master' }}
+      if: ${{ github.ref_name == 'master' }}
       uses:  'phips28/gh-action-bump-version@v9.0.27'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
