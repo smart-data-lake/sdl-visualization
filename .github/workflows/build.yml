@@ -40,13 +40,8 @@ jobs:
       with:
         name: ${{ env.ARTIFACT_NAME }}
         path: |
-<<<<<<< HEAD
           build/**/*.js
           build/**/*.css
-=======
-          build/*/*.js
-          build/*/*.css
->>>>>>> 8a5d4a7 (fix creating asset)
           build/index.html
           build/manifest.json
           build/sdl_logo192.png
