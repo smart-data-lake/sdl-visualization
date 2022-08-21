@@ -73,6 +73,7 @@ jobs:
         filename: ${{ env.ARTIFACT_NAME }}.zip
 
     - run: ls -l
+    - run: ls -l artifact
 
     - name: 'If build on master branch, create release'
       if: ${{ github.ref_name == 'master' }}
@@ -82,4 +83,4 @@ jobs:
         title: Release-${{ steps.package-version.outputs.current-version}}
         automatic_release_tag: ${{ steps.package-version.outputs.current-version}}
         draft: true
-        files: ${{ env.ARTIFACT_NAME }}.zip
+        files: artifact/${{ env.ARTIFACT_NAME }}.zip
