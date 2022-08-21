@@ -53,19 +53,22 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         target-branch: 'develop'
+        skip-tag: 'true'
 
     - name: 'If build on master branch, download artifact'
       if: ${{ github.ref_name == 'master' }}
-      uses: actions/download-artifact@v3
+      uses: dawidd6/action-download-artifact@v2
       with:
+        run_id: ${{ github.run_id }}
         path: artifacts
+        skip_unpack: true
 
     - name: 'If build on master branch, create release'
       if: ${{ github.ref_name == 'master' }}
-      uses: "marvinpinto/action-automatic-releases@latest"
+      uses: marvinpinto/action-automatic-releases@latest
       with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        title: format('Release {0}', ${{ steps.package-version.outputs.current-version}})
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        title: Release-${{ steps.package-version.outputs.current-version}}
         automatic_release_tag: ${{ steps.package-version.outputs.current-version}}
         draft: true
         files: artifacts/*.zip
