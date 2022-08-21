@@ -7,7 +7,7 @@ on:
       - 'develop'
 
 jobs:
-  build-and-upload-artifact:
+  build-and-create-release:
 
     runs-on: ubuntu-latest
 
@@ -43,11 +43,29 @@ jobs:
           build/index.html
           build/manifest.json
           build/sdl_logo192.png
+          build/lighttpd.conf
+          build/README.md
 
-    - name:  'If on master branch, bump version on develop'
+    - name: 'If build on master branch, bump version on develop'
       if: ${{ github.ref_name == 'master' }}
       uses:  'phips28/gh-action-bump-version@v9.0.27'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         target-branch: 'develop'
+
+    - name: 'If build on master branch, download artifact'
+      if: ${{ github.ref_name == 'master' }}
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts
+
+    - name: 'If build on master branch, create release'
+      if: ${{ github.ref_name == 'master' }}
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        title: format('Release {0}', ${{ steps.package-version.outputs.current-version}})
+        automatic_release_tag: ${{ steps.package-version.outputs.current-version}}
+        draft: true
+        files: artifacts/*.zip
