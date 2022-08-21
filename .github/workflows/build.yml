@@ -1,0 +1,71 @@
+name: Build
+
+on: 
+  push:
+    branches:
+      - 'master'
+      - 'develop'
+
+jobs:
+  build-and-create-release:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Git Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16
+
+    - name: get-npm-version
+      id: package-version
+      uses: martinbeentjes/npm-get-version-action@main
+
+    - run: yarn install
+    - run: yarn build
+      env:
+        CI: ''
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: sdl-visualizer-${{ steps.package-version.outputs.current-version}}${{ github.ref_name != 'master' && format('-{0}', github.ref_name) || '' }}
+        path: |
+          build/*/.js
+          build/*/.css
+          build/index.html
+          build/manifest.json
+          build/sdl_logo192.png
+          build/lighttpd.conf
+          build/README.md
+
+    - name: 'If build on master branch, bump version on develop'
+      if: ${{ github.ref_name == 'master' }}
+      uses:  'phips28/gh-action-bump-version@v9.0.27'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        target-branch: 'develop'
+
+    - name: 'If build on master branch, download artifact'
+      if: ${{ github.ref_name == 'master' }}
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts
+
+    - name: 'If build on master branch, create release'
+      if: ${{ github.ref_name == 'master' }}
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        title: format('Release {0}', ${{ steps.package-version.outputs.current-version}})
+        automatic_release_tag: ${{ steps.package-version.outputs.current-version}}
+        draft: true
+        files: artifacts/*.zip

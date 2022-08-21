@@ -1,6 +1,6 @@
 {
-  "name": "sdlb_configuration_visualizer_ts",
-  "version": "0.1.0",
+  "name": "sdlb_configuration_visualizer",
+  "version": "0.9.0",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.9.3",

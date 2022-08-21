@@ -60,21 +60,20 @@ function parseJsonList(text: any): [string[], string[]] {
     el.innerHTML = html;
     var availableFiles: string[] = [];
     var availableDirs: string[] = [];
-    // search for <ul> element with name 'files'
-    var htmlList = Array.from(el.getElementsByTagName("ul"));
-    var fileList = htmlList.find(e => e.id === "files" || e.className === "files");
-    if (fileList) {
-        Array.from(fileList.children).forEach(child => {
-            const links = child.getElementsByTagName("a")
-            if (links.length > 0) {
-                const link = links[0];
-                const title = link.getAttribute("title");
-                if (title) {
-                    if ((title.endsWith("/") || Array.from(link.classList).some(c => c.includes("directory"))) && title !== ".." && link.textContent !== "..") {
-                        availableDirs.push(title);
-                    } else if (title.endsWith(".conf")) {
-                        availableFiles.push(title);
-                    }
+    // search for <ul> element with name 'files', or for a <table> element
+    var htmlList = Array.from(el.getElementsByTagName("ul")).find(e => e.id === "files" || e.className === "files")
+    var htmlTable = el.getElementsByTagName("table").item(0);
+    var htmlParent = (htmlList ? htmlList : htmlTable);
+    if (htmlParent) {
+        const links = htmlParent.getElementsByTagName("a")
+        Array.from(links).forEach(link => {
+            var entry = link.getAttribute("title");
+            if (!entry) entry = link.textContent;
+            if (entry) {
+                if ((entry.endsWith("/") || link.href.endsWith("/") || Array.from(link.classList).some(c => c.includes("directory"))) && !entry.startsWith("..")) {
+                    availableDirs.push(entry);
+                } else if (entry.endsWith(".conf")) {
+                    availableFiles.push(entry);
                 }
             }
         });
