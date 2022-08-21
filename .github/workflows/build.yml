@@ -71,7 +71,7 @@ jobs:
         type: zip
         directory: artifact
         filename: ${{ env.ARTIFACT_NAME }}.zip
-
+        
     - name: 'If build on master branch, create release'
       if: ${{ github.ref_name == 'master' }}
       uses: marvinpinto/action-automatic-releases@latest
