@@ -40,8 +40,8 @@ jobs:
       with:
         name: ${{ env.ARTIFACT_NAME }}
         path: |
-          build/**/.js
-          build/**/.css
+          build/**/*.js
+          build/**/*.css
           build/index.html
           build/manifest.json
           build/sdl_logo192.png
@@ -72,6 +72,8 @@ jobs:
         directory: artifact
         filename: ${{ env.ARTIFACT_NAME }}.zip
 
+    - run: ls -l
+
     - name: 'If build on master branch, create release'
       if: ${{ github.ref_name == 'master' }}
       uses: marvinpinto/action-automatic-releases@latest
@@ -81,4 +83,3 @@ jobs:
         automatic_release_tag: ${{ steps.package-version.outputs.current-version}}
         draft: true
         files: ${{ env.ARTIFACT_NAME }}.zip
- 
