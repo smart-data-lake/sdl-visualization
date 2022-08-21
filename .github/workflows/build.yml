@@ -48,6 +48,16 @@ jobs:
           build/lighttpd.conf
           build/README.md
 
+    - name: 'If build on master branch, download artifact'
+      if: ${{ github.ref_name == 'master' }}
+      uses: dawidd6/action-download-artifact@v2
+      with:
+        run_id: ${{ github.run_id }}
+        workflow: ${{ github.workflow }} 
+        path: artifacts
+        name: ${{ env.ARTIFACT_NAME }}
+        skip_unpack: true
+
     - name: 'If build on master branch, bump version on develop'
       if: ${{ github.ref_name == 'master' }}
       uses:  'phips28/gh-action-bump-version@v9.0.27'
@@ -56,15 +66,6 @@ jobs:
       with:
         target-branch: 'develop'
         skip-tag: 'true'
-
-    - name: 'If build on master branch, download artifact'
-      if: ${{ github.ref_name == 'master' }}
-      uses: dawidd6/action-download-artifact@v2
-      with:
-        run_id: ${{ github.run_id }}
-        path: artifacts
-        name: ${{ env.ARTIFACT_NAME }}
-        skip_unpack: true
 
     - name: 'If build on master branch, create release'
       if: ${{ github.ref_name == 'master' }}
