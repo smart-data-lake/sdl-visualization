@@ -40,8 +40,8 @@ jobs:
       with:
         name: ${{ env.ARTIFACT_NAME }}
         path: |
-          build/*/*.js
-          build/*/*.css
+          build/**/*.js
+          build/**/*.css
           build/index.html
           build/manifest.json
           build/sdl_logo192.png
