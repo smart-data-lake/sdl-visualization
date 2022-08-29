@@ -31,7 +31,7 @@ jobs:
     - run: yarn install
     - run: yarn build
       env:
-        CI: ''
+        CI: '' # disable CI mode as it makes build fail on warnings
 
     - run: echo ARTIFACT_NAME=sdl-visualizer-${{ steps.package-version.outputs.current-version}}${{ github.ref_name != 'master' && format('-{0}', github.ref_name) || '' }} >> $GITHUB_ENV
 
@@ -48,15 +48,6 @@ jobs:
           build/lighttpd.conf
           build/README.md
 
-    - name: 'If build on master branch, bump version on develop'
-      if: ${{ github.ref_name == 'master' }}
-      uses:  'phips28/gh-action-bump-version@v9.0.27'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        target-branch: 'develop'
-        skip-tag: 'true'
-
     - name: 'If build on master branch, download artifact'
       if: ${{ github.ref_name == 'master' }}
       uses: actions/download-artifact@v3
@@ -71,9 +62,6 @@ jobs:
         type: zip
         directory: artifact
         filename: ${{ env.ARTIFACT_NAME }}.zip
-
-    - run: ls -l
-    - run: ls -l artifact
 
     - name: 'If build on master branch, create release'
       if: ${{ github.ref_name == 'master' }}

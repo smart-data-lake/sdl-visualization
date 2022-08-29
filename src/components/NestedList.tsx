@@ -28,8 +28,10 @@ export default function NestedList(props: nestedListProps) {
 
   const allDataObjects = Object.keys(props.data.dataObjects).sort();
   const allActions = Object.keys(props.data.actions).sort();
-  const allConnections = Object.keys(props.data.connections);
-
+  let allConnections : string[] = [];
+  if (Object.keys(props.data).includes('connections')){
+    allConnections = Object.keys(props.data.connections);
+  }
   const [openDataObjectsList, setOpenDataObjectsList] = React.useState(false);
   const [openActionsList, setOpenActionsList] = React.useState(false);
   const [openConnectionsList, setOpenConnectionsList] = React.useState(false);
