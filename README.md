@@ -22,17 +22,18 @@ The .md files must be placed within the *description/elementType/* folder, where
 
 In order to include resources in the description file, use the complete path starting from the description/ folder. Take for example a file airports.md which displays an image photo_of_airports.png. Even if both files (.md and .png) are in the same folder description/dataObjects/ , the following code would not work...
 
-
-`!\[This is the image text\](photo_of_airports.png)`
+```markdown
+![This is the image text](photo_of_airports.png)
+```
 
 
 
 whereas this reference works fine...
 
 
-
-`![This is the image text](description/dataObjects/photo_of_airports.png)`
-
+```markdown
+![This is the image text](description/dataObjects/photo_of_airports.png)
+```
 
 
 Furthermore, the parser slightly modifies Markdown files in order to add additional syntax for our description files:
