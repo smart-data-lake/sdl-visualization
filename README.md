@@ -23,7 +23,7 @@ The .md files must be placed within the *description/elementType/* folder, where
 In order to include resources in the description file, use the complete path starting from the description/ folder. Take for example a file airports.md which displays an image photo_of_airports.png. Even if both files (.md and .png) are in the same folder description/dataObjects/ , the following code would not work...
 
 
-!\[This is the image text\](photo_of_airports.png)
+`!\[This is the image text\](photo_of_airports.png)`
 
 
 
@@ -31,7 +31,7 @@ whereas this reference works fine...
 
 
 
-!\[This is the image text\](description/dataObjects/photo_of_airports.png)
+`![This is the image text](description/dataObjects/photo_of_airports.png)`
 
 
 
@@ -39,8 +39,10 @@ Furthermore, the parser slightly modifies Markdown files in order to add additio
 
 The **@column** annotation is used to describe columns in a table. The syntax is:
 
-@column \`column name (first cell)\` Description of the column as text
-@column \`column name (second cell)\` Antoher description of the column as text
+```markdown
+@column `column name (first cell)` Description of the column as text
+@column `column name (second cell)` Antoher description of the column as text
+```
 
 This would render as:
 
@@ -70,6 +72,6 @@ The project was bootstrapped with [Create React App](https://create-react-app.de
     //  index: paths.publicUrlOrPath,
     //},
 ```
-5. Execute yarn start to start the application
+5. Execute `yarn start` to start the application
 
 
