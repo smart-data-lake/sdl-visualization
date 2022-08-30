@@ -18,9 +18,9 @@ The project uses a webserver called [lighttpd](https://redmine.lighttpd.net/proj
 The *.conf files* (theoretically also *.json* or *.properties*) are to be written in [HOCON-format](https://github.com/lightbend/config/blob/main/HOCON.md). Furthermore, they must be placed within the *config/* folder, which is at the same level as *sdl-visualizer/* (unzipped file).
 
 ### Description files
-The .md files must be placed within the *description/elementType/* folder, whereas *elementType* can be *actions*, *dataObjects* or *connections*. The *description/* folder is also at the same level as *sdl-visualizer/* (unzipped file). Furthermore, the files must be written using the Markdown Standard and they must have the same name as the element type. For example, in order to link a description file to the 'airports' data object, the corresponding file must be named description/dataObjects/airports.md.
+The .md files must be placed within the *description/elementType/* folder, whereas *elementType* can be *actions*, *dataObjects* or *connections*. The *description/* folder is also at the same level as *sdl-visualizer/* (unzipped file). Furthermore, the files must be written using the Markdown Standard and they must have the same name as the element type. For example, in order to link a description file to the *airports* data object, the corresponding file must be named *description/dataObjects/airports.md*.
 
-In order to include resources in the description file, use the complete path starting from the description/ folder. Take for example a file airports.md which displays an image photo_of_airports.png. Even if both files (.md and .png) are in the same folder description/dataObjects/ , the following code would not work...
+In order to include resources in the description file, use the complete path starting from the *description/* folder. Take for example a file *airports.md* which displays an image *photo_of_airports.png*. Even if both files (.md and .png) are in the same folder *description/dataObjects/* , the following code would not work...
 
 ```markdown
 ![This is the image text](photo_of_airports.png)
