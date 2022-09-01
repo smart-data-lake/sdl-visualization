@@ -11,12 +11,12 @@ A Webserver
 ### Linux with lighttpd
 Serve the application with a simple webserver called [lighttpd](https://redmine.lighttpd.net/projects/lighttpd). The server uses the configurations from the lighttpd.conf file, which has already some default configurations, but can be adapted. 
 
-The default configuration serves the config and description directories from the parent folder, and the rest from its own directory.  This allows to have a subdirectory with sdl-visualization release files, serving the SDLB configuration of your project.
+The default configuration serves the config and description directories from the parent folder, and the rest from its own directory. This allows to have a subdirectory with sdl-visualizer release files, serving the SDLB configuration of your project.
 
 In order to start the server, do the following:
 1. Install lighttpd with `sudo apt install lighttpd`.
 2. Create a folder *sdl-visualizer/* on the same level as your *config/* and *description/* folders. 
-3. Download the zip-file from the assets of latest release, e.g. [sdl-visualizer.zip](https://api.github.com/repos/smart-data-lake/sdl-visualization/releases/latest/sdl-visualization.zip), and unzip it inside *sdl-visualizer/*.
+3. Download the zip-file from the assets of latest release, e.g. [sdl-visualizer.zip](https://api.github.com/repos/smart-data-lake/sdl-visualization/releases/latest/sdl-visualizer.zip), and unzip it inside *sdl-visualizer/*.
 4. Adapt *lighttpd.conf* to your needs. The default setup is to listen on port 5000 for http on all interfaces. For production:
     1. Use an https proxy
     2. Authentication should be put in front (e.g. oauth2-proxy)
