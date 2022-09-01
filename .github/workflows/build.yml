@@ -33,12 +33,10 @@ jobs:
       env:
         CI: '' # disable CI mode as it makes build fail on warnings
 
-    - run: echo ARTIFACT_NAME=sdl-visualizer-${{ steps.package-version.outputs.current-version}}${{ github.ref_name != 'master' && format('-{0}', github.ref_name) || '' }} >> $GITHUB_ENV
-
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ env.ARTIFACT_NAME }}
+        name: sdl-visualizer
         path: |
           build/**/*.js
           build/**/*.css
@@ -53,7 +51,7 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         path: artifact
-        name: ${{ env.ARTIFACT_NAME }}
+        name: sdl-visualizer
 
     - name: 'If build on master branch, zip release asset'
       if: ${{ github.ref_name == 'master' }}
@@ -61,7 +59,7 @@ jobs:
       with:
         type: zip
         directory: artifact
-        filename: ${{ env.ARTIFACT_NAME }}.zip
+        filename: sdl-visualizer.zip
 
     - name: 'If build on master branch, create release'
       if: ${{ github.ref_name == 'master' }}
@@ -71,4 +69,4 @@ jobs:
         title: Release-${{ steps.package-version.outputs.current-version}}
         automatic_release_tag: ${{ steps.package-version.outputs.current-version}}
         draft: true
-        files: artifact/${{ env.ARTIFACT_NAME }}.zip
+        files: artifact/sdl-visualizer.zip
