@@ -5,8 +5,8 @@
 ### Prerequisits
 A Webserver
 - to serve static html, js and css files
-- to serve config and description files 
-- that allows "directory listing" for the config files
+- to serve config and description directories 
+- that allows "directory listing" for the config directory (alternatively an index.json file listing alls configuration files can be created inside the config folder).
 
 ### Linux with lighttpd
 Serve the application with a simple webserver called [lighttpd](https://redmine.lighttpd.net/projects/lighttpd). The server uses the configurations from the lighttpd.conf file, which has already some default configurations, but can be adapted. 
