@@ -69,4 +69,5 @@ jobs:
         title: Release-${{ steps.package-version.outputs.current-version}}
         automatic_release_tag: ${{ steps.package-version.outputs.current-version}}
         draft: true
+        prerelease: false
         files: artifact/sdl-visualizer.zip
