@@ -45,6 +45,15 @@ jobs:
           build/sdl_logo192.png
           build/lighttpd.conf
           build/README.md
+          
+    - name: 'If build on master branch, bump version on develop'
+      if: ${{ github.ref_name == 'master' }}
+      uses:  phips28/gh-action-bump-version@v9.0.27
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        target-branch: develop
+        skip-tag: true    
 
     - name: 'If build on master branch, download artifact'
       if: ${{ github.ref_name == 'master' }}
