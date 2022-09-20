@@ -2,7 +2,7 @@ import './App.css';
 import NestedList from './NestedList';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
-import {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile} from '../util/HoconParser';
+import {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent} from '../util/HoconParser';
 import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
 import Header from './Header';
 import { Routes, Route, useLocation } from "react-router-dom";
@@ -25,7 +25,9 @@ function App() {
     .replace(new RegExp(routerLocation.pathname+"$"), "")
     .replace(new RegExp("#$"), "")
     .replace(new RegExp("/$"), "");
-  const configUrl = baseUrl+"/config/";
+  const configSubdir = "/config";  
+  const envConfigSubdir = "/envConfig";  
+  const configUrl = baseUrl+configSubdir;
 
 
   // parse config
@@ -39,15 +41,32 @@ function App() {
       return readConfigIndexFile(configUrl);
     })
     .then(files => {
+      // prepend config directory to files to create relative Url
+      const filesRelUrl = files.map(f => configSubdir+"/"+f);
+      // check for environment config property in manifest file
+      return readManifestFile(baseUrl).then(manifest => {
+        // add environment config file if existing
+        if (manifest["env"]) {
+          const envConfigRelUrl = envConfigSubdir+"/"+manifest["env"]+".conf";
+          // make sure envConfig Url exists
+          return getUrlContent(envConfigRelUrl).then(x => {
+            filesRelUrl.push(envConfigRelUrl);
+            return filesRelUrl;
+          });
+        } else {
+          return filesRelUrl;
+        }
+      })
+    })
+    .then(files => {
       console.log("config files to read", files);
-      const includeText = files.map(f => `include "${configUrl}${f}"`).join("\n");
+      const includeText = files.map(f => `include "${baseUrl}${f}"`).join("\n");
       parseTextStrict(includeText)
       .then(newData => {
         setData(newData);
         setLoading(false);
       })
     })
-    .catch(err => console.log("Error listing files in "+configUrl, err))
   }, []); // only once
   
   // resize drawer
@@ -93,7 +112,7 @@ function App() {
           <NestedList data={data} />
         </Box>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, "padding-top": "7px" }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, "paddingTop": "7px" }}>
         <Toolbar />
         <Routes>
           <Route index element={<p>Please select a component from the drawer on the left to see its configuration</p>} />

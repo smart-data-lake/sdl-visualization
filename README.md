@@ -5,8 +5,8 @@
 ### Prerequisits
 A Webserver
 - to serve static html, js and css files
-- to serve config and description directories 
-- that allows "directory listing" for the config directory (alternatively an index.json file listing alls configuration files can be created inside the config folder).
+- to serve config, envConfig and description directories 
+- that allows "directory listing" for the config directory (alternatively an index.json file listing all configuration files can be created inside the config folder).
 
 ### Linux with lighttpd
 Serve the application with a simple webserver called [lighttpd](https://redmine.lighttpd.net/projects/lighttpd). The server uses the configurations from the lighttpd.conf file, which has already some default configurations, but can be adapted. 
@@ -26,14 +26,18 @@ In order to start the server, do the following:
 
 ## Conventions
 ### Config files
-The *.conf files* (theoretically also *.json* or *.properties*) are to be written in [HOCON-format](https://github.com/lightbend/config/blob/main/HOCON.md). Furthermore, they must be placed in a *config/* folder in the folder where index.html lives. Alternatively the webserver can route this path to a different directory, as done with lighthttp above.
+The `.conf files` (theoretically also *.json* or *.properties*) are to be written in [HOCON-format](https://github.com/lightbend/config/blob/main/HOCON.md). Furthermore, they must be placed in a `config/` folder in the folder where index.html lives. Alternatively the webserver can route this path to a different directory, as done with lighthttp above.
+
+### Environment config files
+Similar to config files, create environment specific configurations in a `envConfig/` folder, one file per environment with filename convention `<environment-name>.conf`. Configure the environment to use in sdl-visualisation in manifest.json using key `"env" = "<environment-name>"`.
+As environment variables are not available in sdl-visualizer (as it is executing in the browser...), you should use them only in environment configuration files and not the general configruation files in `config/`. Then you need to configure an environment for sdl-visualizer that needs no environment variables.
 
 ### Description files
-The .md files must be placed within the *description/<elementType>/* folder, whereas *elementType* can be *actions*, *dataObjects* or *connections*. They must be placed in a *description/* folder in the folder where index.html live. Alternatively the webserver can route this path to a different directory, as done with lighthttp above.
+The .md files must be placed within the `description/<elementType>/` folder, whereas *elementType* can be *actions*, *dataObjects* or *connections*. They must be placed in a `description/` folder in the folder where index.html live. Alternatively the webserver can route this path to a different directory, as done with lighthttp above.
 
-The description files must be written using the Markdown Standard, e.g. [CommonMark](https://commonmark.org/), and the filename must match the element described. For example, in order to link a description file to the *airports* data object, the corresponding file must be named *description/dataObjects/airports.md*.
+The description files must be written using the Markdown Standard, e.g. [CommonMark](https://commonmark.org/), and the filename must match the element described. For example, in order to link a description file to the *airports* data object, the corresponding file must be named `description/dataObjects/airports.md`.
 
-In order to include resources in the description file, use the complete path starting from the *description/* folder. Take for example a file *airports.md* which displays an image *photo_of_airports.png*. Even if both files (.md and .png) are in the same folder *description/dataObjects/* , the following code would not work...
+In order to include resources in the description file, use the complete path starting from the `description/` folder. Take for example a file *airports.md* which displays an image *photo_of_airports.png*. Even if both files (.md and .png) are in the same folder `description/dataObjects/` , the following code would not work...
 
 ```markdown
 ![This is the image text](photo_of_airports.png)

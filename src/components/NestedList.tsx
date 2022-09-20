@@ -124,7 +124,7 @@ export default function NestedList(props: nestedListProps) {
 
 
   return (
-    <Box sx={{"overflow-x": "clip"}}>
+    <Box sx={{"overflowX": "clip"}}>
       <TextField
         className="search_field"
         variant="outlined"
@@ -132,7 +132,7 @@ export default function NestedList(props: nestedListProps) {
         label="Search element"
         value={currentSearch}
         onChange={(e) => handleTextField(e.target.value)} //e is the event Object triggered by the onChange
-        sx={{width: "100%", "padding-right": "25px"}}
+        sx={{width: "100%", "paddingRight": "25px"}}
       />
 
       <List
