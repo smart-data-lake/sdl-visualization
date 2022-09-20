@@ -85,11 +85,7 @@ function parseJsonList(text: any): [string[], string[]] {
  * List config files recursively by http directory list request
  */
 function listConfigFiles(url: string, path: string): Promise<string[]> {
-    const files = fetch(url + path)
-    .then(response => {
-        if (response.ok) return response.text();
-        else throw new Error("Response "+response.status+" "+response.statusText+" "+response.body);
-    })
+    const files = getUrlContent(url + path)
     .then(text => {
         var files, dirs: string[] = [];
         if (text.startsWith("<")) {
@@ -108,12 +104,8 @@ function listConfigFiles(url: string, path: string): Promise<string[]> {
 /**
  * Read config files from index.json url
  */
-function readConfigIndexFile(url: string): Promise<string[]> {
-    const files = fetch(url+"index.json")
-    .then(response => {
-        if (response.ok) return response.text();
-        else throw new Error("Response "+response.status+" "+response.statusText+" "+response.body);
-    })
+function readConfigIndexFile(baseUrl: string): Promise<string[]> {
+    const files = getUrlContent(baseUrl+"/index.json")
     .then(text => {
         const [files, dirs] = parseJsonList(text);
         if (dirs.length > 0) console.log("Directories in index.json are ignored");
@@ -122,5 +114,26 @@ function readConfigIndexFile(url: string): Promise<string[]> {
     return files;
 }
 
+/**
+ * Read additional config from manifest.json url
+ */
+function readManifestFile(baseUrl: string): Promise<any> {
+    const files = getUrlContent(baseUrl+"/manifest.json")
+    .then(text => JSON.parse(text));
+    return files;
+}
 
-export {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile};
+/**
+ * Return URL content, throw error if index.html is returned (redirect) or an other error happens.
+ */
+function getUrlContent(url: string): Promise<string> {
+    return fetch(url).then(response => {
+        if (!response.ok) throw new Error("Could not read "+url+": Response "+response.status+" "+response.statusText+" "+response.body);
+        return response.text().then(t => {
+            if (t.startsWith("<!DOCTYPE")) throw new Error("Could not read "+url+" because it does not exists (rerouted to index.html)");
+            return t;
+        })
+    });
+}
+
+export {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent};
