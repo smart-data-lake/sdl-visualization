@@ -130,7 +130,7 @@ function getUrlContent(url: string): Promise<string> {
     return fetch(url).then(response => {
         if (!response.ok) throw new Error("Could not read "+url+": Response "+response.status+" "+response.statusText+" "+response.body);
         return response.text().then(t => {
-            if (t.startsWith("<!DOCTYPE")) throw new Error("Could not read "+url+" because it does not exists (rerouted to index.html)");
+            if (t.startsWith("<!DOCTYPE html>\n<html lang")) throw new Error("Could not read "+url+" because it does not exists (rerouted to index.html)");
             return t;
         })
     });
