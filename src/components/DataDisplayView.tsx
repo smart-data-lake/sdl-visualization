@@ -5,6 +5,7 @@ import { Box, Tab, Tabs } from "@mui/material";
 import TabPanel from '@mui/lab/TabPanel';
 import TabContext from '@mui/lab/TabContext';
 import MetadataTable from "./MetadataTable";
+import MetadataTableNew from "./MetadataTableNew";
 import MarkdownComponent from "./MarkdownComponent";
 import { useParams } from "react-router-dom";
 import { ReactFlowProvider } from "react-flow-renderer";
@@ -59,7 +60,7 @@ export default function DataDisplayView(props: displayProps) {
         <MarkdownComponent filename={elementName as string} data={props.data} elementType={elementType as string}/>;
       </TabPanel>
       <TabPanel value="configuration" className="content-panel">
-        <MetadataTable data={props.data} elementName={elementName as string} elementType={elementType as string} />;
+        <MetadataTableNew data={props.data} elementName={elementName as string} elementType={elementType as string} />;
       </TabPanel>
       <TabPanel value="lineage" className="content-panel">
       <ReactFlowProvider>
