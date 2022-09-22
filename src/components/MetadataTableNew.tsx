@@ -35,6 +35,17 @@ interface KV{
   value: string
 }
 
+interface expectation{
+  type: any,
+  name: string,
+  description: string,
+  countConditionExpression?: string,
+  globalConditionExpression?: string,
+  expectation: string,
+  scope?: any, 
+  failedSeverity?: any
+}
+
 function createRow(key: string, value: string) {
   return { key, value };
 }
@@ -43,7 +54,7 @@ function createRow(key: string, value: string) {
  * Returns "attribute" object or "undefined" if attribute not existent.
  * "attributeName" supports dot notation for sub attributes (e.g. one can pass a string "metadata.feed" as a parameter)
  **/
-function getAttribute(jsonObject: any, elementName: string, elementType: string, attributeName: string){
+function getAttributeGeneral(jsonObject: any, elementName: string, elementType: string, attributeName: string){
 
   let attributeLevels = attributeName.split('.');
   attributeLevels = [elementType, elementName].concat(attributeLevels);
@@ -115,8 +126,27 @@ function getExpectations(jsonObject: any, elementName: string, elementType: stri
   return element['expectations'] !== undefined ? element['expectations'] : [] //if existent, returns a list of expectation objects (empty instead)
 }
 
-function formatExpectations(expectationObjects: any[]): string{
-  let mdString = '## Expectations \n';
+
+
+function formatExpectations(expectationsList: any[]): string {
+  let expectationsAttributes = ['type','name','description','expectation', 'failedSeverity', 'scope', 'countConditionExpression', 'globalConditionExpression', 'aggExpression'];
+  let expectationsMdString = '|';
+  expectationsAttributes.forEach(attribute => expectationsMdString = expectationsMdString.concat(attribute, '|')); //header
+  expectationsMdString = expectationsMdString.concat('\n', '|'); //next line and start header separator.
+  expectationsAttributes.forEach(attribute => expectationsMdString = expectationsMdString.concat('----', '|')); //header separator line
+  expectationsMdString = expectationsMdString.concat('\n');
+  expectationsList.forEach(expectationObject => {
+    expectationsAttributes.forEach(attribute => {
+      expectationsMdString = expectationsMdString.concat('|', expectationObject[attribute]);
+    });
+    expectationsMdString = expectationsMdString.concat('|', '\n'); //next expectation
+  });
+  return expectationsMdString;
+}
+
+
+function formatExpectationsOld(expectationObjects: any[]): string{
+  let mdString = '';
   let exNumber = 1;
   expectationObjects.forEach((ex) =>{
     mdString = mdString.concat('\n', `### ${exNumber.toString()}. Expectation \n`);
@@ -232,70 +262,99 @@ interface row{
 
 export default function MetadataTableNew(props: detailsTableProps) {
 
+  const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, props.elementName, props.elementType, attributeName);
+
 
   let rows = createElementRows(props.data, props.elementName, props.elementType);
-  let createdTables: string[] = [];
+  let createdSections: string[] = [];
   let topMdString = '';
   
-
-  function appendAttribute(attributeName: string){
-    let att = getAttribute(props.data, props.elementName, props.elementType, attributeName);
-    if (att != undefined){
-      createdTables.push(attributeName);
-      topMdString = topMdString.concat('\n', "**", attributeName, "**: ", att, '\n');
-    }
-  }
 
   //attributes to be displayed at the top of the page
   let topAttributes = ['type', 'metadata.name', 'path', 'table.db', 
                         'table.name', 'table.primaryKey', 'partitions',
                         'metadata.layer', 'subject area'];
-  topAttributes.forEach(a => appendAttribute(a));
+  createdSections.push('table'); //Push manually because we read sub-attributes
+  topAttributes.forEach(attributeName => {
+    let att = getAttribute(attributeName);
+    if (att != undefined){
+      createdSections.push(attributeName);
+      topMdString = topMdString.concat('\n', "**", attributeName, "**: ", att, '\n');
+      }
+  });
 
   let metadataKV = getMetadataKV(props.data, props.elementName, props.elementType);
 
   let mdString = '';
 
-  if (metadataKV .length > 0){
-    createdTables.push('metadata');
-    mdString = mdString.concat('\n', '\n', formatMetadata(metadataKV));
+  //FOREIGN KEYS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
+  let foreignKeysMdString = 'No foreign keys defined in configuration files';
+  let foreignKeysList = getAttribute('table.foreignKeys');
+  if (foreignKeysList !== undefined){
+    foreignKeysMdString = '|table|columns|db (optional)|name (optional)| \n |---|---|---|---|';
+    foreignKeysList.forEach((fkObject: any) => {
+      foreignKeysMdString = foreignKeysMdString.concat('\n', '|', fkObject['table'], '|', fkObject['columns'], '|', fkObject['db'], '|', fkObject['name'], '|');
+    });
   }
 
-  let expectations = getExpectations(props.data, props.elementName, props.elementType);
+  //CONSTRAINTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
+  let constraintsMdString = 'No constraints defined for this dataObject';
+  let constraintsList = getAttribute('constraints');
+  if (constraintsList !== undefined){
+    constraintsMdString = '|constraint| \n |----|';
+    constraintsList.forEach((c: any) => constraintsMdString = constraintsMdString.concat('\n', '|', c, '|'));
+  }
 
+
+  //Expectations
+  let expectationsMdString = 'No expectations defined for this element in the configuration files';
+  let expectations = getExpectations(props.data, props.elementName, props.elementType);
   if (expectations.length > 0){
-    createdTables.push('expectations');
-    mdString = mdString.concat('\n', '\n', formatExpectations(expectations));
+    expectationsMdString = '';
+    createdSections.push('expectations');
+    expectationsMdString = expectationsMdString.concat('\n', '\n', formatExpectations(expectations));
+  }
+
+
+
+  if (metadataKV .length > 0){
+    createdSections.push('metadata');
+    mdString = mdString.concat('\n', '\n', formatMetadata(metadataKV));
   }
 
   if(props.elementType === 'actions'){
     let tr = getTransformers(props.data, props.elementName);
     if(tr.length>0){
-      createdTables.push('transformers');
+      createdSections.push('transformers');
       mdString = mdString.concat('\n', '\n', formatTransformers(tr));
     }
-    createdTables.push('inputId', 'inputIds', 'outputId', 'outputIds');
+    createdSections.push('inputId', 'inputIds', 'outputId', 'outputIds');
     let inputsOutputs = getInputOutputIds(props.data, props.elementName);
     mdString = mdString.concat('\n', '\n', formatInputsOutputs(inputsOutputs[0], inputsOutputs[1]));
   }
 
   
-  if (rows.some((row) => !createdTables.includes(row.key))){ //Check if there are any additional keys
-    let additionalConfigHeader = createdTables.length > 0 ? ' \n ## Addtional configuration attributes' : '## Configuration attributes';
+  if (rows.some((row) => !createdSections.includes(row.key))){ //Check if there are any additional keys
+    let additionalConfigHeader = createdSections.length > 0 ? ' \n ## Addtional configuration attributes' : '## Configuration attributes';
     mdString = mdString.concat(`${additionalConfigHeader} \n \n |Property (key) | Value | \n |-----|-----|`);
     rows.forEach((row)=> {
       row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
       if (row.key != 'code'){
         row.value = row.value.replaceAll('"', '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
       }
-      if (!createdTables.includes(row.key)){
+      if (!createdSections.includes(row.key)){
         mdString = mdString.concat(`\n | ${row.key} | ${row.value} |`);
       }
     });
   }
 
-  const accordionsParameters = [['expectations', mdString], ['additional configurations', mdString]];
+
+  const accordionsParameters = [['Foreign Keys', foreignKeysMdString],
+                                ['Constraints', constraintsMdString], 
+                                ['Expectations', expectationsMdString], 
+                                ['Additional configurations', mdString]];
   const accordions = accordionsParameters.map(([accordionName, markdownText]) => markdownAccordion(accordionName, markdownText));
+
 
 
   return (
