@@ -21,31 +21,19 @@ import remarkGfm from 'remark-gfm';
 import parseCustomMarkdown from '../util/MarkdownParser';
 import 'github-markdown-css/github-markdown.css';
 import { GlobalStyles } from '@mui/material';
-import { NumericLiteral } from 'typescript';
+import { NumericLiteral, PropertySignature } from 'typescript';
 import { Box, Tab, Tabs } from "@mui/material";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import SellIcon from '@mui/icons-material/Sell';
-import ConfigurationAccordions from './ConfigurationAccordions';
-import AltRouteIcon from '@mui/icons-material/AltRoute';
+import { exec } from 'child_process';
 
 
 
 interface KV{
   key: string, 
   value: string
-}
-
-interface expectation{
-  type: any,
-  name: string,
-  description: string,
-  countConditionExpression?: string,
-  globalConditionExpression?: string,
-  expectation: string,
-  scope?: any, 
-  failedSeverity?: any
 }
 
 function createRow(key: string, value: string) {
@@ -146,31 +134,8 @@ function formatExpectations(expectationsList: any[]): string {
   return expectationsMdString;
 }
 
-
-function formatExpectationsOld(expectationObjects: any[]): string{
-  let mdString = '';
-  let exNumber = 1;
-  expectationObjects.forEach((ex) =>{
-    mdString = mdString.concat('\n', `### ${exNumber.toString()}. Expectation \n`);
-    exNumber += 1;
-    //mdString = mdString.concat('\n |Property (key) | Value | \n |-----|-----|');
-    Object.keys(ex).forEach((key)=>{
-      let value = JSON.stringify(ex[key]).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
-      if (key != 'code'){
-        value = value.replace(/"/g, '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
-      }
-      else{ //Remove only first and last double quote from code.
-        if (value.charAt(value.length -1 ) === '"'){value = value.substring(0, value.length - 2);}
-        if (value.charAt(0) === '"'){value = value.substring(1, value.length - 1);}
-      }
-      mdString = mdString.concat(`\n - **${key}**:  ${value} `);
-    });
-  });
-  return mdString;
-}
-
 function formatTransformers(transformerObjects: any[]): string{
-  let mdString = '## Transformers \n';
+  let mdString = '';
   let trNumber = 1;
   transformerObjects.forEach((tr) =>{
     mdString = mdString.concat('\n', `### ${trNumber.toString()}. Transformer \n`);
@@ -204,6 +169,23 @@ function formatMetadata(keyvalue: KV[]){
     mdString = mdString.concat('\n', `- **${kv.key}** : ${kv.value.replaceAll('"', '')}`);
   });
   return mdString;
+}
+
+function formatExecutionMode(execMode: any): string{
+    let mdString = `### Execution Mode \n`;
+    mdString = mdString.concat('\n |Property (key) | Value | \n |-----|-----|');
+    Object.keys(execMode).forEach((key)=>{
+        let value = JSON.stringify(execMode[key]).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
+        mdString = mdString.concat(`\n | ${key} | ${value} |`);
+    });
+    return mdString;
+}
+
+function formatExecutionCondition(execCondition: any): string{
+    let mdString = `### Execution Condition \n`;
+    mdString = mdString.concat('- **Expression**:', execCondition['expression'], '\n');
+    mdString = mdString.concat('- **Description**:', execCondition['description'], '\n');
+    return mdString;
 }
 
 function formatInputsOutputs(inputs: string[], outputs: string[]){
@@ -247,52 +229,34 @@ function markdownAccordion(accordionName: string, markdownText: string){
   )
 }
 
-//function createChips(color)
 
 
 
 
-
-interface detailsTableProps {
+interface accordionCreatorProps {
   data: object;
   elementName: string;
   elementType: string;
-}
- 
-interface row{
-  key: string;
-  value: string;
+  createdSections: string[]; //This shows which attributes should or should not be in the "additional attributes" accordion
 }
 
-export default function MetadataTableNew(props: detailsTableProps) {
+export default function ConfigurationAccordions(props: accordionCreatorProps) {
 
   const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, props.elementName, props.elementType, attributeName);
+  let createdSections = props.createdSections;
 
 
-  let rows = createElementRows(props.data, props.elementName, props.elementType);
-  let createdSections: string[] = [];
-  let topMdString = '';
-  
+  //Markdown Strings use in the accordions
+  let foreignKeysMdString = 'No foreign keys defined for this element in the configuration files';
+  let constraintsMdString = 'No constraints defined for this element in the configuration files';
+  let expectationsMdString = 'No expectations defined for this element in the configuration files';
+  let transformersMdString = 'No transformers defined for this element in the configuration files';
+  let executionMdString = 'No execution mode or condition defined for this element in the configuration files';
+  let mdString = ''; //Currently being used in additional properties. To be replaced. 
 
-  //attributes to be displayed at the top of the page
-  let topAttributes = ['type', 'metadata.name', 'path', 'table.db', 
-                        'table.name', 'table.primaryKey', 'partitions',
-                        'metadata.layer', 'subject area'];
-  createdSections.push('table'); //Push manually because we read sub-attributes
-  topAttributes.forEach(attributeName => {
-    let att = getAttribute(attributeName);
-    if (att != undefined){
-      createdSections.push(attributeName);
-      topMdString = topMdString.concat('\n', "**", attributeName, "**: ", att, '\n');
-      }
-  });
 
-  let metadataKV = getMetadataKV(props.data, props.elementName, props.elementType);
-
-  let mdString = '';
-
-  //FOREIGN KEYS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
-  let foreignKeysMdString = 'No foreign keys defined in configuration files';
+  //Formatting of Markdown Strings:
+  //FOREIGN KEYS --> FOR DATA OBJECTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
   let foreignKeysList = getAttribute('table.foreignKeys');
   if (foreignKeysList !== undefined){
     foreignKeysMdString = '|table|columns|db (optional)|name (optional)| \n |---|---|---|---|';
@@ -301,8 +265,7 @@ export default function MetadataTableNew(props: detailsTableProps) {
     });
   }
 
-  //CONSTRAINTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
-  let constraintsMdString = 'No constraints defined for this dataObject';
+  //CONSTRAINTS --> FOR DATA OBJECTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
   let constraintsList = getAttribute('constraints');
   if (constraintsList !== undefined){
     constraintsMdString = '|constraint| \n |----|';
@@ -310,8 +273,7 @@ export default function MetadataTableNew(props: detailsTableProps) {
   }
 
 
-  //Expectations
-  let expectationsMdString = 'No expectations defined for this element in the configuration files';
+  //EXPECTATIONS --> FOR DATA OBJECTS
   let expectations = getExpectations(props.data, props.elementName, props.elementType);
   if (expectations.length > 0){
     expectationsMdString = '';
@@ -319,22 +281,52 @@ export default function MetadataTableNew(props: detailsTableProps) {
     expectationsMdString = expectationsMdString.concat('\n', '\n', formatExpectations(expectations));
   }
 
+  //TRANSFORMERS --> FOR ACTIONS
+function transformerAccordion(){
+    let tr = getTransformers(props.data, props.elementName);
+    if(tr.length>0){
+        transformersMdString = '';
+        createdSections.push('transformers');
+        transformersMdString = transformersMdString.concat('\n', '\n', formatTransformers(tr));
+    }
+}
+
+  //EXECUTION MODE / CONDITION --> FOR ACTIONS
+
+  function execModeConditionAccordion(){
+    let execMode = getAttribute('executionMode');
+    let execCondition = getAttribute('executionCondition');
+    if(execMode !== undefined || execCondition !== undefined){
+        executionMdString = '';
+    }
+    if(execMode !== undefined){
+        executionMdString = formatExecutionMode(execMode);
+        createdSections.push('executionMode');
+    }
+    if(execCondition !== undefined){
+        executionMdString = executionMdString.concat(formatExecutionCondition(execCondition));
+        createdSections.push('executionCondition');
+    }
+}
+
+  //ADDITIONAL PROPERTIES --> FOR ALL
+
+
+  if(props.elementType==='actions'){transformerAccordion(); execModeConditionAccordion()};
+
+
+
+
+
+
+  let rows = createElementRows(props.data, props.elementName, props.elementType);
+  let metadataKV = getMetadataKV(props.data, props.elementName, props.elementType);
+
 
 
   if (metadataKV .length > 0){
     createdSections.push('metadata');
     mdString = mdString.concat('\n', '\n', formatMetadata(metadataKV));
-  }
-
-  if(props.elementType === 'actions'){
-    let tr = getTransformers(props.data, props.elementName);
-    if(tr.length>0){
-      createdSections.push('transformers');
-      mdString = mdString.concat('\n', '\n', formatTransformers(tr));
-    }
-    createdSections.push('inputId', 'inputIds', 'outputId', 'outputIds');
-    let inputsOutputs = getInputOutputIds(props.data, props.elementName);
-    mdString = mdString.concat('\n', '\n', formatInputsOutputs(inputsOutputs[0], inputsOutputs[1]));
   }
 
   
@@ -353,34 +345,20 @@ export default function MetadataTableNew(props: detailsTableProps) {
   }
 
 
-  let tagsList = getAttribute('metadata.tags');
-  const tags = tagsList === undefined ? (<div></div>) : tagsList.map((tag: string) => <Chip label={tag} color="primary" icon={<SellIcon />} variant="outlined"/>)
-  let feed = getAttribute('metadata.feed');
-  const feedChip = feed === undefined ? (<div></div>) : <Chip label={'feed: '+feed} color="success" icon={<AltRouteIcon />} variant="outlined"/>
-
-  
   const accordionsParameters = [['Foreign Keys', foreignKeysMdString],
                                 ['Constraints', constraintsMdString], 
-                                ['Expectations', expectationsMdString], 
+                                ['Expectations', expectationsMdString],
+                                ['Transformers', transformersMdString],
+                                ['Execution Mode and Condition', executionMdString], 
                                 ['Additional configurations', mdString]];
+
   const accordions = accordionsParameters.map(([accordionName, markdownText]) => markdownAccordion(accordionName, markdownText));
 
 
 
   return (
     <Box>
-      <React.Fragment>
-        <GlobalStyles styles={{ table: { width: '100% !important' } }} />
-        <ReactMarkdown className='markdown-body' children={topMdString} remarkPlugins={[remarkGfm]} />
-      </React.Fragment>
-      <Stack spacing={1} alignItems="left" className='chips'>
-        <Stack direction="row" spacing={2}>
-          {tags}
-          {feedChip}
-        </Stack>
-      </Stack>
-      <br />     
-      <ConfigurationAccordions data={props.data} elementName={props.elementName} elementType={props.elementType} createdSections={[]}/>
+      {accordions}
     </Box>
   )
 }
