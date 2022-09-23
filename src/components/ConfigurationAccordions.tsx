@@ -259,9 +259,11 @@ export default function ConfigurationAccordions(props: accordionCreatorProps) {
   //FOREIGN KEYS --> FOR DATA OBJECTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
   let foreignKeysList = getAttribute('table.foreignKeys');
   if (foreignKeysList !== undefined){
-    foreignKeysMdString = '|table|columns|db (optional)|name (optional)| \n |---|---|---|---|';
+    foreignKeysMdString = '|table|columns (key)|columns (value)|db (optional)|name (optional)| \n |---|---|---|---|---|';
     foreignKeysList.forEach((fkObject: any) => {
-      foreignKeysMdString = foreignKeysMdString.concat('\n', '|', fkObject['table'], '|', fkObject['columns'], '|', fkObject['db'], '|', fkObject['name'], '|');
+      let cKey = Object.keys(fkObject['columns'])[0];
+      let [columnsKey, columnsValue] = [cKey, fkObject['columns'][cKey]]
+      foreignKeysMdString = foreignKeysMdString.concat('\n', '|', fkObject['table'], '|', columnsKey, '|', columnsValue, '|', fkObject['db'], '|', fkObject['name'], '|');
     });
   }
 
