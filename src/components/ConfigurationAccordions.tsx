@@ -65,27 +65,6 @@ function getMetadataKV(jsonObject:any, elementName: string, elementType: string)
   return kv; //returns empty list if no metadata found
 }
 
-function getInputOutputIds(jsonObject: any, actionName: string): [string[], string[]]{
-  let inputs: string[] = [];
-  let outputs: string[] = [];
-
-  let action = jsonObject['actions'][actionName];
-  let hasManyInputs = action['inputIds'] != undefined; //we assume that each action has either inputId or InputIds (same for outputs)
-  let hasManyOutputs = action['outputIds'] != undefined;
-  
-  if (hasManyInputs){
-    let inputList = action['inputIds'] as string[];
-    inputList.forEach((item) => inputs.push(item));
-  } else inputs.push(action['inputId'] as string);
-
-  if (hasManyOutputs){
-    let outputList = action['outputIds'] as string[];
-    outputList.forEach((item) => outputs.push(item));
-  } else outputs.push(action['outputId'] as string);
-
-  return [inputs, outputs];
-}
-
 function getTransformers(jsonObject: any, actionName: string){
   let action = jsonObject['actions'][actionName];
   if(action['transformers']!= undefined){
@@ -94,10 +73,6 @@ function getTransformers(jsonObject: any, actionName: string){
   return []; //returns empty list if there are no transformers in the configuration
 }
 
-function getExpectations(jsonObject: any, elementName: string, elementType: string){
-  let element = jsonObject[elementType][elementName];
-  return element['expectations'] !== undefined ? element['expectations'] : [] //if existent, returns a list of expectation objects (empty instead)
-}
 
 
 
@@ -156,18 +131,6 @@ function formatExecutionCondition(execCondition: any): string{
     return additionalConfigsMd;
 }
 
-function formatInputsOutputs(inputs: string[], outputs: string[]){
-  let additionalConfigsMd = '## Inputs \n';
-  inputs.forEach((input) => {
-    additionalConfigsMd = additionalConfigsMd.concat('\n', `- [${input}](http://${window.location.host}/#/dataObjects/${input})`);
-  });
-  additionalConfigsMd = additionalConfigsMd.concat('\n', '\n', '## Outputs \n');
-  outputs.forEach((output) => {
-    additionalConfigsMd = additionalConfigsMd.concat('\n', `- [${output}](http://${window.location.host}/#/dataObjects/${output})`);
-  });
-  return additionalConfigsMd;
-}
-
 //elementType can be 'actions', 'dataObjects' or 'global'. Returns a list of "simple" additionalAttributes. 
 function createElementRows(jsonObject: any, elementName: string, elementType: string) {
   if (elementType==='global'){
@@ -178,24 +141,6 @@ function createElementRows(jsonObject: any, elementName: string, elementType: st
   return keyList.map(key => createRow(key, JSON.stringify(jsonObject[elementType][elementName][key], null, '\t')));
 }
 
-function markdownAccordion(accordionName: string, markdownText: string){
-  return(
-    <Accordion className='accordion' elevation={0}>
-    <AccordionSummary
-      expandIcon={<ExpandMoreIcon />}
-      className='accordionSummary'
-    >
-      <Typography className='accordionTitle'>{accordionName}</Typography>
-    </AccordionSummary>
-    <AccordionDetails>
-      <React.Fragment>
-        <GlobalStyles styles={{ table: { width: '100% !important' } }} />
-        <ReactMarkdown className='markdown-body' children={markdownText} remarkPlugins={[remarkGfm]} />
-      </React.Fragment>
-    </AccordionDetails>
-  </Accordion>
-  )
-}
 
 
 
@@ -212,7 +157,12 @@ export default function ConfigurationAccordions(props: accordionCreatorProps) {
 
   const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, props.elementName, props.elementType, attributeName);
   let createdSections = props.createdSections;
+  const [openAccordion, setOpenAccordion] = React.useState('none'); //none of the accordions are open at the beginning
 
+  //Only one accordion open at a time
+  const handleChange = (accordionName: string) => (event: React.SyntheticEvent, isExpanded: boolean) =>
+    setOpenAccordion(isExpanded ? accordionName : 'none')
+  
 
   //Markdown Strings use in the accordions
   let foreignKeysadditionalConfigsMd = 'No foreign keys defined for this element in the configuration files';
@@ -225,30 +175,38 @@ export default function ConfigurationAccordions(props: accordionCreatorProps) {
 
   //Formatting of Markdown Strings:
   //FOREIGN KEYS --> FOR DATA OBJECTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
-  let foreignKeysList = getAttribute('table.foreignKeys');
-  if (foreignKeysList !== undefined){
-    foreignKeysadditionalConfigsMd = '|table|columns (key)|columns (value)|db (optional)|name (optional)| \n |---|---|---|---|---|';
-    foreignKeysList.forEach((fkObject: any) => {
-      let cKey = Object.keys(fkObject['columns'])[0];
-      let [columnsKey, columnsValue] = [cKey, fkObject['columns'][cKey]]
-      foreignKeysadditionalConfigsMd = foreignKeysadditionalConfigsMd.concat('\n', '|', fkObject['table'], '|', columnsKey, '|', columnsValue, '|', fkObject['db'], '|', fkObject['name'], '|');
-    });
+  function foreignKeysAccordion(){
+    let foreignKeysList = getAttribute('table.foreignKeys');
+    if (foreignKeysList !== undefined){
+      foreignKeysadditionalConfigsMd = '|table|columns (key)|columns (value)|db (optional)|name (optional)| \n |---|---|---|---|---|';
+      foreignKeysList.forEach((fkObject: any) => {
+        let cKey = Object.keys(fkObject['columns'])[0];
+        let [columnsKey, columnsValue] = [cKey, fkObject['columns'][cKey]]
+        foreignKeysadditionalConfigsMd = foreignKeysadditionalConfigsMd.concat('\n', '|', fkObject['table'], '|', columnsKey, '|', columnsValue, '|', fkObject['db'], '|', fkObject['name'], '|');
+      });
+    }
   }
 
+  
+
   //CONSTRAINTS --> FOR DATA OBJECTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
-  let constraintsList = getAttribute('constraints');
-  if (constraintsList !== undefined){
-    constraintsadditionalConfigsMd = '|constraint| \n |----|';
-    constraintsList.forEach((c: any) => constraintsadditionalConfigsMd = constraintsadditionalConfigsMd.concat('\n', '|', c, '|'));
+  function constraintsAccordion(){
+    let constraintsList = getAttribute('constraints');
+    if (constraintsList !== undefined){
+      constraintsadditionalConfigsMd = '|constraint| \n |----|';
+      constraintsList.forEach((c: any) => constraintsadditionalConfigsMd = constraintsadditionalConfigsMd.concat('\n', '|', c, '|'));
+    }
   }
 
 
   //EXPECTATIONS --> FOR DATA OBJECTS
-  let expectations = getExpectations(props.data, props.elementName, props.elementType);
-  if (expectations.length > 0){
-    expectationsadditionalConfigsMd = '';
-    createdSections.push('expectations');
-    expectationsadditionalConfigsMd = expectationsadditionalConfigsMd.concat('\n', '\n', formatExpectations(expectations));
+  function expectationsAccordion(){
+    let expectations = getAttribute('expectations');
+    if (expectations !== undefined){
+      expectationsadditionalConfigsMd = '';
+      createdSections.push('expectations');
+      expectationsadditionalConfigsMd = expectationsadditionalConfigsMd.concat('\n', '\n', formatExpectations(expectations));
+    }
   }
 
   //TRANSFORMERS --> FOR ACTIONS
@@ -279,72 +237,97 @@ function transformerAccordion(){
     }
   }
 
-  if(props.elementType==='actions'){transformerAccordion(); execModeConditionAccordion()};
+  
+
+  //if(props.elementType==='actions'){transformerAccordion(); execModeConditionAccordion()};
 
 
   //ADDITIONAL PROPERTIES --> FOR ALL
-  let metadata = getAttribute('metadata');
+  function additionalPropertiesAccordion(){
+
+    let metadata = getAttribute('metadata');
   
-  function additionalMetadataList(): {key: string, value: string}[]{
-    //if there are still some metadata properties that haven't been displayed...
-    if (metadata !== undefined){
-      let additionalMetadata = Object.keys(metadata).filter((key) => {
-        let keyAux = 'metadata.'+key;
-        return !createdSections.includes(keyAux);
-      });
-      if (additionalMetadata.length > 0){
-        //...then return a list of Key-Value pairs of this data.
-        return additionalMetadata.map(key => createRow(key, JSON.stringify(metadata[key])));
+    function additionalMetadataList(): {key: string, value: string}[]{
+      //if there are still some metadata properties that haven't been displayed...
+      if (metadata !== undefined){
+        let additionalMetadata = Object.keys(metadata).filter((key) => {
+          let keyAux = 'metadata.'+key;
+          return !createdSections.includes(keyAux);
+        });
+        if (additionalMetadata.length > 0){
+          //...then return a list of Key-Value pairs of this data.
+          return additionalMetadata.map(key => createRow(key, JSON.stringify(metadata[key])));
+        }
       }
+      //...or an empty list instead
+      return [];
     }
-    //...or an empty list instead
-    return [];
-  }
-
-
-
-
-
-
-
-
-
-
-  let additionalAttributes = createElementRows(props.data, props.elementName, props.elementType)
-                            .filter(row => !createdSections.includes(row.key))
-                            .concat(additionalMetadataList());
-  let metadataKV = getMetadataKV(props.data, props.elementName, props.elementType);
-
-
-/*
-  if (metadataKV .length > 0){
-    createdSections.push('metadata');
-    additionalConfigsMd = additionalConfigsMd.concat('\n', '\n', formatMetadata(metadataKV));
-  }
-  */
-
   
-  if (additionalAttributes.length > 0){ //Check if there are any additional keys (either normal keys or metadata keys)
-    
-    additionalConfigsMd = ` \n |Property (key) | Value | \n |-----|-----|`;
-    additionalAttributes.forEach((row)=> {
-      row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
-      if (row.key != 'code'){
-        row.value = row.value.replaceAll('"', '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
-      }
-      additionalConfigsMd = additionalConfigsMd.concat(`\n | ${row.key} | ${row.value} |`);
-    });
+  
+    let additionalAttributes = createElementRows(props.data, props.elementName, props.elementType)
+                              .filter(row => !createdSections.includes(row.key))
+                              .concat(additionalMetadataList());
+    if (additionalAttributes.length > 0){ //Check if there are any additional keys (either normal keys or metadata keys)
+      
+      additionalConfigsMd = ` \n |Property (key) | Value | \n |-----|-----|`;
+      additionalAttributes.forEach((row)=> {
+        row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
+        if (row.key != 'code'){
+          row.value = row.value.replaceAll('"', '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
+        }
+        additionalConfigsMd = additionalConfigsMd.concat(`\n | ${row.key} | ${row.value} |`);
+      });
+    }
   }
 
 
-  const accordionsParameters = [['Foreign Keys', foreignKeysadditionalConfigsMd],
-                                ['Constraints', constraintsadditionalConfigsMd], 
-                                ['Expectations', expectationsadditionalConfigsMd],
-                                ['Transformers', transformersadditionalConfigsMd],
-                                ['Execution Mode and Condition', executionadditionalConfigsMd], 
-                                ['Additional configurations', additionalConfigsMd]];
+  function getAccordionsParameters(): [string, string][]{
+    let parameters: [string, string][] = []
+    if (props.elementType === 'dataObjects'){
+      foreignKeysAccordion();
+      constraintsAccordion();
+      expectationsAccordion();
+      additionalPropertiesAccordion(); //Always to be computed last
+      parameters = [['Foreign Keys', foreignKeysadditionalConfigsMd],
+                    ['Constraints', constraintsadditionalConfigsMd], 
+                    ['Expectations', expectationsadditionalConfigsMd],
+                    ['Additional configurations', additionalConfigsMd]]
+    }
+    else if (props.elementType === 'actions'){
+      transformerAccordion();
+      execModeConditionAccordion();
+      additionalPropertiesAccordion(); //Always to be computed last
+      parameters = [['Transformers', transformersadditionalConfigsMd],
+                    ['Execution Mode and Condition', executionadditionalConfigsMd], 
+                    ['Additional configurations', additionalConfigsMd]]
+    }
+    return parameters; 
+  }
 
-  const accordions = accordionsParameters.map(([accordionName, markdownText]) => markdownAccordion(accordionName, markdownText));
+  function markdownAccordion(accordionName: string, markdownText: string){
+    return(
+      <Accordion  className='accordion' elevation={0} 
+                  expanded={openAccordion === accordionName} 
+                  onChange={handleChange(accordionName)}>
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon />}
+        className='accordionSummary'
+      >
+        <Typography className='accordionTitle'>{accordionName}</Typography>
+      </AccordionSummary>
+      <AccordionDetails>
+        <React.Fragment>
+          <GlobalStyles styles={{ table: { width: '100% !important' } }} />
+          <ReactMarkdown className='markdown-body' children={markdownText} remarkPlugins={[remarkGfm]} />
+        </React.Fragment>
+      </AccordionDetails>
+    </Accordion>
+    )
+  }
+
+
+  //Select which accordions will be rendered
+  const accordions = getAccordionsParameters().map(([accordionName, markdownText]) => markdownAccordion(accordionName, markdownText));
 
 
 
