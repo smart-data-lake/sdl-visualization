@@ -12,38 +12,10 @@ import SellIcon from '@mui/icons-material/Sell';
 import ConfigurationAccordions from './ConfigurationAccordions';
 import AltRouteIcon from '@mui/icons-material/AltRoute';
 import Grid from '@mui/material/Grid';
+import { getAttributeGeneral } from '../util/ConfigSearchOperation';
 
 
 
-
-
-/**
- * Returns "attribute" object or "undefined" if attribute not existent.
- * "attributeName" supports dot notation for sub attributes (e.g. one can pass a string "metadata.feed" as a parameter)
- **/
-function getAttributeGeneral(jsonObject: any, elementName: string, elementType: string, attributeName: string){
-
-  let attributeLevels = attributeName.split('.');
-  attributeLevels = [elementType, elementName].concat(attributeLevels);
-
-  let hasAttribute = true;
-
-  let forObject = jsonObject;
-  for(var i = 0; i<attributeLevels.length; i++ ){
-    forObject = forObject[attributeLevels[i]];
-    console.log()
-    if (forObject === undefined){
-      hasAttribute = false;
-      break;
-    }
-  }
-
-  return hasAttribute ? forObject : undefined;
-}
-
-
-
-//function createChips(color)
 
 interface detailsTableProps {
   data: object;
@@ -166,3 +138,5 @@ export default function MetadataTableNew(props: detailsTableProps) {
     </Box>
   )
 }
+
+export {getAttributeGeneral};
