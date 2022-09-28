@@ -13,6 +13,7 @@ import ConfigurationAccordions from './ConfigurationAccordions';
 import AltRouteIcon from '@mui/icons-material/AltRoute';
 import Grid from '@mui/material/Grid';
 import { getAttributeGeneral } from '../util/ConfigSearchOperation';
+import { Link } from "react-router-dom";
 
 
 
@@ -84,7 +85,17 @@ export default function MetadataTableNew(props: detailsTableProps) {
 
 
   let tagsList = getAttribute('metadata.tags');
-  const tags = tagsList === undefined ? (<div></div>) : tagsList.map((tag: string) => <Chip label={tag} color="primary" icon={<SellIcon />} variant="outlined"/>)
+  const tags = tagsList === undefined ? (<div></div>) : tagsList.map((tag: string) => {
+    let path = `/search/tags=${tag}`;
+    return(
+      <Link to={path}>
+        <Chip label={tag}
+          color="primary"
+          icon={<SellIcon />}
+          variant="outlined" />
+      </Link>);
+    });
+
   let feed = getAttribute('metadata.feed');
   const feedChip = feed === undefined ? (<div></div>) : <Chip label={'feed: '+feed} color="success" icon={<AltRouteIcon />} variant="outlined"/>
   createdSections.push('metadata.tags', 'metadata.feed'); //must be done after the top attributes are rendered.

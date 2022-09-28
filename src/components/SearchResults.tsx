@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { getAttributeGeneral } from '../util/ConfigSearchOperation';
+import { Link } from "react-router-dom";
 
 interface searchResultProps{
     data: any,
@@ -26,6 +27,10 @@ function returnSearchParamsKV(ownSearchString: string | undefined): string[][]{
   else return []; //in case we don't have an ownSearchString 
 }
 
+function isArray(obj: any){
+  return !!obj && obj.constructor === Array;
+}
+
 
 
 export default function SearchResults(props: searchResultProps) {
@@ -40,23 +45,46 @@ export default function SearchResults(props: searchResultProps) {
     [searchKey, searchValue] = [keyValuePairs[0][0], keyValuePairs[0][1]]
   }
 
-  function resultingElements(){
-    let result: string[] = [];
+  /**
+   * 
+   * @returns A list of the resulting dataObjects and Actions that comply with the search
+   */
+  function getResultingElements():string[][]{
+    let result: string[][] = [];
     ['dataObjects', 'actions'].forEach(elementType => {
         let elements: string[] = Object.keys(data[elementType]);
         let auxSearchKey = searchKey;
         if (auxSearchKey === 'feed' || auxSearchKey === 'tags'){
-            auxSearchKey = 'metadata.'+auxSearchKey; //These two attributes are in the metadata
+            auxSearchKey = 'metadata.'+auxSearchKey; //These two attributes are in the metadata part
         }
         elements.forEach((element: string)=>{
+            let elementPair = [element, elementType]; //[elementName, elementType]
+            let push = false;
             let att = getAttributeGeneral(data, element, elementType, auxSearchKey);
-            if (att !== undefined && att ===searchValue){ 
-                result.push(element);
+            if (att !== undefined){
+              if (isArray(att)){ if (att.includes(searchValue)){result.push(elementPair);}} //Cannot merge both conditions because it would throw an error
+              else if (att ===searchValue){ result.push(elementPair);}
             }
         });
     });
     return result;
   }
+
+  function resultComponent(elementName: string, elementType: string){
+    const path = `/${elementType}/${elementName}`;
+    return(
+      <div>
+        <Link to={path}>
+          {elementName}
+        </Link>
+      </div>
+
+    )
+  }
+
+  const resultingElements = getResultingElements().map(elementNameAndType => resultComponent(elementNameAndType[0], elementNameAndType[1]))
+
+
 
 
   return (
@@ -64,7 +92,8 @@ export default function SearchResults(props: searchResultProps) {
         <p>OwnSearchString: {ownSearchString}</p>
         <p>search Key: {searchKey}</p>
         <p>search Value: {searchValue}</p>
-        <p>Resulting Elements: {resultingElements()}</p>
+        <div> .</div>
+        <p>Resulting Elements: {resultingElements}</p>
     </div>
   );
 }
