@@ -91,7 +91,8 @@ export default function MetadataTable(props: detailsTableProps) {
         <Chip label={tag}
           color="primary"
           icon={<SellIcon />}
-          variant="outlined" />
+          variant="outlined" 
+          className='chips'/>
       </Link>);
     });
 
@@ -104,7 +105,8 @@ export default function MetadataTable(props: detailsTableProps) {
           <Chip label={'feed: ' + feed}
             color="success"
             icon={<AltRouteIcon />}
-            variant="outlined" />
+            variant="outlined" 
+            className='chips'/>
         </Link>
       )
     }
@@ -160,7 +162,7 @@ export default function MetadataTable(props: detailsTableProps) {
           {inputOutputTables()}
         </Grid>
       </Grid>
-      <Stack spacing={1} alignItems="left" className='chips'>
+      <Stack spacing={1} alignItems="left" className='chipStack'>
         <Stack direction="row" spacing={2}>
           {tags}
           {feedChip()}

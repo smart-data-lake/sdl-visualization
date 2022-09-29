@@ -40,8 +40,11 @@ a:link{
     padding-left: 0px !important;
 }
 
-
 .chips{
+    cursor:pointer !important;
+}
+
+.chipStack{
     padding-top: 10px;
 }
 input[type=checkbox] {width:20px; height:20px;}
