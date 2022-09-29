@@ -301,6 +301,10 @@ function transformerAccordion(){
                     ['Execution Mode and Condition', executionadditionalConfigsMd], 
                     ['Additional configurations', additionalConfigsMd]]
     }
+    else if (props.elementType === 'connections'){
+      additionalPropertiesAccordion();
+      parameters = [['Details', additionalConfigsMd]];
+    }
     return parameters; 
   }
 
