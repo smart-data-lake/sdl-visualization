@@ -89,11 +89,9 @@ export default function SearchResults(props: searchResultProps) {
 
   return (
     <div>
-        <p>OwnSearchString: {ownSearchString}</p>
-        <p>search Key: {searchKey}</p>
-        <p>search Value: {searchValue}</p>
-        <div> .</div>
-        <p>Resulting Elements: {resultingElements}</p>
+        <p>Resulting Elements with '{searchKey}' == {searchValue}:</p>
+        <br></br>
+        {resultingElements}
     </div>
   );
 }
