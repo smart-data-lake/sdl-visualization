@@ -13,12 +13,13 @@ export default function MarkdownComponent(props: {elementType: string, filename:
 
   React.useEffect(() => {
     const filename = "/description/" + props.elementType + "/" + props.filename +".md"; //file must be in public/description/elementType folder
-    const missingInputFile = "# Missing .md file \n"
-      + "Please provide a Markdown file in the public folder of the project and use the [Commonmark Standard](https://commonmark.org/) \n \n"
-      + "The file should be named as <dataObjectId>.md or <actionId>.md.";
+    const missingInputFile = "### Detailed description \n"
+      + "There is no detailed description for this element. Please provide a Markdown file in the "
+      + "description/<elementType> folder of the project and use the [Commonmark Standard](https://commonmark.org/). \n \n"
+      + "The file should be named as <dataObjectId>.md, <actionId>.md or <connectionId>.md.";
     fetch(filename) //file must be in public folder
     .then(r => {
-      if (!r.ok) { throw new Error("Connectivity problems in the fetch method") }
+      if (!r.ok) { throw new Error("Connectivity problems in the fetch method when fetching the .md description file") }
       return r.text();
     })
     .then(text => {
@@ -42,7 +43,11 @@ export default function MarkdownComponent(props: {elementType: string, filename:
     && props.data[props.elementType][props.filename]['metadata']['description'] != undefined;
 
   if (hasMetadataDescription){
-    let inputConfig = `# ${props.filename} \n` + String(props.data[props.elementType][props.filename]['metadata']['description']);
+    let inputConfig = `### Short description \n` 
+                        + String(props.data[props.elementType][props.filename]['metadata']['description'])
+                        + '\n'
+                        + input;
+
     return( //Redundant return as a check on objects' properties combined with setState() results in an endless rendering loop. 
       <React.Fragment>
         <GlobalStyles styles={{ table: { width: '100% !important' } }} /> 
