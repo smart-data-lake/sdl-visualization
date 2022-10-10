@@ -11,6 +11,7 @@ import remarkGfm from 'remark-gfm';
 import 'github-markdown-css/github-markdown.css';
 import { GlobalStyles } from '@mui/material';
 import { Box} from "@mui/material";
+import { Propane } from '@mui/icons-material';
 
 
 
@@ -147,7 +148,7 @@ function createElementRows(jsonObject: any, elementName: string, elementType: st
 
 
 interface accordionCreatorProps {
-  data: object;
+  data: any;
   elementName: string;
   elementType: string;
   createdSections: string[]; //This shows which attributes should or should not be in the "additional attributes" accordion
@@ -171,7 +172,7 @@ export default function ConfigurationAccordions(props: accordionCreatorProps) {
   let transformersadditionalConfigsMd = 'No transformers defined for this element in the configuration files';
   let executionadditionalConfigsMd = 'No execution mode or condition defined for this element in the configuration files';
   let additionalConfigsMd = 'No additional configurations defined for this element in the configuration files'; //Currently being used in additional properties. To be replaced. 
-
+  let rawHoconCodeMd = '';
 
   //Formatting of Markdown Strings:
   //FOREIGN KEYS --> FOR DATA OBJECTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
@@ -280,6 +281,11 @@ function transformerAccordion(){
     }
   }
 
+  function rawHoconAccordion(){
+    let object = props.data[props.elementType][props.elementName];
+    rawHoconCodeMd = '```json \n' + JSON.stringify(object, null, 4) + '\n ```';
+  }
+
 
   function getAccordionsParameters(): [string, string][]{
     let parameters: [string, string][] = []
@@ -288,22 +294,28 @@ function transformerAccordion(){
       constraintsAccordion();
       expectationsAccordion();
       additionalPropertiesAccordion(); //Always to be computed last
+      rawHoconAccordion();
       parameters = [['Foreign Keys', foreignKeysadditionalConfigsMd],
                     ['Constraints', constraintsadditionalConfigsMd], 
                     ['Expectations', expectationsadditionalConfigsMd],
-                    ['Additional configurations', additionalConfigsMd]]
+                    ['Additional configurations', additionalConfigsMd], 
+                    ['Raw Code', rawHoconCodeMd]]
     }
     else if (props.elementType === 'actions'){
       transformerAccordion();
       execModeConditionAccordion();
       additionalPropertiesAccordion(); //Always to be computed last
+      rawHoconAccordion();
       parameters = [['Transformers', transformersadditionalConfigsMd],
                     ['Execution Mode and Condition', executionadditionalConfigsMd], 
-                    ['Additional configurations', additionalConfigsMd]]
+                    ['Additional configurations', additionalConfigsMd],
+                    ['Raw Code', rawHoconCodeMd]]
     }
     else if (props.elementType === 'connections'){
       additionalPropertiesAccordion();
-      parameters = [['Details', additionalConfigsMd]];
+      rawHoconAccordion();
+      parameters = [['Details', additionalConfigsMd],
+                    ['Raw Code', rawHoconCodeMd]];
     }
     return parameters; 
   }
