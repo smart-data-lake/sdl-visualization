@@ -3,6 +3,7 @@ import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import FindInPageIcon from '@mui/icons-material/FindInPage';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
@@ -14,9 +15,11 @@ import Public from '@mui/icons-material/Public';
 import LanIcon from '@mui/icons-material/Lan';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
 import './ComponentsStyles.css';
 import { Link, useMatch } from "react-router-dom";
 import { Box } from '@mui/material';
+import { FindInPage } from '@mui/icons-material';
 
 
 interface nestedListProps{
@@ -133,6 +136,12 @@ export default function NestedList(props: nestedListProps) {
         value={currentSearch}
         onChange={(e) => handleTextField(e.target.value)} //e is the event Object triggered by the onChange
         sx={{width: "100%", "paddingRight": "25px"}}
+        InputProps={{endAdornment: <InputAdornment position="end">
+                                          <Link to={`/search/entireConfigString=${currentSearch}`}>
+                                        <FindInPage className='searchButton' 
+                                                    titleAccess='Search elements with this string'/>
+                                                    </Link>
+                                    </InputAdornment>,}}
       />
 
       <List

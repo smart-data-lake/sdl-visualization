@@ -47,6 +47,20 @@ a:link{
 .chipStack{
     padding-top: 10px;
 }
+
+.searchButton{
+    cursor: pointer;
+}
+
+.searchButton:active{
+    transform: translateY(4px);
+}
+
+.searchPaper{
+    padding: 10px;
+    width:fit-content;
+}
+
 input[type=checkbox] {width:20px; height:20px;}
 
 /*Media styles*/

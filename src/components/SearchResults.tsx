@@ -1,6 +1,9 @@
 import { useParams } from 'react-router-dom';
 import { getAttributeGeneral } from '../util/ConfigSearchOperation';
 import { Link } from "react-router-dom";
+import MatchingAttributes from './MatchingAttributes';
+import MatchEntireConfig from './MatchEntireConfig';
+import {Box} from '@mui/material';
 
 interface searchResultProps{
     data: any,
@@ -18,7 +21,7 @@ interface searchResultProps{
  *                        /search/feed=myFeed&&tag=myTag
  * @returns A list of the KV pairs that we are looking for in our element search.
  */
-function returnSearchParamsKV(ownSearchString: string | undefined): string[][]{
+function returnSearchParamsKV(ownSearchString: string | undefined): string[][]{ //Returns a list of [key, value] pairs for our search.
   if (ownSearchString){ 
     return ownSearchString
     .split('&&')
@@ -45,53 +48,15 @@ export default function SearchResults(props: searchResultProps) {
     [searchKey, searchValue] = [keyValuePairs[0][0], keyValuePairs[0][1]]
   }
 
-  /**
-   * 
-   * @returns A list of the resulting dataObjects and Actions that comply with the search
-   */
-  function getResultingElements():string[][]{
-    let result: string[][] = [];
-    ['dataObjects', 'actions'].forEach(elementType => {
-        let elements: string[] = Object.keys(data[elementType]);
-        let auxSearchKey = searchKey;
-        if (auxSearchKey === 'feed' || auxSearchKey === 'tags'){
-            auxSearchKey = 'metadata.'+auxSearchKey; //These two attributes are in the metadata part
-        }
-        elements.forEach((element: string)=>{
-            let elementPair = [element, elementType]; //[elementName, elementType]
-            let push = false;
-            let att = getAttributeGeneral(data, element, elementType, auxSearchKey);
-            if (att !== undefined){
-              if (isArray(att)){ if (att.includes(searchValue)){result.push(elementPair);}} //Cannot merge both conditions because it would throw an error
-              else if (att ===searchValue){ result.push(elementPair);}
-            }
-        });
-    });
-    return result;
-  }
-
-  function resultComponent(elementName: string, elementType: string){
-    const path = `/${elementType}/${elementName}`;
-    return(
-      <div>
-        <Link to={path}>
-          {elementName}
-        </Link>
-      </div>
-
-    )
-  }
-
-  const resultingElements = getResultingElements().map(elementNameAndType => resultComponent(elementNameAndType[0], elementNameAndType[1]))
-
+  const display = searchKey === 'entireConfigString' ? 
+                                <MatchEntireConfig data={data} searchKey={searchKey} searchValue={searchValue}/> : 
+                                <MatchingAttributes data={data} searchKey={searchKey} searchValue={searchValue}/>
 
 
 
   return (
-    <div>
-        <p>Resulting Elements with '{searchKey}' == {searchValue}:</p>
-        <br></br>
-        {resultingElements}
-    </div>
+    <Box>
+      {display}
+    </Box>
   );
 }
