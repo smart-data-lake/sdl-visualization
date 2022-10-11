@@ -1,4 +1,4 @@
-import { Box, Button } from '@mui/material';
+import { Box, Button, StepIcon } from '@mui/material';
 import { useState, useCallback, useEffect, useRef, useLayoutEffect, Dispatch} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, ReactFlowProvider, useReactFlow } from 'react-flow-renderer';
 import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
@@ -7,6 +7,8 @@ import './ComponentsStyles.css';
 import { convertCompilerOptionsFromJson } from 'typescript';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import { useParams } from 'react-router-dom';
+import OpenWithIcon from '@mui/icons-material/OpenWith';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 
 
 
@@ -102,31 +104,43 @@ function FlowChart(props: flowProps) {
   const doa = new DataObjectsAndActions(props.data);
   let nodes_init: any[];
   let edges_init: any[];
+  const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']);
 
-
-  if (props.elementType==='dataObjects'){ //only a partial graph
-    const partialGraphPair = doa.returnPartialGraphInputs(props.elementName);
-    const partialNodes = partialGraphPair[0];
-    const partialEdges = partialGraphPair[1];
-    const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges);
-  
-    nodes_init = createReactFlowNodes(partialGraph);
-    edges_init = createReactFlowEdges(partialGraph);
+  function expandGraph(){
+    let buttonMessage = onlyDirectNeighbours[0] ? 'Compress Graph' : 'Expand Graph';
+    setOnlyDirectNeighbours([!onlyDirectNeighbours[0], buttonMessage]);
+    console.log('hidden: ', hidden);
   }
 
-  else if(props.elementType==='actions'){
-    const partialGraphPair = doa.returnPartialGraphInputsFromEdge(props.elementName);
-    const partialNodes = partialGraphPair[0];
-    const partialEdges = partialGraphPair[1];
-    const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges);
-  
-    nodes_init = createReactFlowNodes(partialGraph);
-    edges_init = createReactFlowEdges(partialGraph);
-  }
+  function prepareAndRenderGraph(){
 
-  else{ //to be able to see the complete lineage when selecting actions
-    nodes_init = createReactFlowNodes(doa);
-    edges_init = createReactFlowEdges(doa);
+    if (props.elementType==='dataObjects'){ //only a partial graph
+      const partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(props.elementName) : doa.returnPartialGraphInputs(props.elementName);
+      //const partialGraphPair = doa.returnPartialGraphInputs(props.elementName);
+      const partialNodes = partialGraphPair[0];
+      const partialEdges = partialGraphPair[1];
+      const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges);
+    
+      nodes_init = createReactFlowNodes(partialGraph);
+      edges_init = createReactFlowEdges(partialGraph);
+    }
+  
+    else if(props.elementType==='actions'){
+      const partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighboursFromEdge(props.elementName) : doa.returnPartialGraphInputsFromEdge(props.elementName);
+      const partialNodes = partialGraphPair[0];
+      const partialEdges = partialGraphPair[1];
+      const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges);
+    
+      nodes_init = createReactFlowNodes(partialGraph);
+      edges_init = createReactFlowEdges(partialGraph);
+    }
+  
+    else{ //to be able to see the complete lineage when selecting connections / global
+      nodes_init = createReactFlowNodes(doa);
+      edges_init = createReactFlowEdges(doa);
+    }
+    return [nodes_init, edges_init];
+
   }
 
   useEffect(() => {
@@ -134,9 +148,16 @@ function FlowChart(props: flowProps) {
     setEdges(edges_init);
   }, [props]); // Only re-run the effect if nodes_init changes
 
-  const [nodes, setNodes] = useState(nodes_init);
-  const [edges, setEdges] = useState(edges_init);
-  let [hidden, setHidden] = useState(useParams().elementType === 'dataObjects' ? true : false);
+  useEffect(()=>{
+    const new_graph = prepareAndRenderGraph();
+    setNodes(new_graph[0]);
+    setEdges(new_graph[1]);
+  }, [onlyDirectNeighbours]); //Re-render the graph after expanding or contracting
+
+  let initial_render = prepareAndRenderGraph();
+  const [nodes, setNodes] = useState(initial_render[0]);
+  const [edges, setEdges] = useState(initial_render[0]);
+  let [hidden, setHidden] = useState(useParams().elementType === 'dataObjects' ? true : false); //Hidden action labels
 
 
 
@@ -154,7 +175,7 @@ function FlowChart(props: flowProps) {
 
   useEffect(() => {
     setEdges((eds) => eds.map(hide(hidden)));
-  }, [hidden]);
+  }, [hidden, onlyDirectNeighbours]); //edges must be hidden at each render (that is, also when we expand/compress the graph)
 
 
   //DEPRECATED
@@ -238,9 +259,19 @@ function FlowChart(props: flowProps) {
         <Background />
         <MiniMap />
         <Controls />
-        <div style={{ position: 'absolute', left: 17, bottom: 125, zIndex: 4, cursor: 'pointer' }}>
-            <RocketLaunchOutlined onClick={() => setHidden(!hidden)} color={hidden ? 'inherit' : 'primary'}/>
+        <div title='Display / Hide action IDs' style={{ position: 'absolute', left: 17, bottom: 125, zIndex: 4, cursor: 'pointer' }}>
+          <RocketLaunchOutlined onClick={() => setHidden(!hidden)} color={hidden ? 'inherit' : 'primary'} />
         </div>
+
+        <div title='Click here to expand / compress the direct neighbours' style={{ position: 'absolute', left: 17, top: 15, zIndex: 4, cursor: 'pointer' }}>
+          <Button 
+              variant='contained' 
+              startIcon={onlyDirectNeighbours[0] ? <OpenWithIcon/> : <CloseFullscreenIcon/>} 
+              onClick={expandGraph}>
+            {onlyDirectNeighbours[1]}
+          </Button>
+        </div>
+
       </ReactFlow>
     </Box>
   );
