@@ -2,10 +2,12 @@ import './App.css';
 import NestedList from './NestedList';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
+import SearchResults from './SearchResults';
 import {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent} from '../util/HoconParser';
 import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
 import Header from './Header';
 import { Routes, Route, useLocation } from "react-router-dom";
+import { useSearchParams } from 'react-router-dom';
 
 export const defaultDrawerWidth = 300;
 const minDrawerWidth = 50;
@@ -17,6 +19,8 @@ function App() {
   const [data, setData] = React.useState<Object>({dataObjects: {}, actions: {}, connections: {}, global: {}});
   const [isLoading, setLoading] = useState(true);
   const [drawerWidth, setDrawerWidth] = useState(defaultDrawerWidth);
+
+
 
 
   const routerLocation = useLocation();
@@ -116,6 +120,12 @@ function App() {
         <Toolbar />
         <Routes>
           <Route index element={<p>Please select a component from the drawer on the left to see its configuration</p>} />
+          <Route
+            path='/search/:ownSearchString' //the ownSearchString is our definition of a 
+                                            //search because of problems with routing Search Parameters
+            element={
+              <SearchResults data={data}/>
+            } />
           <Route
             path="/:elementType/:elementName"
             element={
