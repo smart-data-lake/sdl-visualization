@@ -64,10 +64,10 @@ export default function DataDisplayView(props: displayProps) {
         </Tabs>
       </Box>
       <TabPanel value="description" className="content-panel">
-        <MarkdownComponent filename={elementName as string} data={props.data} elementType={elementType as string}/>;
+        <MarkdownComponent filename={elementName as string} data={props.data} elementType={elementType as string}/>
       </TabPanel>
       <TabPanel value="configuration" className="content-panel">
-        <MetadataTable data={props.data} elementName={elementName as string} elementType={elementType as string} />;
+        <MetadataTable data={props.data} elementName={elementName as string} elementType={elementType as string} />
       </TabPanel>
       <TabPanel value="lineage" className="content-panel">
       <ReactFlowProvider>
