@@ -22,7 +22,7 @@ export default function DataDisplayView(props: displayProps) {
   const [value, setValue] = React.useState('description');
 
   // reset value on element change
-  React.useEffect(() => setValue('description'), [elementName, elementType]);
+  //React.useEffect(() => setValue('description'), [elementName, elementType]);
 
   // change selected tab
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
