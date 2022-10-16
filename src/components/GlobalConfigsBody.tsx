@@ -8,8 +8,6 @@ import * as React from 'react';
 
 interface thisProps {
     data: any;
-    elementName: string;
-    elementType: string;
 }
 
 interface KV {
@@ -18,24 +16,19 @@ interface KV {
 }
 
 export default function GlobalConfigsBody(props: thisProps){
-    const globalOptions = props.data['global'];
-
     let resultMdString = '';
 
-    Object.keys(globalOptions).map(option => {
+    Object.keys(props.data).map(option => {
         resultMdString = resultMdString.concat('\n', `### ${option}`, '\n');
-        Object.keys(globalOptions[option]).forEach(key => {
-            resultMdString = resultMdString.concat(`- **${key}**: ${JSON.stringify(globalOptions[option][key])}`, '\n');
+        Object.keys(props.data[option]).forEach(key => {
+            resultMdString = resultMdString.concat(`- **${key}**: ${JSON.stringify(props.data[option][key])}`, '\n');
         });
     });
         
-    
     return (
-          <React.Fragment>
-            <GlobalStyles styles={{ table: { width: '100% !important' } }} />
-            <ReactMarkdown className='markdown-body' children={resultMdString} remarkPlugins={[remarkGfm]} />
-          </React.Fragment>
+        <React.Fragment>
+        <GlobalStyles styles={{ table: { width: '100% !important' } }} />
+        <ReactMarkdown className='markdown-body' children={resultMdString} remarkPlugins={[remarkGfm]} />
+        </React.Fragment>
     )
-
-    
 }

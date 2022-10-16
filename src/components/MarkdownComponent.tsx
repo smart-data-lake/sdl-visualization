@@ -37,14 +37,12 @@ export default function MarkdownComponent(props: {elementType: string, filename:
   }, [props.filename]);
 
   let hasMetadataDescription = 
-    props.data[props.elementType] != undefined 
-    && props.data[props.elementType][props.filename] != undefined 
-    && props.data[props.elementType][props.filename]['metadata'] != undefined 
-    && props.data[props.elementType][props.filename]['metadata']['description'] != undefined;
+    props.data && props.data['metadata'] 
+    && props.data['metadata']['description'];
 
   if (hasMetadataDescription){
     let inputConfig = `### Short description \n` 
-                        + String(props.data[props.elementType][props.filename]['metadata']['description'])
+                        + String(props.data['metadata']['description'])
                         + '\n'
                         + input;
 

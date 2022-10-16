@@ -12,6 +12,7 @@ import 'github-markdown-css/github-markdown.css';
 import { GlobalStyles } from '@mui/material';
 import { Box} from "@mui/material";
 import { Propane } from '@mui/icons-material';
+import { getAttributeGeneral } from '../util/ConfigSearchOperation';
 
 
 
@@ -22,30 +23,6 @@ interface KV{
 
 function createRow(key: string, value: string) {
   return { key, value };
-}
-
-/**
- * Returns "attribute" object or "undefined" if attribute not existent.
- * "attributeName" supports dot notation for sub attributes (e.g. one can pass a string "metadata.feed" as a parameter)
- **/
-function getAttributeGeneral(jsonObject: any, elementName: string, elementType: string, attributeName: string){
-
-  let attributeLevels = attributeName.split('.');
-  attributeLevels = [elementType, elementName].concat(attributeLevels);
-
-  let hasAttribute = true;
-
-  let forObject = jsonObject;
-  for(var i = 0; i<attributeLevels.length; i++ ){
-    forObject = forObject[attributeLevels[i]];
-    console.log()
-    if (forObject === undefined){
-      hasAttribute = false;
-      break;
-    }
-  }
-
-  return hasAttribute ? forObject : undefined;
 }
 
 function getMetadataKV(jsonObject:any, elementName: string, elementType: string){
@@ -66,8 +43,7 @@ function getMetadataKV(jsonObject:any, elementName: string, elementType: string)
   return kv; //returns empty list if no metadata found
 }
 
-function getTransformers(jsonObject: any, actionName: string){
-  let action = jsonObject['actions'][actionName];
+function getTransformers(action: any){
   if(action['transformers']){
     return action['transformers']; //returns a list of transformer objects
   }
@@ -132,33 +108,26 @@ function formatExecutionCondition(execCondition: any): string{
     return additionalConfigsMd;
 }
 
-//elementType can be 'actions', 'dataObjects' or 'global'. Returns a list of "simple" additionalAttributes. 
-function createElementRows(jsonObject: any, elementName: string, elementType: string) {
-  if (elementType==='global'){
-    var keyList = Object.keys(jsonObject[elementType]);
-    return keyList.map(key => createRow(key, JSON.stringify(jsonObject[elementType][key], null, '\t')));
-  }
-  var keyList = Object.keys(jsonObject[elementType][elementName]);
-  return keyList.map(key => createRow(key, JSON.stringify(jsonObject[elementType][elementName][key], null, '\t')));
+function createElementRows(obj: any) {
+  var keyList = Object.keys(obj);
+  return keyList.map(key => createRow(key, JSON.stringify(obj[key], null, '\t')));
 }
 
 
-
-
-
-
-interface accordionCreatorProps {
-  data: any;
-  elementName: string;
+interface AccordionCreatorProps {
+  data: any; // config of object to display
   elementType: string;
   createdSections: string[]; //This shows which attributes should or should not be in the "additional attributes" accordion
 }
 
-export default function ConfigurationAccordions(props: accordionCreatorProps) {
+export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
-  const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, props.elementName, props.elementType, attributeName);
+  const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, attributeName.split('.'));
   var accordionSections = new Map<string,[string,string]>();
   const [openAccordion, setOpenAccordion] = React.useState('none'); //none of the accordions are open at the beginning
+
+  // reset accordion on element change
+  React.useEffect(() => setOpenAccordion('none'), [props.data]);
 
   //Only one accordion open at a time
   const handleChange = (accordionName: string) => (event: React.SyntheticEvent, isExpanded: boolean) =>
@@ -203,7 +172,7 @@ export default function ConfigurationAccordions(props: accordionCreatorProps) {
 
   //TRANSFORMERS --> FOR ACTIONS
   function transformerAccordion(){
-    let tr = getTransformers(props.data, props.elementName);
+    let tr = getTransformers(props.data);
     if (tr && tr.length>0){
       var transformersMd = formatTransformers(tr);
       accordionSections.set('transformers', ['Transformers', transformersMd]);
@@ -249,7 +218,7 @@ export default function ConfigurationAccordions(props: accordionCreatorProps) {
       return [];
     }
   
-    let additionalAttributes = createElementRows(props.data, props.elementName, props.elementType)
+    let additionalAttributes = createElementRows(props.data)
                               .filter(row => !props.createdSections.includes(row.key))
                               .filter(row => !accordionSections.has(row.key))
                               .concat(additionalMetadataList());
@@ -268,8 +237,7 @@ export default function ConfigurationAccordions(props: accordionCreatorProps) {
   }
 
   function rawHoconAccordion(){
-    let object = props.data[props.elementType][props.elementName];
-    var rawHoconCodeMd = '```json \n' + JSON.stringify(object, null, 4) + '\n ```';
+    var rawHoconCodeMd = '```json \n' + JSON.stringify(props.data, null, 4) + '\n ```';
     accordionSections.set('rawJson', ['Raw Code', rawHoconCodeMd]);
   }
 

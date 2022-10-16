@@ -14,23 +14,21 @@ import AltRouteIcon from '@mui/icons-material/AltRoute';
 import Grid from '@mui/material/Grid';
 import { getAttributeGeneral } from '../util/ConfigSearchOperation';
 import { Link } from "react-router-dom";
-import GlobalConfigsBody from "./GlobalConfigsBody";
 import { TOP_ATTRIBUTES } from "./TopAttributes";
 
 
 
 interface detailsTableProps {
-  data: any;
+  data: any; // config of object to display
   elementName: string;
   elementType: string;
 }
 
 
-function getInputOutputIds(jsonObject: any, actionName: string): [string[], string[]]{
+function getInputOutputIds(action: any): [string[], string[]]{
   let inputs: string[] = [];
   let outputs: string[] = [];
 
-  let action = jsonObject['actions'][actionName];
   let hasManyInputs = action['inputIds'] != undefined; //we assume that each action has either inputId or InputIds (same for outputs)
   let hasManyOutputs = action['outputIds'] != undefined;
   
@@ -62,8 +60,7 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): [string, stri
 
 export default function MetadataTable(props: detailsTableProps) {
 
-  const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, props.elementName, props.elementType, attributeName);
-
+  const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, attributeName.split('.'));
 
   let createdSections: string[] = [];
   let topMdString = '';
@@ -116,7 +113,7 @@ export default function MetadataTable(props: detailsTableProps) {
 
   function inputOutputTables(){
     if (props.elementType == 'actions'){
-      let [inputs, outputs] = getInputOutputIds(props.data, props.elementName)
+      let [inputs, outputs] = getInputOutputIds(props.data)
       let [formattedInputs, formattedOutputs] = formatInputsOutputs(inputs, outputs);
       return(
         <Grid container spacing={2}>
@@ -140,11 +137,8 @@ export default function MetadataTable(props: detailsTableProps) {
 
   function bodyContent(){
     if (props.elementType === 'actions' || props.elementType === 'dataObjects' || props.elementType === 'connections'){
-      return(<ConfigurationAccordions data={props.data} elementName={props.elementName} elementType={props.elementType} createdSections={createdSections} />)
+      return(<ConfigurationAccordions data={props.data} elementType={props.elementType} createdSections={createdSections} />)
     } 
-    else if (props.elementType === 'global') { 
-      return <GlobalConfigsBody data={props.data} elementName={props.elementName} elementType={props.elementType} />
-    }
     else{throw new Error(`Unknown element Type ${props.elementType}`);}
   }
 
@@ -173,5 +167,3 @@ export default function MetadataTable(props: detailsTableProps) {
     </Box>
   )
 }
-
-export {getAttributeGeneral};
