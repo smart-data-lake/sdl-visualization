@@ -1,5 +1,5 @@
 import './App.css';
-import NestedList from './NestedList';
+import ElementList from './ElementList';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
 import SearchResults from './SearchResults';
@@ -114,7 +114,7 @@ function App() {
               position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 100,
           }}/>     
         <Box sx={{ overflow: 'auto' }}>
-          <NestedList data={data} />
+          <ElementList data={data} />
         </Box>
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3, "paddingTop": "7px" }}>

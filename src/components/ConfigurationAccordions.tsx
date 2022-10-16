@@ -6,14 +6,11 @@ import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import './ComponentsStyles.css';
 import 'github-markdown-css/github-markdown.css';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import 'github-markdown-css/github-markdown.css';
-import { GlobalStyles } from '@mui/material';
 import { Box} from "@mui/material";
-import { Propane } from '@mui/icons-material';
 import { getAttributeGeneral } from '../util/ConfigSearchOperation';
-
+import MarkdownComponent from './MarkdownComponent';
+import PropertiesComponent from './PropertiesComponent';
 
 
 interface KV{
@@ -123,7 +120,7 @@ interface AccordionCreatorProps {
 export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
   const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, attributeName.split('.'));
-  var accordionSections = new Map<string,[string,string]>();
+  var accordionSections = new Map<string,[string,JSX.Element]>();
   const [openAccordion, setOpenAccordion] = React.useState('none'); //none of the accordions are open at the beginning
 
   // reset accordion on element change
@@ -144,7 +141,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
         let [columnsKey, columnsValue] = [cKey, fkObject['columns'][cKey]]
         foreignKeyMd = foreignKeyMd.concat('\n', '|', fkObject['table'], '|', columnsKey, '|', columnsValue, '|', fkObject['db'], '|', fkObject['name'], '|');
       });
-      accordionSections.set('table.foreignKeys', ['Foreign Keys', foreignKeyMd]);
+      accordionSections.set('table.foreignKeys', ['Foreign Keys', <MarkdownComponent markdown={foreignKeyMd} />]);
     }
   }
 
@@ -156,7 +153,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     if (constraintsList && constraintsList.length>0){
       var constraintsMd = '|constraint| \n |----|';
       constraintsList.forEach((c: any) => constraintsMd = constraintsMd.concat('\n', '|', c, '|'));
-      accordionSections.set('constraints', ['Constraints', constraintsMd]);
+      accordionSections.set('constraints', ['Constraints', <MarkdownComponent markdown={constraintsMd} />]);
     }
   }
 
@@ -166,7 +163,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     let expectations = getAttribute('expectations');
     if (expectations && expectations.length>0){
       var expectationsMd = formatExpectations(expectations);
-      accordionSections.set('expectations', ['Expectations', expectationsMd]);
+      accordionSections.set('expectations', ['Expectations', <MarkdownComponent markdown={expectationsMd} />]);
     }
   }
 
@@ -175,7 +172,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     let tr = getTransformers(props.data);
     if (tr && tr.length>0){
       var transformersMd = formatTransformers(tr);
-      accordionSections.set('transformers', ['Transformers', transformersMd]);
+      accordionSections.set('transformers', ['Transformers', <MarkdownComponent markdown={transformersMd} />]);
     }
   }
 
@@ -183,8 +180,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   function execModeAccordion(){
     let execMode = getAttribute('executionMode');
     if(execMode){
-      const executionModeMd = formatExecutionMode(execMode);
-      accordionSections.set('executionMode', ['Execution Mode', executionModeMd]);
+      accordionSections.set('executionMode', ['Execution Mode', <PropertiesComponent obj={execMode} />]);
     }
   }
 
@@ -192,8 +188,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   function execConditionAccordion(){
     let execCondition = getAttribute('executionCondition');
     if(execCondition){
-      const executionConditionMd = formatExecutionCondition(execCondition);
-      accordionSections.set('executionCondition', ['Execution Condition', executionConditionMd]);
+      accordionSections.set('executionCondition', ['Execution Condition', <PropertiesComponent obj={execCondition} />]);
     }
   }
 
@@ -223,26 +218,17 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
                               .filter(row => !accordionSections.has(row.key))
                               .concat(additionalMetadataList());
     if (additionalAttributes.length > 0){ //Check if there are any additional keys (either normal keys or metadata keys)
-      
-      var additionalConfigsMd = ` \n |Property (key) | Value | \n |-----|-----|`;
-      additionalAttributes.forEach((row)=> {
-        row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
-        if (row.key != 'code'){
-          row.value = row.value.replaceAll('"', '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
-        }
-        additionalConfigsMd = additionalConfigsMd.concat(`\n | ${row.key} | ${row.value} |`);
-      });
-      accordionSections.set('additionalAttrs', ['Additional configurations', additionalConfigsMd]);
+      accordionSections.set('additionalAttrs', ['Additional configurations', <PropertiesComponent properties={additionalAttributes} />]);
     }
   }
 
   function rawHoconAccordion(){
     var rawHoconCodeMd = '```json \n' + JSON.stringify(props.data, null, 4) + '\n ```';
-    accordionSections.set('rawJson', ['Raw Code', rawHoconCodeMd]);
+    accordionSections.set('rawJson', ['Raw Code', <MarkdownComponent markdown={rawHoconCodeMd} />]);
   }
 
 
-  function getAccordionsParameters(): [string, string][]{
+  function getAccordionSections(): [string, JSX.Element][]{
     if (props.elementType === 'dataObjects'){
       foreignKeysAccordion();
       constraintsAccordion();
@@ -264,26 +250,23 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     return Array.from(accordionSections.values()); 
   }
 
-  function markdownAccordion(accordionName: string, markdownText: string){
+  function createAccordion(accordionName: string, jsxElement: JSX.Element){
     return(
-      <Accordion  className='accordion' elevation={3} 
+      <Accordion  className='accordion' elevation={3} disableGutters={true}
                   expanded={openAccordion === accordionName} 
                   onChange={handleChange(accordionName)}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography variant="body1">{accordionName}</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <React.Fragment>
-            <GlobalStyles styles={{ table: { width: '100% !important' } }} />
-            <ReactMarkdown className='markdown-body' children={markdownText} remarkPlugins={[remarkGfm]} />
-          </React.Fragment>
+          {jsxElement}
         </AccordionDetails>
       </Accordion>
     )
   }
 
   //Select which accordions will be rendered
-  const accordions = getAccordionsParameters().map(([accordionName, markdownText]) => markdownAccordion(accordionName, markdownText));
+  const accordions = getAccordionSections().map(([accordionName, jsxElement]) => createAccordion(accordionName, jsxElement));
 
   return (
     <Box>

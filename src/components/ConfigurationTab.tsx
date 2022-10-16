@@ -14,7 +14,7 @@ import AltRouteIcon from '@mui/icons-material/AltRoute';
 import Grid from '@mui/material/Grid';
 import { getAttributeGeneral } from '../util/ConfigSearchOperation';
 import { Link } from "react-router-dom";
-import { TOP_ATTRIBUTES } from "./TopAttributes";
+import { TOP_ATTRIBUTES } from "../util/TopAttributes";
 
 
 
@@ -58,7 +58,7 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): [string, stri
 }
 
 
-export default function MetadataTable(props: detailsTableProps) {
+export default function ConfigurationTab(props: detailsTableProps) {
 
   const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, attributeName.split('.'));
 

@@ -1,11 +1,11 @@
-import FlowChart from "./FlowChart";
+import LineageTab from "./LineageTab";
 import React from 'react';
 import './ComponentsStyles.css';
 import { Box, Tab, Tabs } from "@mui/material";
 import TabPanel from '@mui/lab/TabPanel';
 import TabContext from '@mui/lab/TabContext';
-import MetadataTable from "./MetadataTable";
-import MarkdownComponent from "./MarkdownComponent";
+import ConfigurationTab from "./ConfigurationTab";
+import DescriptionTab from "./DescriptionTab";
 import { useParams } from "react-router-dom";
 import { ReactFlowProvider } from "react-flow-renderer";
 
@@ -39,17 +39,14 @@ export default function DataDisplayView(props: displayProps) {
         </Tabs>
       </Box>
       <TabPanel value="description" className="content-panel">
-        <MarkdownComponent filename={elementName as string} data={configObj} elementType={elementType as string}/>
+        <DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
       </TabPanel>
       <TabPanel value="configuration" className="content-panel">
-        <MetadataTable data={configObj} elementName={elementName as string} elementType={elementType as string} />
+        <ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} />
       </TabPanel>
       <TabPanel value="lineage" className="content-panel">
       <ReactFlowProvider>
-        <FlowChart 
-          data={props.data}
-          elementName={elementName as string} 
-          elementType={elementType as string} />
+        <LineageTab data={props.data} elementName={elementName as string} elementType={elementType as string} />
       </ReactFlowProvider>
       </TabPanel>
     </TabContext> 

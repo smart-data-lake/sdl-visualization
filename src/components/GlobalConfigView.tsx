@@ -2,7 +2,7 @@ import './ComponentsStyles.css';
 import { Box, Tab, Tabs } from "@mui/material";
 import TabPanel from '@mui/lab/TabPanel';
 import TabContext from '@mui/lab/TabContext';
-import GlobalConfigsBody from "./GlobalConfigsBody";
+import PropertiesComponent from './PropertiesComponent';
 
 interface ViewProps {
   data: any; // global configuration
@@ -19,7 +19,7 @@ export default function GlobalConfigView(props: ViewProps) {
         </Tabs>
       </Box>
       <TabPanel value="configuration">
-        <GlobalConfigsBody data={props.data} />
+        <PropertiesComponent obj={props.data} />
       </TabPanel>
     </TabContext>      
     );
