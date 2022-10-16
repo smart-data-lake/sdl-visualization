@@ -322,22 +322,19 @@ function transformerAccordion(){
 
   function markdownAccordion(accordionName: string, markdownText: string){
     return(
-      <Accordion  className='accordion' elevation={0} 
+      <Accordion  className='accordion' elevation={3} 
                   expanded={openAccordion === accordionName} 
                   onChange={handleChange(accordionName)}>
-      <AccordionSummary
-        expandIcon={<ExpandMoreIcon />}
-        className='accordionSummary'
-      >
-        <Typography className='accordionTitle'>{accordionName}</Typography>
-      </AccordionSummary>
-      <AccordionDetails>
-        <React.Fragment>
-          <GlobalStyles styles={{ table: { width: '100% !important' } }} />
-          <ReactMarkdown className='markdown-body' children={markdownText} remarkPlugins={[remarkGfm]} />
-        </React.Fragment>
-      </AccordionDetails>
-    </Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="body1">{accordionName}</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <React.Fragment>
+            <GlobalStyles styles={{ table: { width: '100% !important' } }} />
+            <ReactMarkdown className='markdown-body' children={markdownText} remarkPlugins={[remarkGfm]} />
+          </React.Fragment>
+        </AccordionDetails>
+      </Accordion>
     )
   }
 
