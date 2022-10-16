@@ -68,7 +68,7 @@ function getMetadataKV(jsonObject:any, elementName: string, elementType: string)
 
 function getTransformers(jsonObject: any, actionName: string){
   let action = jsonObject['actions'][actionName];
-  if(action['transformers']!= undefined){
+  if(action['transformers']){
     return action['transformers']; //returns a list of transformer objects
   }
   return []; //returns empty list if there are no transformers in the configuration
@@ -116,8 +116,8 @@ function formatTransformers(transformerObjects: any[]): string{
 }
 
 function formatExecutionMode(execMode: any): string{
-    let additionalConfigsMd = `### Execution Mode \n`;
-    additionalConfigsMd = additionalConfigsMd.concat('\n |Property (key) | Value | \n |-----|-----|');
+    let additionalConfigsMd = '';
+    additionalConfigsMd = additionalConfigsMd.concat('|Property (key) | Value | \n |-----|-----|');
     Object.keys(execMode).forEach((key)=>{
         let value = JSON.stringify(execMode[key]).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
         additionalConfigsMd = additionalConfigsMd.concat(`\n | ${key} | ${value} |`);
@@ -126,7 +126,7 @@ function formatExecutionMode(execMode: any): string{
 }
 
 function formatExecutionCondition(execCondition: any): string{
-    let additionalConfigsMd = `### Execution Condition \n`;
+    let additionalConfigsMd = '';
     additionalConfigsMd = additionalConfigsMd.concat('- **Expression**:', execCondition['expression'], '\n');
     additionalConfigsMd = additionalConfigsMd.concat('- **Description**:', execCondition['description'], '\n');
     return additionalConfigsMd;
@@ -157,34 +157,25 @@ interface accordionCreatorProps {
 export default function ConfigurationAccordions(props: accordionCreatorProps) {
 
   const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, props.elementName, props.elementType, attributeName);
-  let createdSections = props.createdSections;
+  var accordionSections = new Map<string,[string,string]>();
   const [openAccordion, setOpenAccordion] = React.useState('none'); //none of the accordions are open at the beginning
 
   //Only one accordion open at a time
   const handleChange = (accordionName: string) => (event: React.SyntheticEvent, isExpanded: boolean) =>
     setOpenAccordion(isExpanded ? accordionName : 'none')
   
-
-  //Markdown Strings use in the accordions
-  let foreignKeysadditionalConfigsMd = 'No foreign keys defined for this element in the configuration files';
-  let constraintsadditionalConfigsMd = 'No constraints defined for this element in the configuration files';
-  let expectationsadditionalConfigsMd = 'No expectations defined for this element in the configuration files';
-  let transformersadditionalConfigsMd = 'No transformers defined for this element in the configuration files';
-  let executionadditionalConfigsMd = 'No execution mode or condition defined for this element in the configuration files';
-  let additionalConfigsMd = 'No additional configurations defined for this element in the configuration files'; //Currently being used in additional properties. To be replaced. 
-  let rawHoconCodeMd = '';
-
   //Formatting of Markdown Strings:
   //FOREIGN KEYS --> FOR DATA OBJECTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
   function foreignKeysAccordion(){
     let foreignKeysList = getAttribute('table.foreignKeys');
-    if (foreignKeysList !== undefined){
-      foreignKeysadditionalConfigsMd = '|table|columns (key)|columns (value)|db (optional)|name (optional)| \n |---|---|---|---|---|';
+    if (foreignKeysList && foreignKeysList.length>0){
+      var foreignKeyMd = '|table|columns (key)|columns (value)|db (optional)|name (optional)| \n |---|---|---|---|---|';
       foreignKeysList.forEach((fkObject: any) => {
         let cKey = Object.keys(fkObject['columns'])[0];
         let [columnsKey, columnsValue] = [cKey, fkObject['columns'][cKey]]
-        foreignKeysadditionalConfigsMd = foreignKeysadditionalConfigsMd.concat('\n', '|', fkObject['table'], '|', columnsKey, '|', columnsValue, '|', fkObject['db'], '|', fkObject['name'], '|');
+        foreignKeyMd = foreignKeyMd.concat('\n', '|', fkObject['table'], '|', columnsKey, '|', columnsValue, '|', fkObject['db'], '|', fkObject['name'], '|');
       });
+      accordionSections.set('table.foreignKeys', ['Foreign Keys', foreignKeyMd]);
     }
   }
 
@@ -193,9 +184,10 @@ export default function ConfigurationAccordions(props: accordionCreatorProps) {
   //CONSTRAINTS --> FOR DATA OBJECTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
   function constraintsAccordion(){
     let constraintsList = getAttribute('constraints');
-    if (constraintsList !== undefined){
-      constraintsadditionalConfigsMd = '|constraint| \n |----|';
-      constraintsList.forEach((c: any) => constraintsadditionalConfigsMd = constraintsadditionalConfigsMd.concat('\n', '|', c, '|'));
+    if (constraintsList && constraintsList.length>0){
+      var constraintsMd = '|constraint| \n |----|';
+      constraintsList.forEach((c: any) => constraintsMd = constraintsMd.concat('\n', '|', c, '|'));
+      accordionSections.set('constraints', ['Constraints', constraintsMd]);
     }
   }
 
@@ -203,45 +195,38 @@ export default function ConfigurationAccordions(props: accordionCreatorProps) {
   //EXPECTATIONS --> FOR DATA OBJECTS
   function expectationsAccordion(){
     let expectations = getAttribute('expectations');
-    if (expectations !== undefined){
-      expectationsadditionalConfigsMd = '';
-      createdSections.push('expectations');
-      expectationsadditionalConfigsMd = expectationsadditionalConfigsMd.concat('\n', '\n', formatExpectations(expectations));
+    if (expectations && expectations.length>0){
+      var expectationsMd = formatExpectations(expectations);
+      accordionSections.set('expectations', ['Expectations', expectationsMd]);
     }
   }
 
   //TRANSFORMERS --> FOR ACTIONS
-function transformerAccordion(){
+  function transformerAccordion(){
     let tr = getTransformers(props.data, props.elementName);
-    if(tr.length>0){
-        transformersadditionalConfigsMd = '';
-        createdSections.push('transformers');
-        transformersadditionalConfigsMd = transformersadditionalConfigsMd.concat('\n', '\n', formatTransformers(tr));
-    }
-}
-
-  //EXECUTION MODE / CONDITION --> FOR ACTIONS
-
-  function execModeConditionAccordion(){
-    let execMode = getAttribute('executionMode');
-    let execCondition = getAttribute('executionCondition');
-    if(execMode !== undefined || execCondition !== undefined){
-        executionadditionalConfigsMd = '';
-    }
-    if(execMode !== undefined){
-        executionadditionalConfigsMd = formatExecutionMode(execMode);
-        createdSections.push('executionMode');
-    }
-    if(execCondition !== undefined){
-        executionadditionalConfigsMd = executionadditionalConfigsMd.concat(formatExecutionCondition(execCondition));
-        createdSections.push('executionCondition');
+    if (tr && tr.length>0){
+      var transformersMd = formatTransformers(tr);
+      accordionSections.set('transformers', ['Transformers', transformersMd]);
     }
   }
 
-  
+  //EXECUTION MODE / CONDITION --> FOR ACTIONS
+  function execModeAccordion(){
+    let execMode = getAttribute('executionMode');
+    if(execMode){
+      const executionModeMd = formatExecutionMode(execMode);
+      accordionSections.set('executionMode', ['Execution Mode', executionModeMd]);
+    }
+  }
 
-  //if(props.elementType==='actions'){transformerAccordion(); execModeConditionAccordion()};
-
+  //EXECUTION CONDITION --> FOR ACTIONS
+  function execConditionAccordion(){
+    let execCondition = getAttribute('executionCondition');
+    if(execCondition){
+      const executionConditionMd = formatExecutionCondition(execCondition);
+      accordionSections.set('executionCondition', ['Execution Condition', executionConditionMd]);
+    }
+  }
 
   //ADDITIONAL PROPERTIES --> FOR ALL
   function additionalPropertiesAccordion(){
@@ -253,7 +238,7 @@ function transformerAccordion(){
       if (metadata !== undefined){
         let additionalMetadata = Object.keys(metadata).filter((key) => {
           let keyAux = 'metadata.'+key;
-          return !createdSections.includes(keyAux);
+          return !props.createdSections.includes(keyAux);
         });
         if (additionalMetadata.length > 0){
           //...then return a list of Key-Value pairs of this data.
@@ -264,13 +249,13 @@ function transformerAccordion(){
       return [];
     }
   
-  
     let additionalAttributes = createElementRows(props.data, props.elementName, props.elementType)
-                              .filter(row => !createdSections.includes(row.key))
+                              .filter(row => !props.createdSections.includes(row.key))
+                              .filter(row => !accordionSections.has(row.key))
                               .concat(additionalMetadataList());
     if (additionalAttributes.length > 0){ //Check if there are any additional keys (either normal keys or metadata keys)
       
-      additionalConfigsMd = ` \n |Property (key) | Value | \n |-----|-----|`;
+      var additionalConfigsMd = ` \n |Property (key) | Value | \n |-----|-----|`;
       additionalAttributes.forEach((row)=> {
         row.value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
         if (row.key != 'code'){
@@ -278,46 +263,37 @@ function transformerAccordion(){
         }
         additionalConfigsMd = additionalConfigsMd.concat(`\n | ${row.key} | ${row.value} |`);
       });
+      accordionSections.set('additionalAttrs', ['Additional configurations', additionalConfigsMd]);
     }
   }
 
   function rawHoconAccordion(){
     let object = props.data[props.elementType][props.elementName];
-    rawHoconCodeMd = '```json \n' + JSON.stringify(object, null, 4) + '\n ```';
+    var rawHoconCodeMd = '```json \n' + JSON.stringify(object, null, 4) + '\n ```';
+    accordionSections.set('rawJson', ['Raw Code', rawHoconCodeMd]);
   }
 
 
   function getAccordionsParameters(): [string, string][]{
-    let parameters: [string, string][] = []
     if (props.elementType === 'dataObjects'){
       foreignKeysAccordion();
       constraintsAccordion();
       expectationsAccordion();
       additionalPropertiesAccordion(); //Always to be computed last
       rawHoconAccordion();
-      parameters = [['Foreign Keys', foreignKeysadditionalConfigsMd],
-                    ['Constraints', constraintsadditionalConfigsMd], 
-                    ['Expectations', expectationsadditionalConfigsMd],
-                    ['Additional configurations', additionalConfigsMd], 
-                    ['Raw Code', rawHoconCodeMd]]
     }
     else if (props.elementType === 'actions'){
       transformerAccordion();
-      execModeConditionAccordion();
+      execModeAccordion();
+      execConditionAccordion();
       additionalPropertiesAccordion(); //Always to be computed last
       rawHoconAccordion();
-      parameters = [['Transformers', transformersadditionalConfigsMd],
-                    ['Execution Mode and Condition', executionadditionalConfigsMd], 
-                    ['Additional configurations', additionalConfigsMd],
-                    ['Raw Code', rawHoconCodeMd]]
     }
     else if (props.elementType === 'connections'){
       additionalPropertiesAccordion();
       rawHoconAccordion();
-      parameters = [['Details', additionalConfigsMd],
-                    ['Raw Code', rawHoconCodeMd]];
     }
-    return parameters; 
+    return Array.from(accordionSections.values()); 
   }
 
   function markdownAccordion(accordionName: string, markdownText: string){
@@ -338,11 +314,8 @@ function transformerAccordion(){
     )
   }
 
-
   //Select which accordions will be rendered
   const accordions = getAccordionsParameters().map(([accordionName, markdownText]) => markdownAccordion(accordionName, markdownText));
-
-
 
   return (
     <Box>
