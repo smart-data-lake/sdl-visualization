@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App';
-import MarkdownComponent from './components/MarkdownComponent';
+import DescriptionTab from './components/DescriptionTab';
 import FileDisplay from './util/FileDisplay';
 import LayoutFlowTest from './archiv/LayoutFlowTest';
 import { BrowserRouter, HashRouter } from "react-router-dom";

@@ -19,12 +19,12 @@ import { Link, useMatch } from "react-router-dom";
 import { Box } from '@mui/material';
 
 
-interface nestedListProps{
+interface ElementListProps{
   data: any;
 }
 
 //props.data should be the JsonObject (already parsed from HOCON)
-export default function NestedList(props: nestedListProps) {
+export default function ElementList(props: ElementListProps) {
 
   const allDataObjects = Object.keys(props.data.dataObjects).sort();
   const allActions = Object.keys(props.data.actions).sort();

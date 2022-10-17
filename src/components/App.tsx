@@ -1,5 +1,5 @@
 import './App.css';
-import NestedList from './NestedList';
+import ElementList from './ElementList';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
 import SearchResults from './SearchResults';
@@ -8,6 +8,7 @@ import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
 import Header from './Header';
 import { Routes, Route, useLocation } from "react-router-dom";
 import { useSearchParams } from 'react-router-dom';
+import GlobalConfigView from './GlobalConfigView';
 
 export const defaultDrawerWidth = 300;
 const minDrawerWidth = 50;
@@ -16,7 +17,7 @@ const maxDrawerWidth = 600;
 function App() {
 
   // state
-  const [data, setData] = React.useState<Object>({dataObjects: {}, actions: {}, connections: {}, global: {}});
+  const [data, setData] = React.useState<any>({dataObjects: {}, actions: {}, connections: {}, global: {}});
   const [isLoading, setLoading] = useState(true);
   const [drawerWidth, setDrawerWidth] = useState(defaultDrawerWidth);
 
@@ -113,7 +114,7 @@ function App() {
               position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 100,
           }}/>     
         <Box sx={{ overflow: 'auto' }}>
-          <NestedList data={data} />
+          <ElementList data={data} />
         </Box>
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3, "paddingTop": "7px" }}>
@@ -134,7 +135,7 @@ function App() {
           <Route
             path="/globalOptions"
             element={
-              <DataDisplayView data={data} globalSelected={true}/>
+              <GlobalConfigView data={data.global}/>
             } />
         </Routes>
       </Box>

@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { getAttributeGeneral } from '../util/ConfigSearchOperation';
+import { getAttributeGeneral, getElementAttributeGeneral } from '../util/ConfigSearchOperation';
 import { Link } from "react-router-dom";
 
 interface searchResultProps{
@@ -60,7 +60,7 @@ export default function SearchResults(props: searchResultProps) {
         elements.forEach((element: string)=>{
             let elementPair = [element, elementType]; //[elementName, elementType]
             let push = false;
-            let att = getAttributeGeneral(data, element, elementType, auxSearchKey);
+            let att = getElementAttributeGeneral(data, element, elementType, auxSearchKey);
             if (att !== undefined){
               if (isArray(att)){ if (att.includes(searchValue)){result.push(elementPair);}} //Cannot merge both conditions because it would throw an error
               else if (att ===searchValue){ result.push(elementPair);}

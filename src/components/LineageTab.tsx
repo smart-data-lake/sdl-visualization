@@ -99,7 +99,7 @@ type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 
 
 
-function FlowChart(props: flowProps) {
+function LineageTab(props: flowProps) {
 
   const doa = new DataObjectsAndActions(props.data);
   let nodes_init: any[];
@@ -277,4 +277,4 @@ function FlowChart(props: flowProps) {
   );
 }
 
-export default FlowChart;
+export default LineageTab;
