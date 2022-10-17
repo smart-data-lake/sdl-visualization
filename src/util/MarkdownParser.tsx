@@ -13,7 +13,7 @@ function formatDataObjectLink(textLine: string){
   if (textLine.includes('@dataObject')){
     let result = '';
     textLine.split('@dataObject').forEach((substring, index) => {
-      if (index != 0 ){
+      if (index !== 0 ){
         let spacesArr = substring.split(' ');
         spacesArr[1] = `[${spacesArr[1]}](http://${window.location.host}/#/dataObjects/${spacesArr[1]})`; //index has to be 1 because the first index will contain empty string
         spacesArr.forEach((word) => result = result.concat(word, ' '));
@@ -41,7 +41,7 @@ export default function parseCustomMarkdown(text: string){
           else{
             currString = currString.concat('|'); //close previous row
           }
-          let lineArr = line.split('\`');
+          let lineArr = line.split('`');
           currString = currString.concat('\n', '|', lineArr[1], '|', lineArr[2]);
       }
       else if (line.startsWith('#') || line.startsWith('@endColumn')){

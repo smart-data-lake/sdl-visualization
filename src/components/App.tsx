@@ -3,11 +3,10 @@ import ElementList from './ElementList';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
 import SearchResults from './SearchResults';
-import {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent} from '../util/HoconParser';
+import {parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent} from '../util/HoconParser';
 import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
 import Header from './Header';
 import { Routes, Route, useLocation } from "react-router-dom";
-import { useSearchParams } from 'react-router-dom';
 import GlobalConfigView from './GlobalConfigView';
 
 export const defaultDrawerWidth = 300;

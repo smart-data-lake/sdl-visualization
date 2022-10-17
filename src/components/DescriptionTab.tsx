@@ -31,7 +31,7 @@ export default function DescriptionTab(props: {elementType: string, elementName:
         setInput(description);
       });
     }
-  }, [props.elementName]);
+  }, [props.elementType, props.elementName]);
 
   let hasMetadataDescription = 
     props.data && props.data['metadata'] 

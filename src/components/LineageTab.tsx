@@ -1,10 +1,9 @@
-import { Box, Button, StepIcon } from '@mui/material';
-import { useState, useCallback, useEffect, useRef, useLayoutEffect, Dispatch} from 'react';
-import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, ReactFlowProvider, useReactFlow } from 'react-flow-renderer';
-import DataObjectsAndActions, { DataObject, Action, DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
+import { Box, Button } from '@mui/material';
+import { useState, useCallback, useEffect, useRef} from 'react';
+import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, useReactFlow } from 'react-flow-renderer';
+import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
 import { useNavigate } from "react-router-dom";
 import './ComponentsStyles.css';
-import { convertCompilerOptionsFromJson } from 'typescript';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import { useParams } from 'react-router-dom';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
@@ -102,8 +101,8 @@ type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 function LineageTab(props: flowProps) {
 
   const doa = new DataObjectsAndActions(props.data);
-  let nodes_init: any[];
-  let edges_init: any[];
+  let nodes_init: any[] = [];
+  let edges_init: any[] = [];
   const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']);
 
   function expandGraph(){

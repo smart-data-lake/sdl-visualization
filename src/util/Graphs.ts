@@ -92,8 +92,8 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
     returnPartialGraphInputs(specificNodeId:id, colorNode:boolean = true): [Node[], Edge[]]{
         function predecessors(nodeId: id, graph: DAGraph){
-            var nodes = new Set<Node>;
-            var edges = new Set<Edge>;
+            var nodes = new Set<Node>();
+            var edges = new Set<Edge>();
             graph.edges.forEach(edge => {
                 if (edge.toNode.id === nodeId){
                     let pred = predecessors(edge.fromNode.id, graph);
@@ -108,8 +108,8 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
 
 
         function successors(nodeId: id, graph:DAGraph){
-            var nodes = new Set<Node>;
-            var edges = new Set<Edge>;
+            var nodes = new Set<Node>();
+            var edges = new Set<Edge>();
             graph.edges.forEach(edge =>{
                 if (edge.fromNode.id === nodeId){
                     let succ = successors(edge.toNode.id, graph);
@@ -156,7 +156,7 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
     }
 
     returnDirectNeighboursFromEdge(specificEdgeId: id): [Node[], Edge[]]{
-        const predsAndSuccs: Node[] = this.nodes.filter(node => this.edges.some(edge => edge.id === specificEdgeId && edge.toNode.id === node.id || edge.id === specificEdgeId && edge.fromNode.id === node.id));
+        const predsAndSuccs: Node[] = this.nodes.filter(node => this.edges.some(edge => (edge.id === specificEdgeId && edge.toNode.id === node.id) || (edge.id === specificEdgeId && edge.fromNode.id === node.id)));
         const edges: Edge[] = this.edges.filter(edge => edge.id === specificEdgeId);
         edges.forEach(edge => edge.isCentral = true);
         return [predsAndSuccs, edges];
@@ -307,7 +307,7 @@ function computeNodePositions(nodes: Node[], edges: Edge[]){
 
     //If there is one Central Node, then shift its position to [0, 0] and shift all nodes as well
     let centralNode = nodes.find((node) => node.isCenterNode);
-    if (centralNode != undefined) {
+    if (centralNode) {
         let shiftX = centralNode.position.x;
         let shiftY = centralNode.position.y;
         let shiftedNodes = nodes.filter((node) => !node.isCenterNode); //See if deep copy needed with strucuturedClone() !!

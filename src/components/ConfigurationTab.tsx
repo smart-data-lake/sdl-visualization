@@ -29,8 +29,8 @@ function getInputOutputIds(action: any): [string[], string[]]{
   let inputs: string[] = [];
   let outputs: string[] = [];
 
-  let hasManyInputs = action['inputIds'] != undefined; //we assume that each action has either inputId or InputIds (same for outputs)
-  let hasManyOutputs = action['outputIds'] != undefined;
+  let hasManyInputs = action['inputIds'] !== undefined; //we assume that each action has either inputId or InputIds (same for outputs)
+  let hasManyOutputs = action['outputIds'] !== undefined;
   
   if (hasManyInputs){
     let inputList = action['inputIds'] as string[];
@@ -73,7 +73,7 @@ export default function ConfigurationTab(props: detailsTableProps) {
   topAttributes.forEach(attributeName => {
     let att = getAttribute(attributeName);
     createdSections.push(attributeName);
-    if (att != undefined){
+    if (att){
       topMdString = topMdString.concat('\n', "**", attributeName, "**: ", att, '\n');
       }
   });
@@ -112,7 +112,7 @@ export default function ConfigurationTab(props: detailsTableProps) {
   createdSections.push('metadata.tags', 'metadata.feed'); //must be done after the top attributes are rendered.
 
   function inputOutputTables(){
-    if (props.elementType == 'actions'){
+    if (props.elementType === 'actions'){
       let [inputs, outputs] = getInputOutputIds(props.data)
       let [formattedInputs, formattedOutputs] = formatInputsOutputs(inputs, outputs);
       return(
