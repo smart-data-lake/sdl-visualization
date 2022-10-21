@@ -22,7 +22,7 @@ export default function DataDisplayView(props: displayProps) {
 
   React.useEffect(() => {
     if (elementType && elementName) setConfigObj(props.data[elementType][elementName]);
-  }, [elementName, elementType]);
+  }, [elementName, elementType, props.data]);
 
   // change selected tab
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {

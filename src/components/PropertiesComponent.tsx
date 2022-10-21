@@ -13,7 +13,7 @@ export default function PropertiesComponent(props: {obj?: any, properties?: {key
       value = <PropertiesComponent obj={value} />;
     } else {
       value = JSON.stringify(row.value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
-      if (key != 'code') {
+      if (key !== 'code') {
         value = value.replaceAll('"', '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
       }
     }

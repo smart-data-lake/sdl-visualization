@@ -23,10 +23,7 @@ function createRow(key: string, value: string) {
 }
 
 function getMetadataKV(jsonObject:any, elementName: string, elementType: string){
-  let hasMetadata = 
-    jsonObject[elementType] != undefined 
-    && jsonObject[elementType][elementName] != undefined
-    && jsonObject[elementType][elementName]['metadata'] != undefined;
+  let hasMetadata = jsonObject[elementType] && jsonObject[elementType][elementName] && jsonObject[elementType][elementName]['metadata'];
   
   let kv: KV [] = [];
 
@@ -40,15 +37,11 @@ function getMetadataKV(jsonObject:any, elementName: string, elementType: string)
   return kv; //returns empty list if no metadata found
 }
 
-function getTransformers(action: any){
-  if(action['transformers']){
-    return action['transformers']; //returns a list of transformer objects
-  }
-  return []; //returns empty list if there are no transformers in the configuration
+function getTransformers(action: any): any[] {
+  //returns a list of transformer objects
+  return (action['transformer'] ? [action['transformer']] : [])
+  .concat(action['transformers'] ?? []);
 }
-
-
-
 
 function formatExpectations(expectationsList: any[]): string {
   let expectationsAttributes = ['type','name','description','expectation', 'failedSeverity', 'scope', 'countConditionExpression', 'globalConditionExpression', 'aggExpression'];
@@ -75,7 +68,7 @@ function formatTransformers(transformerObjects: any[]): string{
     additionalConfigsMd = additionalConfigsMd.concat('\n |Property (key) | Value | \n |-----|-----|');
     Object.keys(tr).forEach((key)=>{
       let value = JSON.stringify(tr[key]).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
-      if (key != 'code'){
+      if (key !== 'code'){
         value = value.replace(/"/g, '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
       }
       else{ //Remove only first and last double quote from code.
@@ -86,23 +79,6 @@ function formatTransformers(transformerObjects: any[]): string{
     });
   });
   return additionalConfigsMd;
-}
-
-function formatExecutionMode(execMode: any): string{
-    let additionalConfigsMd = '';
-    additionalConfigsMd = additionalConfigsMd.concat('|Property (key) | Value | \n |-----|-----|');
-    Object.keys(execMode).forEach((key)=>{
-        let value = JSON.stringify(execMode[key]).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
-        additionalConfigsMd = additionalConfigsMd.concat(`\n | ${key} | ${value} |`);
-    });
-    return additionalConfigsMd;
-}
-
-function formatExecutionCondition(execCondition: any): string{
-    let additionalConfigsMd = '';
-    additionalConfigsMd = additionalConfigsMd.concat('- **Expression**:', execCondition['expression'], '\n');
-    additionalConfigsMd = additionalConfigsMd.concat('- **Description**:', execCondition['description'], '\n');
-    return additionalConfigsMd;
 }
 
 function createElementRows(obj: any) {

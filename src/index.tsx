@@ -1,10 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App';
-import DescriptionTab from './components/DescriptionTab';
-import FileDisplay from './util/FileDisplay';
-import LayoutFlowTest from './archiv/LayoutFlowTest';
-import { BrowserRouter, HashRouter } from "react-router-dom";
+import { HashRouter } from "react-router-dom";
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement

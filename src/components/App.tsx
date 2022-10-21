@@ -3,11 +3,10 @@ import ElementList from './ElementList';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
 import SearchResults from './SearchResults';
-import {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent} from '../util/HoconParser';
+import {parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent} from '../util/HoconParser';
 import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
 import Header from './Header';
 import { Routes, Route, useLocation } from "react-router-dom";
-import { useSearchParams } from 'react-router-dom';
 import GlobalConfigView from './GlobalConfigView';
 
 export const defaultDrawerWidth = 300;
@@ -30,48 +29,57 @@ function App() {
     .replace(new RegExp(routerLocation.pathname+"$"), "")
     .replace(new RegExp("#$"), "")
     .replace(new RegExp("/$"), "");
+  const exportedConfigUrl = baseUrl+"/exportedConfig.json"  
   const configSubdir = "/config";  
   const envConfigSubdir = "/envConfig";  
   const configUrl = baseUrl+configSubdir;
 
 
-  // parse config
+  // get config
   React.useEffect(() => {
-    // get config files
-    console.log("reading config from url "+configUrl);
-    listConfigFiles(configUrl, "")
+    // a) search for exported config in json format
+    getUrlContent(exportedConfigUrl)
+    .then(jsonStr => JSON.parse(jsonStr))
     .catch(err => {
-      // backup - read list from static index.json
-      console.log("Could not list files in URL "+configUrl+" ("+err+"), will try reading index.json.");
-      return readConfigIndexFile(configUrl);
-    })
-    .then(files => {
-      // prepend config directory to files to create relative Url
-      const filesRelUrl = files.map(f => configSubdir+"/"+f);
-      // check for environment config property in manifest file
-      return readManifestFile(baseUrl).then(manifest => {
-        // add environment config file if existing
-        if (manifest["env"]) {
-          const envConfigRelUrl = envConfigSubdir+"/"+manifest["env"]+".conf";
-          // make sure envConfig Url exists
-          return getUrlContent(envConfigRelUrl).then(x => {
-            filesRelUrl.push(envConfigRelUrl);
+      console.log("Could not get exported config in json format "+configUrl+", will try listing hocon config files. ("+err+")");
+      // b) parse config from Hocon Files
+      console.log("reading config from url "+configUrl);
+      // b1) get config file list by listing config directory
+      return listConfigFiles(configUrl, "")
+      .catch(err => {
+        // b2) read config file list from static index.json
+        console.log("Could not list files in URL "+configUrl+", will try reading index.json. ("+err+")");
+        return readConfigIndexFile(configUrl);
+      })
+      .then(files => {
+        // prepend config directory to files to create relative Url
+        const filesRelUrl = files.map(f => configSubdir+"/"+f);
+        // check for environment config property in manifest file
+        return readManifestFile(baseUrl).then(manifest => {
+          // add environment config file if existing
+          if (manifest["env"]) {
+            const envConfigRelUrl = envConfigSubdir+"/"+manifest["env"]+".conf";
+            // make sure envConfig Url exists
+            return getUrlContent(envConfigRelUrl).then(x => {
+              filesRelUrl.push(envConfigRelUrl);
+              return filesRelUrl;
+            });
+          } else {
             return filesRelUrl;
-          });
-        } else {
-          return filesRelUrl;
-        }
+          }
+        })
+      })
+      .then(files => {
+        console.log("config files to read", files);
+        const includeText = files.map(f => `include "${baseUrl}${f}"`).join("\n");
+        return parseTextStrict(includeText)
       })
     })
-    .then(files => {
-      console.log("config files to read", files);
-      const includeText = files.map(f => `include "${baseUrl}${f}"`).join("\n");
-      parseTextStrict(includeText)
-      .then(newData => {
-        setData(newData);
-        setLoading(false);
-      })
+    .then(newData => {
+      setData(newData);
+      setLoading(false);
     })
+
   }, []); // only once
   
   // resize drawer
