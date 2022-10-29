@@ -136,4 +136,27 @@ function getUrlContent(url: string): Promise<string> {
     });
 }
 
-export {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent};
+/**
+ * Standardizes recursively all object keys from KebabCase (hyphen separated) to CamelCase, 
+ * as SDLB accepts both syntax for configuration properties, and we should do the same in the visualizer.
+ */
+function standardizeKeys(input: any, parentKey?: string): any {
+    if (typeof input !== 'object') return input;
+    if (Array.isArray(input)) return input.map(x => standardizeKeys(x, parentKey));
+    if (Object.keys(input).length === 0) return;
+    return Object.keys(input).reduce(function (newObj: any, key: string) {
+        let val = input[key];
+        let newVal = (typeof val === 'object') && val !== null ? standardizeKeys(val, key) : val;
+        if (newVal) {
+            if (parentKey==="connections" || parentKey==="dataObjects" || parentKey==="actions" || parentKey==="options" || parentKey==="runtimeOptions" || parentKey==="sparkOptions") newObj[key] = newVal;
+            else newObj[kebabToCamelCase(key)] = newVal;
+        }
+        return newObj;
+    }, {});
+};
+
+function kebabToCamelCase(input: string): string {
+    return input.replace(/-./g, x=>x[1].toUpperCase());
+}
+
+export {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent, standardizeKeys};

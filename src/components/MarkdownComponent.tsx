@@ -8,7 +8,7 @@ import * as React from 'react';
 export default function MarkdownComponent(props: {markdown: string}){
   return (
     <React.Fragment>
-      <GlobalStyles styles={{ table: { width: '100% !important' } }} />
+      <GlobalStyles styles={{ table: { width: '100% !important', overflow: 'scroll' } }} />
       <ReactMarkdown className='markdown-body' children={props.markdown} remarkPlugins={[remarkGfm]} />
     </React.Fragment>
   )

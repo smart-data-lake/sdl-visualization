@@ -3,7 +3,7 @@ import ElementList from './ElementList';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
 import SearchResults from './SearchResults';
-import {parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent} from '../util/HoconParser';
+import {parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent, standardizeKeys} from '../util/HoconParser';
 import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
 import Header from './Header';
 import { Routes, Route, useLocation } from "react-router-dom";
@@ -72,11 +72,11 @@ function App() {
       .then(files => {
         console.log("config files to read", files);
         const includeText = files.map(f => `include "${baseUrl}${f}"`).join("\n");
-        return parseTextStrict(includeText)
+        return parseTextStrict(includeText);
       })
     })
     .then(newData => {
-      setData(newData);
+      setData(standardizeKeys(newData));
       setLoading(false);
     })
 

@@ -18,10 +18,15 @@ export default function DataDisplayView(props: displayProps) {
 
   const {elementName, elementType} = useParams();
   const [configObj, setConfigObj] = React.useState();
+  const [connectionConfigObj, setConnectionConfigObj] = React.useState();
   const [selectedTyp, setSelectedTab] = React.useState('description');
 
   React.useEffect(() => {
-    if (elementType && elementName) setConfigObj(props.data[elementType][elementName]);
+    if (elementType && elementName) {
+      let obj = props.data[elementType][elementName];
+      if (obj && obj['connectionId']) setConnectionConfigObj(props.data['connections'][obj['connectionId']]);
+      setConfigObj(obj);
+    }
   }, [elementName, elementType, props.data]);
 
   // change selected tab
@@ -42,7 +47,7 @@ export default function DataDisplayView(props: displayProps) {
         <DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
       </TabPanel>
       <TabPanel value="configuration" className="content-panel">
-        <ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} />
+        <ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} connection={connectionConfigObj} />
       </TabPanel>
       <TabPanel value="lineage" className="content-panel">
       <ReactFlowProvider>
