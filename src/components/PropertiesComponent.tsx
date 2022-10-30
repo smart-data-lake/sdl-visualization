@@ -29,15 +29,15 @@ export default function PropertiesComponent(props: {entries: {key: string, value
     const key = entry.key;
     var value = entry.value;
     // pass through react elements
-    if (React.isValidElement(value)) value = value;
+    if (React.isValidElement(value)) {} // no operation
     // pass through list of react elements
-    else if (Array.isArray(value) || React.isValidElement(value[0])) value = value;
+    else if (Array.isArray(value) || React.isValidElement(value[0])) {} // no operation
     // create a key/value table for objects
     else if (typeof value == 'object' && !Array.isArray(value)) {
       value = createPropertiesComponent({obj: value});
     } else if (key === "code") {
     // format code
-      const type = props.entries.find(e => e.key == "type");
+      const type = props.entries.find(e => e.key === "type");
       const language = (type && type.value.split(/(?=[A-Z])/)[0].toLowerCase()) || "default";
       console.log(language);
       value = <CodeViewComponent code={removeBlockOfTrailingSpaces(value)} language={language} />
@@ -53,6 +53,7 @@ export default function PropertiesComponent(props: {entries: {key: string, value
         <TableCell>{value}</TableCell>
       </TableRow>;
     }
+    return undefined;
   })
   .filter(cmp => cmp); // remove undefined values;
   return <TableContainer component={Paper} sx={{width: width}}>
