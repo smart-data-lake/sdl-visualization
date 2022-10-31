@@ -145,12 +145,14 @@ function LineageTab(props: flowProps) {
   useEffect(() => {
     setNodes(nodes_init);
     setEdges(edges_init);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props]); // Only re-run the effect if nodes_init changes
 
   useEffect(()=>{
     const new_graph = prepareAndRenderGraph();
     setNodes(new_graph[0]);
     setEdges(new_graph[1]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlyDirectNeighbours]); //Re-render the graph after expanding or contracting
 
   let initial_render = prepareAndRenderGraph();
