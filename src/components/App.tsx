@@ -53,7 +53,7 @@ function App() {
       })
       .then(files => {
         // prepend config directory to files to create relative Url
-        const filesRelUrl = files.map(f => configSubdir+"/"+f);
+        const filesRelUrl = files.map(f => configSubdir+f);
         // check for environment config property in manifest file
         return readManifestFile(baseUrl).then(manifest => {
           // add environment config file if existing

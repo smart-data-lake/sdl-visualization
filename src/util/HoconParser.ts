@@ -79,7 +79,12 @@ function parseJsonList(text: any): [string[], string[]] {
         });
     } else throw new Error("No files list found in HTML file listing");
     return [availableFiles, availableDirs];
- }
+}
+
+function prefixWithSlash(str: string): string {
+    if (str.startsWith("/")) return str;
+    return "/" + str;
+}
 
 /**
  * List config files recursively by http directory list request
@@ -93,8 +98,8 @@ function listConfigFiles(url: string, path: string): Promise<string[]> {
         } else {
             [files, dirs] = parseJsonList(text);
         }
-        var subDirFiless = [Promise.resolve(files.map(f => path + f))];
-        dirs.forEach(dir => subDirFiless.push(listConfigFiles(url, path + dir + "/")));
+        var subDirFiless = [Promise.resolve(files.map(f => path + prefixWithSlash(f)))];
+        dirs.forEach(dir => subDirFiless.push(listConfigFiles(url, path + prefixWithSlash(dir))));
         return Promise.all(subDirFiless)
         .then(filess => filess.flat())
     });
