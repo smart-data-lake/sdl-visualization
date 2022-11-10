@@ -1,5 +1,7 @@
 import dagre from 'dagre';
 
+const central_node_color = '#ffc0cb';
+
 //Union of two sets
 function union<T>(setA: Set<T>, setB: Set<T>) {
     const _union = new Set(setA);
@@ -82,16 +84,16 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
         this.destNodes = [...new Set(destinationNodes)]; //Nodes with incoming edges (remove duplicates)
         this.levelOneNodes = this.nodes.filter(x => !destinationNodes.includes(x)); //nodes without incoming edges
 
-        this.changeLevelForAllNodes(); //compute levels for all nodes
+        // this.changeLevelForAllNodes(); //compute levels for all nodes. Not needed anymore since the layout is done automatically.
         this.computeLevelsList();
         
     }
 
-    //Returns the nodes and edges of a partial graph based on a specific node (direct predecessors and succesors) as a pair
+    //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
     returnPartialGraphInputs(specificNodeId:id, colorNode:boolean = true): [Node[], Edge[]]{
         function predecessors(nodeId: id, graph: DAGraph){
-            var nodes = new Set<Node>;
-            var edges = new Set<Edge>;
+            var nodes = new Set<Node>();
+            var edges = new Set<Edge>();
             graph.edges.forEach(edge => {
                 if (edge.toNode.id === nodeId){
                     let pred = predecessors(edge.fromNode.id, graph);
@@ -106,8 +108,8 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
 
 
         function successors(nodeId: id, graph:DAGraph){
-            var nodes = new Set<Node>;
-            var edges = new Set<Edge>;
+            var nodes = new Set<Node>();
+            var edges = new Set<Edge>();
             graph.edges.forEach(edge =>{
                 if (edge.fromNode.id === nodeId){
                     let succ = successors(edge.toNode.id, graph);
@@ -122,7 +124,7 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
 
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
         specificNode.isCenterNode = true;
-        if(colorNode){specificNode.backgroundColor='#ffc0cb';}
+        if(colorNode){specificNode.backgroundColor=central_node_color;}
         const nodes = setAsArray(union(predecessors(specificNodeId, this)[0] as Set<Node>, successors(specificNodeId, this)[0] as Set<Node>));//merge predeccessors and successors     
         nodes.push(specificNode as Node); //add the central/origin node itself
         const edges = setAsArray(union(predecessors(specificNodeId, this)[1] as Set<Edge>, successors(specificNodeId, this)[1] as Set<Edge>));   
@@ -135,9 +137,6 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
         let result: [Node[], Edge[]] = [[], []];
         for (let i = 0 ; i < edgesWithId.length ; i++){
             let [nodesNext, edgesNext] = this.returnPartialGraphInputs(edgesWithId[i].toNode.id, false);
-            //let a: Node[] = setAsArray(union(new Set(result[0]), new Set(nodesNext))) as Node[];
-            //let b: Edge[] = setAsArray(union(new Set(result[1]), new Set(edgesNext))) as Edge[];
-            //result = [a,b];
             result = [setAsArray(union(new Set(result[0]), new Set(nodesNext))), setAsArray(union(new Set(result[1]), new Set(edgesNext)))]
         }
         const specificEdges: Edge[] = this.edges.filter(edge => edge.id===specificEdgeId);
@@ -147,7 +146,27 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
         return result;
     }
 
+    returnDirectNeighbours(specificNodeId: id, colorNode:boolean = true): [Node[], Edge[]]{
+        const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
+        specificNode.isCenterNode = true;
+        if(colorNode){specificNode.backgroundColor=central_node_color;}
+        const edges = this.edges.filter(edge => edge.fromNode.id === specificNodeId || edge.toNode.id === specificNodeId);
+        let predsAndSuccs: Node[] = this.nodes.filter(node => edges.some(edge => edge.toNode.id === node.id || edge.fromNode.id === node.id));
+        return [predsAndSuccs.concat(specificNode), edges];
+    }
 
+    returnDirectNeighboursFromEdge(specificEdgeId: id): [Node[], Edge[]]{
+        const predsAndSuccs: Node[] = this.nodes.filter(node => this.edges.some(edge => (edge.id === specificEdgeId && edge.toNode.id === node.id) || (edge.id === specificEdgeId && edge.fromNode.id === node.id)));
+        const edges: Edge[] = this.edges.filter(edge => edge.id === specificEdgeId);
+        edges.forEach(edge => edge.isCentral = true);
+        return [predsAndSuccs, edges];
+    }
+
+    /**
+     * DEPRECATED
+     * @param destNode 
+     * @returns Defines level of a node (DEPRECATED as the layout is done by the ReactFlow library)
+     */
     longestPath(destNode: Node): number { //defines level of a node
         var result = 0
         if (this.destNodes.includes(destNode)){
@@ -159,13 +178,18 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
         }
         return result
     }
-
+    /**
+     * DEPRECATED as the layout is done by the ReactFlow library
+     */
     changeLevelForAllNodes(): void {
         this.nodes.forEach(node => {
             node.level = this.longestPath(node)
         })
     }
 
+    /**
+     * DEPRECATED as the layout is done by the ReactFlow library
+     */
     computeLevelsList(){
         this.nodes.forEach(node =>{
             if (this.levels[node.level]===undefined){
@@ -283,7 +307,7 @@ function computeNodePositions(nodes: Node[], edges: Edge[]){
 
     //If there is one Central Node, then shift its position to [0, 0] and shift all nodes as well
     let centralNode = nodes.find((node) => node.isCenterNode);
-    if (centralNode != undefined) {
+    if (centralNode) {
         let shiftX = centralNode.position.x;
         let shiftY = centralNode.position.y;
         let shiftedNodes = nodes.filter((node) => !node.isCenterNode); //See if deep copy needed with strucuturedClone() !!

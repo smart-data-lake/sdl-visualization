@@ -19,12 +19,12 @@ import { Link, useMatch } from "react-router-dom";
 import { Box } from '@mui/material';
 
 
-interface nestedListProps{
+interface ElementListProps{
   data: any;
 }
 
 //props.data should be the JsonObject (already parsed from HOCON)
-export default function NestedList(props: nestedListProps) {
+export default function ElementList(props: ElementListProps) {
 
   const allDataObjects = Object.keys(props.data.dataObjects).sort();
   const allActions = Object.keys(props.data.actions).sort();
@@ -74,8 +74,8 @@ export default function NestedList(props: nestedListProps) {
     else return 'normal';
   }
 
-  const dataObjectsCompleteList = currentDataObjects.map((dataObject) => (
-    <Link to={`/dataObjects/${dataObject}`}>
+  const dataObjectsCompleteList = currentDataObjects.map((dataObject,i) => (
+    <Link to={`/dataObjects/${dataObject}`} key={"d"+i}>
       <ListItemButton sx={{ pl: 4 }}>
         <ListItemIcon>
           <TableViewTwoTone />
@@ -90,8 +90,8 @@ export default function NestedList(props: nestedListProps) {
     </Link>
   ));
 
-  const actionsCompleteList = currentActions.map((action) => (
-    <Link to={`/actions/${action}`}>
+  const actionsCompleteList = currentActions.map((action,i) => (
+    <Link to={`/actions/${action}`} key={"a"+i}>
       <ListItemButton sx={{ pl: 4 }}>
         <ListItemIcon>
           <RocketLaunchOutlined />
@@ -106,8 +106,8 @@ export default function NestedList(props: nestedListProps) {
     </Link>
   ));
 
-  const connectionsCompleteList = currentConnections.map((connection) => (
-    <Link to={`/connections/${connection}`}>
+  const connectionsCompleteList = currentConnections.map((connection,i) => (
+    <Link to={`/connections/${connection}`} key={"c"+i}>
       <ListItemButton sx={{ pl: 4 }}>
         <ListItemIcon>
           <LanOutlinedIcon />
@@ -124,7 +124,7 @@ export default function NestedList(props: nestedListProps) {
 
 
   return (
-    <Box sx={{"overflow-x": "clip"}}>
+    <Box sx={{"overflowX": "clip"}}>
       <TextField
         className="search_field"
         variant="outlined"
@@ -132,7 +132,7 @@ export default function NestedList(props: nestedListProps) {
         label="Search element"
         value={currentSearch}
         onChange={(e) => handleTextField(e.target.value)} //e is the event Object triggered by the onChange
-        sx={{width: "100%", "padding-right": "25px"}}
+        sx={{width: "100%", "paddingRight": "25px"}}
       />
 
       <List

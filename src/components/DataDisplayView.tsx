@@ -1,72 +1,57 @@
-import FlowChart from "./FlowChart";
+import LineageTab from "./LineageTab";
 import React from 'react';
 import './ComponentsStyles.css';
 import { Box, Tab, Tabs } from "@mui/material";
 import TabPanel from '@mui/lab/TabPanel';
 import TabContext from '@mui/lab/TabContext';
-import MetadataTable from "./MetadataTable";
-import MarkdownComponent from "./MarkdownComponent";
+import ConfigurationTab from "./ConfigurationTab";
+import DescriptionTab from "./DescriptionTab";
 import { useParams } from "react-router-dom";
 import { ReactFlowProvider } from "react-flow-renderer";
 
 interface displayProps {
-  data: object;
-  globalSelected?: boolean; //true for the url /globalOptions
+  data: any; // complete configuration
 }
 
 
 export default function DataDisplayView(props: displayProps) {
 
   const {elementName, elementType} = useParams();
-  
-  const [value, setValue] = React.useState('description');
+  const [configObj, setConfigObj] = React.useState();
+  const [connectionConfigObj, setConnectionConfigObj] = React.useState();
+  const [selectedTyp, setSelectedTab] = React.useState('description');
 
-  // reset value on element change
-  React.useEffect(() => setValue('description'), [elementName, elementType]);
+  React.useEffect(() => {
+    if (elementType && elementName) {
+      let obj = props.data[elementType][elementName];
+      if (obj && obj['connectionId']) setConnectionConfigObj(props.data['connections'][obj['connectionId']]);
+      setConfigObj(obj);
+    }
+  }, [elementName, elementType, props.data]);
 
   // change selected tab
   const handleChange = (event: React.SyntheticEvent, newValue: string) => {
-    setValue(newValue);
+    setSelectedTab(newValue);
   };
 
-
-  if (props.globalSelected){
-    return (
-      <TabContext value={'configuration'}>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={'configuration'} onChange={handleChange} aria-label="element tabs">
-          <Tab label="Configuration" value="configuration" sx={{height: "15px"}} />
-        </Tabs>
-      </Box>
-      <TabPanel value="configuration">
-        <MetadataTable data={props.data} elementName='global' elementType='global' />;
-      </TabPanel>
-    </TabContext>      
-    );
-  }
-  
-
   return (
-    <TabContext value={value}>
+    <TabContext value={selectedTyp}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={value} onChange={handleChange} aria-label="element tabs">
+        <Tabs value={selectedTyp} onChange={handleChange} aria-label="element tabs">
           <Tab label="Description" value="description" sx={{height: "15px"}} />
           <Tab label="Configuration" value="configuration" sx={{height: "15px"}} />
           {(elementType==="actions" || elementType==="dataObjects") && <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />}
         </Tabs>
       </Box>
       <TabPanel value="description" className="content-panel">
-        <MarkdownComponent filename={elementName as string} data={props.data} elementType={elementType as string}/>;
+        <DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
       </TabPanel>
       <TabPanel value="configuration" className="content-panel">
-        <MetadataTable data={props.data} elementName={elementName as string} elementType={elementType as string} />;
+        <ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} connection={connectionConfigObj} />
       </TabPanel>
       <TabPanel value="lineage" className="content-panel">
       <ReactFlowProvider>
-        <FlowChart 
-          data={props.data}
-          elementName={elementName as string} 
-          elementType={elementType as string} />
+        <LineageTab data={props.data} elementName={elementName as string} elementType={elementType as string} />
       </ReactFlowProvider>
       </TabPanel>
     </TabContext> 

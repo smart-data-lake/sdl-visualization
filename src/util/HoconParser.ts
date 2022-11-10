@@ -79,17 +79,18 @@ function parseJsonList(text: any): [string[], string[]] {
         });
     } else throw new Error("No files list found in HTML file listing");
     return [availableFiles, availableDirs];
- }
+}
+
+function prefixWithSlash(str: string): string {
+    if (str.startsWith("/")) return str;
+    return "/" + str;
+}
 
 /**
  * List config files recursively by http directory list request
  */
 function listConfigFiles(url: string, path: string): Promise<string[]> {
-    const files = fetch(url + path)
-    .then(response => {
-        if (response.ok) return response.text();
-        else throw new Error("Response "+response.status+" "+response.statusText+" "+response.body);
-    })
+    const files = getUrlContent(url + path)
     .then(text => {
         var files, dirs: string[] = [];
         if (text.startsWith("<")) {
@@ -97,8 +98,8 @@ function listConfigFiles(url: string, path: string): Promise<string[]> {
         } else {
             [files, dirs] = parseJsonList(text);
         }
-        var subDirFiless = [Promise.resolve(files.map(f => path + f))];
-        dirs.forEach(dir => subDirFiless.push(listConfigFiles(url, path + dir + "/")));
+        var subDirFiless = [Promise.resolve(files.map(f => path + prefixWithSlash(f)))];
+        dirs.forEach(dir => subDirFiless.push(listConfigFiles(url, path + prefixWithSlash(dir))));
         return Promise.all(subDirFiless)
         .then(filess => filess.flat())
     });
@@ -108,12 +109,8 @@ function listConfigFiles(url: string, path: string): Promise<string[]> {
 /**
  * Read config files from index.json url
  */
-function readConfigIndexFile(url: string): Promise<string[]> {
-    const files = fetch(url+"index.json")
-    .then(response => {
-        if (response.ok) return response.text();
-        else throw new Error("Response "+response.status+" "+response.statusText+" "+response.body);
-    })
+function readConfigIndexFile(baseUrl: string): Promise<string[]> {
+    const files = getUrlContent(baseUrl+"/index.json")
     .then(text => {
         const [files, dirs] = parseJsonList(text);
         if (dirs.length > 0) console.log("Directories in index.json are ignored");
@@ -122,5 +119,49 @@ function readConfigIndexFile(url: string): Promise<string[]> {
     return files;
 }
 
+/**
+ * Read additional config from manifest.json url
+ */
+function readManifestFile(baseUrl: string): Promise<any> {
+    const files = getUrlContent(baseUrl+"/manifest.json")
+    .then(text => JSON.parse(text));
+    return files;
+}
 
-export {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile};
+/**
+ * Return URL content, throw error if index.html is returned (redirect) or an other error happens.
+ */
+function getUrlContent(url: string): Promise<string> {
+    return fetch(url).then(response => {
+        if (!response.ok) throw new Error("Could not read "+url+": Response "+response.status+" "+response.statusText+" "+response.body);
+        return response.text().then(t => {
+            if (t.startsWith("<!DOCTYPE html>\n<html lang")) throw new Error("Could not read "+url+" because it does not exists (rerouted to index.html)");
+            return t;
+        })
+    });
+}
+
+/**
+ * Standardizes recursively all object keys from KebabCase (hyphen separated) to CamelCase, 
+ * as SDLB accepts both syntax for configuration properties, and we should do the same in the visualizer.
+ */
+function standardizeKeys(input: any, parentKey?: string): any {
+    if (typeof input !== 'object') return input;
+    if (Array.isArray(input)) return input.map(x => standardizeKeys(x, parentKey));
+    if (Object.keys(input).length === 0) return;
+    return Object.keys(input).reduce(function (newObj: any, key: string) {
+        let val = input[key];
+        let newVal = (typeof val === 'object') && val !== null ? standardizeKeys(val, key) : val;
+        if (newVal) {
+            if (parentKey==="connections" || parentKey==="dataObjects" || parentKey==="actions" || parentKey==="options" || parentKey==="runtimeOptions" || parentKey==="sparkOptions") newObj[key] = newVal;
+            else newObj[kebabToCamelCase(key)] = newVal;
+        }
+        return newObj;
+    }, {});
+};
+
+function kebabToCamelCase(input: string): string {
+    return input.replace(/-./g, x=>x[1].toUpperCase());
+}
+
+export {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent, standardizeKeys};

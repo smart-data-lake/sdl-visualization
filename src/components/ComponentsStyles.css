@@ -27,6 +27,13 @@ a:link{
     color: black;
 }
 
+.chips{
+    cursor:pointer !important;
+}
+
+.chipStack{
+    padding-top: 10px;
+}
 input[type=checkbox] {width:20px; height:20px;}
 
 /*Media styles*/

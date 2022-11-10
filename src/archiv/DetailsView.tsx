@@ -1,6 +1,6 @@
-import MetadataTable from "../components/MetadataTable";
+import ConfigurationTab from "../components/ConfigurationTab";
 import './ComponentsStyles.css';
-import MarkdownComponent from "../components/MarkdownComponent";
+import DescriptionTab from "../components/DescriptionTab";
 
 import { Box } from "@mui/material";
 
@@ -19,8 +19,8 @@ export default function DetailsView(props: detailsProps) {
 
     return (
       <Box>
-        <MetadataTable data={props.data} elementName={props.elementName} elementType={props.elementType} />;
-        <MarkdownComponent filename={props.elementName} data={props.data} elementType={props.elementType}/>;
+        <ConfigurationTab data={props.data} elementName={props.elementName} elementType={props.elementType} />;
+        <DescriptionTab elementName={props.elementName} data={props.data} elementType={props.elementType}/>;
       </Box>
     );
 } 

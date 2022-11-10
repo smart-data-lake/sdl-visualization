@@ -1,6 +1,6 @@
 import { RocketLaunchOutlined, TableViewTwoTone } from '@mui/icons-material';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
-import {AppBar, Toolbar, IconButton, Typography, Icon, Box} from '@mui/material';
+import {AppBar, Toolbar, IconButton, Typography, Icon} from '@mui/material';
 import { useMatch } from 'react-router-dom';
 
 export default function Header() {

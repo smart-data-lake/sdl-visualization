@@ -1,11 +1,13 @@
 import './App.css';
-import NestedList from './NestedList';
+import ElementList from './ElementList';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
-import {parseFileStrict, parseTextStrict, listConfigFiles, readConfigIndexFile} from '../util/HoconParser';
+import SearchResults from './SearchResults';
+import {parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent, standardizeKeys} from '../util/HoconParser';
 import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
 import Header from './Header';
 import { Routes, Route, useLocation } from "react-router-dom";
+import GlobalConfigView from './GlobalConfigView';
 
 export const defaultDrawerWidth = 300;
 const minDrawerWidth = 50;
@@ -14,9 +16,11 @@ const maxDrawerWidth = 600;
 function App() {
 
   // state
-  const [data, setData] = React.useState<Object>({dataObjects: {}, actions: {}, connections: {}, global: {}});
+  const [data, setData] = React.useState<any>({dataObjects: {}, actions: {}, connections: {}, global: {}});
   const [isLoading, setLoading] = useState(true);
   const [drawerWidth, setDrawerWidth] = useState(defaultDrawerWidth);
+
+
 
 
   const routerLocation = useLocation();
@@ -25,29 +29,57 @@ function App() {
     .replace(new RegExp(routerLocation.pathname+"$"), "")
     .replace(new RegExp("#$"), "")
     .replace(new RegExp("/$"), "");
-  const configUrl = baseUrl+"/config/";
+  const exportedConfigUrl = baseUrl+"/exportedConfig.json"  
+  const configSubdir = "/config";  
+  const envConfigSubdir = "/envConfig";  
+  const configUrl = baseUrl+configSubdir;
 
 
-  // parse config
+  // get config
   React.useEffect(() => {
-    // get config files
-    console.log("reading config from url "+configUrl);
-    listConfigFiles(configUrl, "")
+    // a) search for exported config in json format
+    getUrlContent(exportedConfigUrl)
+    .then(jsonStr => JSON.parse(jsonStr))
     .catch(err => {
-      // backup - read list from static index.json
-      console.log("Could not list files in URL "+configUrl+" ("+err+"), will try reading index.json.");
-      return readConfigIndexFile(configUrl);
-    })
-    .then(files => {
-      console.log("config files to read", files);
-      const includeText = files.map(f => `include "${configUrl}${f}"`).join("\n");
-      parseTextStrict(includeText)
-      .then(newData => {
-        setData(newData);
-        setLoading(false);
+      console.log("Could not get exported config in json format "+configUrl+", will try listing hocon config files. ("+err+")");
+      // b) parse config from Hocon Files
+      console.log("reading config from url "+configUrl);
+      // b1) get config file list by listing config directory
+      return listConfigFiles(configUrl, "")
+      .catch(err => {
+        // b2) read config file list from static index.json
+        console.log("Could not list files in URL "+configUrl+", will try reading index.json. ("+err+")");
+        return readConfigIndexFile(configUrl);
+      })
+      .then(files => {
+        // prepend config directory to files to create relative Url
+        const filesRelUrl = files.map(f => configSubdir+f);
+        // check for environment config property in manifest file
+        return readManifestFile(baseUrl).then(manifest => {
+          // add environment config file if existing
+          if (manifest["env"]) {
+            const envConfigRelUrl = envConfigSubdir+"/"+manifest["env"]+".conf";
+            // make sure envConfig Url exists
+            return getUrlContent(envConfigRelUrl).then(x => {
+              filesRelUrl.push(envConfigRelUrl);
+              return filesRelUrl;
+            });
+          } else {
+            return filesRelUrl;
+          }
+        })
+      })
+      .then(files => {
+        console.log("config files to read", files);
+        const includeText = files.map(f => `include "${baseUrl}${f}"`).join("\n");
+        return parseTextStrict(includeText);
       })
     })
-    .catch(err => console.log("Error listing files in "+configUrl, err))
+    .then(newData => {
+      setData(standardizeKeys(newData));
+      setLoading(false);
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // only once
   
   // resize drawer
@@ -90,13 +122,19 @@ function App() {
               position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 100,
           }}/>     
         <Box sx={{ overflow: 'auto' }}>
-          <NestedList data={data} />
+          <ElementList data={data} />
         </Box>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, "padding-top": "7px" }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, "paddingTop": "7px" }}>
         <Toolbar />
         <Routes>
           <Route index element={<p>Please select a component from the drawer on the left to see its configuration</p>} />
+          <Route
+            path='/search/:ownSearchString' //the ownSearchString is our definition of a 
+                                            //search because of problems with routing Search Parameters
+            element={
+              <SearchResults data={data}/>
+            } />
           <Route
             path="/:elementType/:elementName"
             element={
@@ -105,7 +143,7 @@ function App() {
           <Route
             path="/globalOptions"
             element={
-              <DataDisplayView data={data} globalSelected={true}/>
+              <GlobalConfigView data={data.global}/>
             } />
         </Routes>
       </Box>
