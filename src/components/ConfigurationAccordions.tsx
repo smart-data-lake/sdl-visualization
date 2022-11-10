@@ -31,8 +31,8 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   var accordionSections = new Map<string,[string,JSX.Element]>();
   const [openAccordion, setOpenAccordion] = React.useState('none'); //none of the accordions are open at the beginning
 
-  // reset accordion on element change
-  React.useEffect(() => setOpenAccordion('none'), [props.data]);
+  // reset accordion on element change -> disabled as it more intuitive if the same accordion section stays open
+  //React.useEffect(() => setOpenAccordion('none'), [props.data]);
 
   //Only one accordion open at a time
   const handleChange = (accordionName: string) => (event: React.SyntheticEvent, isExpanded: boolean) =>
@@ -148,13 +148,19 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   }
 
   function additionalPropertiesAccordion(){
-    const propsToIgnore = props.propsToIgnore.concat(["transformer"]).concat(Array.from(accordionSections.keys()))
+    const propsToIgnore = props.propsToIgnore.concat(["transformer","origin"]).concat(Array.from(accordionSections.keys()))
     const cmp = createPropertiesComponent({obj: props.data, propsToIgnore: propsToIgnore})
     if (cmp) accordionSections.set('additionalAttrs', ['Additional configurations', cmp]);
   }
 
   function rawHoconAccordion(){
-    accordionSections.set('rawJson', ['Raw Code', <CodeViewComponent code={JSON.stringify(props.data, null, 2)} language="json" />]);
+    var rawData = props.data;
+    // remove origin from data if it exists
+    if (rawData.origin) {
+      var rawData = {...rawData}; // deep clone to avoid mutation of the original data
+      rawData.origin = undefined; // remove origin definition
+    }
+    accordionSections.set('rawJson', ['Raw Code', <CodeViewComponent code={JSON.stringify(rawData, null, 2)} language="json" />]);
   }
 
 
