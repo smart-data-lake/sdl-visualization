@@ -1,0 +1,44 @@
+import { Button } from '@mui/material';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import { toPng } from 'html-to-image';
+
+function downloadImage(dataUrl: string) {
+  const a = document.createElement('a');
+
+  a.setAttribute('download', 'reactflow.png');
+  a.setAttribute('href', dataUrl);
+  a.click();
+}
+
+function DownloadButton() {
+  const download = () => {
+    toPng(document.querySelector('.react-flow') as HTMLElement, {
+      filter: (node) => {
+        console.log(node.classList)
+        // we don't want to add the minimap and the controls to the image
+        if (
+          node?.classList?.contains('react-flow__minimap') ||
+          node?.classList?.contains('react-flow__controls') ||
+          node?.classList?.contains('MuiSvgIcon-root') ||
+          node?.classList?.contains('MuiButtonBase-root')
+        ) {
+          return false;
+        }
+
+        return true;
+      },
+    }).then(downloadImage);
+  };
+
+  return (
+
+      <Button
+          variant='contained'
+          startIcon={<CloudDownloadIcon />}
+          onClick={download}>
+          Download Image
+      </Button>
+  );
+}
+
+export default DownloadButton;

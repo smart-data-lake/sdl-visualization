@@ -8,6 +8,7 @@ import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import { useParams } from 'react-router-dom';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import DownloadButton from './DownloadLineageButton';
 
 
 
@@ -271,6 +272,10 @@ function LineageTab(props: flowProps) {
               onClick={expandGraph}>
             {onlyDirectNeighbours[1]}
           </Button>
+        </div>
+
+        <div title='Download image as PNG file' style={{ position: 'absolute', right: 17, top: 15, zIndex: 4, cursor: 'pointer' }}>
+          <DownloadButton />
         </div>
 
       </ReactFlow>
