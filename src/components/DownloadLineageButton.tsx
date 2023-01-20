@@ -1,4 +1,4 @@
-import { Button } from '@mui/material';
+import { IconButton } from '@mui/material';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import { toPng } from 'html-to-image';
 
@@ -30,12 +30,15 @@ function DownloadButton() {
   };
 
   return (
-      <Button
-          variant='contained'
-          startIcon={<CloudDownloadIcon />}
-          onClick={download}>
-          Download Image
-      </Button>
+
+
+    <IconButton
+      color='primary'
+      onClick={download}>
+      <CloudDownloadIcon />
+    </IconButton>
+
+
   );
 }
 

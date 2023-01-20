@@ -1,4 +1,4 @@
-import { Box, Button } from '@mui/material';
+import { Box, IconButton } from '@mui/material';
 import { useState, useCallback, useEffect, useRef} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, useReactFlow } from 'react-flow-renderer';
 import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
@@ -261,20 +261,23 @@ function LineageTab(props: flowProps) {
         <Background />
         <MiniMap />
         <Controls />
-        <div title='Display / Hide action IDs' style={{ position: 'absolute', left: 17, bottom: 125, zIndex: 4, cursor: 'pointer' }}>
-          <RocketLaunchOutlined onClick={() => setHidden(!hidden)} color={hidden ? 'inherit' : 'primary'} />
+        <div title='Display / Hide action IDs' style={{ position: 'absolute', left: 9, bottom: 125, zIndex: 4, cursor: 'pointer' }}>
+          <IconButton 
+            color={hidden ? 'inherit' : 'primary'}
+            onClick={() => setHidden(!hidden)}>
+            <RocketLaunchOutlined />
+          </IconButton>
         </div>
 
-        <div title='Click here to expand / compress the direct neighbours' style={{ position: 'absolute', left: 17, top: 15, zIndex: 4, cursor: 'pointer' }}>
-          <Button 
-              variant='contained' 
-              startIcon={onlyDirectNeighbours[0] ? <OpenWithIcon/> : <CloseFullscreenIcon/>} 
-              onClick={expandGraph}>
-            {onlyDirectNeighbours[1]}
-          </Button>
+        <div title={onlyDirectNeighbours[1] as string} style={{ position: 'absolute', left: 9, bottom: 155, zIndex: 4, cursor: 'pointer' }}>
+          <IconButton 
+            color='primary'
+            onClick={expandGraph}>
+            {onlyDirectNeighbours[0] ? <OpenWithIcon/> : <CloseFullscreenIcon/>}
+          </IconButton>
         </div>
 
-        <div title='Download image as PNG file' style={{ position: 'absolute', right: 17, top: 15, zIndex: 4, cursor: 'pointer' }}>
+        <div title='Download image as PNG file' style={{ position: 'absolute', left: 9, bottom: 185, zIndex: 4, cursor: 'pointer' }}>
           <DownloadButton />
         </div>
 
