@@ -33,7 +33,7 @@ function DownloadButton() {
 
 
     <IconButton
-      color='primary'
+      color='inherit'
       onClick={download}>
       <CloudDownloadIcon />
     </IconButton>

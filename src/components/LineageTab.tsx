@@ -271,7 +271,7 @@ function LineageTab(props: flowProps) {
 
         <div title={onlyDirectNeighbours[1] as string} style={{ position: 'absolute', left: 9, bottom: 155, zIndex: 4, cursor: 'pointer' }}>
           <IconButton 
-            color='primary'
+            color='inherit'
             onClick={expandGraph}>
             {onlyDirectNeighbours[0] ? <OpenWithIcon/> : <CloseFullscreenIcon/>}
           </IconButton>
