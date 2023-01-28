@@ -13,18 +13,12 @@ function DownloadButton() {
   const download = () => {
     toPng(document.querySelector('.react-flow') as HTMLElement, {
       filter: (node) => {
-        console.log(node.classList)
         // don't include minimap, the controls and the MUI Buttons.
-        if (
-          node?.classList?.contains('react-flow__minimap') ||
-          node?.classList?.contains('react-flow__controls') ||
-          node?.classList?.contains('MuiSvgIcon-root') ||
-          node?.classList?.contains('MuiButtonBase-root')
-        ) {
-          return false;
-        }
-
-        return true;
+        return (          
+        !node?.classList?.contains('react-flow__minimap') &&
+        !node?.classList?.contains('react-flow__controls') &&
+        !node?.classList?.contains('MuiSvgIcon-root') &&
+        !node?.classList?.contains('MuiButtonBase-root'))
       },
     }).then(downloadImage);
   };
