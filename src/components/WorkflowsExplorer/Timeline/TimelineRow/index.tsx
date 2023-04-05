@@ -1,14 +1,14 @@
 import React from 'react';
 import styled, { css } from 'styled-components';
 import { Link } from 'react-router-dom';
-import { getPathFor } from '../../../utils/routing';
+import { getPathFor } from '../../../../util/WorkflowsExplorer/routing';
 import { TFunction } from 'i18next';
 import TaskListLabel from '../TaskListLabel';
 import LineElement, { BoxGraphicValue } from './LineElement';
 
-import { getTaskDuration } from '../../../utils/task';
+import { getTaskDuration } from '../../../../util/WorkflowsExplorer/task';
 import { TimelineMetrics } from '../Timeline';
-import { AsyncStatus, Row } from '../../../types';
+import { AsyncStatus, Row } from '../../../../types';
 
 type TimelineRowProps = {
   // Row type and data

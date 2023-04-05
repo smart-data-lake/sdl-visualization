@@ -1,6 +1,6 @@
 import { lighten } from 'polished';
 import { DefaultTheme } from 'styled-components';
-import { Step, Row } from '../../../types';
+import { Step, Row } from '../../../../types';
 import { StepRowData } from '../useTaskData';
 import { LabelPosition } from './LineElement';
 

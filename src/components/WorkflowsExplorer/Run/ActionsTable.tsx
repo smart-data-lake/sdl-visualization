@@ -1,7 +1,7 @@
 import { Sheet, Table} from "@mui/joy";
 import React from "react"
 import ActionRow from "./ActionRow";
-import { Row } from "../../types";
+import { Row } from "../../../types";
 
 
 const ActionsTable = (props: { rows: Row[];}) => {

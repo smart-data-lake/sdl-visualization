@@ -1,7 +1,7 @@
 import { Box, Table } from "@mui/joy";
 import React from "react";
-import { StateFile } from "../../types";
-import useFetchData from "../../hooks/useFetchData";
+import { StateFile } from "../../../types";
+import useFetchData from "../../../hooks/useFetchData";
 import RunsRow from "./RunsRow";
 
 const WorkflowHistoryTable = (props : {workflow: string}) => {

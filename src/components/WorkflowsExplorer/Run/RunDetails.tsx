@@ -3,8 +3,8 @@ import React from "react";
 import ListItem/* , { listItemClasses }  */from '@mui/joy/ListItem';
 import ListItemButton/* , { listItemButtonClasses } */ from '@mui/joy/ListItemButton';
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
-import { getISOString } from "../../utils/date";
-import Attempt from "../../utils/Attempt";
+import { getISOString } from "../../../util/WorkflowsExplorer/date";
+import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 
 const RunDetails = (props: { attempt: Attempt; }) => {
     const attempt : Attempt = props.attempt;

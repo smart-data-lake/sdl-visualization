@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styled, { css } from 'styled-components';
-import { Row } from '../../types';
-import { formatDuration } from '../../utils/format';
-import { getPath } from '../../utils/routing';
-import { colorByStatus } from '../../utils/style';
-import { getTaskDuration, getTaskId } from '../../utils/task';
+import { Row } from '../../../types';
+import { formatDuration } from '../../../util/WorkflowsExplorer/format';
+import { getPath } from '../../../util/WorkflowsExplorer/routing';
+import { colorByStatus } from '../../../util/WorkflowsExplorer/style';
+import { getTaskDuration, getTaskId } from '../../../util/WorkflowsExplorer/task';
 
 //
 // Component

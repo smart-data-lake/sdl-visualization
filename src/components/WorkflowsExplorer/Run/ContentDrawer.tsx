@@ -3,8 +3,8 @@ import React from "react";
 import { Box, IconButton, Sheet, Typography } from "@mui/joy";
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useParams } from "react-router-dom";
-import Attempt from "../../utils/Attempt";
-import { Row } from "../../types"
+import Attempt from "../../../util/WorkflowsExplorer/Attempt";
+import { Row } from "../../../types"
 
 const getRow = (attempt: Attempt, taskName: string) => {
     if (taskName === 'err') throw('was not able to fetch task name');

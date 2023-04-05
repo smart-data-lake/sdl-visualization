@@ -1,6 +1,6 @@
 import { useEffect, useReducer } from 'react';
-import { Run, Row } from '../../types';
-import { getLongestRowDuration, startAndEndpointsOfRows } from '../../utils/row';
+import { Run, Row } from '../../../types';
+import { getLongestRowDuration, startAndEndpointsOfRows } from '../../../util/WorkflowsExplorer/row';
 
 //
 // Hook for controlling timeline. Timeline does not require use of this but this hook will provide functions

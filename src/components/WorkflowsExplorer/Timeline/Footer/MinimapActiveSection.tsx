@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { formatDuration } from '../../../utils/format';
+import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
 import { TimelineMetrics } from '../Timeline';
 import MinimapHandle from './MinimapHandle';
 

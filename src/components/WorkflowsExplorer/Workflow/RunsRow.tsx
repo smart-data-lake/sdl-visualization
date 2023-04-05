@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { StateFile } from "../../types";
+import { StateFile } from "../../../types";
 
 const RunsRow = (props : {run: {id: number, run: StateFile}}) => {
     const currURL = useLocation().pathname;

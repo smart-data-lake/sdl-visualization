@@ -1,5 +1,5 @@
 import React from "react";
-import PageHeader from "../../utils/PageHeader";
+import PageHeader from "../../../util/WorkflowsExplorer/PageHeader";
 import WorkflowsTable from "./WorkflowsTable";
 
 const Workflows = () => {

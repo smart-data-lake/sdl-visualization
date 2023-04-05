@@ -1,9 +1,9 @@
-import useFetchData from "../../hooks/useFetchData";
-import Attempt from "../../utils/Attempt";
+import useFetchData from "../../../hooks/useFetchData";
+import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TabNav from "./Tabs";
 import RunDetails from "./RunDetails"
 import { useLocation } from "react-router-dom";
-import PageHeader from "../../utils/PageHeader";
+import PageHeader from "../../../util/WorkflowsExplorer/PageHeader";
 import React from "react";
 
 const RunOverview = (props : {panelOpen?: boolean}) => {

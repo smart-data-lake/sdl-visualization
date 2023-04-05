@@ -1,4 +1,4 @@
-import { Step, Row, TaskStatus } from '../../types';
+import { Step, Row, TaskStatus } from '../../../types';
 import { RowDataModel } from './useTaskData';
 
 //

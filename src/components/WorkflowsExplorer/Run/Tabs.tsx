@@ -4,15 +4,15 @@ import TabList from '@mui/joy/TabList';
 import Tab, { tabClasses } from '@mui/joy/Tab';
 import TabPanel from '@mui/joy/TabPanel';
 import { Box, Input } from "@mui/joy";
-import Attempt from "../../utils/Attempt";
+import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TableOfActions from "./ActionsTable";
 import { ThemeProvider } from 'styled-components';
 import ContentDrawer from './ContentDrawer';
 import { useNavigate, useParams } from 'react-router-dom'
-import theme from "../../theme";
-import GlobalStyle from "../../GlobalStyle";
+import theme from "../../../theme";
+import GlobalStyle from "../../../GlobalStyle";
 import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
-import { Row } from "../../types";
+import { Row } from "../../../types";
 
 const ToolBar = (props: {rows: Row[], updateRows: (rows: Row[]) => void}) => {
     const { rows, updateRows } = props;

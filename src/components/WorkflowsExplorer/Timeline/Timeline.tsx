@@ -5,9 +5,9 @@ import TimelineRow from './TimelineRow';
 import { useTranslation } from 'react-i18next';
 import TimelineFooter from './Footer';
 import { TFunction } from 'i18next';
-import { toRelativeSize } from '../../utils/style';
+import { toRelativeSize } from '../../../util/WorkflowsExplorer/style';
 import { TasksSortBy } from './useTaskListSettings';
-import { AsyncStatus, Row } from '../../types';
+import { AsyncStatus, Row } from '../../../types';
 
 const listStyle = { transition: 'height 0.25s' };
 

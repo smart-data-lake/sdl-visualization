@@ -1,7 +1,7 @@
 import React, { createRef, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { getLongestRowDuration, getTaskLineStatus, startAndEndpointsOfRows } from '../../../utils/row';
-import { Row, TaskStatus } from '../../../types';
+import { Row, TaskStatus } from "../../../../types";
 import MinimapRow from './MinimapRow';
 import MinimapActiveSection from './MinimapActiveSection';
 import { TimelineMetrics } from '../Timeline';
