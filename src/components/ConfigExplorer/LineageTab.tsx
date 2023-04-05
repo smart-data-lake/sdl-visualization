@@ -1,7 +1,7 @@
 import { Box, IconButton } from '@mui/material';
 import { useState, useCallback, useEffect, useRef} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, useReactFlow } from 'react-flow-renderer';
-import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions } from '../util/Graphs';
+import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions } from '../../util/Graphs';
 import { useNavigate } from "react-router-dom";
 import './ComponentsStyles.css';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';

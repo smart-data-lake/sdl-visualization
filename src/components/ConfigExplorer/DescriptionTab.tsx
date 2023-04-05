@@ -1,8 +1,8 @@
 import React from 'react';
-import parseCustomMarkdown from '../util/MarkdownParser';
+import parseCustomMarkdown from '../../util/MarkdownParser';
 import 'github-markdown-css/github-markdown.css';
 import MarkdownComponent from './MarkdownComponent';
-import { getUrlContent } from '../util/HoconParser';
+import { getUrlContent } from '../../util/HoconParser';
 
 // cache for already loaded descriptions
 var descriptionCache: any = {};

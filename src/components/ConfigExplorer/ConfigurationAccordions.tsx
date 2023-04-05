@@ -8,7 +8,7 @@ import './ComponentsStyles.css';
 import 'github-markdown-css/github-markdown.css';
 import 'github-markdown-css/github-markdown.css';
 import { Box, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
-import { getAttributeGeneral } from '../util/ConfigSearchOperation';
+import { getAttributeGeneral } from '../../util/ConfigSearchOperation';
 import { createPropertiesComponent } from './PropertiesComponent';
 import CodeViewComponent from './CodeViewComponent';
 

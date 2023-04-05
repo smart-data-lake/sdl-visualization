@@ -3,7 +3,7 @@ import ElementList from './ElementList';
 import React, {useState, useCallback} from 'react';
 import DataDisplayView from './DataDisplayView';
 import SearchResults from './SearchResults';
-import {parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent, standardizeKeys} from '../util/HoconParser';
+import {parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent, standardizeKeys} from '../../util/HoconParser';
 import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
 import Header from './Header';
 import { Routes, Route, useLocation } from "react-router-dom";
@@ -13,7 +13,7 @@ export const defaultDrawerWidth = 300;
 const minDrawerWidth = 50;
 const maxDrawerWidth = 600;
 
-function App() {
+function ConfigExplorer() {
 
   // state
   const [data, setData] = React.useState<any>({dataObjects: {}, actions: {}, connections: {}, global: {}});
@@ -103,8 +103,8 @@ function App() {
   }
   return (
     <Box sx={{ display: 'flex' }}>
-      <CssBaseline />
-      <Header />
+      {/* <CssBaseline /> */}
+      {/* <Header /> */}
       <Drawer
         variant="permanent"
         sx={{
@@ -125,7 +125,7 @@ function App() {
           <ElementList data={data} />
         </Box>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, "paddingTop": "7px" }}>
+      {/* <Box component="main" sx={{ flexGrow: 1, p: 3, "paddingTop": "7px" }}>
         <Toolbar />
         <Routes>
           <Route index element={<p>Please select a component from the drawer on the left to see its configuration</p>} />
@@ -146,9 +146,9 @@ function App() {
               <GlobalConfigView data={data.global}/>
             } />
         </Routes>
-      </Box>
+      </Box> */}
     </Box>
   );
 }
 
-export default App;
+export default ConfigExplorer;

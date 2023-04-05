@@ -1,6 +1,6 @@
-import ConfigurationTab from "../components/ConfigurationTab";
+import ConfigurationTab from "../components/ConfigExplorer/ConfigurationTab";
 import './ComponentsStyles.css';
-import DescriptionTab from "../components/DescriptionTab";
+import DescriptionTab from "../components/ConfigExplorer/DescriptionTab";
 
 import { Box } from "@mui/material";
 
