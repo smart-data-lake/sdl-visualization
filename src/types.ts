@@ -1,4 +1,4 @@
-import { durationMicro } from "./utils/date";
+import { durationMicro } from "./util/WorkflowsExplorer/date";
 
 export type AttemptConfig = {
     name: string;

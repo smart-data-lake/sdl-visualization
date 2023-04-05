@@ -1,7 +1,7 @@
-import { TimelineMetrics } from '../components/Timeline/Timeline';
-import { RowDataModel, StepRowData } from '../components/Timeline/useTaskData';
-import { TaskSettingsState } from '../components/Timeline/useTaskListSettings';
-import { Row, Step, Run, TaskStatus } from '../types';
+import { TimelineMetrics } from '../../components/WorkflowsExplorer/Timeline/Timeline';
+import { RowDataModel, StepRowData } from '../../components/WorkflowsExplorer/Timeline/useTaskData';
+import { TaskSettingsState } from '../../components/WorkflowsExplorer/Timeline/useTaskListSettings';
+import { Row, Step, Run, TaskStatus } from '../../types';
 
 //
 // LOT OF TESTS DEPEND ON THESE VALUES AS DEFAULTS SO DONT CHANGE THESE!!!

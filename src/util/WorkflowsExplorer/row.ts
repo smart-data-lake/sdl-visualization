@@ -1,4 +1,4 @@
-import { Row, TaskStatus } from '../types';
+import { Row, TaskStatus } from '../../types';
 
 const takeSmallest = (a: Row): number | null =>
   a.started_at || Number.MAX_VALUE;

@@ -1,4 +1,4 @@
-import { ActionsState, Action, StateFile } from "../types"
+import { ActionsState, Action, StateFile } from "../../types"
 import { uniqueNamesGenerator, adjectives, colors, animals, names, languages, starWars, countries } from 'unique-names-generator';
 
 export default function randomStateFile(name?: string, runId?: number) {

@@ -82,7 +82,7 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
       // If we are not grouping, we make lines from task rows.
       // 13 groups since we cannot fit more.
       const perGroup = Math.ceil(rows.length / 13);
-      const grps = [];
+      const grps : Row[][] = [];
       // Cut all rows to 13 groups
       for (let i = 0; i < 13; i++) {
         grps.push(rows.slice(perGroup * i, perGroup * i + perGroup));

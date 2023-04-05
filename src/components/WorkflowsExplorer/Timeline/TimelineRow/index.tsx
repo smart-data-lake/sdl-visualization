@@ -60,17 +60,14 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
   );
 };
 
-const RowElement: React.FC<{ item: Row; onOpen: () => void; paramsString?: string }> = ({
-  item,
-  children,
- // paramsString,
-}) => {
-    return (
+const RowElement = (props: React.PropsWithChildren<{ item: Row; onOpen: () => void; paramsString?: string }>) => {
+  const { item } = props;  
+  return (
       <RowGraphLinkContainer
         to={`${getPathFor.task(item)}`}
         data-testid="timeline-row-graphic-container"
       >
-        {children}
+        {props.children}
       </RowGraphLinkContainer>
     );
 };

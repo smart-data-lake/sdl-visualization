@@ -1,4 +1,4 @@
-import { Row } from '../types';
+import { Row } from '../../types';
 
 /**
  * Row id might come as string or number. Make sure we have string

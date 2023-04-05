@@ -1,4 +1,4 @@
-import { ActionsState, Run, RunInfo, StateFile, Row } from "../types"
+import { ActionsState, Run, RunInfo, StateFile, Row } from "../../types"
 import randomStateFile from "./randomStateFile";
 
 
