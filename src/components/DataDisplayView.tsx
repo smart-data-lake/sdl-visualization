@@ -30,7 +30,7 @@ export default function DataDisplayView(props: displayProps) {
   }, [elementName, elementType, props.data]);
 
   // change selected tab
-  const handleChange = (event: React.SyntheticEvent, newValue: string) => {
+  const handleChange = (_: React.SyntheticEvent, newValue: string) => {
     setSelectedTab(newValue);
   };
 

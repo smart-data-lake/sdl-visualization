@@ -60,7 +60,7 @@ function App() {
           if (manifest["env"]) {
             const envConfigRelUrl = envConfigSubdir+"/"+manifest["env"]+".conf";
             // make sure envConfig Url exists
-            return getUrlContent(envConfigRelUrl).then(x => {
+            return getUrlContent(envConfigRelUrl).then(_ => {
               filesRelUrl.push(envConfigRelUrl);
               return filesRelUrl;
             });
@@ -83,7 +83,7 @@ function App() {
   }, []); // only once
   
   // resize drawer
-  const handleDraggerMouseDown = (e: React.MouseEvent) => { // this needs React.MouseEvent as it is used in react component
+  const handleDraggerMouseDown = (_: React.MouseEvent) => { // this needs React.MouseEvent as it is used in react component
     document.addEventListener("mouseup", handleMouseUp, true);
     document.addEventListener("mousemove", handleMouseMove, true);
   };

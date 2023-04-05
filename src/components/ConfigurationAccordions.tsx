@@ -35,7 +35,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   //React.useEffect(() => setOpenAccordion('none'), [props.data]);
 
   //Only one accordion open at a time
-  const handleChange = (accordionName: string) => (event: React.SyntheticEvent, isExpanded: boolean) =>
+  const handleChange = (accordionName: string) => (_: React.SyntheticEvent, isExpanded: boolean) =>
     setOpenAccordion(isExpanded ? accordionName : 'none')
   
   //Formatting of Markdown Strings:
@@ -189,7 +189,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     )
   }
 
-  const accordions = getAccordionSections().map(([key, name, jsxElement], idx) => createAccordion(key, name, jsxElement));
+  const accordions = getAccordionSections().map(([key, name, jsxElement], _) => createAccordion(key, name, jsxElement));
 
   return (
     <Box>

@@ -1,6 +1,6 @@
 import React, { createRef, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { getLongestRowDuration, getTaskLineStatus, startAndEndpointsOfRows } from '../../../utils/row';
+import { getLongestRowDuration, getTaskLineStatus, startAndEndpointsOfRows } from '../../../../util/WorkflowsExplorer/row';
 import { Row, TaskStatus } from "../../../../types";
 import MinimapRow from './MinimapRow';
 import MinimapActiveSection from './MinimapActiveSection';

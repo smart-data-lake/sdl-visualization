@@ -75,7 +75,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
 
   const autosizerContents = useCallback(
-    ({ width, height }) => (
+    ({height, width}) => (
       <>
         <List
           overscanRowCount={10}

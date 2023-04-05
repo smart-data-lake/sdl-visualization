@@ -8,7 +8,7 @@ import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TableOfActions from "./ActionsTable";
 import { ThemeProvider } from 'styled-components';
 import ContentDrawer from './ContentDrawer';
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom';
 import theme from "../../../theme";
 import GlobalStyle from "../../../GlobalStyle";
 import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
