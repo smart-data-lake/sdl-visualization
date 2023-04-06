@@ -1,8 +1,7 @@
 import CssBaseline from '@mui/joy/CssBaseline';
-import { CssVarsProvider } from '@mui/joy/styles';
 import { useState } from 'react';
 import { createHashRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router-dom';
-import ConfigExplorer, { useConfig } from './components/ConfigExplorer/ConfigExplorer';
+import ConfigExplorer from './components/ConfigExplorer/ConfigExplorer';
 import DataDisplayView from './components/ConfigExplorer/DataDisplayView';
 import GlobalConfigView from './components/ConfigExplorer/GlobalConfigView';
 import SearchResults from './components/ConfigExplorer/SearchResults';
@@ -18,6 +17,7 @@ export default function App() {
   const [data, setData] = useState<any>({});
 
   const storeData = (data: any) => {
+    console.log('changed data')
     setData(data)
   }
   

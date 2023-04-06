@@ -1,6 +1,5 @@
 import { Box } from "@mui/joy";
 import { Outlet } from "react-router-dom";
-import ConfigExplorer, { useConfig } from "../components/ConfigExplorer/ConfigExplorer";
 import Header from "./Header";
 import SideBar from "./SideBar";
 
