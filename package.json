@@ -3,9 +3,10 @@
   "version": "0.10.0",
   "private": true,
   "dependencies": {
-    "@emotion/react": "^11.9.3",
-    "@emotion/styled": "^11.9.3",
+    "@emotion/react": "^11.10.6",
+    "@emotion/styled": "^11.10.6",
     "@mui/icons-material": "^5.8.4",
+    "@mui/joy": "^5.0.0-alpha.74",
     "@mui/lab": "^5.0.0-alpha.93",
     "@mui/material": "^5.9.0",
     "@pushcorn/hocon-parser": "git+https://github.com/zzeekk/hocon-parser.git#master",

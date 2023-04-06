@@ -19,7 +19,7 @@ const SideBar = () => {
         },
         {
             icon : <TuneRoundedIcon/>,
-            link : '/'
+            link : '/configviewer'
         }
     ]
     const navigate = useNavigate();

@@ -8,6 +8,7 @@ import {Box, Toolbar, Drawer, CssBaseline} from '@mui/material';
 import Header from './Header';
 import { Routes, Route, useLocation } from "react-router-dom";
 import GlobalConfigView from './GlobalConfigView';
+import { CircularProgress, Sheet } from '@mui/joy';
 
 export const defaultDrawerWidth = 300;
 const minDrawerWidth = 50;
@@ -99,33 +100,28 @@ function ConfigExplorer() {
   }, []);  
 
   if (isLoading) {
-    return <div>Loading...</div>
+    return <CircularProgress />
   }
   return (
-    <Box sx={{ display: 'flex' }}>
-      {/* <CssBaseline /> */}
-      {/* <Header /> */}
-      <Drawer
-        variant="permanent"
+    <Box sx={{ display: 'flex'}}>
+      <Sheet
         sx={{
-          width: drawerWidth,
-          flexShrink: 0,
+          position: 'fixed',
+          display: 'flex',
+          border: '1px solid',
+          borderColor: 'lightgray',
+          borderRadius: '0.5rem',
+          height: '90%',
+
         }}
-        PaperProps={{sx: { width: drawerWidth, boxSizing: 'border-box' }}}
+        
       >
         <Toolbar />
-        <Box id="dragger"
-          onMouseDown={handleDraggerMouseDown}
-          sx={{
-              cursor: "ew-resize", backgroundColor: "#f4f7f9",
-              width: "5px", padding: "4px 0 0", borderTop: "1px solid #ddd",
-              position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 100,
-          }}/>     
         <Box sx={{ overflow: 'auto' }}>
           <ElementList data={data} />
         </Box>
-      </Drawer>
-      {/* <Box component="main" sx={{ flexGrow: 1, p: 3, "paddingTop": "7px" }}>
+      </Sheet>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, pt: "7px", ml: '25rem' }}>
         <Toolbar />
         <Routes>
           <Route index element={<p>Please select a component from the drawer on the left to see its configuration</p>} />
@@ -146,7 +142,7 @@ function ConfigExplorer() {
               <GlobalConfigView data={data.global}/>
             } />
         </Routes>
-      </Box> */}
+      </Box> 
     </Box>
   );
 }

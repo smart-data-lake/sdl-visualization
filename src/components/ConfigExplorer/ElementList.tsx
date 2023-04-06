@@ -76,7 +76,7 @@ export default function ElementList(props: ElementListProps) {
 
   const dataObjectsCompleteList = currentDataObjects.map((dataObject,i) => (
     <Link to={`/dataObjects/${dataObject}`} key={"d"+i}>
-      <ListItemButton sx={{ pl: 4 }}>
+      <ListItemButton sx={{ pl: '1rem' }}>
         <ListItemIcon>
           <TableViewTwoTone />
         </ListItemIcon>
@@ -92,7 +92,7 @@ export default function ElementList(props: ElementListProps) {
 
   const actionsCompleteList = currentActions.map((action,i) => (
     <Link to={`/actions/${action}`} key={"a"+i}>
-      <ListItemButton sx={{ pl: 4 }}>
+      <ListItemButton sx={{ pl: '1rem' }}>
         <ListItemIcon>
           <RocketLaunchOutlined />
         </ListItemIcon>
@@ -108,7 +108,7 @@ export default function ElementList(props: ElementListProps) {
 
   const connectionsCompleteList = currentConnections.map((connection,i) => (
     <Link to={`/connections/${connection}`} key={"c"+i}>
-      <ListItemButton sx={{ pl: 4 }}>
+      <ListItemButton sx={{ pl: '1rem' }}>
         <ListItemIcon>
           <LanOutlinedIcon />
         </ListItemIcon>

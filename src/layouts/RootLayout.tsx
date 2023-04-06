@@ -12,7 +12,7 @@ function RootLayout() {
                 <Box
                     sx={{
                         flex: 1,
-                        pl: '17rem',
+                        pl: '10rem',
                         pr: '14rem',
                         pt: '2rem',
                         display: 'flex',
