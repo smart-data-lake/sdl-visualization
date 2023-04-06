@@ -30,23 +30,24 @@ export default function App() {
         <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<RunOverview panelOpen={true}/>}/>
         <Route path='*' element={<NotFound/>}/>
         // ConfigExplorer
-        <Route path='/configviewer' element={<ConfigExplorer storeData={storeData}/>}/> 
-        <Route
-            path='/search/:ownSearchString' //the ownSearchString is our definition of a 
-                                            //search because of problems with routing Search Parameters
-            element={
-              <SearchResults data={data}/>
-            } />
+        <Route path='/configviewer' element={<ConfigExplorer storeData={storeData}/>}>
           <Route
-            path="/:elementType/:elementName"
+              path='/configviewer/search/:ownSearchString' //the ownSearchString is our definition of a 
+              //search because of problems with routing Search Parameters
+              element={
+                <SearchResults data={data}/>
+              } />
+          <Route
+            path="/configviewer/:elementType/:elementName"
             element={
               <DataDisplayView data={data} />
             } />
           <Route
-            path="/globalOptions"
+            path="/configviewer/globalOptions"
             element={
               <GlobalConfigView data={data.global}/>
             } />
+        </Route> 
       </Route>
     )
   )

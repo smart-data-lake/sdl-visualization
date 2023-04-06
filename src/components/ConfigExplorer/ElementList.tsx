@@ -75,7 +75,7 @@ export default function ElementList(props: ElementListProps) {
   }
 
   const dataObjectsCompleteList = currentDataObjects.map((dataObject,i) => (
-    <Link to={`/dataObjects/${dataObject}`} key={"d"+i}>
+    <Link to={`/configviewer/dataObjects/${dataObject}`} key={"d"+i}>
       <ListItemButton sx={{ pl: '1rem' }}>
         <ListItemIcon>
           <TableViewTwoTone />
@@ -91,7 +91,7 @@ export default function ElementList(props: ElementListProps) {
   ));
 
   const actionsCompleteList = currentActions.map((action,i) => (
-    <Link to={`/actions/${action}`} key={"a"+i}>
+    <Link to={`/configviewer/actions/${action}`} key={"a"+i}>
       <ListItemButton sx={{ pl: '1rem' }}>
         <ListItemIcon>
           <RocketLaunchOutlined />
@@ -107,7 +107,7 @@ export default function ElementList(props: ElementListProps) {
   ));
 
   const connectionsCompleteList = currentConnections.map((connection,i) => (
-    <Link to={`/connections/${connection}`} key={"c"+i}>
+    <Link to={`/configviewer/connections/${connection}`} key={"c"+i}>
       <ListItemButton sx={{ pl: '1rem' }}>
         <ListItemIcon>
           <LanOutlinedIcon />
@@ -181,7 +181,7 @@ export default function ElementList(props: ElementListProps) {
             {connectionsCompleteList}
           </List>
         </Collapse>
-        <Link to='/globalOptions'>
+        <Link to='/configviewer/globalOptions'>
           <ListItemButton>
             <ListItemIcon>
               <Public />

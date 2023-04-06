@@ -70,7 +70,7 @@ export default function SearchResults(props: searchResultProps) {
   }
 
   function resultComponent(elementName: string, elementType: string){
-    const path = `/${elementType}/${elementName}`;
+    const path = `/configviewer/${elementType}/${elementName}`;
     return(
       <div>
         <Link to={path}>

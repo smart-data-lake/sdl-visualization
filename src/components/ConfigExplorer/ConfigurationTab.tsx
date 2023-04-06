@@ -58,7 +58,7 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
 
 function createSearchChip(attr: string, value: string, icon: JSX.Element, color: "primary" | "default" | "success" | "secondary" | "error" | "info" | "warning" | undefined = "primary") {
   if (value){
-    const path = `/search/${attr}=${value}`;
+    const path = `/configviewer/search/${attr}=${value}`;
     return(
       <Link to={path}>
         <Chip label={value} sx={{mr: 1}}
@@ -73,7 +73,7 @@ function createSearchChip(attr: string, value: string, icon: JSX.Element, color:
 
 function createDataObjectChip(name: string){
   return(
-    <Link to={"/dataObjects/"+name}>
+    <Link to={"/configviewer/dataObjects/"+name}>
       <Chip label={name}
         color="primary"
         icon={<TableViewTwoTone />}
@@ -85,7 +85,7 @@ function createDataObjectChip(name: string){
 
 function createConnectionChip(name: string){
   return(
-    <Link to={"/connections/"+name}>
+    <Link to={"/configviewer/connections/"+name}>
       <Chip label={name}
         color="primary"
         icon={<LanOutlinedIcon />}

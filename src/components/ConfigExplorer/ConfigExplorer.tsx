@@ -2,7 +2,7 @@ import './App.css';
 import ElementList from './ElementList';
 import { useEffect } from 'react';
 import {Box, Toolbar } from '@mui/material';
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
 import { CircularProgress, Sheet } from '@mui/joy';
 import { useConfig } from '../../hooks/useConfig';
 
@@ -38,10 +38,7 @@ function ConfigExplorer(props: {storeData: (data: any) => void}) {
         </Box>
       </Sheet>
       <Box component="main" sx={{ flexGrow: 1, p: 3, pt: "7px", ml: '20rem' }}>
-        <Toolbar />
-        <Routes>
-          <Route index element={<p>Please select a component from the drawer on the left to see its configuration</p>} />
-        </Routes>
+        <Outlet />
       </Box> 
     </Box>
   );
