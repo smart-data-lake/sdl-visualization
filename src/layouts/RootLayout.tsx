@@ -1,9 +1,11 @@
 import { Box } from "@mui/joy";
 import { Outlet } from "react-router-dom";
+import ConfigExplorer, { useConfig } from "../components/ConfigExplorer/ConfigExplorer";
 import Header from "./Header";
 import SideBar from "./SideBar";
 
 function RootLayout() {
+
     return ( 
         <>
             <Header />
@@ -12,7 +14,7 @@ function RootLayout() {
                 <Box
                     sx={{
                         flex: 1,
-                        pl: '10rem',
+                        pl: '7rem',
                         pr: '14rem',
                         pt: '2rem',
                         display: 'flex',

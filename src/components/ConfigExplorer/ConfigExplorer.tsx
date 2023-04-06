@@ -1,6 +1,6 @@
 import './App.css';
 import ElementList from './ElementList';
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useEffect} from 'react';
 import DataDisplayView from './DataDisplayView';
 import SearchResults from './SearchResults';
 import {parseTextStrict, listConfigFiles, readConfigIndexFile, readManifestFile, getUrlContent, standardizeKeys} from '../../util/HoconParser';
@@ -14,16 +14,15 @@ export const defaultDrawerWidth = 300;
 const minDrawerWidth = 50;
 const maxDrawerWidth = 600;
 
-function ConfigExplorer() {
-
+export const useConfig = () => {
   // state
   const [data, setData] = React.useState<any>({dataObjects: {}, actions: {}, connections: {}, global: {}});
   const [isLoading, setLoading] = useState(true);
   const [drawerWidth, setDrawerWidth] = useState(defaultDrawerWidth);
-
-
-
-
+  
+  
+  
+  
   const routerLocation = useLocation();
   const baseUrl = window.location.href
     .replace(new RegExp("/index.html$"), "")
@@ -34,8 +33,8 @@ function ConfigExplorer() {
   const configSubdir = "/config";  
   const envConfigSubdir = "/envConfig";  
   const configUrl = baseUrl+configSubdir;
-
-
+  
+  
   // get config
   React.useEffect(() => {
     // a) search for exported config in json format
@@ -99,6 +98,17 @@ function ConfigExplorer() {
     }
   }, []);  
 
+  return {data, isLoading}
+}
+
+function ConfigExplorer(props: {storeData: (data: any) => void}) {
+  const { storeData } = props;
+  const { data, isLoading } = useConfig()
+
+  useEffect(()=>{
+    if (!isLoading) storeData(data)
+  }, [isLoading])
+
   if (isLoading) {
     return <CircularProgress />
   }
@@ -116,12 +126,11 @@ function ConfigExplorer() {
         }}
         
       >
-        <Toolbar />
         <Box sx={{ overflow: 'auto' }}>
           <ElementList data={data} />
         </Box>
       </Sheet>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, pt: "7px", ml: '25rem' }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, pt: "7px", ml: '20rem' }}>
         <Toolbar />
         <Routes>
           <Route index element={<p>Please select a component from the drawer on the left to see its configuration</p>} />
