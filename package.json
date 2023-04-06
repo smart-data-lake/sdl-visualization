@@ -97,5 +97,9 @@
   },
   "devDependencies": {
     "@types/dagre": "^0.7.47"
+  },
+  "peerDependencies": {
+    "react": "18.0.2",
+    "react-dom": "18.0.2"
   }
 }
