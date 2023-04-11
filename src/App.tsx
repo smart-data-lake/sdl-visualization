@@ -10,6 +10,7 @@ import WorkflowHistory from './components/WorkflowsExplorer/Workflow/WorkflowHis
 import Workflows from './components/WorkflowsExplorer/Workflows/Workflows';
 import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
+import { useConfig } from './hooks/useConfig';
 
 
 
@@ -21,16 +22,15 @@ export default function App() {
     setData(data)
   }
   
-  const router = createHashRouter(
+  const router = () => createHashRouter(
     createRoutesFromElements(
-      <Route path='/' element={<RootLayout/>}>
+      <Route path='/' element={<RootLayout storeData={storeData}/>}>
         <Route path='/workflows/' element={<Workflows/>}/>
         <Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
         <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<RunOverview/>}/>
         <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<RunOverview panelOpen={true}/>}/>
         <Route path='*' element={<NotFound/>}/>
-        // ConfigExplorer
-        <Route path='/configviewer' element={<ConfigExplorer storeData={storeData}/>}>
+        <Route path='/configviewer' element={<ConfigExplorer data={data}/>}>
           <Route
               path='/configviewer/search/:ownSearchString' //the ownSearchString is our definition of a 
               //search because of problems with routing Search Parameters
@@ -54,7 +54,7 @@ export default function App() {
   return (
     <>
       <CssBaseline />
-      <RouterProvider router={router}/>
+      <RouterProvider router={router()}/>
     </>
   );
 }

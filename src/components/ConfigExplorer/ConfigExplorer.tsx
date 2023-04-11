@@ -8,17 +8,9 @@ import { useConfig } from '../../hooks/useConfig';
 
 
 
-function ConfigExplorer(props: {storeData: (data: any) => void}) {
-  const { storeData } = props;
-  const { data, isLoading } = useConfig()
+function ConfigExplorer(props: {data: any}) {
+  const { data } = props;
 
-  useEffect(()=>{
-    if (!isLoading) storeData(data)
-  }, [isLoading])
-
-  if (isLoading) {
-    return <CircularProgress />
-  }
   return (
     <Box sx={{ display: 'flex'}}>
       <Sheet
