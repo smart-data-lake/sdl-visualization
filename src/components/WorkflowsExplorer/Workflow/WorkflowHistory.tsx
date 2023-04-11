@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import PageHeader from "../../../util/WorkflowsExplorer/PageHeader";
+import PageHeader from "../../../layouts/PageHeader";
 import RunsHistoryTable from "./WorkflowHistoryTable";
 
 const WorkflowHistory = () => {

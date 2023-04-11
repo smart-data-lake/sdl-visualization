@@ -5,8 +5,8 @@ import SideBar from "./SideBar";
 import { useConfig } from "../hooks/useConfig";
 import { useEffect } from "react";
 
-function RootLayout(props: {storeData?: (data: any) => void}) {
-    const { storeData } = props;
+function RootLayout(props: {storeData?: (data: any) => void, currData?: any}) {
+    const { storeData, currData } = props;
     const { data, isLoading } = useConfig()
 
     useEffect(()=>{
@@ -21,8 +21,8 @@ function RootLayout(props: {storeData?: (data: any) => void}) {
                 <Box
                     sx={{
                         flex: 1,
-                        pl: '17rem',
-                        pr: '14rem',
+                        pl: '13rem',
+                        pr: '10rem',
                         pt: '2rem',
                         display: 'flex',
                         flexDirection: 'column',

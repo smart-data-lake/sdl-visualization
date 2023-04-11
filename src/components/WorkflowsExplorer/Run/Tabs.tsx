@@ -49,6 +49,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                 controlledRows={defaultRows} 
                 updateRows={updateRows} 
                 filters={filters}
+                style="horizontal"
             />
             {rows.length === 0 ? (
                 <>
@@ -77,6 +78,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                             <Panel
                                 collapsible={true}
                                 order={1}
+                                minSize={30}
                             >
                                 <ThemeProvider theme={theme}>
                                 <GlobalStyle />
@@ -95,7 +97,11 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                             }}
                                         />
                                     </PanelResizeHandle >
-                                    <Panel collapsible={true} order={2}>
+                                    <Panel 
+                                        collapsible={true} 
+                                        order={2}
+                                        minSize={30}
+                                    >
                                         <ContentDrawer attempt={attempt}/>
                                     </Panel>
                                 </>
@@ -107,6 +113,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                             <Panel
                                 collapsible={true}
                                 order={1}
+                                minSize={30}
                             >
                                 <TableOfActions rows={rows}/>
                             </Panel>
@@ -122,7 +129,11 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                         }}    
                                     />
                                 </PanelResizeHandle >
-                                <Panel collapsible={true} order={2}> 
+                                <Panel 
+                                    collapsible={true} 
+                                    order={2} 
+                                    minSize={30}
+                                > 
                                     <ContentDrawer attempt={attempt}/>
                                 </Panel>
                             </>

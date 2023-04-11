@@ -9,7 +9,7 @@ import StyleIcon from '@mui/icons-material/Style';
 import ConfigurationAccordions from './ConfigurationAccordions';
 import AltRouteIcon from '@mui/icons-material/AltRoute';
 import Grid from '@mui/material/Grid';
-import { getAttributeGeneral } from '../../util/ConfigSearchOperation';
+import { getAttributeGeneral } from '../../util/ConfigExplorer/ConfigSearchOperation';
 import { Link } from "react-router-dom";
 import { ExploreOutlined, LayersOutlined, TableViewTwoTone } from '@mui/icons-material';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';

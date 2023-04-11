@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { getUrlContent, listConfigFiles, readConfigIndexFile, readManifestFile, parseTextStrict, standardizeKeys } from "../util/HoconParser";
+import { getUrlContent, listConfigFiles, readConfigIndexFile, readManifestFile, parseTextStrict, standardizeKeys } from "../util/ConfigExplorer/HoconParser";
 
 const defaultDrawerWidth = 300;
 const minDrawerWidth = 50;

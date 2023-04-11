@@ -8,32 +8,31 @@ const WorkflowsTable = () => {
 
     const render = () => {
         return (
-            <>
-                <Box
-                    sx={{
-                        height: '30rem', 
-                        overflow: 'auto'
-                    }}
+            <Box
+                sx={{
+                    overflow: 'auto',
+                    bottom: 0,
+                    color: 'tomato'
+                }}
                 >
-                    <Table size='md' hoverRow color='neutral' stickyHeader>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Run number</th>
-                                <th>Number of attempt</th>
-                                <th>Started</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.map((row : {id: number, name: string}) => (
-                                <>
-                                    <WorkflowRow data={row}/>
-                                </>
-                            ))}
-                        </tbody>
-                    </Table>
-                </Box>
-            </>
+                <Table size='sm' hoverRow color='neutral' stickyHeader>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Run number</th>
+                            <th>Number of attempt</th>
+                            <th>Started</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {data.map((row : {id: number, name: string}) => (
+                            <>
+                                <WorkflowRow data={row}/>
+                            </>
+                        ))}
+                    </tbody>
+                </Table>
+            </Box>
         )
     }
     return ( 

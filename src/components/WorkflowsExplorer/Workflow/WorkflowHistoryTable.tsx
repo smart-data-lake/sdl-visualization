@@ -12,12 +12,12 @@ const WorkflowHistoryTable = (props : {workflow: string}) => {
         const runs = data;
         return (
             <Box
-                sx={{
-                    height: '30rem', 
-                    overflow: 'auto'
-                }}
+                
                 >
-                <Table size='md' hoverRow color='neutral' stickyHeader>
+                <Table size='sm' hoverRow color='neutral' stickyHeader sx={{
+                    height: '90%', 
+                    overflow: 'auto'
+                }}>
                     <thead>
                         <tr>
                             <th>Run ID</th>

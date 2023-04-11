@@ -1,9 +1,8 @@
-import React from "react";
-import { Box, Breadcrumbs, Link, Typography } from "@mui/joy";
+import { HomeRounded } from "@mui/icons-material";
+import { Breadcrumbs, Typography, Link } from "@mui/joy";
 import { useLocation, useNavigate } from "react-router-dom";
-import HomeRounded from "@mui/icons-material/HomeRounded";
 
-function BasicBreadcrumbs() {
+const BasicBreadcrumbs = () => {
     const url = useLocation().pathname;
     const links = [...url.split('/')].splice(1);
     const current = links.pop();
@@ -19,11 +18,11 @@ function BasicBreadcrumbs() {
     }
 
     return (
-      <Breadcrumbs aria-label="breadcrumbs">
+      <Breadcrumbs aria-label="breadcrumbs" sx={{color: 'white'}}>
+                    
         <Link
             onClick={() => handleClick('Home')}
             key='Home'
-            color="neutral"          
         >
             <HomeRounded sx={{ mt: 0.75 }} fontSize="inherit"/>
         </Link>
@@ -33,30 +32,14 @@ function BasicBreadcrumbs() {
                 // and is generally not needed in your app
                 onClick={() => handleClick(item)}
                 key={item}
-                color="neutral"   
+                sx={{color: 'white'}}  
             >
                 <Typography fontSize="inherit" sx={{textTransform: 'capitalize'}}>{item}</Typography>
             </Link>
         ))}
-        <Typography fontSize="inherit" sx={{textTransform: 'capitalize'}}>{current}</Typography>
+        <Typography fontSize="inherit" sx={{textTransform: 'capitalize', color: 'lightgray'}}>{current}</Typography>
       </Breadcrumbs>
     );
 }
 
-const PageHeader = (props: {title : string, subtitle?: string, description?: string}) => {
-    const { title, subtitle, description } = props;
-    return ( 
-        <>
-            <BasicBreadcrumbs/>
-            <Box sx={{
-                pb: '4rem'
-            }}>
-                <Typography level="h2" sx={{pb: '1rem', textTransform: 'capitalize'}}>{title}</Typography>
-                {subtitle && <Typography level="h4" sx={{pb: '1rem'}}>{subtitle}</Typography>}
-                {description && <Typography level="body2" sx={{pb: '2rem'}}>{description}</Typography>}
-            </Box>
-        </>
-     );
-}
- 
-export default PageHeader;
+export default BasicBreadcrumbs;
