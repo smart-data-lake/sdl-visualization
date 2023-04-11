@@ -1,4 +1,4 @@
-import { Row, TaskStatus } from '../../types';
+import { Row, SortType, TaskStatus } from '../../types';
 
 const takeSmallest = (a: Row): number | null =>
   a.started_at || Number.MAX_VALUE;
@@ -50,7 +50,7 @@ export const startAndEndpointsOfRows = (rows: Row[]): { start: number; end: numb
  */
 export const getLongestRowDuration = (rows: Row[]): number => {
   return rows.reduce((val, item) => {
-      const t = item;
+      const t : Row = item;
       return t.duration && t.duration > val ? t.duration : val;
   }, 0);
 };
@@ -69,7 +69,72 @@ export const getTaskLineStatus = (rows: Row[]): TaskStatus => {
 };
 
 /**
- * Get current step name
+ * Get current step name	
  */
 export const getCurrentStepName = (rows: Row[]): string =>
   rows.find((row) => row.status === 'running')?.step_name || '';
+
+
+export const sortRows = (rows: Row[], sortType: SortType) => {
+	if(sortType === 'start time asc') return rows.sort(startTimeAsc)
+	if(sortType === 'start time desc') return rows.sort(startTimeDesc)
+	if(sortType === 'duration asc') return rows.sort(durationAsc)
+	if(sortType === 'duration desc') return rows.sort(durationDesc)
+	return rows;
+}
+
+/**
+     * Utility function for comparisons in the default "Array.sort()" function
+     * @param a 
+     * @param b 
+     * @returns
+     */
+export function startTimeAsc(a: Row, b: Row) {
+	if (a.started_at < b.started_at) {
+		return -1;
+	}
+	if (a.started_at > b.started_at) {
+		return 1;
+	}
+	return 0;
+}
+/**
+     * Utility function for comparisons in the default "Array.sort()" function
+     * @param a 
+     * @param b 
+     * @returns
+     */
+export function startTimeDesc(a: Row, b: Row) {
+	if (a.started_at < b.started_at) {
+		return 1;
+	}
+	if (a.started_at > b.started_at) {
+		return -1;
+	}
+	return 0;
+}
+
+/**
+     * Utility function for comparisons in the default "Array.sort()" function
+     * @param a 
+     * @param b 
+     * @returns
+     */
+export function durationAsc(a: Row, b: Row) {
+	if (a.duration < b.duration) {
+		return -1;
+	}
+	if (a.duration > b.duration) {
+		return 1;
+	}
+	return 0;
+}
+export function durationDesc(a: Row, b: Row) {
+	if (a.duration < b.duration) {
+		return 1;
+	}
+	if (a.duration > b.duration) {
+		return -1;
+	}
+	return 0;
+}

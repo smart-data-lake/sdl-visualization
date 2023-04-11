@@ -3,49 +3,23 @@ import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab, { tabClasses } from '@mui/joy/Tab';
 import TabPanel from '@mui/joy/TabPanel';
-import { Box, Input } from "@mui/joy";
+import { Box, Typography } from "@mui/joy";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TableOfActions from "./ActionsTable";
 import { ThemeProvider } from 'styled-components';
 import ContentDrawer from './ContentDrawer';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom'
 import theme from "../../../theme";
 import GlobalStyle from "../../../GlobalStyle";
 import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
 import { Row } from "../../../types";
+import ToolBar from "../ToolBar/ToolBar";
+import InboxIcon from '@mui/icons-material/Inbox';
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
-const ToolBar = (props: {rows: Row[], updateRows: (rows: Row[]) => void}) => {
-    const { rows, updateRows } = props;
+export const defaultDrawerWidth = 600;
 
-    function handleInput(value: string) {
-        const filteredRows = rows.filter((row) => row.step_name.toLowerCase().includes(value.toLowerCase()));
-        updateRows(filteredRows);    
-    }
-  
 
-    return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'row',
-                justifyContent: 'left',
-                mt: '2rem',
-                mb: '1rem',
-                gap: '1rem'
-            }}
-        >
-                <Input
-                    placeholder="Search"
-                    required
-                    sx={{ mb: 1, fontSize: 'var(--joy-fontSize-sm)' }}
-                    onChange={(event) => {
-                        const { value } = event.target;
-                        handleInput(value)
-                    }}
-                />
-        </Box>
-    )
-}
 /**
  * 
  * @param attempt 
@@ -55,44 +29,111 @@ const ToolBar = (props: {rows: Row[], updateRows: (rows: Row[]) => void}) => {
 const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const { attempt, open } = props;
     const defaultRows = attempt.rows;
-    const [rows, setRows] = useState(defaultRows);
+    const [rows, setRows] = useState<Row[]>(defaultRows);
 
     const updateRows = (rows: Row[]) => {
         setRows(rows);
     }
 
+    const filters = [
+        {name: 'Succeeded', fun: (rows: Row[]) => {return rows.filter(row => row.status === 'completed')}},
+        {name: 'Unknown', fun: (rows: Row[]) => {return rows.filter(row => row.status === 'unknown')}},
+        {name: 'Failed', fun: (rows: Row[]) => {return rows.filter(row => row.status === 'failed')}}
+    ];
+    
+    
+    
     return ( 
         <>
-            <ToolBar rows={defaultRows} updateRows={updateRows}/>
-            <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between'
-                    }}
+            <ToolBar 
+                controlledRows={defaultRows} 
+                updateRows={updateRows} 
+                filters={filters}
+            />
+            {rows.length === 0 ? (
+                <>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            p: '10rem',
+                            gap: '5rem'
+                        }}
                     >
-                    <ThemeProvider theme={theme}>
-                    <GlobalStyle />
-                        <VirtualizedTimeline run={attempt.run} rows={rows}/>
-                    </ThemeProvider>
-                    {open && <ContentDrawer attempt={attempt}/>}
-                </Box>
-            </TabPanel>
-            <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between'
-                    }}
-                >
-                    <TableOfActions rows={rows}/>
-                    {open && <ContentDrawer attempt={attempt}/>}
-                </Box>
-            </TabPanel>
-            <TabPanel value={2} sx={{ py: '1rem' }}>
-                <b>Lineage</b> tab panel
-            </TabPanel>
-            
+                        <InboxIcon sx={{
+                            scale: '5',
+                        }}/>
+                        <Typography>
+                            No actions found
+                        </Typography>
+                    </Box>
+                </>
+            ) : (
+                <>
+                    <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
+                        <PanelGroup direction="horizontal">
+                            <Panel
+                                collapsible={true}
+                                order={1}
+                            >
+                                <ThemeProvider theme={theme}>
+                                <GlobalStyle />
+                                    <VirtualizedTimeline run={attempt.run} rows={rows}/>
+                                </ThemeProvider>
+                            </Panel>
+                            {open && (
+                                <>
+                                    <PanelResizeHandle >
+                                        <Box
+                                            sx={{
+                                                height: '100%',
+                                                mx: '1rem',
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                            }}
+                                        />
+                                    </PanelResizeHandle >
+                                    <Panel collapsible={true} order={2}>
+                                        <ContentDrawer attempt={attempt}/>
+                                    </Panel>
+                                </>
+                            )}
+                        </PanelGroup> 
+                    </TabPanel>
+                    <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
+                        <PanelGroup direction="horizontal">
+                            <Panel
+                                collapsible={true}
+                                order={1}
+                            >
+                                <TableOfActions rows={rows}/>
+                            </Panel>
+                            {open && (
+                            <>
+                                <PanelResizeHandle >
+                                    <Box
+                                        sx={{
+                                            height: '100%',
+                                            mx: '1rem',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                        }}    
+                                    />
+                                </PanelResizeHandle >
+                                <Panel collapsible={true} order={2}> 
+                                    <ContentDrawer attempt={attempt}/>
+                                </Panel>
+                            </>
+                        )}
+                        </PanelGroup>
+                    </TabPanel>
+                    <TabPanel value={2} sx={{ py: '1rem' }}>
+                        <b>Lineage</b> tab panel
+                    </TabPanel>
+                </>
+            )}
         </> 
     );
 }
@@ -108,10 +149,10 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
         setValue(typeof v === 'number' ? v : 0);
         navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}`)
         if (stepName) navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}/${stepName}`)
-        
     }
     return ( 
         <>
+            
             <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)}>
                 <Box
                     sx={{

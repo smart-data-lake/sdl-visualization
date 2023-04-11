@@ -36,47 +36,30 @@ export interface RunInfo {
   streaming: boolean;
 }   
 
-export type ActionsState = {
-  [actionName: string]: Action
-}
 
-export interface Action {
-  executionId : {
-    type : string,
-    runId : number,
-    attemptId : number
-  },
-  state : string,
-  startTstmp : string,
-  duration: string,
-  actionFinishTime?: number,
-  results: [
-    {
-      subFeed? : object,
-      mainMetrics? : object
-    }
-  ]
-}
+
+export type SortType = 'start time asc' | 'start time desc' | 'duration asc' | 'duration desc'
 
 export class Row implements MetaDataBaseObject {
-    flow_id: string;
-    step_name: string;
-    run_number: number;
+  flow_id: string;
+  step_name: string;
+  run_number: number;
     attempt_id: number;
     task_id: number;
     ts_epoch: number;
     status: TaskStatus;
     user_name: string;
     system_tags: string[];
-    started_at?: number;
+    started_at: number;
     finished_at: number;
-    duration?: number;
+    duration: number;
     tags?: string[] | undefined;
     run_id?: string;
     task_name?: string;
     foreach_label?: string;
-    metadata?: object;
-
+    metadata: Metadata;
+    message: string;
+    
     constructor(properties: TaskProperty) {
       this.flow_id = properties.runInfo.workflowName;
       this.step_name = properties.actionName;
@@ -90,48 +73,86 @@ export class Row implements MetaDataBaseObject {
       this.metadata = properties.action.results;
       this.task_id = properties.runInfo.attemptId;
       this.user_name = '';
-      this.system_tags = [''];
+      this.system_tags = [];
+      this.message = properties.action.msg;
     }
-}
-
-export type TaskStatus = 'running' | 'completed' | 'failed' | 'unknown' | 'pending' | 'refining';
-
-export interface TaskProperty {
-  runInfo: RunInfo,
-  action: Action,  
-  actionName: string;
-}
-
-export type RunParams = {
+  }
+  
+  
+  export type TaskStatus = 'running' | 'completed' | 'failed' | 'unknown' | 'pending' | 'refining';
+  
+  export interface TaskProperty {
+    runInfo: RunInfo,
+    action: Action,  
+    actionName: string;
+  }
+  
+  export type RunParams = {
     appConfig : {
-		feedSel : string,
-		applicationName : string,
-		configuration : string,
-		parallelism : number,
-		statePath : string,
-		streaming : boolean
+      feedSel : string,
+      applicationName : string,
+      configuration : string,
+      parallelism : number,
+      statePath : string,
+      streaming : boolean
     },
     runId : number,
     attemptId : number,
     runStartTime : string,
     attemptStartTime : string,
-}
-export type StateFile = {
+  }
+  export type StateFile = {
     appConfig : {
-		feedSel : string,
-		applicationName : string,
-		configuration : string,
-		parallelism : number,
-		statePath : string,
-		streaming : boolean
+      feedSel : string,
+      applicationName : string,
+      configuration : string,
+      parallelism : number,
+      statePath : string,
+      streaming : boolean
     },
     runId : number,
     attemptId : number,
     runStartTime : string,
     attemptStartTime : string,
     actionsState: ActionsState
-} 
-
+  } 
+  
+  export type ActionsState = {
+    [actionName: string]: Action
+  }
+  
+  export interface Action {
+    executionId : {
+      type : string,
+      runId : number,
+      attemptId : number
+    },
+    state : string,
+    startTstmp : string,
+    duration: string,
+    actionFinishTime?: number,
+    msg: string,
+    results: Metadata
+  }
+  export type Metadata = [{
+    subFeed?: {
+      type?: string,
+      dataObjectId?: string,
+      partitionValues?: any[],
+      isSkipped?: boolean,
+      isDAGStart?: boolean,
+      isDummy?: boolean,
+    },
+    mainMetrics?: {
+      stage?: string,
+      count?: number, 
+      num_tasks?: number,
+      no_data?: boolean,
+      records_written?: number,
+      stage_duration?: string,
+      bytes_written?: number,
+    }
+  }]
 
   export type Flow = MetaDataBaseObject;
   

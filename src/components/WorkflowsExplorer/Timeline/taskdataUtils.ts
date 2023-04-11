@@ -144,11 +144,11 @@ export function makeTasksForStep(currentData: Record<string, Row[]>, item: Row):
     if (!item.started_at) {
       if (item.attempt_id === 0) {
         item.started_at = item.ts_epoch;
-        item.duration = item.duration || (item.finished_at ? item.finished_at - item.ts_epoch : undefined);
+        item.duration = item.duration || item.finished_at - item.ts_epoch;
       } else {
-        const prevTask = currentData[item.task_id].find((t) => t.attempt_id === item.attempt_id - 1);
-        item.started_at = item.started_at || prevTask?.finished_at || undefined;
-        item.duration = item.started_at && item.finished_at ? item.finished_at - item.started_at : undefined;
+        //const prevTask = currentData[item.task_id].find((t) => t.attempt_id === item.attempt_id - 1);
+        item.started_at = item.started_at;
+        item.duration = item.started_at && item.finished_at - item.started_at;
       }
     }
 

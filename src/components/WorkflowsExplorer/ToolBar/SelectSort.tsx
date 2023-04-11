@@ -1,0 +1,57 @@
+import { ListItemDecorator, Select, Typography } from "@mui/joy";
+import React from "react";
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import Option from '@mui/joy/Option';
+import { SortType } from "../../../types";
+
+const SelectSort = (props: {updateSort: (sort: SortType) => void}) => {
+	const { updateSort } = props;
+
+  	return (
+  	  	<Select
+			size="sm"
+			defaultValue={'start time asc'}
+	  	  	placeholder="Sort by"
+			onChange={(_, v) => updateSort(v as SortType)}
+			sx={{
+			  minWidth: 180,
+			}}
+	  	>
+	  	  	<Option value="start time asc">
+				<ListItemDecorator>
+					<ArrowUpwardIcon/>
+				</ListItemDecorator>
+				<Typography sx={{ml: '0.5rem'}}>
+					Start time
+				</Typography>
+			</Option>
+	  	  	<Option value="start time desc">
+				<ListItemDecorator>
+					<ArrowDownwardIcon/>
+				</ListItemDecorator>
+				<Typography sx={{ml: '0.5rem'}}>
+					Start time
+				</Typography>
+			</Option>
+	  	  	<Option value="duration asc">
+				<ListItemDecorator>
+					<ArrowUpwardIcon/>
+				</ListItemDecorator>
+				<Typography sx={{ml: '0.5rem'}}>
+					Duration
+				</Typography>
+			</Option>
+	  	  	<Option value="duration desc">
+				<ListItemDecorator>
+					<ArrowDownwardIcon/>
+				</ListItemDecorator>
+				<Typography sx={{ml: '0.5rem'}}>
+					Duration
+				</Typography>
+			</Option>
+  	  	</Select>
+  	);
+}
+
+export default SelectSort;

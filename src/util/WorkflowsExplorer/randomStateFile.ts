@@ -35,29 +35,29 @@ export function randomActionsState(runStartTime : Date)  {
 }
 
 export function randomAction(runStartTime : Date) {
-    const randomCoin = Math.round(Math.random());
+    const state = randomState();
     const action : Action = {
         executionId: {
             type : uniqueNamesGenerator({ dictionaries: [languages] }),
             runId : Math.round(Math.random() * 1000),
             attemptId : Math.round(Math.random() * 1000),
         },
-        state : randomState(),
+        state : state,
+        msg: 'This is a random action :)',
         startTstmp : new Date(runStartTime.getTime() + Math.round(Math.random() * 50000) + 100).toISOString(),
         duration : 'PT' + (Math.random() * 60).toFixed(3) + 'S',
         results : [{
-            subFeed : randomCoin > 0 ? {
-                type : randomCoin > 0 ? uniqueNamesGenerator({ dictionaries: [languages] }) : undefined,
-                dataObjectId : randomCoin > 0 ? uniqueNamesGenerator({ dictionaries: [countries] }) : undefined,
-                partitionValues : randomCoin > 0 ? [uniqueNamesGenerator({ dictionaries: [animals] })] : [],
-                isDAGStart : randomCoin > 0 ? true : false,
-                isSkipped : randomCoin > 0 ? true : false,
-                isDummy : randomCoin > 0 ? true : false,
-
+            subFeed : state === 'SUCCEEDED' ? {
+                type : uniqueNamesGenerator({ dictionaries: [languages] }),
+                dataObjectId : uniqueNamesGenerator({ dictionaries: [countries] }),
+                partitionValues : [uniqueNamesGenerator({ dictionaries: [animals] })],
+                isDAGStart : true,
+                isSkipped : true,
+                isDummy : true,
             } : undefined,
-            mainMetrics : randomCoin > 0 ? {
-                stage : randomCoin > 0 ? uniqueNamesGenerator({ dictionaries: [starWars] }) : undefined,
-                num_tasks : randomCoin > 0 ? uniqueNamesGenerator({ dictionaries: [languages] }) : undefined,
+            mainMetrics : state === 'SUCCEEDED' ? {
+                stage : uniqueNamesGenerator({ dictionaries: [starWars] }),
+                num_tasks : Math.round(Math.random()),
                 records_written : Math.round(Math.random()*1000000),
                 stage_duration : 'PT' + (Math.random() * 60).toFixed(3) + 'S',
                 bytes_written : Math.round(Math.random()*1000000),
