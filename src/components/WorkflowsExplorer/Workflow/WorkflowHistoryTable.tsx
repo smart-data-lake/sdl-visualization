@@ -3,6 +3,7 @@ import React from "react";
 import { StateFile } from "../../../types";
 import useFetchData from "../../../hooks/useFetchData";
 import RunsRow from "./RunsRow";
+import { Height } from "@mui/icons-material";
 
 const WorkflowHistoryTable = (props : {workflow: string}) => {
     const { workflow } = props;
@@ -11,13 +12,16 @@ const WorkflowHistoryTable = (props : {workflow: string}) => {
     const render = () => { 
         const runs = data;
         return (
-            <Box
-                
-                >
-                <Table size='sm' hoverRow color='neutral' stickyHeader sx={{
-                    height: '90%', 
-                    overflow: 'auto'
-                }}>
+            <Box sx={{ 
+                overflow: 'auto',
+                height: '80vh',
+            }}>
+                <Table 
+                    size='sm' 
+                    hoverRow 
+                    color='neutral' 
+                    stickyHeader 
+                    >
                     <thead>
                         <tr>
                             <th>Run ID</th>

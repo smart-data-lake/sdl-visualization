@@ -44,14 +44,16 @@ const ToolBar = (props: {controlledRows: any[], updateRows: (rows: any[]) => voi
     if (style === 'vertical') return (
         <Box
             sx={{
-                border: '1px solid',
-                borderColor: 'lightgray',
-                borderRadius: '0.5rem',
-                height: '90%',
-                maxWidth: '15rem',
+                height: '85vh',
+                maxWidth: '17rem',
               }}
         >
-            <Box sx={{m: '1rem'}}>
+            <Box sx={{
+                m: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+            }}>
                 <Input
                     placeholder="Search"
                     required

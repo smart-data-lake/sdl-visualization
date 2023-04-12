@@ -12,20 +12,16 @@ function ConfigExplorer(props: {data: any}) {
   const { data } = props;
 
   return (
-    <Box sx={{ display: 'flex'}}>
+    <Box>
       <Sheet
         sx={{
+          width: '17rem',
           position: 'fixed',
-          display: 'flex',
-          border: '1px solid',
-          borderColor: 'lightgray',
-          borderRadius: '0.5rem',
-          height: '90%',
-
+          height: '85vh',
         }}
         
       >
-        <Box sx={{ overflow: 'auto' }}>
+        <Box >
           <ElementList data={data} />
         </Box>
       </Sheet>

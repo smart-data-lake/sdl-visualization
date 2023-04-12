@@ -11,15 +11,13 @@ const Workflows = () => {
                 sx={{
                     display: 'flex',
                     flexDirection: 'row',
-                    gap: 10,
+                    gap: '3rem',
                 }}
             >
                 <ToolBar style={'vertical'} controlledRows={[]} updateRows={() => null}/>
                 <Box>
                     <PageHeader 
-                        title={'Workflows'} 
-                        description={'Workflows are specified sets of SLDB actions to be run. They represent a specific pipeline used in the project'}
-                        />
+                        title={'Workflows'} />
                     <WorkflowsTable/>
                 </Box>
             </Box>

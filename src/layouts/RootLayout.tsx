@@ -21,8 +21,8 @@ function RootLayout(props: {storeData?: (data: any) => void, currData?: any}) {
                 <Box
                     sx={{
                         flex: 1,
-                        pl: '13rem',
-                        pr: '10rem',
+                        pl: '7rem',
+                        pr: '7rem',
                         pt: '2rem',
                         display: 'flex',
                         flexDirection: 'column',

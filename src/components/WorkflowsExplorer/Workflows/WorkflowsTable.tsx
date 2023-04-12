@@ -8,13 +8,10 @@ const WorkflowsTable = () => {
 
     const render = () => {
         return (
-            <Box
-                sx={{
-                    overflow: 'auto',
-                    bottom: 0,
-                    color: 'tomato'
-                }}
-                >
+            <Box sx={{ 
+                overflow: 'auto',
+                height: '80vh',
+            }}>
                 <Table size='sm' hoverRow color='neutral' stickyHeader>
                     <thead>
                         <tr>

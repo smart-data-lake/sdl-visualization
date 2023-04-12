@@ -4,11 +4,12 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import { Row } from "../../../types";
 
 
-const FilterMenu = (props: {updateList: (list: boolean[]) => void, filters?: {name: string, fun: (rows: Row[]) => void}[]}) => {
+const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vertical' | ' horizontal', filters?: {name: string, fun: (rows: Row[]) => void}[]}) => {
     const { filters, updateList } = props;
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [list, setList] = useState<boolean[]>(Array(props.filters?.length).fill(true));
     const open = Boolean(anchorEl);
+    const style = props.style ? props.style : 'vertical';
 
 	useEffect(() => {
 		updateList(list);
