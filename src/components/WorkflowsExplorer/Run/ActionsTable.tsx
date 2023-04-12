@@ -1,12 +1,21 @@
 import { Sheet, Table} from "@mui/joy";
-import React from "react"
 import ActionRow from "./ActionRow";
 import { Row } from "../../../types";
 
-
+/**
+ * The ActionsTables component displays the actions of a run. It is used in the ContentDrawer component.
+ * It receives the rows to display as a prop.
+ * @param props rows: Row[] - the rows to display
+ * @returns JSX.Element
+ */
 const ActionsTable = (props: { rows: Row[];}) => {
     const { rows } = props;
     
+    /**
+     * The renderTable function renders the rows of the table. It iterates over the rows and renders an ActionRow component for each row.
+     * @param rows 
+     * @returns JSX.Element
+     */
     const renderTable = (rows: Row[]) => {
         return (
             rows.map((row) => (
@@ -42,6 +51,7 @@ const ActionsTable = (props: { rows: Row[];}) => {
                         </tr>
                     </thead>
                     <tbody>
+                        {/** Render the rows of the table */}
                         {renderTable(rows)}
                     </tbody>
                 </Table>

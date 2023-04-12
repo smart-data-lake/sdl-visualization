@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
 
+/**
+ * The useFetchData hook is used to fetch data from the backend. It returns the data as a json object.
+ * If not specified, the base url is set to 'http://localhost:3001/'.
+ * @param arg 
+ * @param base 
+ * @param callBack 
+ * @returns 
+ */
 const useFetchData = (arg: string, base?: string, callBack?: () => void) => {
     const [data, setData] = useState(null);
     if (!base) base = 'http://localhost:3001/';

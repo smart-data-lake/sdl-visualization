@@ -3,7 +3,10 @@ import React from 'react'
 import { List, ListItem, Sheet } from '@mui/joy'
 import BasicBreadcrumbs from './BasicBreadCrumbs';
 
-
+/**
+ * Header is the header of the application. It contains the SDL logo and the breadcrumbs.
+ * @returns A JSX element that represents the RootLayout component
+ */
 
 const Header = () => {
     return ( 

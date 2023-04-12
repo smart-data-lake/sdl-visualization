@@ -5,6 +5,12 @@ import useFetchData from "../../../hooks/useFetchData";
 import RunsRow from "./RunsRow";
 import { Height } from "@mui/icons-material";
 
+/**
+ * The WorkflowHistoryTable component is the table that displays the history of a workflow.
+ * It fetches the data from the backend and renders the table.
+ * @param props.workflow - string
+ * @returns JSX.Element
+ */
 const WorkflowHistoryTable = (props : {workflow: string}) => {
     const { workflow } = props;
     const data = useFetchData(workflow);

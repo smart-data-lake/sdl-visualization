@@ -2,6 +2,11 @@ import { HomeRounded } from "@mui/icons-material";
 import { Breadcrumbs, Typography, Link } from "@mui/joy";
 import { useLocation, useNavigate } from "react-router-dom";
 
+/**
+ * The BasicBreadcrumbs component is the breadcrumbs of each page. It displays a URL path in a hierarchical manner. It allows the user to quickly navigate back to a parent page.
+ * @returns JSX element that represents the BasicBreadCrumbs component
+ */
+
 const BasicBreadcrumbs = () => {
     const url = useLocation().pathname;
     const links = [...url.split('/')].splice(1);

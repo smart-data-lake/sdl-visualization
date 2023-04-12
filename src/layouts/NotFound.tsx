@@ -1,6 +1,11 @@
 import React from "react";
 import { Box, Typography } from "@mui/joy";
 
+/**
+ * NotFound is the 404 page of the application. It contains the SDL logo and a message.
+ * @returns A JSX element that represents the NotFound component
+ */
+
 const NotFound = () => {
     return ( 
         <Box

@@ -1,7 +1,11 @@
-import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { StateFile } from "../../../types";
 
+/**
+ * The RunsRow component is a row in the WorkflowHistoryTable component.
+ * @param props.run - {id: number, run: StateFile}
+ * @returns JSX.Element
+ */
 const RunsRow = (props : {run: {id: number, run: StateFile}}) => {
     const currURL = useLocation().pathname;
     const { id, run } = props.run;

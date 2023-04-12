@@ -6,7 +6,14 @@ import FilterMenu from "./FilterMenu";
 import SelectSort from "./SelectSort";
 
 
-
+/**
+ * The ToolBar component is a component that implements various search, filter and sort functions.
+ * It updates the rows that are passed to it based on predefined filters and the user's input.
+ * @param props.controlledRows - rows to be filtered, the rows that are passed to the ToolBar component and represent the complete information we can search of filter on.
+ * @param props.filter - filters to be applied, they are passed and used by the FilterMenu component, which is a subcomponent of the ToolBar component that update the rows based on the filters using the updateRows function.
+ * @param props.style - style of the toolbar
+ * @returns JSX.Element
+ */
 const ToolBar = (props: {controlledRows: any[], updateRows: (rows: any[]) => void, style?: 'horizontal' | 'vertical', filters?: {name: string, fun: (rows: Row[]) => any}[]}) => {
     const { controlledRows, updateRows, filters } = props;
 	const [value, setValue] = useState<string>('');

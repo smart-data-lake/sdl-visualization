@@ -4,7 +4,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import HomeRounded from "@mui/icons-material/HomeRounded";
 import BasicBreadcrumbs from "./BasicBreadCrumbs";
 
-
+/**
+ * The PageHeader component is the header of each page. It contains the title, subtitle, and description of the page. It is used in pages such as Workflows, Workflow and Run.
+ * @param props title - The title of the page, subtitle - The subtitle of the page, description - The description of the page
+ * @returns JSX element that represents the PageHeader component
+ */
 const PageHeader = (props: {title : string, subtitle?: string, description?: string}) => {
     const { title, subtitle, description } = props;
     return ( 

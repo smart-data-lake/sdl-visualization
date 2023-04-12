@@ -1,5 +1,4 @@
 import { Chip, Typography } from "@mui/joy";
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Row } from "../../../types";
 import { getISOString } from "../../../util/WorkflowsExplorer/date";

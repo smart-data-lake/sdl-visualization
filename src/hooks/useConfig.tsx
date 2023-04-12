@@ -6,6 +6,12 @@ const defaultDrawerWidth = 300;
 const minDrawerWidth = 50;
 const maxDrawerWidth = 600;
 
+/**
+ * The useConfig hook is used to fetch the config from the backend. It returns the config as a json object, and a boolean indicating whether the config is still loading.
+ * This hook was originally in the ConfigExplorer component.
+ * @returns {data: any, isLoading: boolean}
+ */
+
 export const useConfig = () => {
     // state
     const [data, setData] = React.useState<any>({dataObjects: {}, actions: {}, connections: {}, global: {}});

@@ -1,8 +1,10 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 
-
-
+/**
+ * The WorkflowRow component is a row in the WorkflowsTable component.
+ * @param props.data - {id: number, name: string}
+ * @returns 
+ */
 
 const WorkflowRow = (props: {data: {id: number, name: string}}) => {
     const { data } = props;

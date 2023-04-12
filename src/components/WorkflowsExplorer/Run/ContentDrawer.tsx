@@ -1,5 +1,3 @@
-/* import Close from "@mui/icons-material/Close"; */
-import React from "react";
 import { Box, IconButton, Sheet, Table, Typography } from "@mui/joy";
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useParams } from "react-router-dom";
@@ -12,6 +10,13 @@ const getRow = (attempt: Attempt, taskName: string) => {
     return attempt.rows.filter((row) => {return row.step_name === taskName})[0];
 }
 
+/**
+ * The result table component displays the metadata of a task. It is used in the ContentDrawer component.
+ * It visually structures the information available in the metrics and subfeed properties of a task.
+ * @param props.metrics metrics: any - the metrics of the task
+ * @param props.subfeed subFeed: any - the subfeed of the task
+ * @returns 
+ */
 const ResultsTable = (props: {metrics?: any, subFeed?: any}) => {
     const { metrics, subFeed } = props;
     const formatByte = (bytes: number) => {
@@ -60,6 +65,13 @@ const ResultsTable = (props: {metrics?: any, subFeed?: any}) => {
     )
 }
 
+/**
+ * The content sheet component displays the metadata of a task. It is used in the ContentDrawer component. 
+ * It displays the main metrics of a task if they are available, otherwise it displays the subfeed.
+ * If available, it also displays the message of the task.
+ * @param props action: Row - the row to display
+ * @returns 
+ */
 const ContentSheet = (props: {action: Row}) => {
     const { action } = props;
     
@@ -138,7 +150,12 @@ const ContentSheet = (props: {action: Row}) => {
     )
 }
 
-
+/**
+ * ContentDrawer is a component that displays the content of a task. It can be opened by clicking on a task in the Run component and closed by clicking the close button.
+ * The content is fetched from the attempt object. It is displayed in a ContentSheet.
+ * @param props attempt: Attempt
+ * @returns 
+ */
 const ContentDrawer = (props: {attempt: Attempt}) => {
     const { attempt } = props;
     const { flowId, runNumber, taskId, tab, stepName } = useParams();
