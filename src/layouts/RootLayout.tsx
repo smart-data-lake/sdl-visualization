@@ -23,7 +23,7 @@ function RootLayout(props: {storeData?: (data: any) => void, currData?: any}) {
     useEffect(()=>{
         if (!isLoading && storeData) storeData(data)
     }, [isLoading])
-
+        
     return ( 
         <>
             <Header />

@@ -1,10 +1,10 @@
 import { Box, Table } from "@mui/joy";
 import React from "react";
-import useFetchData from "../../../hooks/useFetchData";
+import useFetchWorkflows from "../../../hooks/useFetchData";
 import WorkflowRow from "./WorkflowRow";
 
 const WorkflowsTable = () => {
-    const data = useFetchData('index');
+    const { data } = useFetchWorkflows();
 
     const render = () => {
         return (
