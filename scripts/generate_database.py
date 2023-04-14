@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from wonderwords import RandomWord
 import json
 import os
+import math
 
 placeHolderString = "NaN"
 placeHolderNumber = -1
@@ -60,28 +61,32 @@ def randomState():
     p = random()
     if p < 0.8:
         return "SUCCEEDED"
-    if p < 0.95:
+    if p < 0.99:
         return "SKIPPED"
     return "CANCELLED"
 
 def randomTime(attemptStartTime):
     """Generate a random time."""
-    offset = timedelta(randint(0, 150000))
+    offset = timedelta(random())
     newTime = datetime.fromisoformat(attemptStartTime) + offset
     return newTime.isoformat()
 
 def randomDuration():
     """Generate a random duration."""
-    ms = randint(5000, 30000)
+    return formatDuration(random())
+    
+
+def formatDuration(ms):
+    ms = math.floor(ms * 10000000)
     milliseconds = ms % 1000
     seconds = (ms // 1000) % 60
     minutes = (ms // (1000 * 60)) % 60
     hours = (ms // (1000 * 60 * 60)) % 24
     if hours > 0:
-        return f"PT{hours}H{minutes}M{seconds}.{milliseconds}"
+        return f"PT{hours}H{minutes}M{seconds}.{milliseconds}S"
     if minutes > 0:
-        return f"PT{minutes}M{seconds}.{milliseconds}"
-    return f"PT{seconds}.{milliseconds}"
+        return f"PT{minutes}M{seconds}.{milliseconds}S"
+    return f"PT{seconds}.{milliseconds}S"
 
 def randomResults():
     """Generate a random results."""
@@ -115,14 +120,14 @@ def randomWorkflows():
     runs = []
     uid = 0
 
-    for i in range(100): # 100 workflows
+    for i in range(randint(20, 40)): # 15-25 workflows
         workflowName = randomWord("nouns")
         runId = 0
         attemptId = 0
-        numRuns = randint(50, 100)
+        numRuns = randint(50, 200)
         records = []
 
-        for i in range(numRuns): # 50-100 runs per workflow
+        for i in range(numRuns): # 50-200 runs per workflow
             if random() < 0.5:
                 attemptId += 1
             else:
@@ -134,13 +139,13 @@ def randomWorkflows():
                 "stateFile": randomStateFile 
                 (
                     workflowName, 
-                    randint(50, 100), 
+                    randint(5, 100), 
                     runId, attemptId, 
-                    randomTime("2020-01-01T00:00:00"), 
+                    "2020-01-01T00:00:00", 
                     randomTime("2020-01-01T00:00:00")
             )})
             uid += 1
-        workflows.append({"name": workflowName, "numRuns": runId, "numAttempts": numRuns, "lastDuration": -1, "lastStatus": "SUCCEEDED"})
+        workflows.append({"name": workflowName, "numRuns": runId, "numAttempts": numRuns, "lastDuration": getDuration(records[len(records) - 1]["stateFile"]), "lastStatus": "SUCCEEDED"})
         
         workflowRun = []
         for record in records:
@@ -170,10 +175,15 @@ def randomWorkflows():
 
 def getDuration(stateFile):
     """Get the duration of a state file."""
-    duration = -1
+    runStartTime =  datetime.fromisoformat(stateFile["runStartTime"])
+    currentLongest = runStartTime
     for action in stateFile["actionsState"].values():
-        duration = (duration < isodate.parse_duration(action["duration"])) if isodate.parse_duration(action["duration"]) else duration
-    return duration
+        actionEndTime = datetime.fromisoformat(action["startTStamp"]) + isodate.parse_duration(action["duration"])
+        if (currentLongest < actionEndTime): currentLongest = actionEndTime
+
+    diff = timedelta.total_seconds(currentLongest - runStartTime)*1000
+    tmp = formatDuration(diff)
+    return tmp
 
 def getStatus(stateFile):
     """Get the status of a state file."""
@@ -185,7 +195,7 @@ def getStatus(stateFile):
 def main():
     db = randomWorkflows()
     script_dir = os.path.dirname(__file__)
-    path = os.path.join(script_dir, 'output/db.json')
+    path = os.path.join(script_dir, f"output/db_{randomWord('adjective')}.json")
     with open(path, "w") as outfile:
         json.dump(db, outfile)
 
