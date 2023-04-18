@@ -1,0 +1,45 @@
+.search_field{
+    margin: 10px 10px !important;
+    width: 90%;
+}
+
+.data-flow{
+    /*background-color: lightblue;*/
+    height: 800px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+}
+
+.content-panel{
+    padding-left: 0px !important;
+    padding-right: 0px !important;
+    padding-bottom: 0px !important;
+}
+
+.hide_edges_checkbox_text{
+    font-size:large;
+    font-style:italic;
+    font-weight: bold;
+}
+
+a:link{
+    text-decoration: none;
+    color: black;
+}
+
+.chips{
+    cursor:pointer !important;
+}
+
+.chipStack{
+    padding-top: 10px;
+}
+input[type=checkbox] {width:20px; height:20px;}
+
+/*Media styles*/
+@media  screen and (max-width: 1400px) {
+    .data-flow{
+        height: 440px;
+    }
+}
+
