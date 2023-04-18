@@ -3,7 +3,6 @@ import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TabNav from "./Tabs";
 import { useLocation } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
-import randomStateFile from "../../../util/WorkflowsExplorer/randomStateFile";
 
 /**
     The Run component displays information about a specific run of a workflow.
@@ -15,9 +14,7 @@ import randomStateFile from "../../../util/WorkflowsExplorer/randomStateFile";
 */
 const Run = (props : {panelOpen?: boolean}) => {
     const links = [...useLocation().pathname.split('/')].splice(1);
-    console.log(links[1], parseInt(links[2]), parseInt(links[3]))
     const { data, isLoading } = useFetchRun(links[1], parseInt(links[2]), parseInt(links[3]));
-    if (!isLoading) console.log(data)
 
     const render = () => {
         const attempt = new Attempt(data[0]);

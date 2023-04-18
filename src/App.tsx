@@ -24,7 +24,6 @@ export default function App() {
    * @param data - The data to be stored in the `data` state variable.
    */
   const storeData = (data: any) => {
-    console.log('changed data')
     setData(data)
   }
   

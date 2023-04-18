@@ -15,9 +15,10 @@ const WorkflowsTable = () => {
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Run number</th>
+                            <th>Number of runs</th>
                             <th>Number of attempt</th>
-                            <th>Started</th>
+                            <th>Last run status</th>
+                            <th>Last run duration</th>
                         </tr>
                     </thead>
                     <tbody>

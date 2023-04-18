@@ -9,6 +9,8 @@ const ActionRow = (props: { row: Row }) => {
     const row : Row = props.row;
     const navigate = useNavigate()
 
+    console.log(row)
+
     return ( 
         
             <tr onClick={() => navigate(`/workflows/${row.flow_id}/${row.run_number}/${row.task_id}/table/${row.step_name}`)}>

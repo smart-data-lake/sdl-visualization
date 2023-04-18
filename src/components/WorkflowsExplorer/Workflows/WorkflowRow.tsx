@@ -1,3 +1,4 @@
+import { Chip } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
 
 /**
@@ -6,7 +7,7 @@ import { useNavigate } from "react-router-dom";
  * @returns 
  */
 
-const WorkflowRow = (props: {data: {id: number, name: string}}) => {
+const WorkflowRow = (props: {data: any}) => {
     const { data } = props;
     const navigate = useNavigate();
     
@@ -15,9 +16,14 @@ const WorkflowRow = (props: {data: {id: number, name: string}}) => {
             <>
                 <tr onClick={() => handleClick()}>
                     <td>{data.name}</td>
-                    <td>{'?'}</td>
-                    <td>{"Dummy field"}</td>
-                    <td>{"Dummy field 2"}</td>
+                    <td>{data.numRuns}</td>
+                    <td>{data.numAttempts}</td>
+                    <td>
+                        <Chip variant="soft" size="sm" color={data.lastStatus === 'SUCCEEDED' ? 'success' : 'danger'}>
+                            {data.lastStatus}
+                        </Chip>
+                    </td>
+                    <td>{data.lastDuration}</td>
                 </tr>
             </>
         )
