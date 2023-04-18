@@ -17,12 +17,32 @@ export const useFetchWorkflows = () => {
     return { data, isLoading };
 }
 
-export const useFetchWorkflow = () => {
+export const useFetchWorkflow = (workflow: string) => {
+    const [data, setData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
+    useEffect(() => {
+        api.getWorkflow(workflow).then((data) => {
+            setData(data);
+            setIsLoading(false);
+        });
+    }, []);
+
+    return { data, isLoading };
 }
 
-export const useFetchRun = () => {
+export const useFetchRun = (name: string, runId: number, attemptId: number) => {
+    const [data, setData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
+    useEffect(() => {
+        api.getRun({name, runId, attemptId}).then((data) => {
+            setData(data);
+            setIsLoading(false);
+        });
+    }, []);
+
+    return { data, isLoading };
 }
 
 export default useFetchWorkflows;

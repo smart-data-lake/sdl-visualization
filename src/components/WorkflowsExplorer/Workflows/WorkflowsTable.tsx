@@ -1,5 +1,4 @@
 import { Box, Table } from "@mui/joy";
-import React from "react";
 import useFetchWorkflows from "../../../hooks/useFetchData";
 import WorkflowRow from "./WorkflowRow";
 
