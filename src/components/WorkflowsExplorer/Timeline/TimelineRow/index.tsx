@@ -5,8 +5,6 @@ import { getPathFor } from '../../../../util/WorkflowsExplorer/routing';
 import { TFunction } from 'i18next';
 import TaskListLabel from '../TaskListLabel';
 import LineElement, { BoxGraphicValue } from './LineElement';
-
-import { getTaskDuration } from '../../../../util/WorkflowsExplorer/task';
 import { TimelineMetrics } from '../Timeline';
 import { AsyncStatus, Row } from '../../../../types';
 
@@ -49,7 +47,7 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
                 timeline={lineElementMetrics}
                 row={{ type: 'task', data: item }}
                 isLastAttempt={true}
-                duration={getTaskDuration(item)}
+                duration={item.getTaskDuration()}
                 startTimeOfFirstAttempt={timeline.sortBy === 'duration' ? item.started_at || 0 : undefined}
                 dragging={dragging}
                 paramsString={paramsString}

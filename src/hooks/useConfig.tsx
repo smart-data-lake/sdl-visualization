@@ -16,7 +16,6 @@ export const useConfig = () => {
     // state
     const [data, setData] = React.useState<any>({dataObjects: {}, actions: {}, connections: {}, global: {}});
     const [isLoading, setLoading] = useState(true);
-    const [drawerWidth, setDrawerWidth] = useState(defaultDrawerWidth);
     
     
     
@@ -79,22 +78,7 @@ export const useConfig = () => {
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // only once
-    
-    // resize drawer
-    const handleDraggerMouseDown = (_: React.MouseEvent) => { // this needs React.MouseEvent as it is used in react component
-      document.addEventListener("mouseup", handleMouseUp, true);
-      document.addEventListener("mousemove", handleMouseMove, true);
-    };
-    const handleMouseUp = () => {
-      document.removeEventListener("mouseup", handleMouseUp, true);
-      document.removeEventListener("mousemove", handleMouseMove, true);
-    };
-    const handleMouseMove = useCallback((e: MouseEvent): any => { // this needs document MouseEvent as it is used with document add/removeEventListener
-      const newWidth = e.clientX - document.body.offsetLeft;
-      if (newWidth > minDrawerWidth && newWidth < maxDrawerWidth) {
-        setDrawerWidth(newWidth);
-      }
-    }, []);  
+   
   
     return {data, isLoading}
   }
