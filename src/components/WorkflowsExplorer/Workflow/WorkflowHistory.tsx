@@ -1,9 +1,12 @@
-import React from "react";
 import { useLocation } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
 import RunsHistoryTable from "./WorkflowHistoryTable";
-import { Box } from "@mui/joy";
+import { Box, CircularProgress } from "@mui/joy";
 import ToolBar from "../ToolBar/ToolBar";
+import HistoryChart from "../HistoryChart/HistoryChart";
+import { useFetchWorkflow } from "../../../hooks/useFetchData";
+import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
+import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 
 
 /**
@@ -14,6 +17,28 @@ import ToolBar from "../ToolBar/ToolBar";
 const WorkflowHistory = () => {
     const links = [...useLocation().pathname.split('/')].splice(1);
     const workflowName :  string= links[links.length - 1];
+    const { data, isLoading } = useFetchWorkflow(workflowName);
+
+    const generateChartData = () => {
+        const succeeded : any[] = [];
+        const cancelled : any[] = [];
+        const categories: any[] = [];
+
+        data[0].runs.forEach((run) => {
+            if (run.status === 'CANCELLED') {
+                cancelled.push(durationMicro(run.duration));
+                succeeded.push(0);
+            } else {
+                succeeded.push(durationMicro(run.duration));
+                cancelled.push(0);
+            }    
+            categories.push(getISOString(new Date(run.attemptStartTime)));
+        });
+        return {succeeded, cancelled, categories};
+    }
+
+    if (isLoading) return (<CircularProgress/>)
+
     return (
         <>
             <Box
@@ -23,13 +48,13 @@ const WorkflowHistory = () => {
                     gap: '3rem',
                 }}
             >
-                <ToolBar style={'vertical'} controlledRows={[]} updateRows={() => null}/>
                 <Box>
-                    <PageHeader 
-                        title={workflowName} 
-                    />
-                    <RunsHistoryTable workflow={workflowName}/>
-
+                    <PageHeader title={workflowName} />
+                    <Box sx={{minWidth: '100%'}}>
+                        <HistoryChart data={generateChartData()}/>    
+                    </Box>
+                    <ToolBar style={'horizontal'} controlledRows={[]} updateRows={() => null}/>
+                    <RunsHistoryTable data={data}/>
                 </Box>
             </Box>
         </>   

@@ -8,47 +8,39 @@ import RunsRow from "./RunsRow";
  * @param props.workflow - string
  * @returns JSX.Element
  */
-const WorkflowHistoryTable = (props : {workflow: string}) => {
-    const { workflow } = props;
-    const { data, isLoading } = useFetchWorkflow(workflow);
+const WorkflowHistoryTable = (props : {data: any}) => {
+    const { data } = props;
     
-    const render = () => {
-        return (
-            <Box sx={{ 
-                overflow: 'auto',
-                height: '80vh',
-            }}>
-                <Table 
-                    size='sm' 
-                    hoverRow 
-                    color='neutral' 
-                    stickyHeader 
-                    >
-                    <thead>
-                        <tr>
-                            <th>Run ID</th>
-                            <th>Attempt ID</th>
-                            <th>Run Start Time</th>
-                            <th>Duration</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {data[0].runs.map((run: any) => (
-                            <>
-                                <RunsRow run={run}/>
-                            </>
-                        ))}
-                    </tbody>
-                </Table>
-                
-            </Box>
-        )
-    }
     return (
-        <>
-            {!isLoading && render()}
-        </> 
+        <Box sx={{ 
+            overflow: 'auto',
+            height: '47vh',
+        }}>
+            <Table 
+                size='sm' 
+                hoverRow 
+                color='neutral' 
+                stickyHeader 
+                >
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Attempt ID</th>
+                        <th>Run Start Time</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {data[0].runs.map((run: any) => (
+                        <>
+                            <RunsRow run={run}/>
+                        </>
+                    ))}
+                </tbody>
+            </Table>
+            
+        </Box>
     );
 }
  

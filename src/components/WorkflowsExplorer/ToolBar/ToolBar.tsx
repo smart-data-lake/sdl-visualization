@@ -56,7 +56,6 @@ const ToolBar = (props: {controlledRows: any[], updateRows: (rows: any[]) => voi
               }}
         >
             <Box sx={{
-                m: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1rem',
