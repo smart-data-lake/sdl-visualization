@@ -60,12 +60,12 @@ export class Row implements MetaDataBaseObject {
     metadata: Metadata;
     message: string;
     
-    constructor(properties: TaskProperty) {
+    constructor({ properties }: { properties: TaskProperty; }) {
       this.flow_id = properties.runInfo.workflowName;
       this.step_name = properties.actionName;
       this.run_number = properties.runInfo.runId;
       this.attempt_id = properties.runInfo.attemptId;
-      this.ts_epoch = new Date(properties.action.startTstmp).getTime();
+      this.ts_epoch = new Date(properties.action.startTStamp).getTime();
       this.status = properties.action.state === 'SUCCEEDED' ? 'completed' : (properties.action.state === 'SKIPPED' ? 'unknown' : 'failed');
       this.started_at = this.ts_epoch;
       this.duration = durationMicro(properties.action.duration === 'PT0S' ? 'PT0.001S' : properties.action.duration);
@@ -75,6 +75,7 @@ export class Row implements MetaDataBaseObject {
       this.user_name = '';
       this.system_tags = [];
       this.message = properties.action.msg;
+      console.log(properties.action.startTStamp)
     }
   }
   
@@ -128,7 +129,7 @@ export class Row implements MetaDataBaseObject {
       attemptId : number
     },
     state : string,
-    startTstmp : string,
+    startTStamp : string,
     duration: string,
     actionFinishTime?: number,
     msg: string,

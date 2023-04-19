@@ -166,6 +166,7 @@ def randomWorkflows():
                     "runId" : record["stateFile"]["runId"],
                     "attemptId" : record["stateFile"]["attemptId"],
                     "runStartTime" : record["stateFile"]["runStartTime"],
+                    "attemptStartTime" : record["stateFile"]["attemptStartTime"],
                     "duration" : getDuration(record["stateFile"]),
                     "status" : getStatus(record["stateFile"]),
                 }

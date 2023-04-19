@@ -1,5 +1,7 @@
 import { Chip } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
+import { durationMicro } from "../../../util/WorkflowsExplorer/date";
+import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 
 /**
  * The WorkflowRow component is a row in the WorkflowsTable component.
@@ -23,7 +25,7 @@ const WorkflowRow = (props: {data: any}) => {
                             {data.lastStatus}
                         </Chip>
                     </td>
-                    <td>{data.lastDuration}</td>
+                    <td>{formatDuration(durationMicro(data.lastDuration))}</td>
                 </tr>
             </>
         )

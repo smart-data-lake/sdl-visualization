@@ -44,7 +44,7 @@ export function randomAction(runStartTime : Date) {
         },
         state : state,
         msg: 'This is a random action :)',
-        startTstmp : new Date(runStartTime.getTime() + Math.round(Math.random() * 50000) + 100).toISOString(),
+        startTStamp : new Date(runStartTime.getTime() + Math.round(Math.random() * 50000) + 100).toISOString(),
         duration : 'PT' + (Math.random() * 60).toFixed(3) + 'S',
         results : [{
             subFeed : state === 'SUCCEEDED' ? {

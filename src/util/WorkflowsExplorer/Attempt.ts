@@ -31,10 +31,13 @@ export default class Attempt {
             const actionName = entry[0];
             const action = entry[1];
             const taskData = new Row({
-                runInfo: this.runInfo, 
-                action: action, 
+              properties: {
+                runInfo: this.runInfo,
+                action: action,
                 actionName: actionName
+              }
             });
+            console.log(action)
             taskRow.push(taskData)
         })
         return taskRow;

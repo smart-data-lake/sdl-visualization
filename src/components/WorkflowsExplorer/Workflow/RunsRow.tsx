@@ -1,5 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Chip } from "@mui/joy";
+import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
+import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 
 /**
  * The RunsRow component is a row in the WorkflowHistoryTable component.
@@ -19,8 +21,8 @@ const RunsRow = (props : {run: any}) => {
         <tr  onClick={() => handleClick()}>
             <td>{run.runId}</td>
             <td>{run.attemptId}</td>
-            <td>{run.runStartTime}</td>
-            <td>{run.duration}</td>
+            <td>{getISOString(new Date(run.attemptStartTime))}</td>
+            <td>{formatDuration(durationMicro(run.duration))}</td>
             <td>
                 <Chip variant="soft" size="sm" color={run.status === 'SUCCEEDED' ? 'success' : 'danger'}>
                     {run.status}
