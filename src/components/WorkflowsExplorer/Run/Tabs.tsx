@@ -61,6 +61,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                 controlledRows={defaultRows} 
                 updateRows={updateRows} 
                 filters={filters}
+                searchColumn="step_name"
                 style="horizontal"
             />
             {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}

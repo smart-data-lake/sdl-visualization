@@ -7,6 +7,7 @@ import HistoryChart from "../HistoryChart/HistoryChart";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
+import { useEffect, useState } from "react";
 
 
 /**
@@ -18,6 +19,15 @@ const WorkflowHistory = () => {
     const links = [...useLocation().pathname.split('/')].splice(1);
     const workflowName :  string= links[links.length - 1];
     const { data, isLoading } = useFetchWorkflow(workflowName);
+    const [rows, setRows] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!isLoading) setRows(data[0].runs);
+    }, [data])
+
+    const updateRows = (rows: any[]) => {
+        setRows(rows);
+    }
 
     const generateChartData = () => {
         const succeeded : any[] = [];
@@ -48,12 +58,17 @@ const WorkflowHistory = () => {
                     gap: '3rem',
                 }}
             >
+                    <ToolBar 
+                        style={'vertical'} 
+                        controlledRows={data[0].runs} 
+                        updateRows={updateRows}
+                        searchColumn={'runId'}
+                    />
                 <Box>
                     <PageHeader title={workflowName} />
                     <Box sx={{minWidth: '100%'}}>
                         <HistoryChart data={generateChartData()}/>    
                     </Box>
-                    <ToolBar style={'horizontal'} controlledRows={[]} updateRows={() => null}/>
                     <RunsHistoryTable data={data}/>
                 </Box>
             </Box>

@@ -14,8 +14,15 @@ import SelectSort from "./SelectSort";
  * @param props.style - style of the toolbar
  * @returns JSX.Element
  */
-const ToolBar = (props: {controlledRows: any[], updateRows: (rows: any[]) => void, style?: 'horizontal' | 'vertical', filters?: {name: string, fun: (rows: Row[]) => any}[]}) => {
-    const { controlledRows, updateRows, filters } = props;
+const ToolBar = (
+    props: {
+        controlledRows: any[], 
+        updateRows: (rows: any[]) => void, 
+        searchColumn: string,
+        style?: 'horizontal' | 'vertical', 
+        filters?: {name: string, fun: (rows: Row[]) => any}[]
+    }) => {
+    const { controlledRows, updateRows, searchColumn, filters } = props;
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
     const [sort, setSort] = useState<SortType>('start time asc');
@@ -31,7 +38,8 @@ const ToolBar = (props: {controlledRows: any[], updateRows: (rows: any[]) => voi
 
 	useEffect(() => {
 		function handleInput() {
-			return controlledRows.filter((row) => row.step_name.toLowerCase().includes(value.toLowerCase()));
+        
+			return controlledRows.filter((row) => row[searchColumn].toString().toLowerCase().includes(value.toLowerCase()));
 		}
 		
 		function applyFilters() {

@@ -14,7 +14,7 @@ const WorkflowHistoryTable = (props : {data: any}) => {
     return (
         <Box sx={{ 
             overflow: 'auto',
-            height: '47vh',
+            height: '57vh',
         }}>
             <Table 
                 size='sm' 

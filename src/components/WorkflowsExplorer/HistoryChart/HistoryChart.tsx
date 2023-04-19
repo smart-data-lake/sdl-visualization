@@ -9,12 +9,16 @@ const HistoryChart = (props: {data : {succeeded: {x: string, y: number}[], cance
                 stacked: true,
                 id: "main-chart",
                 toolbar: {
-                    show: false
+                    show: true,
+                    tools: {
+                        download: true,
+                        selection: true,
+                        zoom: true,
+                        zoomin: true,
+                        zoomout: true,
+                        pan: true,
+                    },
                 }
-            },
-            lengend: {
-                show: false,
-                position: 'top',
             },
             plotOptions: {
                 bar: {
@@ -141,7 +145,7 @@ const HistoryChart = (props: {data : {succeeded: {x: string, y: number}[], cance
     
     return ( 
         <>
-            <Chart options={state1.options} series={state1.series} type="bar" width="100%" height={250} /> 
+            <Chart options={state1.options} series={state1.series} type="bar" width="100%" height={200} /> 
             {/* <Chart options={state2.options} series={state2.series} type="bar" width="100%" height={100} /> */}
         </>
         );

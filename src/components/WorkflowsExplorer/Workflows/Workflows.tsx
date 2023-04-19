@@ -15,8 +15,8 @@ const Workflows = () => {
                     gap: '3rem',
                 }}
             >
-                <ToolBar style={'vertical'} controlledRows={[]} updateRows={() => null}/>
-                <Box>
+                {/* <ToolBar style={'vertical'} controlledRows={[]} updateRows={() => null}/>
+                 */}<Box>
                     <PageHeader 
                         title={'Workflows'} />
                     <WorkflowsTable/>
