@@ -122,7 +122,6 @@ export function generateRandomDB() {
         db[workflow.name] = tmp;
         db['index'] = index;
     });
-    console.log(db)
 
     //exportData(db)
 }

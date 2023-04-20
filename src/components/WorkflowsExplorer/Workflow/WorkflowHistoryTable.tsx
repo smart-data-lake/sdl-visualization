@@ -8,7 +8,7 @@ import RunsRow from "./RunsRow";
  * @param props.workflow - string
  * @returns JSX.Element
  */
-const WorkflowHistoryTable = (props : {data: any}) => {
+const WorkflowHistoryTable = (props : {data: any[]}) => {
     const { data } = props;
     
     return (
@@ -32,7 +32,7 @@ const WorkflowHistoryTable = (props : {data: any}) => {
                     </tr>
                 </thead>
                 <tbody>
-                    {data[0].runs.map((run: any) => (
+                    {data.map((run: any) => (
                         <>
                             <RunsRow run={run}/>
                         </>

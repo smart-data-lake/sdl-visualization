@@ -69,7 +69,7 @@ const WorkflowHistory = () => {
                     <Box sx={{minWidth: '100%'}}>
                         <HistoryChart data={generateChartData()}/>    
                     </Box>
-                    <RunsHistoryTable data={data}/>
+                    <RunsHistoryTable data={rows}/>
                 </Box>
             </Box>
         </>   

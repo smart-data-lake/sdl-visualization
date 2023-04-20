@@ -20,7 +20,7 @@ const ToolBar = (
         updateRows: (rows: any[]) => void, 
         searchColumn: string,
         style?: 'horizontal' | 'vertical', 
-        filters?: {name: string, fun: (rows: Row[]) => any}[]
+        filters?: {name: string, fun: (rows: any[]) => any}[]
     }) => {
     const { controlledRows, updateRows, searchColumn, filters } = props;
 	const [value, setValue] = useState<string>('');
@@ -38,8 +38,8 @@ const ToolBar = (
 
 	useEffect(() => {
 		function handleInput() {
-        
-			return controlledRows.filter((row) => row[searchColumn].toString().toLowerCase().includes(value.toLowerCase()));
+            const tmp = controlledRows.filter((row) => row[searchColumn].toString().toLowerCase().includes(value.toLowerCase()));
+            return tmp;
 		}
 		
 		function applyFilters() {
@@ -51,7 +51,12 @@ const ToolBar = (
 		}
 		
 		const a = handleInput();
-		const b = applyFilters(); 
+        let b : any;
+        if (filters && filters.length > 0) {
+            b = applyFilters(); 
+        } else {
+            b = controlledRows;
+        }
 		const c = a.filter((row) => b.includes(row));
 		updateRows(sortRows(c, sort));
 	}, [value, list, sort]);
@@ -72,10 +77,11 @@ const ToolBar = (
                     placeholder="Search"
                     required
                     sx={{ mb: 0, fontSize: 'var(--joy-fontSize-sm)' }}
-                    onChange={(event) => {
-                        const { value } = event.target;
-                        setValue(value)
-                    }}
+                        onChange={(event) => {
+                            const { value } = event.target;
+                            setValue(value)
+                        }
+                    }
                 />
 				<SelectSort updateSort={updateSort}/>
                 {filters && <FilterMenu filters={filters} updateList={updateList}/>}
