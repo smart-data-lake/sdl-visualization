@@ -1,154 +1,49 @@
-import Chart from "react-apexcharts";
+import React, { PureComponent } from 'react';
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush, ReferenceLine } from 'recharts';
 
-const HistoryChart = (props: {data : {succeeded: {x: string, y: number}[], cancelled: {x: string, y: number}[], categories: any[]}}) => {
+const HistoryChart = (props: {data : {value: number, status: string, name: string}[]}) => {
     const { data } = props;
-    const state1 ={
-        options: {
-            chart: {
-                stacked: true,
-                id: "main-chart",
-                toolbar: {
-                    show: true,
-                    tools: {
-                        download: true,
-                        selection: true,
-                        zoom: true,
-                        zoomin: true,
-                        zoomout: true,
-                        pan: true,
-                    },
-                }
-            },
-            plotOptions: {
-                bar: {
-                    columnWidth: '80%',
-                }
-            },
-            colors: ['#20af2e', '#eb3428'],
-            dataLabels: {
-                enabled: false
-            },
-            grid: {
-                xaxis: {
-                    lines: {
-                        show: false
-                    },
-                },
-                yaxis: {
-                    lines: {
-                        show: false
-                    },
-                }
-
-            },
-            xaxis: {
-                labels: {
-                    show: false
-                },
-                categories: data.categories,
-            },
-            yaxis: {
-                labels: {
-                    show: true,
-                    formatter: (value: number) => {
-                        return formatDuration(value);
-                    }
-                }
-            }
-        },
-        series: [
-            {
-                name: "Succeeded",
-                data: data.succeeded,
-
-            },
-            {
-                name: "Cancelled",
-                data: data.cancelled
-            }
-        ]
-    }
-    const state2 ={
-        options: {
-            chart: {
-                stacked: true,
-                id: "brush",
-                animations: {
-                    animateGradually: {
-                        enabled: false
-                    }
-                },
-                brush: {
-                    enabled: true,
-                    target: 'main-chart',
-                  },
-                  selection: {
-                    enabled: true,
-                    fill: {
-                      color: '#ccc',
-                      opacity: 0.4
-                    },
-                    stroke: {
-                      color: '#0D47A1',
-                    }
-                  },
-            },
-            plotOptions: {
-                bar: {
-                    columnWidth: '50%',
-                }
-            },
-            dataLabels: {
-                enabled: false
-            },
-            colors: ['#20af2e', '#eb3428'],
-            grid: {
-                xaxis: {
-                    lines: {
-                        show: false
-                    },
-                },
-                yaxis: {
-                    lines: {
-                        show: false
-                    },
-                }
-
-            },
-            xaxis: {
-                labels: {
-                    show: false
-                }
-            },
-            yaxis: {
-                labels: {
-                    show: false,
-                }
-            }
-        },
-        series: [
-            {
-                name: "Succeeded",
-                data: data.succeeded,
-
-            },
-            {
-                name: "Cancelled",
-                data: data.cancelled
-            }
-        ]
-    }
-
-    
-    
-    
-    return ( 
-        <>
-            <Chart options={state1.options} series={state1.series} type="bar" width="100%" height={200} /> 
-            {/* <Chart options={state2.options} series={state2.series} type="bar" width="100%" height={100} /> */}
-        </>
-        );
+    const barColors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
+    return (
+        <ResponsiveContainer width={"99%"} height={240}>
+          <BarChart
+            width={500}
+            height={300}
+            data={data}
+            margin={{
+              top: 20,
+              right: 30,
+              left: 20,
+              bottom: 5,
+            }}
+          >
+            <Tooltip 
+                cursor={{fill: 'black', fillOpacity: 0.1}}
+                position={{ y: 0 }}
+                animationDuration={0}
+                labelFormatter={(label: string) => {return 'Date: ' + data[parseInt(label)].name}}
+                formatter={(value: number, name: string) => {return [formatDuration(value) as any, 'Duration']}}
+            />
+            <Bar 
+                dataKey="value" 
+                stackId="a" 
+                fill="#20af2e"
+                animationDuration={0}
+            >
+                    {
+                        data.map((entry, index) => {
+                                return (
+                                    <Cell key={`cell-${index}`} fill={entry.status === 'SUCCEEDED' ? '#20af2e':'#eb3428'} />
+                                )
+                            }
+                        )
+                    }    
+            </Bar>
+            <Brush height={30} stroke="#d1d1d1" />
+          </BarChart>
+        </ResponsiveContainer>
+      );
     }
  
 export default HistoryChart;

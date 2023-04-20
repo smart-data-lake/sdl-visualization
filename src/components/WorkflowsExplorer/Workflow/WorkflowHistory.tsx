@@ -6,8 +6,9 @@ import ToolBar from "../ToolBar/ToolBar";
 import HistoryChart from "../HistoryChart/HistoryChart";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
-import { formatDuration } from "../../../util/WorkflowsExplorer/format";
+
 import { useEffect, useState } from "react";
+import Example from "../HistoryChart/Example";
 
 
 /**
@@ -30,21 +31,22 @@ const WorkflowHistory = () => {
     }
 
     const generateChartData = () => {
-        const succeeded : any[] = [];
-        const cancelled : any[] = [];
-        const categories: any[] = [];
+        const res : {
+            value: number,
+            status: string,
+            name: string,
+        }[] = [];
 
-        data[0].runs.forEach((run) => {
-            if (run.status === 'CANCELLED') {
-                cancelled.push(durationMicro(run.duration));
-                succeeded.push(0);
-            } else {
-                succeeded.push(durationMicro(run.duration));
-                cancelled.push(0);
-            }    
-            categories.push(getISOString(new Date(run.attemptStartTime)));
+        rows.forEach((run) => {
+            res.push(
+                {
+                    value: durationMicro(run.duration),
+                    status: run.status,
+                    name: getISOString(new Date(run.attemptStartTime)),
+                }
+            )
         });
-        return {succeeded, cancelled, categories};
+        return res;
     }
 
     if (isLoading) return (<CircularProgress/>)
@@ -67,7 +69,8 @@ const WorkflowHistory = () => {
                 <Box>
                     <PageHeader title={workflowName} />
                     <Box sx={{minWidth: '100%'}}>
-                        <HistoryChart data={generateChartData()}/>    
+                        <HistoryChart data={generateChartData()}/>
+                        {/* <Example />  */}
                     </Box>
                     <RunsHistoryTable data={rows}/>
                 </Box>
