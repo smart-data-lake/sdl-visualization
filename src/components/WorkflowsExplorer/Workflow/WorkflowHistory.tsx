@@ -35,7 +35,8 @@ const WorkflowHistory = () => {
             value: number,
             status: string,
             name: string,
-            id: string
+            runId: number,
+            attemptId: number
         }[] = [];
 
         rows.forEach((run) => {
@@ -44,7 +45,8 @@ const WorkflowHistory = () => {
                     value: durationMicro(run.duration),
                     status: run.status,
                     name: getISOString(new Date(run.attemptStartTime)),
-                    id: "Run " + run.runId + " Attempt " + run.attemptId    
+                    runId: run.runId,
+                    attemptId: run.attemptId    
                 }
             )
         });
