@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
 import RunsHistoryTable from "./WorkflowHistoryTable";
-import { Box, CircularProgress } from "@mui/joy";
+import { Box, CircularProgress, Sheet } from "@mui/joy";
 import ToolBar from "../ToolBar/ToolBar";
 import HistoryChart from "../HistoryChart/HistoryChart";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
@@ -35,6 +35,7 @@ const WorkflowHistory = () => {
             value: number,
             status: string,
             name: string,
+            id: string
         }[] = [];
 
         rows.forEach((run) => {
@@ -43,36 +44,67 @@ const WorkflowHistory = () => {
                     value: durationMicro(run.duration),
                     status: run.status,
                     name: getISOString(new Date(run.attemptStartTime)),
+                    id: "Run " + run.runId + " Attempt " + run.attemptId    
                 }
             )
         });
         return res;
     }
 
+    const filters = [
+        {name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row.status === 'SUCCEEDED')}},
+        {name: 'Unknown', fun: (rows: any) => {return rows.filter(row => row.status === 'SKIPPED')}},
+        {name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row.status === 'CANCELLED')}}
+    ];
+
     if (isLoading) return (<CircularProgress/>)
 
     return (
         <>
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    gap: '3rem',
-                }}
-            >
-                    <ToolBar 
-                        style={'vertical'} 
-                        controlledRows={data[0].runs} 
-                        updateRows={updateRows}
-                        searchColumn={'runId'}
-                    />
-                <Box>
-                    <PageHeader title={workflowName} />
-                    <Box sx={{minWidth: '100%'}}>
-                        <HistoryChart data={generateChartData()}/>
-                        {/* <Example />  */}
-                    </Box>
-                    <RunsHistoryTable data={rows}/>
+            <Box>
+                <PageHeader title={workflowName} />
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        gap: '3rem',
+                    }}
+                >
+                        <ToolBar 
+                            style={'vertical'} 
+                            controlledRows={data[0].runs} 
+                            updateRows={updateRows}
+                            searchColumn={'runId'}
+                            filters={filters}
+                        />
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '3rem',
+                            }}
+                        >
+                            <Sheet 
+                                sx={{
+                                    p: '2rem',
+                                    border: '1px solid lightgray',
+                                    borderRadius: '0.5rem',
+                                }}
+                            >
+                                <HistoryChart data={generateChartData()}/>
+                                {/* <Example />  */}
+                            </Sheet>
+                            <Sheet 
+                                sx={{
+                                    py: '4rem',
+                                    p: '2rem',
+                                    border: '1px solid lightgray',
+                                    borderRadius: '0.5rem',
+                                }}
+                            >
+                                <RunsHistoryTable data={rows}/>
+                            </Sheet>
+                        </Box>
                 </Box>
             </Box>
         </>   

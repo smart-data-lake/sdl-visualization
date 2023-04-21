@@ -1,4 +1,4 @@
-import { IconButton, Menu, MenuItem, Switch, Typography } from "@mui/joy";
+import { Box, Checkbox, IconButton, Menu, MenuItem, Stack, Switch, Typography } from "@mui/joy";
 import React, { useEffect, useState } from "react";
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { Row } from "../../../types";
@@ -17,7 +17,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [list, setList] = useState<boolean[]>(Array(props.filters?.length).fill(true));
     const open = Boolean(anchorEl);
-    const style = props.style ? props.style : 'vertical';
+    const style = props.style ? props.style : 'horizontal';
 
 	useEffect(() => {
 		updateList(list);
@@ -30,7 +30,41 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
     const handleClose = () => {
       setAnchorEl(null);
     };
-  
+    
+    if (style === 'vertical') return (
+        <Stack>
+
+            {filters && filters.map((filter, index) => (
+                <>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                        }}
+                    >
+                        <Checkbox 
+                            color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Cancelled' ? 'danger' : 'neutral')}
+                        	size="sm"
+                            variant="soft"
+                        	checked={list[index]}
+                        	onChange={() => {
+                            	setList(list.map((item, i) => i === index ? !item : item));
+                            }}
+                            sx={{
+                                mr: '1rem'
+                            }}
+                            />
+                        <Typography>
+                            {filter.name}
+                        </Typography>
+                    </Box>
+                        
+                </>
+            ))}
+        </Stack>
+    )
+
     return (
       <div>
         <IconButton

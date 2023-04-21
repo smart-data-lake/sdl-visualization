@@ -75,7 +75,7 @@ export const getCurrentStepName = (rows: Row[]): string =>
   rows.find((row) => row.status === 'running')?.step_name || '';
 
 
-export const sortRows = (rows: Row[], sortType: SortType) => {
+export const sortRows = (rows: any, sortType: SortType) => {
 	if(sortType === 'start time asc') return rows.sort(startTimeAsc)
 	if(sortType === 'start time desc') return rows.sort(startTimeDesc)
 	if(sortType === 'duration asc') return rows.sort(durationAsc)

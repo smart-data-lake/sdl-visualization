@@ -1,4 +1,4 @@
-import { Box, Input } from "@mui/joy";
+import { Box, Divider, Input, Typography } from "@mui/joy";
 import React, { useEffect, useState } from "react";
 import { Row, SortType } from "../../../types";
 import { sortRows } from "../../../util/WorkflowsExplorer/row";
@@ -20,9 +20,10 @@ const ToolBar = (
         updateRows: (rows: any[]) => void, 
         searchColumn: string,
         style?: 'horizontal' | 'vertical', 
-        filters?: {name: string, fun: (rows: any[]) => any}[]
+        filters?: {name: string, fun: (rows: any[]) => any}[],
+        sortEnabled?: boolean
     }) => {
-    const { controlledRows, updateRows, searchColumn, filters } = props;
+    const { controlledRows, updateRows, searchColumn, filters, sortEnabled } = props;
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
     const [sort, setSort] = useState<SortType>('start time asc');
@@ -64,42 +65,54 @@ const ToolBar = (
     if (style === 'vertical') return (
         <Box
             sx={{
-                height: '85vh',
+                height: '100%',
                 maxWidth: '17rem',
+                border: '1px solid lightgray',
+                borderRadius: '0.5rem',
               }}
         >
             <Box sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '1rem',
+                m: '1rem',
+                gap: '0.5rem',
             }}>
+
+                {filters && (
+                        <>
+                            <Typography level="body1">
+                                Status
+                            </Typography>
+                            <Divider/>
+                            <FilterMenu filters={filters} updateList={updateList} style={'vertical'}/>
+                        </>
+                    )
+                }
                 <Input
                     placeholder="Search"
                     required
-                    sx={{ mb: 0, fontSize: 'var(--joy-fontSize-sm)' }}
+                    sx={{fontSize: 'var(--joy-fontSize-sm)' }}
                         onChange={(event) => {
                             const { value } = event.target;
                             setValue(value)
                         }
                     }
                 />
-				<SelectSort updateSort={updateSort}/>
-                {filters && <FilterMenu filters={filters} updateList={updateList}/>}
             </Box>
         </Box>
     );
-
+    
     return (
         <Box
             sx={{
                 display: 'flex',
                 flexDirection: 'row',
-                justifyContent: 'right',
+                justifyContent: 'left',
                 mt: '2rem',
                 mb: '1rem',
                 gap: '1rem'
             }}
-        >
+            >
                 <Input
                     placeholder="Search"
                     required
@@ -109,7 +122,7 @@ const ToolBar = (
                         setValue(value)
                     }}
                 />
-				<SelectSort updateSort={updateSort}/>
+                <SelectSort updateSort={updateSort}/>
                 {filters && <FilterMenu filters={filters} updateList={updateList}/>}
         </Box>
     )

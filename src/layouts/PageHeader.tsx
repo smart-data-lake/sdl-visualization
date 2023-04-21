@@ -13,7 +13,7 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
     const { title, subtitle, description } = props;
     return ( 
         <>
-            <Sheet sx={{
+            <Box sx={{
                 display: 'flex',
                 flexDirection: 'column',
                 pb: '1rem',
@@ -21,10 +21,10 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                 position: 'sticky',
 
             }}>
-                <Typography level="h3" sx={{pb: '1rem', textTransform: 'capitalize'}}>{title}</Typography>
+                <Typography level="h2" sx={{pb: '1rem', textTransform: 'capitalize'}}>{title}</Typography>
                 {subtitle && <Typography level="h4" sx={{pb: '1rem'}}>{subtitle}</Typography>}
                 {description && <Typography level="body2" sx={{pb: '2rem'}}>{description}</Typography>}
-            </Sheet>
+            </Box>
         </>
      );
 }

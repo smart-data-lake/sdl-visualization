@@ -61,7 +61,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                 controlledRows={defaultRows} 
                 updateRows={updateRows} 
                 filters={filters}
-                searchColumn="step_name"
+                searchColumn={"step_name"}
                 style="horizontal"
             />
             {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
@@ -74,7 +74,9 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                             justifyContent: 'center',
                             alignItems: 'center',
                             p: '10rem',
-                            gap: '5rem'
+                            gap: '5rem',
+                            border: '1px solid lightgray',
+                            borderRadius: '0.5rem',
                         }}
                     >
                         <InboxIcon sx={{
@@ -89,69 +91,93 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                 <>
                     <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
                         <PanelGroup direction="horizontal">
-                            <Panel
-                                collapsible={true}
-                                order={1}
-                                minSize={30}
+                            <Box 
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    minWidth: '100%',
+                                    border: '1px solid lightgray',
+                                    borderRadius: '0.5rem',
+                                    p:'2rem'
+                                }}
                             >
-                                <ThemeProvider theme={theme}>
-                                <GlobalStyle />
-                                    <VirtualizedTimeline run={attempt.run} rows={rows}/>
-                                </ThemeProvider>
-                            </Panel>
-                            {open && (
-                                <>
-                                    <PanelResizeHandle >
-                                        <Box
-                                            sx={{
-                                                height: '100%',
-                                                mx: '1rem',
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                            }}
-                                        />
-                                    </PanelResizeHandle >
-                                    <Panel 
-                                        collapsible={true} 
-                                        order={2}
-                                        minSize={30}
-                                    >
-                                        <ContentDrawer attempt={attempt}/>
-                                    </Panel>
-                                </>
-                            )}
+                                <Panel
+                                    collapsible={false}
+                                    order={1}
+                                    minSize={30}
+                                >
+                                    <ThemeProvider theme={theme}>
+                                    <GlobalStyle />
+                                        <VirtualizedTimeline run={attempt.run} rows={rows}/>
+                                    </ThemeProvider>
+                                </Panel>
+                                {open && (
+                                    <>
+
+
+                                        <PanelResizeHandle >
+                                            <Box
+                                                sx={{
+                                                    height: '100%',
+                                                    mx: '1rem',
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                }}
+                                                />
+                                        </PanelResizeHandle >
+                                        <Panel 
+                                            collapsible={true} 
+                                            order={2}
+                                            minSize={30}
+                                            >
+                                            <ContentDrawer attempt={attempt}/>
+                                        </Panel>
+                                    </>
+                                )}
+                            </Box>
                         </PanelGroup> 
                     </TabPanel>
                     <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
                         <PanelGroup direction="horizontal">
-                            <Panel
-                                collapsible={true}
-                                order={1}
-                                minSize={30}
+                            <Box 
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    minWidth: '100%',
+                                    border: '1px solid lightgray',
+                                    borderRadius: '0.5rem',
+                                    p:'2rem'
+                                }}
                             >
-                                <TableOfActions rows={rows}/>
-                            </Panel>
-                            {open && (
-                            <>
-                                <PanelResizeHandle >
-                                    <Box
-                                        sx={{
-                                            height: '100%',
-                                            mx: '1rem',
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                        }}    
-                                    />
-                                </PanelResizeHandle >
-                                <Panel 
-                                    collapsible={true} 
-                                    order={2} 
-                                    minSize={30}
-                                > 
-                                    <ContentDrawer attempt={attempt}/>
-                                </Panel>
-                            </>
-                        )}
+                                    <Panel
+                                        collapsible={true}
+                                        order={1}
+                                        minSize={30}
+                                    >
+                                        <TableOfActions rows={rows}/>
+                                    </Panel>
+                                    {open && (
+                                    <>
+                                        <PanelResizeHandle >
+                                            <Box
+                                                sx={{
+                                                    height: '100%',
+                                                    mx: '1rem',
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                }}    
+                                            />
+                                        </PanelResizeHandle >
+                                        <Panel 
+                                            collapsible={true} 
+                                            order={2} 
+                                            minSize={30}
+                                        > 
+                                            <ContentDrawer attempt={attempt}/>
+                                        </Panel>
+                                    </>
+                                )}
+                            </Box>
                         </PanelGroup>
                     </TabPanel>
                     <TabPanel value={2} sx={{ py: '1rem' }}>
