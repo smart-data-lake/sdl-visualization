@@ -48,7 +48,7 @@ const WorkflowHistory = () => {
 
     const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number,) => {
         setPage(newPage);
-        setToDisplay(rows.slice(newPage*rowsPerPage, (newPage+1)*rowsPerPage + rowsPerPage));
+        setToDisplay(rows.slice(newPage*rowsPerPage, newPage*rowsPerPage + rowsPerPage));
     }
 
     const updateRows = (rows: any[]) => {
@@ -111,17 +111,35 @@ const WorkflowHistory = () => {
                                 gap: '3rem',
                             }}
                         >
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    justifyContent: 'left',
+                                    gap: '3rem',
+                                }}
+                            >
                             <Sheet 
                                 sx={{
+                                    flexGrow: 1,
                                     p: '2rem',
                                     border: '1px solid lightgray',
-                                    maxWidth: '70%',
                                     borderRadius: '0.5rem',
                                 }}
                             >
                                 <HistoryChart data={generateChartData()}/>
-                                {/* <Example />  */}
                             </Sheet>
+                            <Sheet 
+                                sx={{
+                                    flexGrow: 3,
+                                    p: '2rem',
+                                    border: '1px solid lightgray',
+                                    borderRadius: '0.5rem',
+                                }}
+                            >
+                                <HistoryChart data={generateChartData()}/>
+                            </Sheet>
+                            </Box>
                             <Sheet 
                                 sx={{
                                     py: '4rem',

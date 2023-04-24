@@ -2,7 +2,7 @@ import React from "react";
 import PageHeader from "../../../layouts/PageHeader";
 import WorkflowsTable from "./WorkflowsTable";
 import ToolBar from "../ToolBar/ToolBar";
-import { Box } from "@mui/joy";
+import { Box, Sheet } from "@mui/joy";
 
 const Workflows = () => {
     
@@ -11,15 +11,28 @@ const Workflows = () => {
             <Box
                 sx={{
                     display: 'flex',
-                    flexDirection: 'row',
-                    gap: '3rem',
+                    flexDirection: 'column',
                 }}
             >
-                {/* <ToolBar style={'vertical'} controlledRows={[]} updateRows={() => null}/>
-                 */}<Box>
-                    <PageHeader 
-                        title={'Workflows'} />
+                <PageHeader title={'Workflows'} noBack={true} />
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        gap: '3rem',
+                    }}
+                >
+                    <ToolBar style={'vertical'} controlledRows={[]} updateRows={() => null} searchColumn={"name"}/>
+                    <Sheet 
+                                sx={{
+                                    py: '4rem',
+                                    p: '2rem',
+                                    border: '1px solid lightgray',
+                                    borderRadius: '0.5rem',
+                                }}
+                            >
                     <WorkflowsTable/>
+                    </Sheet>
                 </Box>
             </Box>
         </>
