@@ -25,7 +25,7 @@ const HistoryChart = (props: {data : {value: number, status: string, name: strin
             }}
           >
             <Tooltip 
-                cursor={{fill: 'black', fillOpacity: 0.1}}
+                cursor={{fill: 'lightgray', fillOpacity: 0.2, alignmentBaseline: 'middle'}}
                 position={{ y: 0 }}
                 animationDuration={0}
                 label={false}
@@ -35,21 +35,22 @@ const HistoryChart = (props: {data : {value: number, status: string, name: strin
                 }
                 formatter={(value: number, name: string) => {return [formatDuration(value) as any, 'Duration']}}
                 />
-            <YAxis tickFormatter={(value) => formatDuration(value)}/>
+            <YAxis width={77} tickFormatter={(value) => formatDuration(value)}/>
             <Bar 
                 dataKey="value" 
                 stackId="a" 
                 fill="#20af2e"
-                animationDuration={0}
+                animationDuration={200}
                 onClick={handleClick}
-				onMouseOver={(data, index) => {console.log('*')}}
+				        onMouseOver={(data, index) => {console.log('*')}}
+                barSize={data.length > 25 ? 5 : (data.length > 10 ? 10 : 20)}
+                radius={[1, 1, 1, 1]}
             >
                     {
                       data.map((entry, index) => {
                         return (
                           <Cell key={`cell-${index}`} fill={entry.status === 'SUCCEEDED' ? '#20af2e':'#eb3428'} />
                           )
-                          {/* <Cell cursor="pointer" fill={index === activeIndex ? '#82ca9d' : '#8884d8'} key={`cell-${index}`} /> */}
                             }
                         )
                     }    

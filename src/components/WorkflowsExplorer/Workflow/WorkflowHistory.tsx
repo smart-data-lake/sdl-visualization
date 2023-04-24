@@ -27,7 +27,6 @@ const WorkflowHistory = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [count, setCount] = useState(0);
     
-    console.log(toDisplay)
     useEffect(() => {
         if (!isLoading) {
             setRows(data[0].runs);
@@ -80,7 +79,7 @@ const WorkflowHistory = () => {
 
     const filters = [
         {name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row.status === 'SUCCEEDED')}},
-        {name: 'Unknown', fun: (rows: any) => {return rows.filter(row => row.status === 'SKIPPED')}},
+        /* {name: 'Unknown', fun: (rows: any) => {return rows.filter(row => row.status === 'SKIPPED')}}, */
         {name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row.status === 'CANCELLED')}}
     ];
 
@@ -116,7 +115,7 @@ const WorkflowHistory = () => {
                                     display: 'flex',
                                     flexDirection: 'row',
                                     justifyContent: 'left',
-                                    gap: '3rem',
+                                    gap: '1rem',
                                 }}
                             >
                             <Sheet 
@@ -148,6 +147,7 @@ const WorkflowHistory = () => {
                                     borderRadius: '0.5rem',
                                 }}
                             >
+                                <RunsHistoryTable data={toDisplay}/>
                                 <TablePagination
                                     component="div"
                                     count={count}
@@ -156,7 +156,6 @@ const WorkflowHistory = () => {
                                     rowsPerPage={rowsPerPage}
                                     onRowsPerPageChange={handleChangeRowsPerPage}
                                 />
-                                <RunsHistoryTable data={toDisplay}/>
                             </Sheet>
                         </Box>
                 </Box>

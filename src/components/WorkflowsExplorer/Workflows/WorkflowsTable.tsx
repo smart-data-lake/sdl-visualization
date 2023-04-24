@@ -2,14 +2,14 @@ import { Box, Table } from "@mui/joy";
 import useFetchWorkflows from "../../../hooks/useFetchData";
 import WorkflowRow from "./WorkflowRow";
 
-const WorkflowsTable = () => {
-    const { data } = useFetchWorkflows();
+const WorkflowsTable = (props: {data: any}) => {
+    const { data } = props;
 
     const render = () => {
         return (
             <Box sx={{ 
+                maxHeight: '64vh',
                 overflow: 'auto',
-                height: '80vh',
             }}>
                 <Table size='sm' hoverRow color='neutral' stickyHeader>
                     <thead>
