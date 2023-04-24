@@ -9,6 +9,7 @@ import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/dat
 
 import { useEffect, useState } from "react";
 import Example from "../HistoryChart/Example";
+import { TablePagination } from "@mui/material";
 
 
 /**
@@ -21,10 +22,34 @@ const WorkflowHistory = () => {
     const workflowName :  string= links[links.length - 1];
     const { data, isLoading } = useFetchWorkflow(workflowName);
     const [rows, setRows] = useState<any[]>([]);
+    const [toDisplay, setToDisplay] = useState<any[]>(rows);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [count, setCount] = useState(0);
+    
+    console.log(toDisplay)
+    useEffect(() => {
+        if (!isLoading) {
+            setRows(data[0].runs);
+            setCount(rows.length)
+        }
+    }, [data])
 
     useEffect(() => {
-        if (!isLoading) setRows(data[0].runs);
-    }, [data])
+        setToDisplay(rows.slice(0, rowsPerPage));
+        setCount(rows.length)
+    }, [rows])
+
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+        setToDisplay(rows.slice(0, parseInt(event.target.value, 10)));
+    }
+
+    const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number,) => {
+        setPage(newPage);
+        setToDisplay(rows.slice(newPage*rowsPerPage, (newPage+1)*rowsPerPage + rowsPerPage));
+    }
 
     const updateRows = (rows: any[]) => {
         setRows(rows);
@@ -39,7 +64,7 @@ const WorkflowHistory = () => {
             attemptId: number
         }[] = [];
 
-        rows.forEach((run) => {
+        toDisplay.forEach((run) => {
             res.push(
                 {
                     value: durationMicro(run.duration),
@@ -90,6 +115,7 @@ const WorkflowHistory = () => {
                                 sx={{
                                     p: '2rem',
                                     border: '1px solid lightgray',
+                                    maxWidth: '70%',
                                     borderRadius: '0.5rem',
                                 }}
                             >
@@ -104,7 +130,15 @@ const WorkflowHistory = () => {
                                     borderRadius: '0.5rem',
                                 }}
                             >
-                                <RunsHistoryTable data={rows}/>
+                                <TablePagination
+                                    component="div"
+                                    count={count}
+                                    page={page}
+                                    onPageChange={handleChangePage}
+                                    rowsPerPage={rowsPerPage}
+                                    onRowsPerPageChange={handleChangeRowsPerPage}
+                                />
+                                <RunsHistoryTable data={toDisplay}/>
                             </Sheet>
                         </Box>
                 </Box>

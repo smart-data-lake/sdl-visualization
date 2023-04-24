@@ -1,6 +1,8 @@
 import { Box, Table } from "@mui/joy";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import RunsRow from "./RunsRow";
+import { TablePagination } from "@mui/material";
+import { useState } from "react";
     
 /**
  * The WorkflowHistoryTable component is the table that displays the history of a workflow.
@@ -11,10 +13,12 @@ import RunsRow from "./RunsRow";
 const WorkflowHistoryTable = (props : {data: any[]}) => {
     const { data } = props;
     
+
+
     return (
         <Box sx={{ 
+            maxHeight: '38vh',
             overflow: 'auto',
-            height: '57vh',
         }}>
             <Table 
                 size='sm' 
