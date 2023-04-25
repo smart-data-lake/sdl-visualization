@@ -95,6 +95,8 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                 sx={{
                                     display: 'flex',
                                     flexDirection: 'row',
+                                    height: '57vh',
+                                    overflow: 'auto',
                                     minWidth: '100%',
                                     border: '1px solid lightgray',
                                     borderRadius: '0.5rem',
@@ -113,23 +115,22 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                 </Panel>
                                 {open && (
                                     <>
-
-
                                         <PanelResizeHandle >
                                             <Box
                                                 sx={{
-                                                    height: '100%',
                                                     mx: '1rem',
+                                                    overflow: 'auto',
                                                     border: '1px solid',
                                                     borderColor: 'divider',
                                                 }}
                                                 />
                                         </PanelResizeHandle >
                                         <Panel 
-                                            collapsible={true} 
+                                            collapsible={false} 
                                             order={2}
+                                            defaultSize={30}
                                             minSize={30}
-                                            >
+                                        >
                                             <ContentDrawer attempt={attempt}/>
                                         </Panel>
                                     </>
@@ -150,7 +151,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                 }}
                             >
                                     <Panel
-                                        collapsible={true}
+                                        collapsible={false}
                                         order={1}
                                         minSize={30}
                                     >
@@ -161,16 +162,17 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                         <PanelResizeHandle >
                                             <Box
                                                 sx={{
-                                                    height: '100%',
                                                     mx: '1rem',
+                                                    overflow: 'auto',
                                                     border: '1px solid',
                                                     borderColor: 'divider',
-                                                }}    
+                                                }}   
                                             />
                                         </PanelResizeHandle >
                                         <Panel 
-                                            collapsible={true} 
+                                            collapsible={false} 
                                             order={2} 
+                                            defaultSize={30}
                                             minSize={30}
                                         > 
                                             <ContentDrawer attempt={attempt}/>

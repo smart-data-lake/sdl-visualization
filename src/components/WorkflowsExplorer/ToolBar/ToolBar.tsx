@@ -75,22 +75,30 @@ const ToolBar = (
                 display: 'flex',
                 flexDirection: 'column',
                 m: '1rem',
-                gap: '0.5rem',
+                gap: '1.5rem',
             }}>
 
                 {filters && (
                         <>
-                            <Typography level="body1">
-                                Status
-                            </Typography>
-                            <Divider/>
-                            <FilterMenu filters={filters} updateList={updateList} style={'vertical'}/>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.5rem',
+                                }}
+                            >
+                                <Typography level="body1">
+                                    Status
+                                </Typography>
+                                <Divider/>
+                                <FilterMenu filters={filters} updateList={updateList} style={'vertical'}/>
+                            </Box>
                         </>
                     )
                 }
                 <Input
-                    placeholder="Search"
-                    required
+                    placeholder="Search row"
+                    size="sm"
                     sx={{fontSize: 'var(--joy-fontSize-sm)' }}
                         onChange={(event) => {
                             const { value } = event.target;
@@ -108,6 +116,7 @@ const ToolBar = (
                 display: 'flex',
                 flexDirection: 'row',
                 justifyContent: 'left',
+                alignItems: 'center',
                 mt: '2rem',
                 mb: '1rem',
                 gap: '1rem'
@@ -115,7 +124,7 @@ const ToolBar = (
             >
                 <Input
                     placeholder="Search"
-                    required
+                    size="sm"
                     sx={{ mb: 0, fontSize: 'var(--joy-fontSize-sm)' }}
                     onChange={(event) => {
                         const { value } = event.target;

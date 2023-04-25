@@ -63,7 +63,7 @@ export default class Attempt {
             status: 'completed',
             user: 'undefined',
             user_name: 'undefined',
-            ts_epoch: Math.min(...(this.rows.flatMap(row => row.started_at!).filter(x=>x))) - 10, // start 10ms earlier
+            ts_epoch: new Date(this.runInfo.runStartTime).getTime() - 10, // start 10ms earlier
             finished_at: Math.max(...(this.rows.flatMap(row => row.finished_at!).filter(x=>x))),
             system_tags: [],
         }
