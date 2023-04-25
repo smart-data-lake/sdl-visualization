@@ -120,14 +120,14 @@ def randomWorkflows():
     runs = []
     uid = 0
 
-    for i in range(randint(20, 40)): # 15-25 workflows
+    for i in range(randint(39, 40)): # 15-25 workflows
         workflowName = randomWord("nouns")
         runId = 0
         attemptId = 0
-        numRuns = randint(100, 300)
+        numRuns = randint(149, 150) # 100-300 runs per workflow
         records = []
 
-        for i in range(numRuns): # 100-300 runs per workflow
+        for i in range(numRuns): 
             if random() < 0.5:
                 attemptId += 1
             else:

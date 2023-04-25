@@ -221,7 +221,6 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
                     <TabList variant="plain" sx={style}>
                         <Tab>Timeline</Tab>
                         <Tab>Actions table</Tab>
-                        <Tab disabled>Action lineage</Tab>
                     </TabList>
                 </Box>
                 <TabsPanels attempt={attempt} open = {panelOpen}/>

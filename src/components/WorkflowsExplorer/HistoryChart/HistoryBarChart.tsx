@@ -3,7 +3,7 @@ import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush, ReferenceLine } from 'recharts';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-const HistoryChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[]}) => {
+const HistoryBarChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[]}) => {
     const { data } = props;
 	const curr = useLocation();
 	const navigate = useNavigate();
@@ -60,4 +60,4 @@ const HistoryChart = (props: {data : {value: number, status: string, name: strin
       );
     }
  
-export default HistoryChart;
+export default HistoryBarChart;

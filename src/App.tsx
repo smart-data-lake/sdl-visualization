@@ -10,6 +10,7 @@ import WorkflowHistory from './components/WorkflowsExplorer/Workflow/WorkflowHis
 import Workflows from './components/WorkflowsExplorer/Workflows/Workflows';
 import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
+import Home from './components/HomeMenu/Home';
 
 /**
  * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
@@ -34,31 +35,35 @@ export default function App() {
    */
   const router = () => createHashRouter(
     createRoutesFromElements(
-      <Route path='/' element={<RootLayout storeData={storeData}/>}>
-        <Route path='/workflows/' element={<Workflows/>}/>
-        <Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
-        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
-        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true}/>}/>
-        <Route path='*' element={<NotFound/>}/>
-        <Route path='/configviewer' element={<ConfigExplorer data={data}/>}>
-          <Route
-              path='/configviewer/search/:ownSearchString' //the ownSearchString is our definition of a 
-              //search because of problems with routing Search Parameters
-              element={
-                <SearchResults data={data}/>
-              } />
-          <Route
-            path="/configviewer/:elementType/:elementName"
-            element={
-              <DataDisplayView data={data} />
-            } />
-          <Route
-            path="/configviewer/globalOptions"
-            element={
-              <GlobalConfigView data={data.global}/>
-            } />
-        </Route> 
-      </Route>
+      	<Route path='/' element={<RootLayout storeData={storeData}/>}>
+      		<Route path='/' element={<Home/>}/>
+      		<Route path='/workflows/' element={<Workflows/>}/>
+      		  	<Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
+      		  	<Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
+      		  	<Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true}/>}/>
+      		  	<Route path='*' element={<NotFound/>}/>
+      		  	<Route path='/configviewer' element={<ConfigExplorer data={data}/>}>
+      		  	  	<Route
+      		  	  	    path='/configviewer/search/:ownSearchString' //the ownSearchString is our definition of a 
+      		  	  	    //search because of problems with routing Search Parameters
+      		  	  	    element={
+      		  	  	      <SearchResults data={data}/>
+      		  	  	    }
+					/>
+      		  	  	<Route
+      		  	  	  	path="/configviewer/:elementType/:elementName"
+      		  	  	  	element={
+      		  	  	  	  <DataDisplayView data={data} />
+      		  	  	  	} 
+					/>
+      		  	  	<Route
+      		  	  	  	path="/configviewer/globalOptions"
+      		  	  	  	element={
+      		  	  	    	<GlobalConfigView data={data.global}/>
+      		  	  		}
+					/>
+      		  </Route> 
+      	</Route>
     )
   )
   return (

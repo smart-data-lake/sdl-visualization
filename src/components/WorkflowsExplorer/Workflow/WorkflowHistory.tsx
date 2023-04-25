@@ -3,13 +3,13 @@ import PageHeader from "../../../layouts/PageHeader";
 import RunsHistoryTable from "./WorkflowHistoryTable";
 import { Box, CircularProgress, Sheet } from "@mui/joy";
 import ToolBar from "../ToolBar/ToolBar";
-import HistoryChart from "../HistoryChart/HistoryChart";
+import HistoryBarChart from "../HistoryChart/HistoryBarChart";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
-
 import { useEffect, useState } from "react";
-import Example from "../HistoryChart/Example";
 import { TablePagination } from "@mui/material";
+import HistoryAreaChart from "../HistoryChart/HistoryAreaChart";
+import HistoryPieChart from "../HistoryChart/HistoryPieChart";
 
 
 /**
@@ -54,7 +54,7 @@ const WorkflowHistory = () => {
         setRows(rows);
     }
 
-    const generateChartData = () => {
+    const generateChartData = (data?: any) => {
         const res : {
             value: number,
             status: string,
@@ -63,6 +63,20 @@ const WorkflowHistory = () => {
             attemptId: number
         }[] = [];
 
+        if (data) {
+            data.forEach((run: any) => {
+                res.push(
+                    {
+                        value: durationMicro(run.duration),
+                        status: run.status,
+                        name: getISOString(new Date(run.attemptStartTime)),
+                        runId: run.runId,
+                        attemptId: run.attemptId    
+                    }
+                )
+            });
+        }
+        else {
         toDisplay.forEach((run) => {
             res.push(
                 {
@@ -74,6 +88,7 @@ const WorkflowHistory = () => {
                 }
             )
         });
+        }
         return res;
     }
 
@@ -121,12 +136,24 @@ const WorkflowHistory = () => {
                             <Sheet 
                                 sx={{
                                     flexGrow: 1,
+                                    maxWidth: '50%',
                                     p: '2rem',
                                     border: '1px solid lightgray',
                                     borderRadius: '0.5rem',
                                 }}
                             >
-                                <HistoryChart data={generateChartData()}/>
+                                <HistoryAreaChart data={generateChartData(rows)}/>
+                            </Sheet>
+                            <Sheet 
+                                sx={{
+                                    flexGrow: 1,
+                                    maxWidth: '50%',
+                                    p: '1rem',
+                                    border: '1px solid lightgray',
+                                    borderRadius: '0.5rem',
+                                }}
+                            >
+                                <HistoryPieChart data={generateChartData(rows)}/>
                             </Sheet>
                             <Sheet 
                                 sx={{
@@ -136,7 +163,7 @@ const WorkflowHistory = () => {
                                     borderRadius: '0.5rem',
                                 }}
                             >
-                                <HistoryChart data={generateChartData()}/>
+                                <HistoryBarChart data={generateChartData()}/>
                             </Sheet>
                             </Box>
                             <Sheet 

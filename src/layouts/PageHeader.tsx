@@ -38,7 +38,7 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                     verticalAlign: 'middle',
 
                 }}>
-                    <Typography level="h2" sx={{textTransform: 'capitalize'}}>{title}</Typography>
+                    <Typography level="h2">{title}</Typography>
                     {subtitle && <Typography level="h4" sx={{pt: '1rem'}}>{subtitle}</Typography>}
                     {description && <Typography level="body2" sx={{py: '1rem'}}>{description}</Typography>}
                 </Box>
