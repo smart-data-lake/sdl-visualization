@@ -1,10 +1,14 @@
-import datetime
+from datetime import datetime, timedelta
+from wonderwords import RandomWord
+import isodate
 import json
 import math
 import os
 import uuid
 
-import isodate
+def randomWord(type):
+    """Generate a random word."""
+    return RandomWord().word(include_parts_of_speech=[type])
 
 # Function that lists the file at the given path
 def list_files(path):
@@ -14,10 +18,10 @@ def list_files(path):
 def create_dict(path):
     files = list_files(path)
     statefiles = []
-    id = uuid.uuid1()
-    workflows = {}
-    workflow = {}
-    runs = {}
+    id = uuid.uuid4()
+    workflows = []
+    workflow_tmp = {}
+    runs = []
 
     for file in files:
         # Read the file
@@ -31,14 +35,14 @@ def create_dict(path):
         names.append(data["appConfig"]["applicationName"])
     
     for name in names:
-        workflow[name] = {
+        workflow_tmp[name] = {
             "name": name,
             "runs": [],
         }
 
     for data in statefiles:
         # Get the important variable of the statefile
-        id = id.hex
+        uid = id.hex
         runId = data["runId"]
         attemptId = data["attemptId"]
         name = data["appConfig"]["applicationName"]
@@ -49,7 +53,7 @@ def create_dict(path):
 
         runs.append(
             {
-                "id": id,
+                "id": str(id),
                 "runId": runId,
                 "attemptId": attemptId,
                 "runStartTime": runStartTime,
@@ -59,48 +63,92 @@ def create_dict(path):
             }
         )
 
-        workflow[name]["runs"].append(
+        workflow_tmp[name]["runs"].append(
             {
-                "id": id,
+                "id": str(id),
                 "runId": runId,
                 "attemptId": attemptId,
                 "runStartTime": runStartTime,
                 "attemptStartTime": attemptStartTime,
-                "duration": getDuration(data["actionsState"]),
-                "status": "SUCCEEDED"
+                "duration": getDuration(data),
+                "status": getStatus(actionsState)
             }
         )
+    
+    workflow = []
+    for workflow_p in workflow_tmp.values():
+        workflow.append(workflow_p)
+        lastRun = getLastRun(workflow_p["runs"])
+        firstRun = getFirstRun(workflow_p["runs"])
+        workflows.append(
+            {
+                "name": workflow_p["name"],
+                "numRuns": lastRun["runId"] - firstRun["runId"] + 1,
+                "numAttempts": len(workflow_p["runs"]),
+                "lastDuration": lastRun["duration"],
+                "lastStatus": lastRun["status"],
+            }
+        )
+    
+    return {"workflows": workflows, "runs": runs, "workflow": workflow}
+
+def getLastRun(runs):
+    """Get the last run of a workflow."""
+    lastRun = runs[0]
+    for run in runs:
+        if run["runId"] > lastRun["runId"]:
+            lastRun = run
+    return lastRun
+
+def getFirstRun(runs):
+    """Get the last run of a workflow."""
+    firstRun = runs[0]
+    for run in runs:
+        if run["runId"] < firstRun["runId"]:
+            firstRun = run
+    return firstRun
+
+def getStatus(actionsState):
+    """Get the status of a state file."""
+    for action in actionsState.values():
+        if action["state"] == "CANCELLED":
+            return "CANCELLED"
+    return "SUCCEEDED"
 
 def getDuration(stateFile):
     """Get the duration of a state file."""
     runStartTime =  datetime.fromisoformat(stateFile["runStartTime"])
     currentLongest = runStartTime
     for action in stateFile["actionsState"].values():
-        actionEndTime = datetime.fromisoformat(action["startTStamp"]) + isodate.parse_duration(action["duration"])
+        actionEndTime = datetime.fromisoformat(action["startTstmp"]) + isodate.parse_duration(action["duration"])
         if (currentLongest < actionEndTime): currentLongest = actionEndTime
 
-    diff = datetime.timedelta.total_seconds(currentLongest - runStartTime)*1000
+    diff = timedelta.total_seconds(currentLongest - runStartTime)
     tmp = formatDuration(diff)
     return tmp
 
-def formatDuration(ms):
-    ms = math.floor(ms * 10000000)
-    milliseconds = ms % 1000
-    seconds = (ms // 1000) % 60
-    minutes = (ms // (1000 * 60)) % 60
-    hours = (ms // (1000 * 60 * 60)) % 24
-    if hours > 0:
-        return f"PT{hours}H{minutes}M{seconds}.{milliseconds}S"
-    if minutes > 0:
-        return f"PT{minutes}M{seconds}.{milliseconds}S"
-    return f"PT{seconds}.{milliseconds}S"
+def formatDuration(seconds):
+    """Format the duration in seconds to a string."""
+    ms = math.floor(seconds * 1000)
+    if ms < 1000:
+        return f"PT0.{ms}S"
+    elif ms < 60*1000:
+        return f"PT{ms/1000}S"
+    elif ms < 60*60*1000:
+        return f"PT{ms//(1000*60)}M{(ms%(1000*60))/1000}S"
+    else:
+        return f"PT{ms//(1000*60*60)}H{(ms%(1000*60*60))//(1000*60)}M{(ms%(1000*60))/1000}S"
 
 def main():
     print("Generating database...")
     script_dir = os.path.dirname(__file__)
     path = os.path.join(script_dir, "./data_directory")
-    dict = create_dict(path)
-    db = {"workflows": [], "runs": [], "workflow": []}
+    db = create_dict(path)
+    print("Writing database...")
+    path = os.path.join(script_dir, f"output/db_realData_{randomWord('adjective')}.json")
+    with open(path, "w") as outfile:
+        json.dump(db, outfile)
+    
     print("Done.")
 
 if __name__ == "__main__":
