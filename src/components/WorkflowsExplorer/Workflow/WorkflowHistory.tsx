@@ -26,10 +26,16 @@ const WorkflowHistory = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [count, setCount] = useState(0);
+
+    const cmp = (a: any, b: any) => {
+        if (a.runStartTime < b.runStartTime) return 1;
+        else if (a.runStartTime > b.runStartTime) return -1;
+        else return 0;
+    }
     
     useEffect(() => {
         if (!isLoading) {
-            setRows(data[0].runs);
+            setRows(data[0].runs.sort(cmp));
             setCount(rows.length)
         }
     }, [data])
@@ -134,38 +140,38 @@ const WorkflowHistory = () => {
                                     gap: '1rem',
                                 }}
                             >
-                            <Sheet 
-                                sx={{
-                                    flexGrow: 1,
-                                    maxWidth: '50%',
-                                    p: '2rem',
-                                    border: '1px solid lightgray',
-                                    borderRadius: '0.5rem',
-                                }}
-                            >
-                                <HistoryAreaChart data={generateChartData(rows)}/>
-                            </Sheet>
-                            <Sheet 
-                                sx={{
-                                    flexGrow: 1,
-                                    maxWidth: '50%',
-                                    p: '1rem',
-                                    border: '1px solid lightgray',
-                                    borderRadius: '0.5rem',
-                                }}
-                            >
-                                <HistoryPieChart data={generateChartData(rows)}/>
-                            </Sheet>
-                            <Sheet 
-                                sx={{
-                                    flexGrow: 3,
-                                    p: '2rem',
-                                    border: '1px solid lightgray',
-                                    borderRadius: '0.5rem',
-                                }}
-                            >
-                                <HistoryBarChart data={generateChartData()}/>
-                            </Sheet>
+                                <Sheet 
+                                    sx={{
+                                        flexGrow: 4,
+                                        p: '2rem',
+                                        border: '1px solid lightgray',
+                                        borderRadius: '0.5rem',
+                                    }}
+                                >
+                                    <HistoryBarChart data={generateChartData()}/>
+                                </Sheet>
+                                <Sheet 
+                                    sx={{
+                                        flexGrow: 1,
+                                        maxWidth: '50%',
+                                        p: '1rem',
+                                        border: '1px solid lightgray',
+                                        borderRadius: '0.5rem',
+                                    }}
+                                >
+                                    <HistoryPieChart data={generateChartData(rows)}/>
+                                </Sheet>
+                                <Sheet 
+                                    sx={{
+                                        flexGrow: 1,
+                                        maxWidth: '50%',
+                                        p: '2rem',
+                                        border: '1px solid lightgray',
+                                        borderRadius: '0.5rem',
+                                    }}
+                                >   
+                                    <HistoryAreaChart data={generateChartData(rows)}/>
+                                </Sheet>
                             </Box>
                             <Sheet 
                                 sx={{
