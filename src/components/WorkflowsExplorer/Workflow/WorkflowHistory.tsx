@@ -51,6 +51,7 @@ const WorkflowHistory = () => {
     }
 
     const updateRows = (rows: any[]) => {
+        
         setRows(rows);
     }
 

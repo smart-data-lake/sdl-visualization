@@ -23,7 +23,10 @@ def create_dict(path):
     workflow_tmp = {}
     runs = []
 
-    for file in files:
+    nFiles = len(files)
+
+    for i in range(nFiles//2):
+        file = files[i]
         # Read the file
         with open(os.path.join(path, file)) as f:
             data = json.load(f)
@@ -63,6 +66,10 @@ def create_dict(path):
             }
         )
 
+        status = getStatus(actionsState)
+        duration = "PT0.0S"
+        if(status != "CANCELLED"): duration = getDuration(data)
+
         workflow_tmp[name]["runs"].append(
             {
                 "id": str(id),
@@ -70,8 +77,8 @@ def create_dict(path):
                 "attemptId": attemptId,
                 "runStartTime": runStartTime,
                 "attemptStartTime": attemptStartTime,
-                "duration": getDuration(data),
-                "status": getStatus(actionsState)
+                "status": status,
+                "duration": duration,
             }
         )
     
@@ -117,10 +124,13 @@ def getStatus(actionsState):
 
 def getDuration(stateFile):
     """Get the duration of a state file."""
-    runStartTime =  datetime.fromisoformat(stateFile["runStartTime"])
+    runStartTime =  isodate.parse_datetime(stateFile["runStartTime"])
     currentLongest = runStartTime
     for action in stateFile["actionsState"].values():
-        actionEndTime = datetime.fromisoformat(action["startTstmp"]) + isodate.parse_duration(action["duration"])
+        if "startTstmp" in action.keys():
+            actionEndTime = isodate.parse_datetime(action["startTstmp"]) + isodate.parse_duration(action["duration"])
+        else:
+            actionEndTime = runStartTime
         if (currentLongest < actionEndTime): currentLongest = actionEndTime
 
     diff = timedelta.total_seconds(currentLongest - runStartTime)
@@ -142,7 +152,7 @@ def formatDuration(seconds):
 def main():
     print("Generating database...")
     script_dir = os.path.dirname(__file__)
-    path = os.path.join(script_dir, "./data_directory")
+    path = os.path.join(script_dir, "./succeeded")
     db = create_dict(path)
     print("Writing database...")
     path = os.path.join(script_dir, f"output/db_realData_{randomWord('adjective')}.json")
