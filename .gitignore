@@ -2,6 +2,7 @@
 /scripts/output
 /scripts/data_directory
 /scripts/sika_data
+/scripts/succeeded
 # dependencies
 /node_modules
 /.pnp
