@@ -2,8 +2,12 @@
 /scripts/output
 /scripts/data_directory
 /scripts/sika_data
+<<<<<<< HEAD
 /scripts/vmdl
 
+=======
+/scripts/succeeded
+>>>>>>> 9dfa79ab9976619fa7c69c931d2933366c28e074
 # dependencies
 /node_modules
 /.pnp
