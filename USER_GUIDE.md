@@ -31,7 +31,7 @@ $ pip install -r requirements.txt
 ## Include statefiles
 You can create a folder in `/scripts` and put all the statefiles you want to analyse inside of it.
 ## Generate the database
-To do so you can run the python script `script/generate_json_from_statefile.py`. You will be prompted to enter the name of the folder where your statefiles reside. Once you provided the name of the folder the script will bundle the statefiles in one json that will serve as database
+To do so you can run the python script `script/generate_json_from_statefile.py`. You will be prompted to enter the name of the folder where your statefiles reside. Once you provided the name of the folder the script will bundle the statefiles in one json that will serve as database. The database will be saved in the folder `scripts/outputs` and its name has format ``
 # Running the json-server
 You know should have installed the node dependencies. You can the run the following command to serve the database your created in the previous step:
 ````

@@ -150,12 +150,18 @@ def formatDuration(seconds):
         return f"PT{ms//(1000*60*60)}H{(ms%(1000*60*60))//(1000*60)}M{(ms%(1000*60))/1000}S"
 
 def main():
+    print("Enter the name of the statefile folder:")
+    folder_name = str(input())
     print("Generating database...")
     script_dir = os.path.dirname(__file__)
-    path = os.path.join(script_dir, "./succeeded")
+    path = os.path.join(script_dir, f"./{folder_name}")
     db = create_dict(path)
     print("Writing database...")
-    path = os.path.join(script_dir, f"output/db_realData_{randomWord('adjective')}.json")
+
+    if (not os.path.exists(os.path.join(script_dir, "output"))):
+        os.mkdir(os.path.join(script_dir, "output"))
+        
+    path = os.path.join(script_dir, f"output/db_{folder_name}.json")
     with open(path, "w") as outfile:
         json.dump(db, outfile)
     
