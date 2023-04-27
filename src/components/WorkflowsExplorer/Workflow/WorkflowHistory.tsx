@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
 import RunsHistoryTable from "./WorkflowHistoryTable";
 import { Box, CircularProgress, Sheet } from "@mui/joy";
@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { TablePagination } from "@mui/material";
 import HistoryAreaChart from "../HistoryChart/HistoryAreaChart";
 import HistoryPieChart from "../HistoryChart/HistoryPieChart";
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, GridToolbar, gridPaginatedVisibleSortedGridRowIdsSelector, useGridApiRef } from "@mui/x-data-grid";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 
 
@@ -18,7 +18,7 @@ import { formatDuration } from "../../../util/WorkflowsExplorer/format";
  * The WorkflowHistory component is the page that displays the history of a workflow as a table.
  * It allows the user to filter according to different filters/search/sort criteria passed to the ToolBar component.
  * @returns JSX.Element
- */
+*/
 const WorkflowHistory = () => {
     const links = [...useLocation().pathname.split('/')].splice(1);
     const workflowName :  string= links[links.length - 1];
@@ -28,6 +28,10 @@ const WorkflowHistory = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [count, setCount] = useState(0);
+    const currURL = useLocation().pathname;
+    const navigate = useNavigate();
+    
+    const apiRef = useGridApiRef();
     
     useEffect(() => {
         if (!isLoading) {
@@ -35,11 +39,12 @@ const WorkflowHistory = () => {
             setCount(rows.length)
         }
     }, [data])
-
+    
     useEffect(() => {
         setToDisplay(rows.slice(0, rowsPerPage));
         setCount(rows.length)
     }, [rows])
+
 
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
@@ -104,7 +109,6 @@ const WorkflowHistory = () => {
     ]
 
     const formatRows = () => {
-        console.log(rows)
         return rows.map((row: any) => {
             return {
                 id: row.attemptStartTime,
@@ -125,6 +129,7 @@ const WorkflowHistory = () => {
     ];
 
     if (isLoading) return (<CircularProgress/>)
+
 
     return (
         <>
@@ -162,28 +167,6 @@ const WorkflowHistory = () => {
                         >
                             <Sheet 
                                 sx={{
-                                    flexGrow: 1,
-                                    maxWidth: '50%',
-                                    p: '2rem',
-                                    border: '1px solid lightgray',
-                                    borderRadius: '0.5rem',
-                                }}
-                            >
-                                <HistoryAreaChart data={generateChartData(rows)}/>
-                            </Sheet>
-                            <Sheet 
-                                sx={{
-                                    flexGrow: 1,
-                                    maxWidth: '50%',
-                                    p: '1rem',
-                                    border: '1px solid lightgray',
-                                    borderRadius: '0.5rem',
-                                }}
-                            >
-                                <HistoryPieChart data={generateChartData(rows)}/>
-                            </Sheet>
-                            <Sheet 
-                                sx={{
                                     flexGrow: 3,
                                     p: '2rem',
                                     border: '1px solid lightgray',
@@ -193,8 +176,19 @@ const WorkflowHistory = () => {
                                 <HistoryBarChart data={generateChartData()}/>
                             </Sheet>
                         </Box>
-                        <Sheet sx={{width: '100%', height: '60vh'}}>
-                            <DataGrid rows={formatRows()} columns={columns}/>
+                        <Sheet sx={{width: '100%', height: '65vh'}}>
+                            <DataGrid 
+                                apiRef={apiRef}
+                                autoPageSize
+                                rows={formatRows()} 
+                                columns={columns} 
+                                onRowClick={(row) => navigate(currURL + '/' + row.row.runId + '/' + row.row.attemptId + '/timeline')}
+                                initialState={{
+                                    sorting: {
+                                      sortModel: [{ field: 'runId', sort: 'desc' }],
+                                    },
+                                }}
+                            />
                         </Sheet>
                     </Box>
                 </Box>
