@@ -5,6 +5,10 @@ import ToolBar from "../ToolBar/ToolBar";
 import { Box, Sheet } from "@mui/joy";
 import useFetchWorkflows from "../../../hooks/useFetchData";
 import { TablePagination } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
+import { durationMicro } from "../../../util/WorkflowsExplorer/date";
+import { formatDuration } from "../../../util/WorkflowsExplorer/format";
+import { useNavigate } from "react-router-dom";
 
 const Workflows = () => {
     const { data, isLoading } = useFetchWorkflows();
@@ -13,6 +17,7 @@ const Workflows = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [count, setCount] = useState(0);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (!isLoading) {
@@ -40,7 +45,25 @@ const Workflows = () => {
         setRows(rows);
     }
 
-    console.log(data)
+    const formatRows = () => {
+        return rows.map((row: any) => {
+            return {
+                name: row.name,
+                numRuns: row.numRuns,
+                numAttempts: row.numAttempts,
+                lastStatus: row.lastStatus,
+                lastDuration: formatDuration(durationMicro(row.lastDuration)),
+            };
+        })
+    }
+
+    const columns = [
+        { field: 'name', headerName: 'Name', flex: 1 },
+        { field: 'numRuns', headerName: 'Number of runs', flex: 1 },
+        { field: 'numAttempts', headerName: 'Number of attempt', flex: 1 },
+        { field: 'lastStatus', headerName: 'Last run status',  flex: 1 },
+        { field: 'lastDuration', headerName: 'Last run duration',  flex: 1 },
+    ]
 
     return (      
         <>
@@ -61,25 +84,17 @@ const Workflows = () => {
                     {data && <ToolBar style={'vertical'} controlledRows={data} updateRows={updateRows} searchColumn={"name"}/>}
                     <Sheet 
                                 sx={{
-                                    py: '4rem',
-                                    p: '2rem',
-                                    border: '1px solid lightgray',
-                                    borderRadius: '0.5rem',
+                                    width: '100%',
                                 }}
                             >
-                    {data && (
-                        <>
-                            <WorkflowsTable data={toDisplay}/>
-                            <TablePagination
-                                component="div"
-                                count={count}
-                                page={page}
-                                onPageChange={handleChangePage}
-                                rowsPerPage={rowsPerPage}
-                                onRowsPerPageChange={handleChangeRowsPerPage}
-                                />
-                        </>
-                    )}
+                    {data && (<DataGrid 
+                                onRowClick={(row) => {navigate('/workflows/' + row.id)}} 
+                                getRowId={(row) => row.name} 
+                                rows={formatRows()} 
+                                columns={columns} 
+                            />
+                        
+                        )}
                     </Sheet>
                 </Box>
             </Box>
@@ -87,5 +102,16 @@ const Workflows = () => {
     );
 }
 
+{/* <>
+<WorkflowsTable data={toDisplay}/>
+<TablePagination
+component="div"
+count={count}
+page={page}
+onPageChange={handleChangePage}
+rowsPerPage={rowsPerPage}
+onRowsPerPageChange={handleChangeRowsPerPage}
+/>
+</> */}
 
 export default Workflows;
