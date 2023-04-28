@@ -42,8 +42,6 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
                 fill="#20af2e"
                 animationDuration={200}
                 onClick={handleClick}
-				        onMouseOver={(data, index) => {console.log('*')}}
-                barSize={data.length > 25 ? 5 : (data.length > 10 ? 10 : 20)}
                 radius={[1, 1, 1, 1]}
             >
                     {

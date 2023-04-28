@@ -8,7 +8,7 @@ import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TableOfActions from "./ActionsTable";
 import { ThemeProvider } from 'styled-components';
 import ContentDrawer from './ContentDrawer';
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import theme from "../../../theme";
 import GlobalStyle from "../../../GlobalStyle";
 import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
@@ -16,6 +16,9 @@ import { Row } from "../../../types";
 import ToolBar from "../ToolBar/ToolBar";
 import InboxIcon from '@mui/icons-material/Inbox';
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { DataGrid } from "@mui/x-data-grid";
+import { getISOString } from "../../../util/WorkflowsExplorer/date";
+import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 
 export const defaultDrawerWidth = 600;
 
@@ -34,6 +37,8 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const { attempt, open } = props;
     const defaultRows = attempt.rows;
     const [rows, setRows] = useState<Row[]>(defaultRows);
+    const navigate = useNavigate();
+    const currURL = useLocation().pathname;
 
     /**
    * Updates the rows displayed in the table of actions.
@@ -52,7 +57,31 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
         {name: 'Failed', fun: (rows: Row[]) => {return rows.filter(row => row.status === 'failed')}}
     ];
     
-    
+    const columns = [
+        { field: 'step_name', headerName: 'Step Name', flex: 1 },
+        { field: 'status', headerName: 'Step Name', flex: 1 },
+        { field: 'task_id', headerName: 'Step Name', flex: 1 },
+        { field: 'started_at', headerName: 'Step Name', flex: 1 },
+        { field: 'finished_at', headerName: 'Step Name', flex: 1 },
+        { field: 'duration', headerName: 'Step Name', flex: 1 },
+    ];
+
+    const formatRow = () => {
+        return rows.map(row => {
+            return {
+                id: row.step_name,
+                step_name: row.step_name,
+                status: row.status,
+                task_id: row.task_id,
+                started_at: getISOString(new Date(row.started_at || 0)),
+                finished_at: getISOString(new Date(row.finished_at || 0)),
+                duration: formatDuration(row.duration || 0),
+                flow_id: row.flow_id,
+                run_number: row.run_number,
+
+            }
+        })
+    }
     
     return ( 
         <>
@@ -95,7 +124,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                 sx={{
                                     display: 'flex',
                                     flexDirection: 'row',
-                                    height: '57vh',
+                                    height: '70vh',
                                     overflow: 'auto',
                                     minWidth: '100%',
                                     border: '1px solid lightgray',
@@ -145,6 +174,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                     display: 'flex',
                                     flexDirection: 'row',
                                     minWidth: '100%',
+                                    height: '70vh',
                                     border: '1px solid lightgray',
                                     borderRadius: '0.5rem',
                                     p:'2rem'
@@ -155,7 +185,17 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                         order={1}
                                         minSize={30}
                                     >
-                                        <TableOfActions rows={rows}/>
+                                        <DataGrid 
+                                            onRowClick={(row) => {
+                                                //console.log(row.row);
+                                                //console.log(`/workflows/${row.row.flow_id}/${row.row.run_number}/${row.row.task_id}/table/${row.row.step_name}`);
+                                                navigate(`/workflows/${row.row.flow_id}/${row.row.run_number}/${row.row.task_id}/table/${row.row.step_name}`)
+                                            }}
+                                            density={'compact'} 
+                                            rows={formatRow()} 
+                                            columns={columns} 
+                                            autoPageSize
+                                        />
                                     </Panel>
                                     {open && (
                                     <>

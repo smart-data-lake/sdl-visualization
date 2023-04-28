@@ -4,7 +4,7 @@ import RunsHistoryTable from "./WorkflowHistoryTable";
 import { Box, CircularProgress, Sheet } from "@mui/joy";
 import ToolBar from "../ToolBar/ToolBar";
 import HistoryBarChart from "../HistoryChart/HistoryBarChart";
-import { useFetchWorkflow } from "../../../hooks/useFetchData";
+import { api, useFetchWorkflow } from "../../../hooks/useFetchData";
 import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
 import { useEffect, useState } from "react";
 import { TablePagination } from "@mui/material";
@@ -30,7 +30,6 @@ const WorkflowHistory = () => {
     const [count, setCount] = useState(0);
     const currURL = useLocation().pathname;
     const navigate = useNavigate();
-    
     const apiRef = useGridApiRef();
     
     useEffect(() => {
@@ -180,6 +179,7 @@ const WorkflowHistory = () => {
                             <DataGrid 
                                 apiRef={apiRef}
                                 autoPageSize
+                                density={'compact'} 
                                 rows={formatRows()} 
                                 columns={columns} 
                                 onRowClick={(row) => navigate(currURL + '/' + row.row.runId + '/' + row.row.attemptId + '/timeline')}

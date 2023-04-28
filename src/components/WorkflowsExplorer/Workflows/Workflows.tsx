@@ -92,6 +92,7 @@ const Workflows = () => {
                                 getRowId={(row) => row.name} 
                                 rows={formatRows()} 
                                 columns={columns} 
+                                density={'compact'} 
                             />
                         
                         )}

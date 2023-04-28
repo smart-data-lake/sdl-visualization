@@ -25,7 +25,7 @@ def create_dict(path):
 
     nFiles = len(files)
 
-    for i in range(nFiles//2):
+    for i in range(nFiles):
         file = files[i]
         # Read the file
         with open(os.path.join(path, file)) as f:
@@ -152,10 +152,10 @@ def formatDuration(seconds):
 def main():
     print("Generating database...")
     script_dir = os.path.dirname(__file__)
-    path = os.path.join(script_dir, "./succeeded")
+    path = os.path.join(script_dir, "heidi")
     db = create_dict(path)
     print("Writing database...")
-    path = os.path.join(script_dir, f"output/db_realData_{randomWord('adjective')}.json")
+    path = os.path.join(script_dir, f"output/db_heidi.json")
     with open(path, "w") as outfile:
         json.dump(db, outfile)
     

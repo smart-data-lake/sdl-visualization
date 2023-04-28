@@ -11,10 +11,18 @@ import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
  */
 const PageHeader = (props: {title : string, subtitle?: string, description?: string, noBack?: boolean}) => {
     const { title, subtitle, description, noBack } = props;
+    const currURL = useLocation().pathname;
     const navigate = useNavigate();
 
     const handleClick = () => {
-        navigate(-1);
+        if (currURL.split('/').length === 2) {
+            navigate(currURL.split('/').slice(0, 2).join('/'))
+        } else if (currURL.split('/').length === 3) {
+            navigate(currURL.split('/').slice(0, 3  ).join('/'))
+        }
+        else {
+            navigate(currURL.split('/').slice(0, 3).join('/'))
+        }
     }
 
     return ( 
