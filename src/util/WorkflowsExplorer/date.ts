@@ -37,27 +37,8 @@ export const getTimeFromPastByDays = (days: number, timezone?: string): number =
 };
 
 export const durationMicro = (duration: string) => {
-  duration = duration.split('T')[1];
+  const moment = require("moment");
+  const d = moment.duration(duration);
   
-  if (duration.includes('H')) {
-    const hours: number = parseInt(duration.split('H')[0]);
-    duration = duration.split('H')[1];
-    const minutes: number = parseInt(duration.split('M')[0]);
-    duration = duration.split('M')[1];
-    const seconds: number = parseInt(duration.split('.')[0]);
-    duration = duration.split('.')[1];
-    const mseconds: number = parseInt(duration);
-
-    return (mseconds + seconds*1000) + minutes*60*1000 + hours*60*60*1000;
-  } else if (duration.includes('M')) {
-    const minutes: number = parseInt(duration.split('M')[0]);
-    duration = duration.split('M')[1];
-    const seconds: number = parseInt(duration.split('.')[0]);
-    duration = duration.split('.')[1];
-    const mseconds: number = parseInt(duration);
-    
-    return (mseconds + seconds*1000) + minutes*60*1000;
-  } else {
-    return parseFloat(duration.split('S')[0])*1000;
-  }
+  return Math.floor(d.asMilliseconds())
 }

@@ -75,7 +75,6 @@ export class Row implements MetaDataBaseObject {
       this.user_name = '';
       this.system_tags = [];
       this.message = properties.action.msg;
-      console.log(properties.action.startTstmp)
     }
   }
   
