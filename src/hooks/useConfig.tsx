@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { getUrlContent, listConfigFiles, readConfigIndexFile, readManifestFile, parseTextStrict, standardizeKeys } from "../util/ConfigExplorer/HoconParser";
 
@@ -12,10 +12,6 @@ export const useConfig = () => {
     // state
     const [data, setData] = React.useState<any>({dataObjects: {}, actions: {}, connections: {}, global: {}});
     const [isLoading, setLoading] = useState(true);
-    
-    
-    
-    
     const routerLocation = useLocation();
     const baseUrl = window.location.href
       .replace(new RegExp("/index.html$"), "")
@@ -74,8 +70,6 @@ export const useConfig = () => {
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // only once
-    
-    
-  
+
     return {data, isLoading}
   }

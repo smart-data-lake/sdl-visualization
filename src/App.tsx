@@ -11,7 +11,6 @@ import Workflows from './components/WorkflowsExplorer/Workflows/Workflows';
 import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
 import { QueryClient, QueryClientProvider, useQuery } from 'react-query'
-import { useConfig } from './hooks/useConfig';
 
 
 
@@ -21,15 +20,15 @@ import { useConfig } from './hooks/useConfig';
 
 export default function App() {
   // Declare and initialize the `data` state variable with `useState`
-  const { data, isLoading } = useConfig()
+  const [data, setData] = useState<any>({});
 
    /**
    * `storeData` is a function that takes in data as an argument and sets the `data` state variable to that value when called.
    * @param data - The data to be stored in the `data` state variable.
    */
-  /* const storeData = (data: any) => {
+  const storeData = (data: any) => {
     setData(data)
-  } */
+  }
   
   /**
    * `router` sets up the router for the application using `createHashRouter` and `createRoutesFromElements`.
@@ -38,7 +37,7 @@ export default function App() {
    */
   const router = () => createHashRouter(
     createRoutesFromElements(
-      <Route path='/' element={<RootLayout/>}>
+      <Route path='/' element={<RootLayout storeData={storeData}/>}>
         <Route path='/workflows/' element={<Workflows/>}/>
         <Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
         <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>

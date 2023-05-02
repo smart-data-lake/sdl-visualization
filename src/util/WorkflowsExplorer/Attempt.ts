@@ -37,7 +37,6 @@ export default class Attempt {
                 actionName: actionName
               }
             });
-            console.log(action)
             taskRow.push(taskData)
         })
         return taskRow;

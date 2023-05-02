@@ -19,7 +19,7 @@ export class fetchAPI_json_server implements fetchApi {
     };
 
     
-    getRun = async (args: {name: string, runId: number, attemptId: number}) => {
+    getRun = (args: {name: string, runId: number, attemptId: number}) => {
         return fetch(`${this.url}/runs?attemptId=${args.attemptId}&appConfig.applicationName=${args.name}&runId=${args.runId}`)
         .then(res => res.json())
     };    
