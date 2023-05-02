@@ -47,7 +47,7 @@ def randomActionsState(numActions, attemptStartTime, runId, attemptId):
                 'type' : placeHolderNumber,
             },
             'state' : state,
-            'startTStamp' : randomTime(attemptStartTime),
+            'startTstmp' : randomTime(attemptStartTime),
             'duration' : randomDuration(),
             'msg' : placeHolderString,
             'results': randomResults(),
@@ -179,7 +179,7 @@ def getDuration(stateFile):
     runStartTime =  datetime.fromisoformat(stateFile["runStartTime"])
     currentLongest = runStartTime
     for action in stateFile["actionsState"].values():
-        actionEndTime = datetime.fromisoformat(action["startTStamp"]) + isodate.parse_duration(action["duration"])
+        actionEndTime = datetime.fromisoformat(action["startTstmp"]) + isodate.parse_duration(action["duration"])
         if (currentLongest < actionEndTime): currentLongest = actionEndTime
 
     diff = timedelta.total_seconds(currentLongest - runStartTime)*1000
