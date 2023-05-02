@@ -70,6 +70,5 @@ export const useConfig = () => {
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // only once
-
     return {data, isLoading}
   }

@@ -213,10 +213,10 @@ function LineageTab(props: flowProps) {
   const navigate = useNavigate();   
   function clickOnNode(node: flowNodeWithString){
     //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
-    navigate(`/configviewer/dataObjects/${node.id}`); //Link programmatically
+    navigate(`/config/dataObjects/${node.id}`); //Link programmatically
   }
   function clickOnEdge(edge: flowEdgeWithString){
-    navigate(`/configviewer/actions/${edge.old_id}`); //Link programmatically
+    navigate(`/config/actions/${edge.old_id}`); //Link programmatically
   }
 
   // container holding SVG needs manual height resizing to fill 100%

@@ -41,9 +41,9 @@ export interface RunInfo {
 export type SortType = 'start time asc' | 'start time desc' | 'duration asc' | 'duration desc'
 
 export class Row implements MetaDataBaseObject {
-  flow_id: string;
-  step_name: string;
-  run_number: number;
+    flow_id: string;
+    step_name: string;
+    run_number: number;
     attempt_id: number;
     task_id: number;
     ts_epoch: number;
@@ -75,6 +75,25 @@ export class Row implements MetaDataBaseObject {
       this.user_name = '';
       this.system_tags = [];
       this.message = properties.action.msg;
+    }
+
+    /**
+     * Row id might come as string or number. Make sure we have string
+     */
+    getTaskId(): string {
+      return this.step_name;
+    }
+
+    /**
+     * Return task duration with hadnling for running state. If task is in running state, we want to compare its start time to
+     * current time. Note that we are not camparing current time to ts_epoch field, which is just time for task object, not actual task time itself.
+     */
+    getTaskDuration(): number | null {
+      return this.status === 'running' && this.started_at
+        ? Date.now() - this.started_at
+        : this.duration
+        ? this.duration
+        : null;
     }
   }
   

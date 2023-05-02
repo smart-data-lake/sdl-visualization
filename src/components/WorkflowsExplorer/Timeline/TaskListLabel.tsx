@@ -4,8 +4,6 @@ import { Row } from '../../../types';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
 import { getPath } from '../../../util/WorkflowsExplorer/routing';
 import { colorByStatus } from '../../../util/WorkflowsExplorer/style';
-import { getTaskDuration, getTaskId } from '../../../util/WorkflowsExplorer/task';
-import React from 'react';
 
 //
 // Component
@@ -36,7 +34,7 @@ const TaskListLabel = (props: {item: Row}) => {
               </RowTaskName>
             </RowLabelTaskName>
             <RowDuration data-testid="tasklistlabel-duration">
-              {formatDuration(getTaskDuration(item), 1)}
+              {formatDuration(item.getTaskDuration(), 1)}
             </RowDuration>
           </RowLabelContent>
         </Link>
@@ -46,7 +44,7 @@ const TaskListLabel = (props: {item: Row}) => {
 };
 
 function getTaskLabel(item: Row): string {
-  return getTaskId(item);
+  return item.getTaskId();
 }
 
 export default TaskListLabel;
