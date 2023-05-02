@@ -60,7 +60,7 @@ export class Row implements MetaDataBaseObject {
     metadata: Metadata;
     message: string;
     
-    constructor(properties: TaskProperty) {
+    constructor({ properties }: { properties: TaskProperty; }) {
       this.flow_id = properties.runInfo.workflowName;
       this.step_name = properties.actionName;
       this.run_number = properties.runInfo.runId;

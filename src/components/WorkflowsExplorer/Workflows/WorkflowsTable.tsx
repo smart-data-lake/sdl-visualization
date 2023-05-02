@@ -1,42 +1,38 @@
-import { Box, Table } from "@mui/joy";
-import React from "react";
-import useFetchData from "../../../hooks/useFetchData";
+import { Box, CircularProgress, Table } from "@mui/joy";
+import useFetchWorkflows from "../../../hooks/useFetchData";
 import WorkflowRow from "./WorkflowRow";
 
 const WorkflowsTable = () => {
-    const data = useFetchData('index');
+    const { data, isLoading, isFetching } = useFetchWorkflows();
 
-    const render = () => {
-        return (
-            <Box sx={{ 
-                overflow: 'auto',
-                height: '80vh',
-            }}>
-                <Table size='sm' hoverRow color='neutral' stickyHeader>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Run number</th>
-                            <th>Number of attempt</th>
-                            <th>Started</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {data.map((row : {id: number, name: string}) => (
-                            <>
-                                <WorkflowRow data={row}/>
-                            </>
-                        ))}
-                    </tbody>
-                </Table>
-            </Box>
-        )
-    }
-    return ( 
-        <>
-            {data && render()}
-        </>
-     );
+    if (isLoading || isFetching) return <CircularProgress/>
+    
+    return (
+        <Box sx={{ 
+            overflow: 'auto',
+            height: '80vh',
+        }}>
+            <Table size='sm' hoverRow color='neutral' stickyHeader>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Number of runs</th>
+                        <th>Number of attempt</th>
+                        <th>Last run status</th>
+                        <th>Last run duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {data.map((row : {id: number, name: string}) => (
+                        <>
+                            <WorkflowRow data={row}/>
+                        </>
+                    ))}
+                </tbody>
+            </Table>
+        </Box>
+    )
+    
 }
  
 export default WorkflowsTable;

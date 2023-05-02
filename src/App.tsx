@@ -10,6 +10,9 @@ import WorkflowHistory from './components/WorkflowsExplorer/Workflow/WorkflowHis
 import Workflows from './components/WorkflowsExplorer/Workflows/Workflows';
 import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
+import { QueryClient, QueryClientProvider, useQuery } from 'react-query'
+
+
 
 /**
  * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
@@ -24,7 +27,6 @@ export default function App() {
    * @param data - The data to be stored in the `data` state variable.
    */
   const storeData = (data: any) => {
-    console.log('changed data')
     setData(data)
   }
   
@@ -62,11 +64,24 @@ export default function App() {
       </Route>
     )
   )
+
+  /**
+   * `queryClient` is a new instance of `QueryClient` that is used to store the data fetched from the config file.
+   * @returns The `QueryClient` object.
+   * @see https://react-query.tanstack.com/reference/QueryClient
+   * @see https://react-query.tanstack.com/guides/using-queryclient
+   * @see https://react-query.tanstack.com/guides/using-queryclientprovider
+   * @see https://react-query.tanstack.com/guides/using-queryclientprovider#using-queryclientprovider
+    */
+  const queryClient = new QueryClient()
+
   return (
     <>
       <CssBaseline />
-      {/* Provide the router object to the rest of the application with `RouterProvider` */}
-      <RouterProvider router={router()}/>
+      <QueryClientProvider client={queryClient}>
+        {/* Provide the router object to the rest of the application with `RouterProvider` */}
+        <RouterProvider router={router()}/>
+      </QueryClientProvider>
     </>
   );
 }

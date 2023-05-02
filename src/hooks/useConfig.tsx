@@ -1,10 +1,6 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { getUrlContent, listConfigFiles, readConfigIndexFile, readManifestFile, parseTextStrict, standardizeKeys } from "../util/ConfigExplorer/HoconParser";
-
-const defaultDrawerWidth = 300;
-const minDrawerWidth = 50;
-const maxDrawerWidth = 600;
 
 /**
  * The useConfig hook is used to fetch the config from the backend. It returns the config as a json object, and a boolean indicating whether the config is still loading.
@@ -16,10 +12,6 @@ export const useConfig = () => {
     // state
     const [data, setData] = React.useState<any>({dataObjects: {}, actions: {}, connections: {}, global: {}});
     const [isLoading, setLoading] = useState(true);
-    
-    
-    
-    
     const routerLocation = useLocation();
     const baseUrl = window.location.href
       .replace(new RegExp("/index.html$"), "")
@@ -78,7 +70,5 @@ export const useConfig = () => {
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // only once
-   
-  
     return {data, isLoading}
   }

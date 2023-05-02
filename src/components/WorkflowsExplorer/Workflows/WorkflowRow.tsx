@@ -1,4 +1,7 @@
+import { Chip } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
+import { durationMicro } from "../../../util/WorkflowsExplorer/date";
+import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 
 /**
  * The WorkflowRow component is a row in the WorkflowsTable component.
@@ -6,7 +9,7 @@ import { useNavigate } from "react-router-dom";
  * @returns 
  */
 
-const WorkflowRow = (props: {data: {id: number, name: string}}) => {
+const WorkflowRow = (props: {data: any}) => {
     const { data } = props;
     const navigate = useNavigate();
     
@@ -15,9 +18,14 @@ const WorkflowRow = (props: {data: {id: number, name: string}}) => {
             <>
                 <tr onClick={() => handleClick()}>
                     <td>{data.name}</td>
-                    <td>{'?'}</td>
-                    <td>{"Dummy field"}</td>
-                    <td>{"Dummy field 2"}</td>
+                    <td>{data.numRuns}</td>
+                    <td>{data.numAttempts}</td>
+                    <td>
+                        <Chip variant="soft" size="sm" color={data.lastStatus === 'SUCCEEDED' ? 'success' : 'danger'}>
+                            {data.lastStatus}
+                        </Chip>
+                    </td>
+                    <td>{formatDuration(durationMicro(data.lastDuration))}</td>
                 </tr>
             </>
         )
