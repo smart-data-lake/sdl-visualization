@@ -1,6 +1,7 @@
 import { Box, Table } from "@mui/joy";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import RunsRow from "./RunsRow";
+import { CircularProgress } from "@mui/joy";
     
 /**
  * The WorkflowHistoryTable component is the table that displays the history of a workflow.
@@ -10,46 +11,41 @@ import RunsRow from "./RunsRow";
  */
 const WorkflowHistoryTable = (props : {workflow: string}) => {
     const { workflow } = props;
-    const { data, isLoading } = useFetchWorkflow(workflow);
+    const { data, isLoading, isFetching } = useFetchWorkflow(workflow);
     
-    const render = () => {
-        return (
-            <Box sx={{ 
-                overflow: 'auto',
-                height: '80vh',
-            }}>
-                <Table 
-                    size='sm' 
-                    hoverRow 
-                    color='neutral' 
-                    stickyHeader 
-                    >
-                    <thead>
-                        <tr>
-                            <th>Run ID</th>
-                            <th>Attempt ID</th>
-                            <th>Run Start Time</th>
-                            <th>Duration</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {data[0].runs.map((run: any) => (
-                            <>
-                                <RunsRow run={run}/>
-                            </>
-                        ))}
-                    </tbody>
-                </Table>
-                
-            </Box>
-        )
-    }
+    if (isLoading || isFetching) return <CircularProgress/>
+
     return (
-        <>
-            {!isLoading && render()}
-        </> 
-    );
+        <Box sx={{ 
+            overflow: 'auto',
+            height: '80vh',
+        }}>
+            <Table 
+                size='sm' 
+                hoverRow 
+                color='neutral' 
+                stickyHeader 
+                >
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Attempt ID</th>
+                        <th>Run Start Time</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {data[0].runs.map((run: any) => (
+                        <>
+                            <RunsRow run={run}/>
+                        </>
+                    ))}
+                </tbody>
+            </Table>
+            
+        </Box>
+    )
 }
  
 export default WorkflowHistoryTable;

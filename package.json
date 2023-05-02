@@ -44,6 +44,7 @@
     "react-flow-renderer": "^10.3.10",
     "react-i18next": "^11.15.3",
     "react-markdown": "^8.0.3",
+    "react-query": "^3.39.3",
     "react-resizable": "^3.0.5",
     "react-resizable-panels": "^0.0.39",
     "react-router-dom": "^6.3.0",
