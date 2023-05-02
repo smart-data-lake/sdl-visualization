@@ -187,8 +187,6 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                     >
                                         <DataGrid 
                                             onRowClick={(row) => {
-                                                //console.log(row.row);
-                                                //console.log(`/workflows/${row.row.flow_id}/${row.row.run_number}/${row.row.task_id}/table/${row.row.step_name}`);
                                                 navigate(`/workflows/${row.row.flow_id}/${row.row.run_number}/${row.row.task_id}/table/${row.row.step_name}`)
                                             }}
                                             density={'compact'} 
