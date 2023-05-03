@@ -27,16 +27,19 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
 
     return ( 
         <>
-            <Box sx={{
+            <Sheet sx={{
                 display: 'flex',
                 flexDirection: 'row',
                 justifyContent: 'left',
                 position: 'sticky',
-                pb : '2rem',
+                top: 0,
+                zIndex: 2,
+                pb : '1.5rem',
+                pt : '4rem',
                 gap: '1rem',
             }}>
-                {!noBack && <IconButton onClick={handleClick} variant="plain" color="neutral">
-                    <ArrowBackIosIcon />
+                {!noBack && <IconButton  onClick={handleClick} variant="plain" color="neutral" size="sm">
+                    <ArrowBackIosIcon sx={{scale: '80%', pl: '0.3rem'}}/>
                 </IconButton>}
                 <Box sx={{
                     display: 'flex',
@@ -46,11 +49,11 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                     verticalAlign: 'middle',
 
                 }}>
-                    <Typography level="h2">{title}</Typography>
+                    <Typography level="h3">{title}</Typography>
                     {subtitle && <Typography level="h4" sx={{pt: '1rem'}}>{subtitle}</Typography>}
                     {description && <Typography level="body2" sx={{py: '1rem'}}>{description}</Typography>}
                 </Box>
-            </Box>
+            </Sheet>
         </>
      );
 }

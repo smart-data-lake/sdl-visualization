@@ -17,21 +17,19 @@ const WorkflowHistoryTable = (props : {data: any[]}) => {
 
     return (
         <Box sx={{ 
-            maxHeight: '38vh',
             overflow: 'auto',
         }}>
             <Table 
                 size='sm' 
                 hoverRow 
                 color='neutral' 
-                stickyHeader 
                 >
                 <thead>
                     <tr>
                         <th>Run ID</th>
                         <th>Attempt ID</th>
-                        <th>Run Start Time</th>
                         <th>Duration</th>
+                        <th>Run Start Time</th>
                         <th>Status</th>
                     </tr>
                 </thead>

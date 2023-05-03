@@ -34,7 +34,7 @@ const WorkflowHistory = () => {
     
     useEffect(() => {
         if (!isLoading) {
-            setRows(data[0].runs);
+            updateRows(data[0].runs);
             setCount(rows.length)
         }
     }, [data])
@@ -57,8 +57,9 @@ const WorkflowHistory = () => {
     }
 
     const updateRows = (rows: any[]) => {
-        
-        setRows(rows);
+        setRows(rows.sort((a, b) => {
+            return new Date(b.attemptStartTime).getTime() - new Date(a.attemptStartTime).getTime();
+        }));
     }
 
     const generateChartData = (data?: any) => {
@@ -123,7 +124,7 @@ const WorkflowHistory = () => {
 
     const filters = [
         {name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row.status === 'SUCCEEDED')}},
-        /* {name: 'Unknown', fun: (rows: any) => {return rows.filter(row => row.status === 'SKIPPED')}}, */
+        {name: 'Running', fun: (rows: any) => {return rows.filter(row => row.status === 'RUNNING')}},
         {name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row.status === 'CANCELLED')}}
     ];
 
@@ -134,26 +135,13 @@ const WorkflowHistory = () => {
         <>
             <Box>
             <PageHeader title={workflowName} />
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        gap: '3rem',
-                    }}
-                >
-                    <ToolBar 
-                        style={'vertical'} 
-                        controlledRows={data[0].runs} 
-                        updateRows={updateRows}
-                        searchColumn={'runId'}
-                        filters={filters}
-                    />
+                    
                     <Box
                         sx={{
                             display: 'flex',
                             width: '100%',
                             flexDirection: 'column',
-                            gap: '3rem',
+                            gap: '1rem',
                         }}
                     >
                         <Box
@@ -166,44 +154,54 @@ const WorkflowHistory = () => {
                         >
                             <Sheet 
                                 sx={{
-                                    flexGrow: 3,
-                                    p: '2rem',
-                                    border: '1px solid lightgray',
-                                    borderRadius: '0.5rem',
+                                    flex: 1,
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-around',
+                                    borderBottom: '1px solid lightgrey',
+                                    py: '1rem',
                                 }}
                             >
                                 <HistoryBarChart data={generateChartData()}/>
+                                <HistoryAreaChart data={generateChartData(rows)}/>
                             </Sheet>
                         </Box>
-                        <Sheet sx={{width: '100%', height: '65vh'}}>
-                            <DataGrid 
+                        <ToolBar 
+                        style={'horizontal'} 
+                        controlledRows={data[0].runs} 
+                        updateRows={updateRows}
+                        searchColumn={'runId'}
+                        filters={filters}
+                    />
+                        <Sheet sx={{width: '100%'}}>
+                            <RunsHistoryTable data={toDisplay}/>
+                            <TablePagination
+                                component="div"
+                                count={count}
+                                page={page}
+                                onPageChange={handleChangePage}
+                                rowsPerPage={rowsPerPage}
+                                onRowsPerPageChange={handleChangeRowsPerPage}
+                            /> 
+                            {/* <DataGrid 
                                 apiRef={apiRef}
-                                autoPageSize
                                 density={'compact'} 
                                 rows={formatRows()} 
                                 columns={columns} 
                                 onRowClick={(row) => navigate(currURL + '/' + row.row.runId + '/' + row.row.attemptId + '/timeline')}
+                                pageSizeOptions={[10, 15, 25]}
                                 initialState={{
                                     sorting: {
                                       sortModel: [{ field: 'runId', sort: 'desc' }],
                                     },
+                                    pagination: { paginationModel: { pageSize: 15 } },
                                 }}
-                            />
+                            /> */}
                         </Sheet>
                     </Box>
                 </Box>
-            </Box>
         </>   
     );
 }
-{/* <RunsHistoryTable data={toDisplay}/>
-<TablePagination
-    component="div"
-    count={count}
-    page={page}
-    onPageChange={handleChangePage}
-    rowsPerPage={rowsPerPage}
-    onRowsPerPageChange={handleChangeRowsPerPage}
-/> */}
  
 export default WorkflowHistory;

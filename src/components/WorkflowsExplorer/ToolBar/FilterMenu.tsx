@@ -44,7 +44,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
                         }}
                     >
                         <Checkbox 
-                            color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Cancelled' ? 'danger' : 'neutral')}
+                            color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Cancelled' ? 'danger' : 'warning')}
                         	size="sm"
                             variant="soft"
                         	checked={list[index]}
@@ -71,7 +71,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
             {filters && filters.map((filter, index) => (
                 <>
                     <Sheet
-                        color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'neutral')}
+                        color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'warning')}
                         variant="outlined"
                         sx={{
                             p: '0.2rem',
@@ -83,7 +83,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
                         }}
                     >     
                         <Checkbox 
-                            color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'neutral')}
+                            color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'warning')}
                             size="sm"
                             variant="soft"
                             checked={list[index]}

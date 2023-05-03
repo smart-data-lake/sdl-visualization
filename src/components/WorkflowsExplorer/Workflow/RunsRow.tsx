@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Chip } from "@mui/joy";
+import { Chip, Typography } from "@mui/joy";
 import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 
@@ -19,10 +19,10 @@ const RunsRow = (props : {run: any}) => {
 
     return ( 
         <tr  onClick={() => handleClick()}>
-            <td>{run.runId}</td>
-            <td>{run.attemptId}</td>
-            <td>{getISOString(new Date(run.attemptStartTime))}</td>
-            <td>{formatDuration(durationMicro(run.duration))}</td>
+            <td><Typography level="body3">{run.runId}</Typography></td>
+            <td><Typography level="body3">{run.attemptId}</Typography></td>
+            <td><Typography level="body3">{formatDuration(durationMicro(run.duration))}</Typography></td>
+            <td><Typography level="body3">{getISOString(new Date(run.attemptStartTime))}</Typography></td>
             <td>
                 <Chip variant="soft" size="sm" color={run.status === 'SUCCEEDED' ? 'success' : 'danger'}>
                     {run.status}

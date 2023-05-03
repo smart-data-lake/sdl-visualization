@@ -16,10 +16,12 @@ const Header = () => {
                 variant='solid'
                 sx={{
                     top: 0,
+                    width: '100%',
                     display: 'flex',
-                    flexDirection: 'row',
-                    justifyContent: 'left',
-                    position: 'sticky',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    position: 'fixed',
+                    height: '2.7rem',
                     zIndex: 10000,
                     px: 2,
                 }}
@@ -32,7 +34,7 @@ const Header = () => {
                     gap: 2
                 }}>
                     <ListItem>
-                        <img src="/images/sdl_logo_old_plain_white.svg" height={28} />
+                        <img src="/images/sdl_logo_old_plain_white.svg" height={20} />
                     </ListItem>
                 </List>
 

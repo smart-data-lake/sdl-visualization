@@ -14,15 +14,9 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
     };
 
     return (
-        <ResponsiveContainer width={"99%"} height={150}>
+        <ResponsiveContainer height={140}>
           <BarChart
             data={data}
-            margin={{
-              top: 20,
-              right: 30,
-              left: 20,
-              bottom: 20,
-            }}
           >
             <Tooltip 
                 cursor={{fill: 'lightgray', fillOpacity: 0.2, alignmentBaseline: 'middle'}}
@@ -42,7 +36,8 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
                 fill="#20af2e"
                 animationDuration={200}
                 onClick={handleClick}
-                radius={[1, 1, 1, 1]}
+                barSize={15}
+                radius={[5, 5, 1, 1]}
             >
                     {
                       data.map((entry, index) => {

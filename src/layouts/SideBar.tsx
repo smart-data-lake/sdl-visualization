@@ -34,20 +34,22 @@ const SideBar = () => {
             variant='soft'
             sx={{
                 position: 'fixed',
+                top: 43,
                 display: 'flex',
                 flexShrink: 0,
+                zIndex: 1,
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 height: '100%',
-                p: 1,
-                pb: 7
+                pb: 5
             }}
         >
             <Box>
                 <List
                     sx={{
                         display: 'flex',
-                        justifyContent: 'right'
+                        justifyContent: 'center',
+                        p: '0.2rem',
                     }}
                 >   
                     {buttons.map((component) => (
@@ -56,8 +58,8 @@ const SideBar = () => {
                                 <ListItemButton 
                                     sx={{
                                         borderRadius: 4, 
-                                        transform: 'scale(1)',
-                                        justifyContent: 'center'
+                                        scale: '90%',
+                                        justifyContent: 'center',
                                     }}
                                     onClick={() => navigate(component.link)}
                                 >
@@ -76,7 +78,7 @@ const SideBar = () => {
                             disabled 
                             sx={{
                                 borderRadius: 4, 
-                                transform: 'scale(1)',
+                                scale: '90%',
                                 justifyContent: 'center'
                             }}
                         >

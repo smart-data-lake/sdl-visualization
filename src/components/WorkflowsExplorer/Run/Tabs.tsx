@@ -124,12 +124,9 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                 sx={{
                                     display: 'flex',
                                     flexDirection: 'row',
-                                    height: '70vh',
+                                    height: 'auto',
                                     overflow: 'auto',
                                     minWidth: '100%',
-                                    border: '1px solid lightgray',
-                                    borderRadius: '0.5rem',
-                                    p:'2rem'
                                 }}
                             >
                                 <Panel
