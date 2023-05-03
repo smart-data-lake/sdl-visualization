@@ -4,6 +4,8 @@
 /scripts/sika_data
 /scripts/vmdl
 /scripts/data_directory
+
+/src/data/random_db.json
 # dependencies
 /node_modules
 /.pnp
