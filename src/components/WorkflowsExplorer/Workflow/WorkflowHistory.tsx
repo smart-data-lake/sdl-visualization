@@ -57,9 +57,11 @@ const WorkflowHistory = () => {
     }
 
     const updateRows = (rows: any[]) => {
-        setRows(rows.sort((a, b) => {
-            return new Date(b.attemptStartTime).getTime() - new Date(a.attemptStartTime).getTime();
-        }));
+        setRows(rows.sort(cmp));
+    }
+
+    const cmp = (a: any, b: any) => {
+        return new Date(b.attemptStartTime).getTime() - new Date(a.attemptStartTime).getTime();
     }
 
     const generateChartData = (data?: any) => {
@@ -163,7 +165,7 @@ const WorkflowHistory = () => {
                                 }}
                             >
                                 <HistoryBarChart data={generateChartData()}/>
-                                <HistoryAreaChart data={generateChartData(rows)}/>
+                                {!isLoading && <HistoryAreaChart data={generateChartData(data[0].runs.sort())}/>}
                             </Sheet>
                         </Box>
                         <ToolBar 

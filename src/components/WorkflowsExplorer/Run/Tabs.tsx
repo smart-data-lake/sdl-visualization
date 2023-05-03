@@ -124,7 +124,6 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                 sx={{
                                     display: 'flex',
                                     flexDirection: 'row',
-                                    height: 'auto',
                                     overflow: 'auto',
                                     minWidth: '100%',
                                 }}
@@ -134,10 +133,13 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                     order={1}
                                     minSize={30}
                                 >
+                                    <Box sx={{height: '100%',}}>
+
                                     <ThemeProvider theme={theme}>
                                     <GlobalStyle />
                                         <VirtualizedTimeline run={attempt.run} rows={rows}/>
                                     </ThemeProvider>
+                                    </Box>
                                 </Panel>
                                 {open && (
                                     <>
