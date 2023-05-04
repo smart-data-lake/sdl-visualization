@@ -31,14 +31,12 @@ function RootLayout(props: {storeData?: (data: any) => void, currData?: any}) {
             <main>
                 <Box
                     sx={{
-                        flex: 1,
-                        pl: '5rem',
-                        pr: '2rem',
-                        pb: '2rem',
                         display: 'flex',
                         justifyContent: 'center',
-                        position: 'static',
+                        alignItems: 'stretch',
                         flexDirection: 'column',
+                        width: '100%',
+                        px: '5rem'
                     }}
                 >
                     {isLoading && <CircularProgress />}

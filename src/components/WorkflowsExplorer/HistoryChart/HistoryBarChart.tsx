@@ -17,24 +17,24 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
         <ResponsiveContainer height={140}>
           <BarChart
             data={data}
-          >
+            >
             <Tooltip 
                 cursor={{fill: 'lightgray', fillOpacity: 0.2, alignmentBaseline: 'middle'}}
                 position={{ y: 0 }}
                 animationDuration={0}
                 label={false}
                 labelFormatter={(value: string) => {
-						if (data.length > parseInt(value)) return `Run ${data[value].runId} attempt ${data[value].attemptId}`
-                  	}
+                  if (data.length > parseInt(value)) return `Run ${data[value].runId} attempt ${data[value].attemptId}`
                 }
-                formatter={(value: number, name: string) => {return [formatDuration(value) as any, 'Duration']}}
-                />
+              }
+              formatter={(value: number, name: string) => {return [formatDuration(value) as any, 'Duration']}}
+              />
             <YAxis width={77} tickFormatter={(value) => formatDuration(value)}/>
             <Bar 
                 dataKey="value" 
                 stackId="a" 
                 fill="#20af2e"
-                animationDuration={200}
+                animationDuration={100}
                 onClick={handleClick}
                 barSize={15}
                 radius={[5, 5, 1, 1]}

@@ -1,17 +1,14 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
 import RunsHistoryTable from "./WorkflowHistoryTable";
 import { Box, CircularProgress, Sheet } from "@mui/joy";
 import ToolBar from "../ToolBar/ToolBar";
-import HistoryBarChart from "../HistoryChart/HistoryBarChart";
-import { api, useFetchWorkflow } from "../../../hooks/useFetchData";
-import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
+import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import { useEffect, useState } from "react";
 import { TablePagination } from "@mui/material";
-import HistoryAreaChart from "../HistoryChart/HistoryAreaChart";
-import HistoryPieChart from "../HistoryChart/HistoryPieChart";
-import { DataGrid, GridToolbar, gridPaginatedVisibleSortedGridRowIdsSelector, useGridApiRef } from "@mui/x-data-grid";
-import { formatDuration } from "../../../util/WorkflowsExplorer/format";
+import ChartControl from "../HistoryChart/ChartControl";
+import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
+import { Panel, PanelGroup } from "react-resizable-panels";
 
 
 /**
@@ -26,16 +23,16 @@ const WorkflowHistory = () => {
     const [rows, setRows] = useState<any[]>([]);
     const [toDisplay, setToDisplay] = useState<any[]>(rows);
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [rowsPerPage, setRowsPerPage] = useState(15);
     const [count, setCount] = useState(0);
-    const currURL = useLocation().pathname;
-    const navigate = useNavigate();
-    const apiRef = useGridApiRef();
+    const [barChartData, setBarChartData] = useState<any[]>([])
+    const [areaChartData, setAreaChartData] = useState<any[]>([])
     
     useEffect(() => {
         if (!isLoading) {
             updateRows(data[0].runs);
             setCount(rows.length)
+            setAreaChartData(generateChartData(data[0].runs))
         }
     }, [data])
     
@@ -44,6 +41,9 @@ const WorkflowHistory = () => {
         setCount(rows.length)
     }, [rows])
 
+    useEffect(() => {
+        setBarChartData(generateChartData(toDisplay))
+    }, [toDisplay])
 
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
@@ -64,7 +64,7 @@ const WorkflowHistory = () => {
         return new Date(b.attemptStartTime).getTime() - new Date(a.attemptStartTime).getTime();
     }
 
-    const generateChartData = (data?: any) => {
+    const generateChartData = (data: any) => {
         const res : {
             value: number,
             status: string,
@@ -72,22 +72,9 @@ const WorkflowHistory = () => {
             runId: number,
             attemptId: number
         }[] = [];
-
-        if (data) {
-            data.forEach((run: any) => {
-                res.push(
-                    {
-                        value: durationMicro(run.duration),
-                        status: run.status,
-                        name: getISOString(new Date(run.attemptStartTime)),
-                        runId: run.runId,
-                        attemptId: run.attemptId    
-                    }
-                )
-            });
-        }
-        else {
-        toDisplay.forEach((run) => {
+    
+        
+        data.forEach((run) => {
             res.push(
                 {
                     value: durationMicro(run.duration),
@@ -98,31 +85,8 @@ const WorkflowHistory = () => {
                 }
             )
         });
-        }
         return res;
     }
-
-    const columns = [
-            { field: 'runId', headerName: 'Run ID', flex: 1 },
-            { field: 'attemptId', headerName: 'Attempt ID', flex: 1 },
-            { field: 'attemptStartTime', headerName: 'Attempt Start Time', flex: 1 },
-            { field: 'duration', headerName: 'Duration', flex: 1 },
-            { field: 'status', headerName: 'Status', flex: 1 },
-    ]
-
-    const formatRows = () => {
-        return rows.map((row: any) => {
-            return {
-                id: row.attemptStartTime,
-                runId: row.runId,
-                attemptId: row.attemptId,
-                attemptStartTime: getISOString(new Date(row.attemptStartTime)),
-                duration: formatDuration(durationMicro(row.duration)),
-                status: row.status
-            };
-        })
-    }
-
 
     const filters = [
         {name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row.status === 'SUCCEEDED')}},
@@ -135,73 +99,63 @@ const WorkflowHistory = () => {
 
     return (
         <>
-            <Box>
-            <PageHeader title={workflowName} />
-                    
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            width: '100%',
-                            flexDirection: 'column',
-                            gap: '1rem',
-                        }}
+            <PageHeader title={workflowName} />             
+            <Sheet
+                sx={{
+                    display: 'flex',
+                    width: '100%',
+                    flexDirection: 'column',
+                    alignItems: 'stretch',
+                    gap: '1rem',
+                }}
+                >
+                <PanelGroup direction="horizontal">                      
+                    <Panel
+                        collapsible={false}
+                        order={1}
                     >
-                        <Box
+                        <Sheet
                             sx={{
-                                display: 'flex',
-                                flexDirection: 'row',
-                                justifyContent: 'left',
-                                gap: '1rem',
+                                p: '1rem'
                             }}
                         >
-                            <Sheet 
-                                sx={{
-                                    flex: 1,
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-around',
-                                    borderBottom: '1px solid lightgrey',
-                                    py: '1rem',
-                                }}
-                            >
-                                <HistoryBarChart data={generateChartData()}/>
-                                {!isLoading && <HistoryAreaChart data={generateChartData(data[0].runs.sort())}/>}
+                            <ChartControl rows={barChartData} data={areaChartData}/>
+                            <ToolBar 
+                                style={'horizontal'} 
+                                controlledRows={data[0].runs} 
+                                updateRows={updateRows}
+                                searchColumn={'runId'}
+                                filters={filters}
+                                />
+                            <Sheet sx={{width: '100%'}}>
+                                <RunsHistoryTable data={toDisplay}/>
+                                <TablePagination
+                                    component="div"
+                                    count={count}
+                                    page={page}
+                                    onPageChange={handleChangePage}
+                                    rowsPerPage={rowsPerPage}
+                                    onRowsPerPageChange={handleChangeRowsPerPage}
+                                    /> 
                             </Sheet>
-                        </Box>
-                        <ToolBar 
-                        style={'horizontal'} 
-                        controlledRows={data[0].runs} 
-                        updateRows={updateRows}
-                        searchColumn={'runId'}
-                        filters={filters}
-                    />
-                        <Sheet sx={{width: '100%'}}>
-                            <RunsHistoryTable data={toDisplay}/>
-                            <TablePagination
-                                component="div"
-                                count={count}
-                                page={page}
-                                onPageChange={handleChangePage}
-                                rowsPerPage={rowsPerPage}
-                                onRowsPerPageChange={handleChangeRowsPerPage}
-                            /> 
-                            {/* <DataGrid 
-                                apiRef={apiRef}
-                                density={'compact'} 
-                                rows={formatRows()} 
-                                columns={columns} 
-                                onRowClick={(row) => navigate(currURL + '/' + row.row.runId + '/' + row.row.attemptId + '/timeline')}
-                                pageSizeOptions={[10, 15, 25]}
-                                initialState={{
-                                    sorting: {
-                                      sortModel: [{ field: 'runId', sort: 'desc' }],
-                                    },
-                                    pagination: { paginationModel: { pageSize: 15 } },
-                                }}
-                            /> */}
                         </Sheet>
-                    </Box>
-                </Box>
+                    </Panel>
+                    <Panel
+                        collapsible={true}
+                        order={1}
+                        defaultSize={25}
+                    >
+                        <Sheet
+                            sx={{
+                                borderLeft: '1px solid lightgray',
+                                height: '100%'
+                            }}
+                        >
+                            <span>HEEEEEEEY</span>
+                        </Sheet>
+                    </Panel>
+                </PanelGroup>
+            </Sheet>
         </>   
     );
 }

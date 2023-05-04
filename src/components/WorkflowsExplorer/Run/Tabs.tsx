@@ -246,7 +246,6 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
     }
     return ( 
         <>
-            
             <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)}>
                 <Box
                     sx={{

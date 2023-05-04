@@ -5,10 +5,8 @@ const HistoryAreaChart = (props: {data : {value: number, status: string, name: s
     const { data } = props;
 
     return (
-            <ResponsiveContainer width="99%" height="100%">
+            <ResponsiveContainer height={140}>
               <LineChart
-                width={500}
-                height={400}
                 data={data}
                 >
                 {/* <YAxis tickFormatter={(value) => formatDuration(value)}/> */}
@@ -18,7 +16,7 @@ const HistoryAreaChart = (props: {data : {value: number, status: string, name: s
                     dataKey="value" 
                     stroke="#065bbf" 
                     fill="#096bde" 
-                    animationDuration={200}
+                    isAnimationActive={false}
                 />
               </LineChart>
             </ResponsiveContainer>

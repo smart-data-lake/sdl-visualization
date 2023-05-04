@@ -185,10 +185,8 @@ function createRowRenderer({
 //
 
 const ListContainer = styled.div<{ customMinHeight: number }>`
-  flex: 1;
-  min-height: ${(props) => toRelativeSize(props.customMinHeight)}rem;
-  max-width: 100%;
-  position: relative;
+    width: 100%;  
+    height: 100rem;
 `;
 
 export default Timeline;

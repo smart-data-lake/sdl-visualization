@@ -33,6 +33,8 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                 justifyContent: 'left',
                 position: 'sticky',
                 top: 0,
+                width: '100%',
+                borderBottom: '1px solid lightgray',
                 zIndex: 2,
                 pb : '1.5rem',
                 pt : '4rem',

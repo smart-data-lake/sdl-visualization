@@ -57,62 +57,45 @@ const Workflows = () => {
         })
     }
 
-    const columns = [
-        { field: 'name', headerName: 'Name', flex: 1 },
-        { field: 'numRuns', headerName: 'Number of runs', flex: 1 },
-        { field: 'numAttempts', headerName: 'Number of attempt', flex: 1 },
-        { field: 'lastStatus', headerName: 'Last run status',  flex: 1 },
-        { field: 'lastDuration', headerName: 'Last run duration',  flex: 1 },
-    ]
-
     return (      
         <>
-            <Box
+            <PageHeader title={'Workflows'} noBack={true} />
+            
+            <Sheet
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
+                    justifyContent: 'space-evenly',
+                    alignItems: 'left',
+                    
+                    py: '1rem',
+                    gap: '1rem'
                 }}
-            >
-                <PageHeader title={'Workflows'} noBack={true} />
-                <Box
+                >
+                {data && <ToolBar style={'horizontal'} controlledRows={data} updateRows={updateRows} searchColumn={"name"}/>}
+                <Sheet
                     sx={{
                         display: 'flex',
-                        flexDirection: 'row',
-                        gap: '3rem',
+                        flexDirection: 'column'
                     }}
-                >
-                    {data && <ToolBar style={'vertical'} controlledRows={data} updateRows={updateRows} searchColumn={"name"}/>}
-                    <Sheet 
-                                sx={{
-                                    width: '100%',
-                                }}
-                            >
-                    {data && (<DataGrid 
-                                onRowClick={(row) => {navigate('/workflows/' + row.id)}} 
-                                getRowId={(row) => row.name} 
-                                rows={formatRows()} 
-                                columns={columns} 
-                                density={'compact'} 
-                            />
-                        
-                        )}
-                    </Sheet>
-                </Box>
-            </Box>
+                    >
+                    {data && (
+                        <>
+                            <WorkflowsTable data={toDisplay}/>
+                            <TablePagination
+                                component="div"
+                                count={count}
+                                page={page}
+                                onPageChange={handleChangePage}
+                                rowsPerPage={rowsPerPage}
+                                onRowsPerPageChange={handleChangeRowsPerPage}
+                                />
+                        </>
+                    )}
+                </Sheet>
+            </Sheet>
         </>
     );
 }
-
-{/* <>
-<WorkflowsTable data={toDisplay}/>
-<TablePagination
-component="div"
-count={count}
-page={page}
-onPageChange={handleChangePage}
-rowsPerPage={rowsPerPage}
-onRowsPerPageChange={handleChangeRowsPerPage}
-/>
-</> */}
 
 export default Workflows;
