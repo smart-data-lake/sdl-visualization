@@ -1,9 +1,10 @@
 import { Box } from "@mui/material";
-import HistoryAreaChart from "./HistoryAreaChart";
+import HistoryLineChart from "./HistoryLineChart";
 import HistoryBarChart from "./HistoryBarChart";
+import { Indices } from "../Workflow/WorkflowHistory";
 
-const ChartControl = (props: {rows: any, data: any}) => {
-    const {rows, data } = props;
+const ChartControl = (props: {rows: any, data: any, indices: Indices }) => {
+    const {rows, data, indices } = props;
     
     return ( 
         <Box
@@ -14,7 +15,7 @@ const ChartControl = (props: {rows: any, data: any}) => {
             }}
         >
             <HistoryBarChart data={rows}/>
-            <HistoryAreaChart data={data}/>
+            <HistoryLineChart data={data} indices={indices}/>
         </Box>
      );
 }

@@ -131,7 +131,7 @@ const ToolBar = (
                         setValue(value)
                     }}
                 />
-                <SelectSort updateSort={updateSort}/>
+                {sortEnabled && <SelectSort updateSort={updateSort}/>}
                 {filters && <FilterMenu filters={filters} updateList={updateList}/>}
         </Box>
     )

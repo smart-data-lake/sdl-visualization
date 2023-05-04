@@ -9,7 +9,14 @@ import { TablePagination } from "@mui/material";
 import ChartControl from "../HistoryChart/ChartControl";
 import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
 import { Panel, PanelGroup } from "react-resizable-panels";
+import WorkflowDetails from "./WorkflowDetails";
 
+export type Indices = {
+    toDisplayLeft: number, 
+    toDisplayRight?: number, 
+    rangeLeft: number, 
+    rangeRight?: number
+}
 
 /**
  * The WorkflowHistory component is the page that displays the history of a workflow as a table.
@@ -23,10 +30,11 @@ const WorkflowHistory = () => {
     const [rows, setRows] = useState<any[]>([]);
     const [toDisplay, setToDisplay] = useState<any[]>(rows);
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(15);
+    const [rowsPerPage, setRowsPerPage] = useState(25);
     const [count, setCount] = useState(0);
     const [barChartData, setBarChartData] = useState<any[]>([])
     const [areaChartData, setAreaChartData] = useState<any[]>([])
+    const [indices, setIndices] = useState<Indices>({toDisplayLeft: 0, toDisplayRight: rowsPerPage, rangeLeft: 0})
     
     useEffect(() => {
         if (!isLoading) {
@@ -39,21 +47,23 @@ const WorkflowHistory = () => {
     useEffect(() => {
         setToDisplay(rows.slice(0, rowsPerPage));
         setCount(rows.length)
+        setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})
     }, [rows])
 
     useEffect(() => {
         setBarChartData(generateChartData(toDisplay))
     }, [toDisplay])
-
+    
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
         setToDisplay(rows.slice(0, parseInt(event.target.value, 10)));
     }
-
+    
     const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number,) => {
         setPage(newPage);
         setToDisplay(rows.slice(newPage*rowsPerPage, newPage*rowsPerPage + rowsPerPage));
+        setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})
     }
 
     const updateRows = (rows: any[]) => {
@@ -116,10 +126,11 @@ const WorkflowHistory = () => {
                     >
                         <Sheet
                             sx={{
-                                p: '1rem'
+                                py: '1rem',
+                                pr: '1rem'
                             }}
                         >
-                            <ChartControl rows={barChartData} data={areaChartData}/>
+                            <ChartControl rows={barChartData} data={areaChartData} indices={indices}/>
                             <ToolBar 
                                 style={'horizontal'} 
                                 controlledRows={data[0].runs} 
@@ -148,10 +159,11 @@ const WorkflowHistory = () => {
                         <Sheet
                             sx={{
                                 borderLeft: '1px solid lightgray',
+                                p: '2rem',
                                 height: '100%'
                             }}
                         >
-                            <span>HEEEEEEEY</span>
+                            <WorkflowDetails data={data}/>
                         </Sheet>
                     </Panel>
                 </PanelGroup>

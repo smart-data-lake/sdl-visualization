@@ -31,7 +31,7 @@ const SideBar = () => {
         <Sheet
             color='neutral'
             invertedColors
-            variant='soft'
+            variant='outlined'
             sx={{
                 position: 'fixed',
                 top: 43,
@@ -41,7 +41,8 @@ const SideBar = () => {
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 height: '100%',
-                pb: 5
+                pb: 5,
+                backgroundColor: 'lightgray'
             }}
         >
             <Box>

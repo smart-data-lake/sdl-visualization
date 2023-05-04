@@ -72,7 +72,13 @@ const Workflows = () => {
                     gap: '1rem'
                 }}
                 >
-                {data && <ToolBar style={'horizontal'} controlledRows={data} updateRows={updateRows} searchColumn={"name"}/>}
+                {data && <ToolBar 
+                            style={'horizontal'} 
+                            controlledRows={data} 
+                            updateRows={updateRows} 
+                            searchColumn={"name"}
+                            sortEnabled={false}
+                        />}
                 <Sheet
                     sx={{
                         display: 'flex',

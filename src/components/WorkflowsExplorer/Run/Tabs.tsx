@@ -173,10 +173,6 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                     display: 'flex',
                                     flexDirection: 'row',
                                     minWidth: '100%',
-                                    height: '70vh',
-                                    border: '1px solid lightgray',
-                                    borderRadius: '0.5rem',
-                                    p:'2rem'
                                 }}
                             >
                                     <Panel
@@ -184,15 +180,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                         order={1}
                                         minSize={30}
                                     >
-                                        <DataGrid 
-                                            onRowClick={(row) => {
-                                                navigate(`/workflows/${row.row.flow_id}/${row.row.run_number}/${row.row.task_id}/table/${row.row.step_name}`)
-                                            }}
-                                            density={'compact'} 
-                                            rows={formatRow()} 
-                                            columns={columns} 
-                                            autoPageSize
-                                        />
+                                        <TableOfActions rows={rows}/>
                                     </Panel>
                                     {open && (
                                     <>

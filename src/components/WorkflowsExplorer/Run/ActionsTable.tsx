@@ -27,19 +27,14 @@ const ActionsTable = (props: { rows: Row[];}) => {
     }
 
     return (
-        <Sheet
-            sx={{
-                display: 'flex', 
-                justifyContent: 'space-between',
-            }}
-        >   
+        
             <Sheet
                 sx={{
-                    height: '30rem', 
-                    overflow: 'auto'
+                    display: 'flex',
+                    overflow: 'auto',
                 }}
             >
-                <Table size="sm" hoverRow color='neutral' stickyHeader>
+                <Table size="sm" hoverRow color='neutral'>
                     <thead>
                         <tr>
                             <th><b>Name</b></th>
@@ -56,7 +51,6 @@ const ActionsTable = (props: { rows: Row[];}) => {
                     </tbody>
                 </Table>
             </Sheet>
-        </Sheet>
 
     );
 }

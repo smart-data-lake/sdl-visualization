@@ -19,10 +19,10 @@ const RunsRow = (props : {run: any}) => {
 
     return ( 
         <tr  onClick={() => handleClick()}>
-            <td><Typography level="body3">{run.runId}</Typography></td>
-            <td><Typography level="body3">{run.attemptId}</Typography></td>
-            <td><Typography level="body3">{formatDuration(durationMicro(run.duration))}</Typography></td>
-            <td><Typography level="body3">{getISOString(new Date(run.attemptStartTime))}</Typography></td>
+            <td>{run.runId}</td>
+            <td>{run.attemptId}</td>
+            <td>{formatDuration(durationMicro(run.duration))}</td>
+            <td>{getISOString(new Date(run.attemptStartTime))}</td>
             <td>
                 <Chip variant="soft" size="sm" color={run.status === 'SUCCEEDED' ? 'success' : 'danger'}>
                     {run.status}
