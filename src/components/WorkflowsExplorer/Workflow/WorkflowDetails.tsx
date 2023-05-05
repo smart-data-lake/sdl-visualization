@@ -53,7 +53,7 @@ const WorkflowDetails = (props : {data: any}) => {
                 <Typography level="h4">Configuration</Typography>
             </Sheet>
 
-            <Typography level="body1">{data[0].name}</Typography>
+            {/* <Typography level="body1">{data[0].name}</Typography> */}
             </Sheet>
         </>
      );

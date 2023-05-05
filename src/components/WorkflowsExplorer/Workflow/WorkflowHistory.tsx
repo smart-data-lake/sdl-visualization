@@ -8,8 +8,9 @@ import { useEffect, useState } from "react";
 import { TablePagination } from "@mui/material";
 import ChartControl from "../HistoryChart/ChartControl";
 import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
-import { Panel, PanelGroup } from "react-resizable-panels";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import WorkflowDetails from "./WorkflowDetails";
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 export type Indices = {
     toDisplayLeft: number, 
@@ -35,6 +36,7 @@ const WorkflowHistory = () => {
     const [barChartData, setBarChartData] = useState<any[]>([])
     const [areaChartData, setAreaChartData] = useState<any[]>([])
     const [indices, setIndices] = useState<Indices>({toDisplayLeft: 0, toDisplayRight: rowsPerPage, rangeLeft: 0})
+    const [open, setOpen] = useState<Boolean>(true)
     
     useEffect(() => {
         if (!isLoading) {
@@ -127,7 +129,10 @@ const WorkflowHistory = () => {
                         <Sheet
                             sx={{
                                 py: '1rem',
-                                pr: '1rem'
+                                pr: '1rem',
+                                borderRight: '1px solid lightgray',
+                                height: '100vh',
+                                overflow: 'auto', 
                             }}
                         >
                             <ChartControl rows={barChartData} data={areaChartData} indices={indices}/>
@@ -151,21 +156,44 @@ const WorkflowHistory = () => {
                             </Sheet>
                         </Sheet>
                     </Panel>
+                    {open && (
+                                    <>
+                                        <PanelResizeHandle >
+                                            <Box
+                                                sx={{
+                                                    overflow: 'auto',
+                                                    height: '100%',
+                                                    width: '1rem',
+                                                    backgroundColor: 'white',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    borderRight: '1px solid lightgray',
+                                                }}   
+                                            >
+                                                <ChevronRightIcon sx={{mt: '2.3rem'}}/>
+                                            </Box>
+                                        </PanelResizeHandle >
                     <Panel
                         collapsible={true}
                         order={1}
                         defaultSize={25}
+                        minSize={20}
+                        maxSize={25}
                     >
                         <Sheet
                             sx={{
-                                borderLeft: '1px solid lightgray',
-                                p: '2rem',
-                                height: '100%'
+                                height: '100vh',
+                                overflow: 'auto', 
+                                pt: '2rem',
+                                pl: '2rem',
                             }}
                         >
                             <WorkflowDetails data={data}/>
                         </Sheet>
                     </Panel>
+                    </>
+                    )}
                 </PanelGroup>
             </Sheet>
         </>   

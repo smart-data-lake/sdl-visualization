@@ -26,7 +26,7 @@ const HistoryLineChart = (props: {data : {value: number, status: string, name: s
                     stroke="#096bde" 
                     fill= "#096bde"
                     dot={false}
-                    strokeWidth={3}
+                    strokeWidth={2}
                     isAnimationActive={false}
                     />
                 {/* <ReferenceArea x1={indices.toDisplayLeft} x2={indices?.toDisplayRight} stroke="blue" strokeOpacity={0.5} />
