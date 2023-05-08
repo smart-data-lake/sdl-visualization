@@ -31,12 +31,12 @@ def create_dict(files):
         # Read the file
         with open(file) as f:
             data = json.load(f)
-        statefiles.append(data)
+        statefiles.append({"data": data, "path": file})
     
     names = []
     # Get all the unique names of the workflows
-    for data in statefiles:
-        names.append(data["appConfig"]["applicationName"])
+    for statefile in statefiles:
+        names.append(statefile["data"]["appConfig"]["applicationName"])
     
     for name in names:
         workflow_tmp[name] = {
@@ -44,9 +44,10 @@ def create_dict(files):
             "runs": [],
         }
 
-    for data in statefiles:
+    for statefile in statefiles:
         # Get the important variable of the statefile
         uid = id.hex
+        data = statefile["data"]
         runId = data["runId"]
         attemptId = data["attemptId"]
         name = data["appConfig"]["applicationName"]
@@ -61,7 +62,7 @@ def create_dict(files):
                 "runId": runId,
                 "attemptId": attemptId,
                 "name": appConfig["applicationName"],
-                "path": file.split("scripts/../")[1],
+                "path": statefile["path"].split("scripts/../public")[1],
             }
         )
 

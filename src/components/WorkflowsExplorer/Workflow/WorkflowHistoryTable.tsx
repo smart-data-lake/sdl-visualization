@@ -14,7 +14,7 @@ const WorkflowHistoryTable = (props : {workflow: string}) => {
     const { data, isLoading, isFetching } = useFetchWorkflow(workflow);
     
     if (isLoading || isFetching) return <CircularProgress/>
-    console.log(data);
+    
     return (
         <Box sx={{ 
             overflow: 'auto',
