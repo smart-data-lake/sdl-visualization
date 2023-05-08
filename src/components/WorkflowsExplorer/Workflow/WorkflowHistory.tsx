@@ -27,7 +27,7 @@ export type Indices = {
 const WorkflowHistory = () => {
     const links = [...useLocation().pathname.split('/')].splice(1);
     const workflowName :  string= links[links.length - 1];
-    const { data, isLoading } = useFetchWorkflow(workflowName);
+    const { data, isLoading, isFetching } = useFetchWorkflow(workflowName);
     const [rows, setRows] = useState<any[]>([]);
     const [toDisplay, setToDisplay] = useState<any[]>(rows);
     const [page, setPage] = useState(0);
@@ -40,9 +40,9 @@ const WorkflowHistory = () => {
     
     useEffect(() => {
         if (!isLoading) {
-            updateRows(data[0].runs);
+            updateRows(data.runs);
             setCount(rows.length)
-            setAreaChartData(generateChartData(data[0].runs))
+            setAreaChartData(generateChartData(data.runs))
         }
     }, [data])
     
@@ -106,8 +106,7 @@ const WorkflowHistory = () => {
         {name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row.status === 'CANCELLED')}}
     ];
 
-    if (isLoading) return (<CircularProgress/>)
-
+    if (isLoading || isFetching) return (<CircularProgress/>)
 
     return (
         <>
@@ -138,7 +137,7 @@ const WorkflowHistory = () => {
                             <ChartControl rows={barChartData} data={areaChartData} indices={indices}/>
                             <ToolBar 
                                 style={'horizontal'} 
-                                controlledRows={data[0].runs} 
+                                controlledRows={data.runs} 
                                 updateRows={updateRows}
                                 searchColumn={'runId'}
                                 filters={filters}

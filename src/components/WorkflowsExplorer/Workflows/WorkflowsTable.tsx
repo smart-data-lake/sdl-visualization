@@ -2,10 +2,8 @@ import { Box, CircularProgress, Table } from "@mui/joy";
 import useFetchWorkflows from "../../../hooks/useFetchData";
 import WorkflowRow from "./WorkflowRow";
 
-const WorkflowsTable = () => {
-    const { data, isLoading, isFetching } = useFetchWorkflows();
-
-    if (isLoading || isFetching) return <CircularProgress/>
+const WorkflowsTable = (props : {data : any[]}) => {
+    const { data } = props
     
     return (
         <Box sx={{ 

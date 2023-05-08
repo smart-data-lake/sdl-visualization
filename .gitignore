@@ -6,7 +6,7 @@
 /scripts/vmdl
 /scripts/data_directory
 
-/public/state/*.json
+/public/state/index.json
 /public/state/data_directory
 /public/state/sika_data
 /public/state/vmdl

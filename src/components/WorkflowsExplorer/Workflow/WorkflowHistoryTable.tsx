@@ -12,11 +12,8 @@ import { useState } from "react";
  * @returns JSX.Element
  */
  
-const WorkflowHistoryTable = (props : {workflow: string}) => {
-    const { workflow } = props;
-    const { data, isLoading, isFetching } = useFetchWorkflow(workflow);
-    
-    if (isLoading || isFetching) return <CircularProgress/>
+const WorkflowHistoryTable = (props : {data: any[]}) => {
+    const { data } = props;
     
     return (
         <Box>
@@ -35,7 +32,7 @@ const WorkflowHistoryTable = (props : {workflow: string}) => {
                     </tr>
                 </thead>
                 <tbody>
-                    {data.runs.map((run: any) => (
+                    {data.map((run: any) => (
                         <>
                             <RunsRow run={run}/>
                         </>

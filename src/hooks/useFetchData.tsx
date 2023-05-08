@@ -14,7 +14,6 @@ export const useFetchWorkflow = (workflow: string) => {
 }
 
 export const useFetchRun = (name: string, runId: number, attemptId: number) => {
-    console.log(api_local.getRun({name, runId, attemptId}))
     return useQuery('run', () => api_local.getRun({name, runId, attemptId}))
 }
 

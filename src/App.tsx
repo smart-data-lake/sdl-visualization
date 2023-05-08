@@ -10,7 +10,7 @@ import WorkflowHistory from './components/WorkflowsExplorer/Workflow/WorkflowHis
 import Workflows from './components/WorkflowsExplorer/Workflows/Workflows';
 import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
-import Home from './components/HomeMenu/Home';
+import { QueryClient, QueryClientProvider } from 'react-query'
 
 /**
  * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
