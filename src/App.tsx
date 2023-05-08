@@ -11,6 +11,7 @@ import Workflows from './components/WorkflowsExplorer/Workflows/Workflows';
 import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
 import { QueryClient, QueryClientProvider } from 'react-query'
+import Home from './components/HomeMenu/Home';
 
 /**
  * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
@@ -36,6 +37,7 @@ export default function App() {
   const router = () => createHashRouter(
     createRoutesFromElements(
       <Route path='/' element={<RootLayout storeData={storeData}/>}>
+        <Route path='/' element={<Home/>}/>
         <Route path='/workflows/' element={<Workflows/>}/>
         <Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
         <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
