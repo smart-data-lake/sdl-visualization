@@ -1,10 +1,12 @@
 import { fetchAPI_json_server } from "../api/fetchAPI_json_server";
 import { useQuery } from "react-query";
+import { fetchAPI_local_statefiles } from "../api/fetchAPI_local_statefiles";
 
 export const api = new fetchAPI_json_server("http://localhost:3001");
+export const api_local = new fetchAPI_local_statefiles("http://localhost:3001");
 
 export const useFetchWorkflows = () => {
-    return useQuery('workflows', api.getWorkflows);
+    return useQuery('workflows', api_local.getWorkflows);
 }
 
 export const useFetchWorkflow = (workflow: string) => {
