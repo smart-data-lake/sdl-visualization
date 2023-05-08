@@ -9,6 +9,7 @@
 /public/state/data_directory
 /public/state/sika_data
 /public/state/vmdl
+/public/state/heidi
 
 /src/data/random_db.json
 
