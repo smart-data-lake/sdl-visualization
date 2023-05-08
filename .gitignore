@@ -4,6 +4,9 @@
 /scripts/sika_data
 /scripts/vmdl
 /scripts/data_directory
+
+/public/state/*.json
+/public/state/data_directory
 # dependencies
 /node_modules
 /.pnp
