@@ -1,5 +1,4 @@
 import CssBaseline from '@mui/joy/CssBaseline';
-import { ReactQueryDevtools } from 'react-query/devtools'
 import { useState } from 'react';
 import { createHashRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router-dom';
 import ConfigExplorer from './components/ConfigExplorer/ConfigExplorer';
@@ -82,7 +81,6 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         {/* Provide the router object to the rest of the application with `RouterProvider` */}
         <RouterProvider router={router()}/>
-        <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </>
   );
