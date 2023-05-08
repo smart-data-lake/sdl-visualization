@@ -9,9 +9,9 @@ const WorkflowsTable = () => {
     
     return (
         <Box sx={{ 
-            overflow: 'auto',
-            height: '80vh',
-        }}>
+                maxHeight: '64vh',
+                overflow: 'auto',
+            }}>
             <Table size='sm' hoverRow color='neutral' stickyHeader>
                 <thead>
                     <tr>
@@ -32,7 +32,6 @@ const WorkflowsTable = () => {
             </Table>
         </Box>
     )
-    
 }
  
 export default WorkflowsTable;

@@ -23,26 +23,19 @@ const BasicBreadcrumbs = () => {
     }
 
     return (
-      <Breadcrumbs aria-label="breadcrumbs" sx={{color: 'white'}}>
-                    
-        <Link
-            onClick={() => handleClick('Home')}
-            key='Home'
-        >
-            <HomeRounded sx={{ mt: 0.75 }} fontSize="inherit"/>
-        </Link>
+      <Breadcrumbs aria-label="breadcrumbs">
         {links.map((item: string) => (
             <Link
                 // `preventDefault` is for demo purposes
                 // and is generally not needed in your app
                 onClick={() => handleClick(item)}
                 key={item}
-                sx={{color: 'white'}}  
+                color="neutral"
             >
                 <Typography fontSize="inherit" sx={{textTransform: 'capitalize'}}>{item}</Typography>
             </Link>
         ))}
-        <Typography fontSize="inherit" sx={{textTransform: 'capitalize', color: 'lightgray'}}>{current}</Typography>
+        <Typography fontSize="inherit" sx={{textTransform: 'capitalize'}}>{current}</Typography>
       </Breadcrumbs>
     );
 }

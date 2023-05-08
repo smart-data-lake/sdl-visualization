@@ -2,6 +2,8 @@ import { Box, Table } from "@mui/joy";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import RunsRow from "./RunsRow";
 import { CircularProgress } from "@mui/joy";
+import { TablePagination } from "@mui/material";
+import { useState } from "react";
     
 /**
  * The WorkflowHistoryTable component is the table that displays the history of a workflow.
@@ -9,6 +11,7 @@ import { CircularProgress } from "@mui/joy";
  * @param props.workflow - string
  * @returns JSX.Element
  */
+ 
 const WorkflowHistoryTable = (props : {workflow: string}) => {
     const { workflow } = props;
     const { data, isLoading, isFetching } = useFetchWorkflow(workflow);
@@ -16,22 +19,18 @@ const WorkflowHistoryTable = (props : {workflow: string}) => {
     if (isLoading || isFetching) return <CircularProgress/>
     
     return (
-        <Box sx={{ 
-            overflow: 'auto',
-            height: '80vh',
-        }}>
+        <Box>
             <Table 
                 size='sm' 
                 hoverRow 
                 color='neutral' 
-                stickyHeader 
-                >
+             >
                 <thead>
                     <tr>
                         <th>Run ID</th>
                         <th>Attempt ID</th>
-                        <th>Run Start Time</th>
                         <th>Duration</th>
+                        <th>Run Start Time</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -45,7 +44,7 @@ const WorkflowHistoryTable = (props : {workflow: string}) => {
             </Table>
             
         </Box>
-    )
+    );
 }
  
 export default WorkflowHistoryTable;

@@ -8,7 +8,7 @@ import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TableOfActions from "./ActionsTable";
 import { ThemeProvider } from 'styled-components';
 import ContentDrawer from './ContentDrawer';
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import theme from "../../../theme";
 import GlobalStyle from "../../../GlobalStyle";
 import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
@@ -16,6 +16,9 @@ import { Row } from "../../../types";
 import ToolBar from "../ToolBar/ToolBar";
 import InboxIcon from '@mui/icons-material/Inbox';
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { DataGrid } from "@mui/x-data-grid";
+import { getISOString } from "../../../util/WorkflowsExplorer/date";
+import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 
 export const defaultDrawerWidth = 600;
 
@@ -34,6 +37,8 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const { attempt, open } = props;
     const defaultRows = attempt.rows;
     const [rows, setRows] = useState<Row[]>(defaultRows);
+    const navigate = useNavigate();
+    const currURL = useLocation().pathname;
 
     /**
    * Updates the rows displayed in the table of actions.
@@ -52,7 +57,31 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
         {name: 'Failed', fun: (rows: Row[]) => {return rows.filter(row => row.status === 'failed')}}
     ];
     
-    
+    const columns = [
+        { field: 'step_name', headerName: 'Step Name', flex: 1 },
+        { field: 'status', headerName: 'Step Name', flex: 1 },
+        { field: 'task_id', headerName: 'Step Name', flex: 1 },
+        { field: 'started_at', headerName: 'Step Name', flex: 1 },
+        { field: 'finished_at', headerName: 'Step Name', flex: 1 },
+        { field: 'duration', headerName: 'Step Name', flex: 1 },
+    ];
+
+    const formatRow = () => {
+        return rows.map(row => {
+            return {
+                id: row.step_name,
+                step_name: row.step_name,
+                status: row.status,
+                task_id: row.task_id,
+                started_at: getISOString(new Date(row.started_at || 0)),
+                finished_at: getISOString(new Date(row.finished_at || 0)),
+                duration: formatDuration(row.duration || 0),
+                flow_id: row.flow_id,
+                run_number: row.run_number,
+
+            }
+        })
+    }
     
     return ( 
         <>
@@ -61,6 +90,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                 controlledRows={defaultRows} 
                 updateRows={updateRows} 
                 filters={filters}
+                searchColumn={"step_name"}
                 style="horizontal"
             />
             {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
@@ -73,7 +103,9 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                             justifyContent: 'center',
                             alignItems: 'center',
                             p: '10rem',
-                            gap: '5rem'
+                            gap: '5rem',
+                            border: '1px solid lightgray',
+                            borderRadius: '0.5rem',
                         }}
                     >
                         <InboxIcon sx={{
@@ -88,69 +120,91 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                 <>
                     <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
                         <PanelGroup direction="horizontal">
-                            <Panel
-                                collapsible={true}
-                                order={1}
-                                minSize={30}
+                            <Box 
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    overflow: 'auto',
+                                    minWidth: '100%',
+                                }}
                             >
-                                <ThemeProvider theme={theme}>
-                                <GlobalStyle />
-                                    <VirtualizedTimeline run={attempt.run} rows={rows}/>
-                                </ThemeProvider>
-                            </Panel>
-                            {open && (
-                                <>
-                                    <PanelResizeHandle >
-                                        <Box
-                                            sx={{
-                                                height: '100%',
-                                                mx: '1rem',
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                            }}
-                                        />
-                                    </PanelResizeHandle >
-                                    <Panel 
-                                        collapsible={true} 
-                                        order={2}
-                                        minSize={30}
-                                    >
-                                        <ContentDrawer attempt={attempt}/>
-                                    </Panel>
-                                </>
-                            )}
+                                <Panel
+                                    collapsible={false}
+                                    order={1}
+                                    minSize={30}
+                                >
+                                    <Box sx={{height: '100%',}}>
+
+                                    <ThemeProvider theme={theme}>
+                                    <GlobalStyle />
+                                        <VirtualizedTimeline run={attempt.run} rows={rows}/>
+                                    </ThemeProvider>
+                                    </Box>
+                                </Panel>
+                                {open && (
+                                    <>
+                                        <PanelResizeHandle >
+                                            <Box
+                                                sx={{
+                                                    mx: '1rem',
+                                                    overflow: 'auto',
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                }}
+                                                />
+                                        </PanelResizeHandle >
+                                        <Panel 
+                                            collapsible={false} 
+                                            order={2}
+                                            defaultSize={30}
+                                            minSize={30}
+                                        >
+                                            <ContentDrawer attempt={attempt}/>
+                                        </Panel>
+                                    </>
+                                )}
+                            </Box>
                         </PanelGroup> 
                     </TabPanel>
                     <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
                         <PanelGroup direction="horizontal">
-                            <Panel
-                                collapsible={true}
-                                order={1}
-                                minSize={30}
+                            <Box 
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    minWidth: '100%',
+                                }}
                             >
-                                <TableOfActions rows={rows}/>
-                            </Panel>
-                            {open && (
-                            <>
-                                <PanelResizeHandle >
-                                    <Box
-                                        sx={{
-                                            height: '100%',
-                                            mx: '1rem',
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                        }}    
-                                    />
-                                </PanelResizeHandle >
-                                <Panel 
-                                    collapsible={true} 
-                                    order={2} 
-                                    minSize={30}
-                                > 
-                                    <ContentDrawer attempt={attempt}/>
-                                </Panel>
-                            </>
-                        )}
+                                    <Panel
+                                        collapsible={false}
+                                        order={1}
+                                        minSize={30}
+                                    >
+                                        <TableOfActions rows={rows}/>
+                                    </Panel>
+                                    {open && (
+                                    <>
+                                        <PanelResizeHandle >
+                                            <Box
+                                                sx={{
+                                                    mx: '1rem',
+                                                    overflow: 'auto',
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                }}   
+                                            />
+                                        </PanelResizeHandle >
+                                        <Panel 
+                                            collapsible={false} 
+                                            order={2} 
+                                            defaultSize={30}
+                                            minSize={30}
+                                        > 
+                                            <ContentDrawer attempt={attempt}/>
+                                        </Panel>
+                                    </>
+                                )}
+                            </Box>
                         </PanelGroup>
                     </TabPanel>
                     <TabPanel value={2} sx={{ py: '1rem' }}>
@@ -180,7 +234,6 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
     }
     return ( 
         <>
-            
             <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)}>
                 <Box
                     sx={{
@@ -192,7 +245,6 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
                     <TabList variant="plain" sx={style}>
                         <Tab>Timeline</Tab>
                         <Tab>Actions table</Tab>
-                        <Tab disabled>Action lineage</Tab>
                     </TabList>
                 </Box>
                 <TabsPanels attempt={attempt} open = {panelOpen}/>

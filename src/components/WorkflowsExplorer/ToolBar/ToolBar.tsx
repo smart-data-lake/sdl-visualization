@@ -1,4 +1,4 @@
-import { Box, Input } from "@mui/joy";
+import { Box, Divider, Input, Typography } from "@mui/joy";
 import React, { useEffect, useState } from "react";
 import { Row, SortType } from "../../../types";
 import { sortRows } from "../../../util/WorkflowsExplorer/row";
@@ -14,8 +14,16 @@ import SelectSort from "./SelectSort";
  * @param props.style - style of the toolbar
  * @returns JSX.Element
  */
-const ToolBar = (props: {controlledRows: any[], updateRows: (rows: any[]) => void, style?: 'horizontal' | 'vertical', filters?: {name: string, fun: (rows: Row[]) => any}[]}) => {
-    const { controlledRows, updateRows, filters } = props;
+const ToolBar = (
+    props: {
+        controlledRows: any[], 
+        updateRows: (rows: any[]) => void, 
+        searchColumn: string,
+        style?: 'horizontal' | 'vertical', 
+        filters?: {name: string, fun: (rows: any[]) => any}[],
+        sortEnabled?: boolean
+    }) => {
+    const { controlledRows, updateRows, searchColumn, filters, sortEnabled } = props;
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
     const [sort, setSort] = useState<SortType>('start time asc');
@@ -31,7 +39,8 @@ const ToolBar = (props: {controlledRows: any[], updateRows: (rows: any[]) => voi
 
 	useEffect(() => {
 		function handleInput() {
-			return controlledRows.filter((row) => row.step_name.toLowerCase().includes(value.toLowerCase()));
+            const tmp = controlledRows.filter((row) => row[searchColumn].toString().toLowerCase().includes(value.toLowerCase()));
+            return tmp;
 		}
 		
 		function applyFilters() {
@@ -43,7 +52,12 @@ const ToolBar = (props: {controlledRows: any[], updateRows: (rows: any[]) => voi
 		}
 		
 		const a = handleInput();
-		const b = applyFilters(); 
+        let b : any;
+        if (filters && filters.length > 0) {
+            b = applyFilters(); 
+        } else {
+            b = controlledRows;
+        }
 		const c = a.filter((row) => b.includes(row));
 		updateRows(sortRows(c, sort));
 	}, [value, list, sort]);
@@ -51,52 +65,73 @@ const ToolBar = (props: {controlledRows: any[], updateRows: (rows: any[]) => voi
     if (style === 'vertical') return (
         <Box
             sx={{
-                height: '85vh',
+                height: '100%',
                 maxWidth: '17rem',
+                border: '1px solid lightgray',
+                borderRadius: '0.5rem',
               }}
         >
             <Box sx={{
-                m: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '1rem',
+                m: '1rem',
+                gap: '1.5rem',
             }}>
+
+                {filters && (
+                        <>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.5rem',
+                                }}
+                            >
+                                <Typography level="body1">
+                                    Status
+                                </Typography>
+                                <Divider/>
+                                <FilterMenu filters={filters} updateList={updateList} style={'vertical'}/>
+                            </Box>
+                        </>
+                    )
+                }
                 <Input
-                    placeholder="Search"
-                    required
-                    sx={{ mb: 0, fontSize: 'var(--joy-fontSize-sm)' }}
-                    onChange={(event) => {
-                        const { value } = event.target;
-                        setValue(value)
-                    }}
+                    placeholder="Search row"
+                    size="sm"
+                    sx={{fontSize: 'var(--joy-fontSize-sm)' }}
+                        onChange={(event) => {
+                            const { value } = event.target;
+                            setValue(value)
+                        }
+                    }
                 />
-				<SelectSort updateSort={updateSort}/>
-                {filters && <FilterMenu filters={filters} updateList={updateList}/>}
             </Box>
         </Box>
     );
-
+    
     return (
         <Box
             sx={{
                 display: 'flex',
                 flexDirection: 'row',
-                justifyContent: 'right',
+                justifyContent: 'left',
+                alignItems: 'center',
                 mt: '2rem',
                 mb: '1rem',
                 gap: '1rem'
             }}
-        >
+            >
                 <Input
                     placeholder="Search"
-                    required
+                    size="sm"
                     sx={{ mb: 0, fontSize: 'var(--joy-fontSize-sm)' }}
                     onChange={(event) => {
                         const { value } = event.target;
                         setValue(value)
                     }}
                 />
-				<SelectSort updateSort={updateSort}/>
+                {sortEnabled && <SelectSort updateSort={updateSort}/>}
                 {filters && <FilterMenu filters={filters} updateList={updateList}/>}
         </Box>
     )
