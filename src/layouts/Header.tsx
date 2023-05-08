@@ -37,7 +37,6 @@ const Header = () => {
                         <img src="/images/sdl_logo_old_plain_white.svg" height={20} />
                     </ListItem>
                 </List>
-
             </Sheet>
         </>
      );

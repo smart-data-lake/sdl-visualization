@@ -1,6 +1,7 @@
 import { Box, Table } from "@mui/joy";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import RunsRow from "./RunsRow";
+import { CircularProgress } from "@mui/joy";
 import { TablePagination } from "@mui/material";
 import { useState } from "react";
     
@@ -10,19 +11,20 @@ import { useState } from "react";
  * @param props.workflow - string
  * @returns JSX.Element
  */
-const WorkflowHistoryTable = (props : {data: any[]}) => {
-    const { data } = props;
+ 
+const WorkflowHistoryTable = (props : {workflow: string}) => {
+    const { workflow } = props;
+    const { data, isLoading, isFetching } = useFetchWorkflow(workflow);
     
-
-
+    if (isLoading || isFetching) return <CircularProgress/>
+    
     return (
-        <Box sx={{ 
-        }}>
+        <Box>
             <Table 
                 size='sm' 
                 hoverRow 
                 color='neutral' 
-                >
+             >
                 <thead>
                     <tr>
                         <th>Run ID</th>
@@ -33,7 +35,7 @@ const WorkflowHistoryTable = (props : {data: any[]}) => {
                     </tr>
                 </thead>
                 <tbody>
-                    {data.map((run: any) => (
+                    {data.runs.map((run: any) => (
                         <>
                             <RunsRow run={run}/>
                         </>

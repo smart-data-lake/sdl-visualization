@@ -1,48 +1,21 @@
-import { useEffect, useState } from "react";
 import { fetchAPI_json_server } from "../api/fetchAPI_json_server";
+import { useQuery } from "react-query";
+import { fetchAPI_local_statefiles } from "../api/fetchAPI_local_statefiles";
 
 export const api = new fetchAPI_json_server("http://localhost:3001");
+export const api_local = new fetchAPI_local_statefiles("/state/index.json");
 
 export const useFetchWorkflows = () => {
-    const [data, setData] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        api.getWorkflows().then((data) => {
-            setData(data);
-            setIsLoading(false);
-        });
-    }, []);
-
-    return { data, isLoading };
+    return useQuery('workflows', api_local.getWorkflows);
 }
 
 export const useFetchWorkflow = (workflow: string) => {
-    const [data, setData] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        api.getWorkflow(workflow).then((data) => {
-            setData(data);
-            setIsLoading(false);
-        });
-    }, []);
-
-    return { data, isLoading };
+    return useQuery('workflow', () => api_local.getWorkflow(workflow))
 }
 
 export const useFetchRun = (name: string, runId: number, attemptId: number) => {
-    const [data, setData] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        api.getRun({name, runId, attemptId}).then((data) => {
-            setData(data);
-            setIsLoading(false);
-        });
-    }, []);
-
-    return { data, isLoading };
+    console.log(api_local.getRun({name, runId, attemptId}))
+    return useQuery('run', () => api_local.getRun({name, runId, attemptId}))
 }
 
 export default useFetchWorkflows;

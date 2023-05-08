@@ -22,7 +22,7 @@ const SideBar = () => {
         },
         {
             icon : <TuneRoundedIcon/>,
-            link : '/configviewer'
+            link : '/config'
         }
     ]
     const navigate = useNavigate();

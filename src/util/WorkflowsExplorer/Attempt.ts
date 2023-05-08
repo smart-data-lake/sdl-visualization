@@ -1,5 +1,4 @@
 import { ActionsState, Run, RunInfo, StateFile, Row } from "../../types"
-import randomStateFile from "./randomStateFile";
 
 
 export default class Attempt {
@@ -13,10 +12,7 @@ export default class Attempt {
             this.rows = this.getTaskRow(stateFile.actionsState).sort(this.cmp);
             this.run =  this.getRun();
         } else {
-            const stateFile = randomStateFile();
-            this.runInfo = this.getRunInfo(stateFile);  
-            this.rows = this.getTaskRow(stateFile.actionsState).sort(this.cmp);
-            this.run =  this.getRun();
+            throw('Error: no statefile found')
         }
     }
 

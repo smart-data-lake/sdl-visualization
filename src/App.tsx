@@ -35,42 +35,51 @@ export default function App() {
    */
   const router = () => createHashRouter(
     createRoutesFromElements(
-      	<Route path='/' element={<RootLayout storeData={storeData}/>}>
-      		<Route path='/' element={<Home/>}/>
-      		<Route path='/workflows/' element={<Workflows/>}/>
-      		  	<Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
-      		  	<Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
-      		  	<Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true}/>}/>
-      		  	<Route path='*' element={<NotFound/>}/>
-      		  	<Route path='/configviewer' element={<ConfigExplorer data={data}/>}>
-      		  	  	<Route
-      		  	  	    path='/configviewer/search/:ownSearchString' //the ownSearchString is our definition of a 
-      		  	  	    //search because of problems with routing Search Parameters
-      		  	  	    element={
-      		  	  	      <SearchResults data={data}/>
-      		  	  	    }
-					/>
-      		  	  	<Route
-      		  	  	  	path="/configviewer/:elementType/:elementName"
-      		  	  	  	element={
-      		  	  	  	  <DataDisplayView data={data} />
-      		  	  	  	} 
-					/>
-      		  	  	<Route
-      		  	  	  	path="/configviewer/globalOptions"
-      		  	  	  	element={
-      		  	  	    	<GlobalConfigView data={data.global}/>
-      		  	  		}
-					/>
-      		  </Route> 
-      	</Route>
+      <Route path='/' element={<RootLayout storeData={storeData}/>}>
+        <Route path='/workflows/' element={<Workflows/>}/>
+        <Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
+        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
+        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true}/>}/>
+        <Route path='*' element={<NotFound/>}/>
+        <Route path='/config' element={<ConfigExplorer data={data}/>}>
+          <Route
+              path='/config/search/:ownSearchString' //the ownSearchString is our definition of a 
+              //search because of problems with routing Search Parameters
+              element={
+                <SearchResults data={data}/>
+              } />
+          <Route
+            path="/config/:elementType/:elementName"
+            element={
+              <DataDisplayView data={data} />
+            } />
+          <Route
+            path="/config/globalOptions"
+            element={
+              <GlobalConfigView data={data.global}/>
+            } />
+        </Route> 
+      </Route>
     )
   )
+
+  /**
+   * `queryClient` is a new instance of `QueryClient` that is used to store the data fetched from the config file.
+   * @returns The `QueryClient` object.
+   * @see https://react-query.tanstack.com/reference/QueryClient
+   * @see https://react-query.tanstack.com/guides/using-queryclient
+   * @see https://react-query.tanstack.com/guides/using-queryclientprovider
+   * @see https://react-query.tanstack.com/guides/using-queryclientprovider#using-queryclientprovider
+    */
+  const queryClient = new QueryClient()
+
   return (
     <>
       <CssBaseline />
-      {/* Provide the router object to the rest of the application with `RouterProvider` */}
-      <RouterProvider router={router()}/>
+      <QueryClientProvider client={queryClient}>
+        {/* Provide the router object to the rest of the application with `RouterProvider` */}
+        <RouterProvider router={router()}/>
+      </QueryClientProvider>
     </>
   );
 }
