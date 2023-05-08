@@ -1,0 +1,2 @@
+isodate==0.6.1
+wonderwords==2.2.0

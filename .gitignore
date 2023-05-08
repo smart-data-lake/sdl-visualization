@@ -14,7 +14,7 @@
 
 /src/data/random_db.json
 
-
+.venv
 # dependencies
 /node_modules
 /.pnp

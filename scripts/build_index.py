@@ -151,9 +151,9 @@ def formatDuration(seconds):
         return f"PT{ms//(1000*60*60)}H{(ms%(1000*60*60))//(1000*60)}M{(ms%(1000*60))/1000}S"
 
 def main():
-    print("=====================================")
-    print("~~ Welcome to the visualizer setup tool ~~ \n")
-    print("The tool will compile all state files in \"/public/state\" into \"/public/index.json\". If no statefiles are present, a default index is returned:")
+    print("\n\n=====================================")
+    print("~~ Welcome to the index building tool ~~ \n")
+    print("The tool will compile all state files in \"/public/state\" and its subdirectories into \"/public/state/index.json\". If no statefiles are present, a default index is returned:")
     
     script_dir = os.path.dirname(__file__)
     path = os.path.join(script_dir, f"../public/state")
@@ -184,8 +184,8 @@ def main():
         print(f"Generating index for \"{path}\"...")
         print(os.listdir(path))
     
-    print("\n~~ Setup complete ~~")
-    print("=====================================")
+    print("\n~~ Index building complete ~~")
+    print("=====================================\n\n")
 
 if __name__ == "__main__":
     main()
