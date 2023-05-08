@@ -14,7 +14,7 @@ const WorkflowHistoryTable = (props : {workflow: string}) => {
     const { data, isLoading, isFetching } = useFetchWorkflow(workflow);
     
     if (isLoading || isFetching) return <CircularProgress/>
-
+    console.log(data);
     return (
         <Box sx={{ 
             overflow: 'auto',
@@ -36,7 +36,7 @@ const WorkflowHistoryTable = (props : {workflow: string}) => {
                     </tr>
                 </thead>
                 <tbody>
-                    {data[0].runs.map((run: any) => (
+                    {data.runs.map((run: any) => (
                         <>
                             <RunsRow run={run}/>
                         </>

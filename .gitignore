@@ -5,7 +5,10 @@
 /scripts/vmdl
 /scripts/data_directory
 
+/public/state/*.json
+/public/state/data_directory
 /src/data/random_db.json
+
 # dependencies
 /node_modules
 /.pnp

@@ -19,7 +19,7 @@ const Run = (props : {panelOpen?: boolean}) => {
 
     if (isLoading || isFetching) return <CircularProgress/>
     
-    const attempt = new Attempt(data[0]);
+    const attempt = new Attempt(data);
     return (
         <>
             <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId} />
