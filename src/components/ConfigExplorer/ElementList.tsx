@@ -124,7 +124,7 @@ export default function ElementList(props: ElementListProps) {
 
 
   return (
-    <Box sx={{"overflowX": "clip"}}>
+    <Box sx={{"overflowX": "clip", width: '17rem'}}>
       <TextField
         className="search_field"
         variant="outlined"

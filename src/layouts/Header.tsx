@@ -36,6 +36,9 @@ const Header = () => {
                     <ListItem>
                         <img src="/images/sdl_logo_old_plain_white.svg" height={20} />
                     </ListItem>
+                    <ListItem>
+                        <BasicBreadcrumbs />
+                    </ListItem>
                 </List>
             </Sheet>
         </>

@@ -90,6 +90,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                 controlledRows={defaultRows} 
                 updateRows={updateRows} 
                 filters={filters}
+                sortEnabled={true}
                 searchColumn={"step_name"}
                 style="horizontal"
             />

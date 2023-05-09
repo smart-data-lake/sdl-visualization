@@ -23,20 +23,23 @@ const BasicBreadcrumbs = () => {
     }
 
     return (
-      <Breadcrumbs aria-label="breadcrumbs">
-        {links.map((item: string) => (
-            <Link
-                // `preventDefault` is for demo purposes
-                // and is generally not needed in your app
-                onClick={() => handleClick(item)}
-                key={item}
-                color="neutral"
-            >
-                <Typography fontSize="inherit" sx={{textTransform: 'capitalize'}}>{item}</Typography>
-            </Link>
-        ))}
-        <Typography fontSize="inherit" sx={{textTransform: 'capitalize'}}>{current}</Typography>
-      </Breadcrumbs>
+        <Breadcrumbs 
+            aria-label="breadcrumbs"
+            sx={{color: 'white'}}
+        >
+            {links.map((item: string) => (
+                <Link
+                    // `preventDefault` is for demo purposes
+                    // and is generally not needed in your app
+                    onClick={() => handleClick(item)}
+                    key={item}
+                    sx={{color: 'white'}}
+                >
+                    <Typography fontSize="inherit" sx={{textTransform: 'capitalize'}}>{item}</Typography>
+                </Link>
+            ))}
+            <Typography fontSize="inherit" sx={{color: 'white', textTransform: 'capitalize'}}>{current}</Typography>
+        </Breadcrumbs>
     );
 }
 

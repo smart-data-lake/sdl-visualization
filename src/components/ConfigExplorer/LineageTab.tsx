@@ -238,7 +238,7 @@ function LineageTab(props: flowProps) {
   function init() {
     handleResize();
     setTimeout(() => {
-      reactFlow.setCenter(0, 0, {zoom: 1});
+      reactFlow.setCenter(0, 0, {zoom: 0.8});
     }, 1);
     window.addEventListener('resize', () => handleResize());
   }
@@ -246,7 +246,14 @@ function LineageTab(props: flowProps) {
 
 
   return (
-    <Box className='data-flow' sx={{height: contentHeight}} ref={chartBox}>
+    <Box 
+      className='data-flow' 
+      ref={chartBox}
+      sx={{
+        height: '85vh',
+        borderLeft: '1px solid lightgray'
+      }} 
+    >
       <ReactFlow 
         nodes={nodes}
         edges={edges}

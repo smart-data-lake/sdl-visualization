@@ -36,7 +36,9 @@ function RootLayout(props: {storeData?: (data: any) => void, currData?: any}) {
                         alignItems: 'stretch',
                         flexDirection: 'column',
                         width: '100%',
-                        px: '5rem'
+                        height: '100%',
+                        pl: '5rem',
+                        pr:'2rem'
                     }}
                 >
                     {isLoading && <CircularProgress />}
