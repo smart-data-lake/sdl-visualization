@@ -24,8 +24,7 @@ function ConfigExplorer(props: {data: any}) {
 			}}
 			>
     	  	<ElementList data={data} />
-			
-    	  		<Outlet />
+    	  	<Outlet />
     	</Sheet>
     </>
   );

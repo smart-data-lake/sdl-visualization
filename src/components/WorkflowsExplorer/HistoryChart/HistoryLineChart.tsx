@@ -6,13 +6,13 @@ const HistoryLineChart = (props: {data : {value: number, status: string, name: s
     const { data, indices } = props;
 
     return (
-            <ResponsiveContainer height={140}>
+            <ResponsiveContainer height={160}>
               <LineChart
                 data={data}
                 >
                   <Brush height={20}/>
                 <Tooltip
-                  position={{ y: 0 }}
+                  position={{ y: 10 }}
                   animationDuration={100} 
                   labelFormatter={(value: string) => {
                       if (data.length > parseInt(value)) return `Run ${data[value].runId} attempt ${data[value].attemptId}`

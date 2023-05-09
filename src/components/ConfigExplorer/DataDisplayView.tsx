@@ -46,7 +46,7 @@ export default function DataDisplayView(props: displayProps) {
 		<Sheet
 			sx={{
 				flex: 3,
-				overflow: 'auto',
+				overflowY: 'scroll',
 				p: '1rem'		
 			}}
 		>

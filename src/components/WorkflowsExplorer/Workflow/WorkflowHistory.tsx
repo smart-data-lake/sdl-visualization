@@ -114,24 +114,16 @@ const WorkflowHistory = () => {
             <Sheet
                 sx={{
                     display: 'flex',
-                    width: '100%',
-                    flexDirection: 'column',
-                    alignItems: 'stretch',
                     gap: '1rem',
+                    height: '85vh'
                 }}
                 >
-                <PanelGroup direction="horizontal">                      
-                    <Panel
-                        collapsible={false}
-                        order={1}
-                    >
                         <Sheet
                             sx={{
                                 py: '1rem',
                                 pr: '1rem',
                                 borderRight: '1px solid lightgray',
-                                height: '100vh',
-                                overflow: 'auto', 
+                                flex: 3
                             }}
                         >
                             <ChartControl rows={barChartData} data={areaChartData} indices={indices}/>
@@ -142,7 +134,12 @@ const WorkflowHistory = () => {
                                 searchColumn={'runId'}
                                 filters={filters}
                                 />
-                            <Sheet sx={{width: '100%'}}>
+                            <Sheet sx={{
+                                    width: '100%',
+                                    height: '57vh',
+                                    overflowY: 'scroll', 
+                                }}
+                            >
                                 <RunsHistoryTable data={toDisplay}/>
                                 <TablePagination
                                     component="div"
@@ -154,46 +151,19 @@ const WorkflowHistory = () => {
                                     /> 
                             </Sheet>
                         </Sheet>
-                    </Panel>
                     {open && (
-                                    <>
-                                        <PanelResizeHandle >
-                                            <Box
-                                                sx={{
-                                                    overflow: 'auto',
-                                                    height: '100%',
-                                                    width: '1rem',
-                                                    backgroundColor: 'white',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    borderRight: '1px solid lightgray',
-                                                }}   
-                                            >
-                                                <ChevronRightIcon sx={{mt: '2.3rem'}}/>
-                                            </Box>
-                                        </PanelResizeHandle >
-                    <Panel
-                        collapsible={true}
-                        order={1}
-                        defaultSize={25}
-                        minSize={20}
-                        maxSize={25}
-                    >
+                                   
                         <Sheet
                             sx={{
-                                height: '100vh',
-                                overflow: 'auto', 
+                                flex: 1,
+                                height: '10%',
                                 pt: '2rem',
                                 pl: '2rem',
                             }}
                         >
                             <WorkflowDetails data={data}/>
                         </Sheet>
-                    </Panel>
-                    </>
                     )}
-                </PanelGroup>
             </Sheet>
         </>   
     );
