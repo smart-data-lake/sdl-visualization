@@ -11,11 +11,12 @@ def randomWord(type):
     return RandomWord().word(include_parts_of_speech=[type])
 
 # Function that lists the file at the given path
-def list_files(path):
+def list_files(path, extension):
     list = []
     for path, subdirs, files in os.walk(path):
         for name in files:
-            if (name.endswith(".json") and (not name.startswith("index"))):
+            print(name)
+            if (name.endswith(extension) and (not name.startswith("index"))):
                 list.append(os.path.join(path, name))
     return list
 
@@ -151,14 +152,15 @@ def formatDuration(seconds):
         return f"PT{ms//(1000*60*60)}H{(ms%(1000*60*60))//(1000*60)}M{(ms%(1000*60))/1000}S"
 
 def main():
+    script_dir = os.path.dirname(__file__)
+    
     print("\n\n=====================================")
     print("~~ Welcome to the index building tool ~~ \n")
-    print("The tool will compile all state files in \"/public/state\" and its subdirectories into \"/public/state/index.json\". If no statefiles are present, a default index is returned:")
+    print("The tool will compile all state files in \"/public/state\" and its subdirectories into \"/public/state/index.json\". If no statefiles are present, a default empty index is returned:")
     
-    script_dir = os.path.dirname(__file__)
     path = os.path.join(script_dir, f"../public/state")
     print(f"Retrieving summaries \"{path}\"...")
-    files = list_files(path)
+    files = list_files(path, ".json")
     print(f"{len(files)} files found.")
     print("Creating summaries...")
     db = create_dict(files)
@@ -166,23 +168,21 @@ def main():
     with open(f"{path}/index.json", "w") as outfile:
         json.dump(db, outfile, ensure_ascii=False, indent=4)
     print("Summaries written. \n \n")
-    """ if (not os.path.exists(os.path.join(script_dir, "output"))):
-            os.mkdir(os.path.join(script_dir, "output"))
-        
-    path = os.path.join(script_dir, f"output/db_{folder_name}.json")
-    with open(path, "w") as outfile:
-        json.dump(db, outfile)
-     """
-    print("\nEnter the name of the source directory containing your config files (the folder must be in \"/public/config\"). If none press enter:")
-    folder_name_config = str(input())
-    while (not os.path.exists(os.path.join(script_dir, f"../public/config/{folder_name_config}"))):
-        print("The directory does not exist. Please try again:")
-        folder_name_config = str(input())
 
-    if folder_name_config != "":
-        path = os.path.join(script_dir, f"../public/config/{folder_name_config}")
-        print(f"Generating index for \"{path}\"...")
-        print(os.listdir(path))
+    print("The tool will compile all config files in \"/public/config\" and its subdirectories into \"/public/config/index.json\". If no config files are present, a default empty index is returned:")
+    
+    path = os.path.join(script_dir, f"../public/config")
+    print(f"Retrieving configs \"{path}\"...")
+    files = list_files(path, ".conf")
+    print(f"{len(files)} files found.")
+    print("Creating index...")
+    db = [f.split("scripts/../public/config")[1] for f in files]
+    print("Writing summaries...")
+    with open(f"{path}/index.json", "w") as outfile:
+        json.dump(db, outfile, ensure_ascii=False, indent=4)
+    print("Summaries written. \n \n")
+    
+
     
     print("\n~~ Index building complete ~~")
     print("=====================================\n\n")
