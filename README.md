@@ -17,7 +17,7 @@ You need to have installed the following in your environment before begining:
 For testing the app in a development mode (i.e. locally) you will first have to **install the prerequisits**. We will then use the script `setup.sh` to take care the the installation of dependencies and the generation of index and summaries used by the app to navigate your config and statefiles.
 
 #### Files
-Place all your config and state files (no matter your file structure) into the directory `public/config` or `public/state`
+Place all your config and state files (no matter your file structure) into the directory `public/config` and `public/state`
 
 #### Auto-setup
 Make the script `setup.sh` executable by running the following in the project's directory:
