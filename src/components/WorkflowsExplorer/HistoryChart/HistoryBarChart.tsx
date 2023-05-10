@@ -11,7 +11,11 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
 	  const navigate = useNavigate();
 
     useEffect(() => {
-      setWidth(data.length * 45);
+      if (data.length < 5) {
+        setWidth(100);
+      } else {
+        setWidth(data.length * 45);
+      }
     }, [data]);
 
     const handleClick = (data, index) => {
@@ -23,8 +27,8 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
       <Sheet
         sx={{
           flex: 1,
-          display: 'flex',
-          width: '100vh',
+          width: '50vw',
+          display: 'flex', 
           justifyContent: 'flex-end',
         }}
       >
