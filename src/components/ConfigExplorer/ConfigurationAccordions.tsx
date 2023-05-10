@@ -178,7 +178,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
   function createAccordion(key: string, accordionName: string, jsxElement: JSX.Element){
     return(
-      <Accordion key={key} className='accordion' elevation={3} disableGutters={true}
+      <Accordion key={key} className='accordion' elevation={0} disableGutters={true} variant='outlined'
                   expanded={openAccordion === accordionName} 
                   onChange={handleChange(accordionName)}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>

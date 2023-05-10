@@ -157,7 +157,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                         <Panel 
                                             collapsible={false} 
                                             order={2}
-                                            defaultSize={30}
+                                            defaultSize={50}
                                             minSize={30}
                                         >
                                             <ContentDrawer attempt={attempt}/>
@@ -198,7 +198,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                         <Panel 
                                             collapsible={false} 
                                             order={2} 
-                                            defaultSize={30}
+                                            defaultSize={50}
                                             minSize={30}
                                         > 
                                             <ContentDrawer attempt={attempt}/>

@@ -15,13 +15,13 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
     const navigate = useNavigate();
 
     const handleClick = () => {
-        if (currURL.split('/').length === 2) {
-            navigate(currURL.split('/').slice(0, 2).join('/'))
-        } else if (currURL.split('/').length === 3) {
-            navigate(currURL.split('/').slice(0, 3  ).join('/'))
+        const routes = currURL.split('/');
+        if (routes.length === 3) {
+            const newUrl = routes.slice(0, 2  ).join('/')
+            navigate(newUrl)
         }
         else {
-            navigate(currURL.split('/').slice(0, 3).join('/'))
+            navigate(routes.slice(0, 3).join('/'))
         }
     }
 

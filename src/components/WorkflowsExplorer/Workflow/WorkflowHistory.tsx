@@ -11,6 +11,7 @@ import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/dat
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import WorkflowDetails from "./WorkflowDetails";
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import DatetimePicker from "../DatetimePicker/DatetimePicker";
 
 export type Indices = {
     toDisplayLeft: number, 
@@ -125,7 +126,8 @@ const WorkflowHistory = () => {
                                 borderRight: '1px solid lightgray',
                                 flex: 3
                             }}
-                        >
+                        >   
+                            <DatetimePicker />                
                             <ChartControl rows={barChartData} data={areaChartData} indices={indices}/>
                             <ToolBar 
                                 style={'horizontal'} 
