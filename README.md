@@ -6,7 +6,7 @@ SDL Visualizer can parse and resolve SDLB configuration files and state files in
 
 ## Install
 
-### Prerequisits
+### Prerequisites
 You need to have installed the following in your environment before begining:
 - NodeJS version 16 ([see](https://nodejs.dev/en/download/))
 - Yarn ([see](https://classic.yarnpkg.com/lang/en/docs/install/#windows-stable))
@@ -28,7 +28,10 @@ Then run the following to finnish setting up:
 ````
 $ ./setup.sh
 ````
-Finally to start the local development server run:
-````
-$ yarn start
-````
+The setup will install everything and start a local development server on `localhost:3000`
+
+### Use the local development setup
+#### New files
+Whenever you add new files (in `public/config` or in `public/state`) you will have to run the setup script again in order to aggregate the latest data.
+#### Day to day use
+Just run `yarn start` to spin the local development server
