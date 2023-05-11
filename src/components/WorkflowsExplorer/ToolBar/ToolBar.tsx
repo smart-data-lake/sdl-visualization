@@ -4,6 +4,7 @@ import { Row, SortType } from "../../../types";
 import { sortRows } from "../../../util/WorkflowsExplorer/row";
 import FilterMenu from "./FilterMenu";
 import SelectSort from "./SelectSort";
+import DatetimePicker from "../DatetimePicker/DatetimePicker";
 
 
 /**
@@ -21,9 +22,10 @@ const ToolBar = (
         searchColumn: string,
         style?: 'horizontal' | 'vertical', 
         filters?: {name: string, fun: (rows: any[]) => any}[],
-        sortEnabled?: boolean
+        sortEnabled?: boolean,
+        datetimePicker?: boolean
     }) => {
-    const { controlledRows, updateRows, searchColumn, filters, sortEnabled } = props;
+    const { controlledRows, updateRows, searchColumn, filters, sortEnabled, datetimePicker } = props;
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
     const [sort, setSort] = useState<SortType>('start time asc');
@@ -115,11 +117,12 @@ const ToolBar = (
             sx={{
                 display: 'flex',
                 flexDirection: 'row',
-                justifyContent: 'left',
+                justifyContent: 'flex-start',
                 alignItems: 'center',
-                mt: '2rem',
-                mb: '1rem',
-                gap: '1rem'
+                p: '1rem',
+                gap: '1rem',
+                borderRadius: '0.5rem',
+                border: '1px solid lightgray',
             }}
             >
                 <Input
@@ -131,6 +134,7 @@ const ToolBar = (
                         setValue(value)
                     }}
                 />
+                {datetimePicker && <DatetimePicker/>}
                 {sortEnabled && <SelectSort updateSort={updateSort}/>}
                 {filters && <FilterMenu filters={filters} updateList={updateList}/>}
         </Box>

@@ -126,17 +126,19 @@ const WorkflowHistory = () => {
                                 borderRight: '1px solid lightgray',
                                 flex: 3
                             }}
-                        >   
-                            <DatetimePicker />                
+                        >                   
                             <ChartControl rows={barChartData} data={areaChartData} indices={indices}/>
                             <ToolBar 
                                 style={'horizontal'} 
                                 controlledRows={data.runs} 
+                                sortEnabled={true}
                                 updateRows={updateRows}
                                 searchColumn={'runId'}
                                 filters={filters}
-                                />
+                                datetimePicker={true}
+                            />
                             <Sheet sx={{
+                                mt: '1rem',
                                     width: '100%',
                                     height: '57vh',
                                     overflowY: 'scroll', 
