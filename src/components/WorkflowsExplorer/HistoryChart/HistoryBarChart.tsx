@@ -6,7 +6,7 @@ import { Sheet } from '@mui/joy';
 
 const HistoryBarChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[]}) => {
     const { data } = props;
-	  const [width, setWidth] = useState(data.length * 45);
+	  const [width, setWidth] = useState(data.length * 30);
     const curr = useLocation();
 	  const navigate = useNavigate();
 
@@ -14,7 +14,7 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
       if (data.length < 5) {
         setWidth(100);
       } else {
-        setWidth(data.length * 45);
+        setWidth(data.length * 30);
       }
     }, [data]);
 
@@ -34,7 +34,7 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
       >
         <Sheet
           sx={{
-            overflowX: 'scroll',
+            overflowX: 'auto',
             overflowY: 'hidden',
           }}
         >
@@ -62,7 +62,7 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
                 fill="#20af2e"
                 animationDuration={100}
                 onClick={handleClick}
-                barSize={15}
+                barSize={10}
                 radius={[3, 3, 1, 1]}
                 >
                     {

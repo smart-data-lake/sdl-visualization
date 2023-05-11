@@ -14,10 +14,10 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DatetimePicker from "../DatetimePicker/DatetimePicker";
 
 export type Indices = {
-    toDisplayLeft: number, 
-    toDisplayRight?: number, 
-    rangeLeft: number, 
-    rangeRight?: number
+	toDisplayLeft: number, 
+	toDisplayRight?: number, 
+	rangeLeft: number, 
+	rangeRight?: number
 }
 
 /**
@@ -26,151 +26,193 @@ export type Indices = {
  * @returns JSX.Element
 */
 const WorkflowHistory = () => {
-    const links = [...useLocation().pathname.split('/')].splice(1);
-    const workflowName :  string= links[links.length - 1];
-    const { data, isLoading, isFetching } = useFetchWorkflow(workflowName);
-    const [rows, setRows] = useState<any[]>([]);
-    const [toDisplay, setToDisplay] = useState<any[]>(rows);
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(25);
-    const [count, setCount] = useState(0);
-    const [barChartData, setBarChartData] = useState<any[]>([])
-    const [areaChartData, setAreaChartData] = useState<any[]>([])
-    const [indices, setIndices] = useState<Indices>({toDisplayLeft: 0, toDisplayRight: rowsPerPage, rangeLeft: 0})
-    const [open, setOpen] = useState<Boolean>(true)
-    
-    useEffect(() => {
-        if (!isLoading) {
-            updateRows(data.runs);
-            setCount(rows.length)
-            setAreaChartData(generateChartData(data.runs))
-        }
-    }, [data])
-    
-    useEffect(() => {
-        setToDisplay(rows.slice(0, rowsPerPage));
-        setCount(rows.length)
-        setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})
-    }, [rows])
+	const links = [...useLocation().pathname.split('/')].splice(1);
+	const workflowName :  string= links[links.length - 1];
+	const { data, isLoading, isFetching } = useFetchWorkflow(workflowName);
+	const [rows, setRows] = useState<any[]>([]);
+	const [toDisplay, setToDisplay] = useState<any[]>(rows);
+	const [page, setPage] = useState(0);
+	const [rowsPerPage, setRowsPerPage] = useState(25);
+	const [count, setCount] = useState(0);
+	const [barChartData, setBarChartData] = useState<any[]>([])
+	const [areaChartData, setAreaChartData] = useState<any[]>([])
+	const [indices, setIndices] = useState<Indices>({toDisplayLeft: 0, toDisplayRight: rowsPerPage, rangeLeft: 0})
+	const [open, setOpen] = useState<Boolean>(true)
+	const [startDate, setStartDate] = useState<Date>(new Date(0))
+	const [endDate, setEndDate] = useState<Date>(new Date())
+	
+	useEffect(() => {
+		if (!isLoading) {
+			updateRows(data.runs);
+			setCount(rows.length)
+			setAreaChartData(generateChartData(data.runs))
+		}
+	}, [data])
+	
+	useEffect(() => {
+		setToDisplay(rows.slice(0, rowsPerPage));
+		setCount(rows.length)
+		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})
+	}, [rows])
 
-    useEffect(() => {
-        setBarChartData(generateChartData(toDisplay))
-    }, [toDisplay])
-    
-    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-        setToDisplay(rows.slice(0, parseInt(event.target.value, 10)));
-    }
-    
-    const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number,) => {
-        setPage(newPage);
-        setToDisplay(rows.slice(newPage*rowsPerPage, newPage*rowsPerPage + rowsPerPage));
-        setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})
-    }
+	useEffect(() => {
+		setBarChartData(generateChartData(toDisplay))
+	}, [toDisplay])
+	
+	const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+		setRowsPerPage(parseInt(event.target.value, 10));
+		setPage(0);
+		setToDisplay(rows.slice(0, parseInt(event.target.value, 10)));
+	}
+	
+	const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number,) => {
+		setPage(newPage);
+		setToDisplay(rows.slice(newPage*rowsPerPage, newPage*rowsPerPage + rowsPerPage));
+		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})
+	}
 
-    const updateRows = (rows: any[]) => {
-        setRows(rows.sort(cmp));
-    }
+	const updateRows = (rows: any[]) => {
+		setRows(rows.sort(cmp));
+	}
 
-    const cmp = (a: any, b: any) => {
-        return new Date(b.attemptStartTime).getTime() - new Date(a.attemptStartTime).getTime();
-    }
+	const cmp = (a: any, b: any) => {
+		return new Date(b.attemptStartTime).getTime() - new Date(a.attemptStartTime).getTime();
+	}
 
-    const generateChartData = (data: any) => {
-        const res : {
-            value: number,
-            status: string,
-            name: string,
-            runId: number,
-            attemptId: number
-        }[] = [];
-    
-        
-        data.forEach((run) => {
-            res.push(
-                {
-                    value: durationMicro(run.duration),
-                    status: run.status,
-                    name: getISOString(new Date(run.attemptStartTime)),
-                    runId: run.runId,
-                    attemptId: run.attemptId    
-                }
-            )
-        });
-        return res;
-    }
+	const handleDateRangeChange = (start: Date, end: Date) => {
+		setStartDate(start)
+		setEndDate(end)
+		const filteredRows = data.runs.filter((row) => {
+			const date = new Date(row.attemptStartTime)
+			return date >= start && date <= end
+		})
+		updateRows(filteredRows)
+	}
 
-    const filters = [
-        {name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row.status === 'SUCCEEDED')}},
-        {name: 'Running', fun: (rows: any) => {return rows.filter(row => row.status === 'RUNNING')}},
-        {name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row.status === 'CANCELLED')}}
-    ];
+	const generateChartData = (data: any) => {
+		const res : {
+			value: number,
+			status: string,
+			name: string,
+			runId: number,
+			attemptId: number
+		}[] = [];
+	
+		
+		data.forEach((run) => {
+			res.push(
+				{
+					value: durationMicro(run.duration),
+					status: run.status,
+					name: getISOString(new Date(run.attemptStartTime)),
+					runId: run.runId,
+					attemptId: run.attemptId    
+				}
+			)
+		});
+		return res;
+	}
 
-    if (isLoading || isFetching) return (<CircularProgress/>)
+	const filters = [
+		{name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row.status === 'SUCCEEDED')}},
+		{name: 'Running', fun: (rows: any) => {return rows.filter(row => row.status === 'RUNNING')}},
+		{name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row.status === 'CANCELLED')}}
+	];
 
-    return (
-        <>
-            <PageHeader title={workflowName} />             
-            <Sheet
-                sx={{
-                    display: 'flex',
-                    gap: '1rem',
-                    height: '85vh'
-                }}
-                >
-                        <Sheet
-                            sx={{
-                                py: '1rem',
-                                pr: '1rem',
-                                borderRight: '1px solid lightgray',
-                                flex: 3
-                            }}
-                        >                   
-                            <ChartControl rows={barChartData} data={areaChartData} indices={indices}/>
-                            <ToolBar 
-                                style={'horizontal'} 
-                                controlledRows={data.runs} 
-                                sortEnabled={true}
-                                updateRows={updateRows}
-                                searchColumn={'runId'}
-                                filters={filters}
-                                datetimePicker={true}
-                            />
-                            <Sheet sx={{
-                                mt: '1rem',
-                                    width: '100%',
-                                    height: '57vh',
-                                    overflowY: 'scroll', 
-                                }}
-                            >
-                                <RunsHistoryTable data={toDisplay}/>
-                                <TablePagination
-                                    component="div"
-                                    count={count}
-                                    page={page}
-                                    onPageChange={handleChangePage}
-                                    rowsPerPage={rowsPerPage}
-                                    onRowsPerPageChange={handleChangeRowsPerPage}
-                                    /> 
-                            </Sheet>
-                        </Sheet>
-                    {open && (
-                                   
-                        <Sheet
-                            sx={{
-                                flex: 1,
-                                height: '10%',
-                                pt: '2rem',
-                                pl: '2rem',
-                            }}
-                        >
-                            <WorkflowDetails data={data}/>
-                        </Sheet>
-                    )}
-            </Sheet>
-        </>   
-    );
+	if (isLoading || isFetching) return (<CircularProgress/>)
+
+	return (
+		<>
+			<PageHeader title={workflowName} />             
+				<Sheet
+					sx={{
+						display: 'flex',
+						gap: '1rem',
+						height: '85vh'
+					}}
+				>
+					<Sheet
+						sx={{
+							py: '1rem',
+							pr: '1rem',
+							borderRight: '1px solid lightgray',
+							flex: 4,
+							overflowY: 'scroll', 
+						}}
+					>                   
+						<ChartControl rows={barChartData} data={areaChartData} indices={indices}/>
+						<Sheet
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+						}}
+						>
+							<Sheet sx={{flex: 2}}>
+							<ToolBar 
+								style={'horizontal'} 
+								controlledRows={data.runs} 
+								sortEnabled={true}
+								updateRows={updateRows}
+								searchColumn={'runId'}
+								filters={filters}
+								datetimePicker={handleDateRangeChange}
+								/>
+							</Sheet>
+							<TablePagination
+								rowsPerPageOptions={[10, 25, 50, 100]}
+								rowsPerPage={rowsPerPage}
+								page={page}
+								SelectProps={{
+								  inputProps: {
+									'aria-label': 'rows per page',
+								  },
+								  native: true,
+								}}
+								onPageChange={handleChangePage}
+								onRowsPerPageChange={handleChangeRowsPerPage}
+								component="div"
+								count={count}
+							/> 
+						</Sheet>
+						<Sheet sx={{
+							mt: '1rem',
+							width: '100%',
+							height: '57vh',
+							}}
+						>
+							<RunsHistoryTable data={toDisplay}/>
+							<TablePagination
+								rowsPerPageOptions={[10, 25, 50, 100]}
+								rowsPerPage={rowsPerPage}
+								page={page}
+								SelectProps={{
+								  inputProps: {
+									'aria-label': 'rows per page',
+								  },
+								  native: true,
+								}}
+								onPageChange={handleChangePage}
+								onRowsPerPageChange={handleChangeRowsPerPage}
+								component="div"
+								count={count}
+							/> 
+						</Sheet>
+						</Sheet>
+					{open && (
+						
+						<Sheet
+						sx={{
+								flex: 1,
+								pt: '2rem',
+								pl: '1rem',
+							}}
+						>
+							<WorkflowDetails data={data}/>
+						</Sheet>
+					)}
+			</Sheet>
+		</>   
+	);
 }
  
 export default WorkflowHistory;

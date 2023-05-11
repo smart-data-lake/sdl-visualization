@@ -20,9 +20,7 @@ const SelectSort = (props: {updateSort: (sort: SortType) => void}) => {
 			defaultValue={'start time asc'}
 	  	  	placeholder="Sort by"
 			onChange={(_, v) => updateSort(v as SortType)}
-			sx={{
-			  minWidth: 180,
-			}}
+			sx={{minWidth: '9rem'}}
 	  	>
 	  	  	<Option value="start time asc">
 				<ListItemDecorator>

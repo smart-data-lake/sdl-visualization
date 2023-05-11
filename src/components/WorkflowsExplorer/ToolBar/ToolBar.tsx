@@ -23,9 +23,16 @@ const ToolBar = (
         style?: 'horizontal' | 'vertical', 
         filters?: {name: string, fun: (rows: any[]) => any}[],
         sortEnabled?: boolean,
-        datetimePicker?: boolean
+        datetimePicker?: (start: Date, end: Date) => void,
     }) => {
-    const { controlledRows, updateRows, searchColumn, filters, sortEnabled, datetimePicker } = props;
+    const { 
+        controlledRows, 
+        updateRows, 
+        searchColumn, 
+        filters, 
+        sortEnabled, 
+        datetimePicker 
+    } = props;
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
     const [sort, setSort] = useState<SortType>('start time asc');
@@ -119,22 +126,19 @@ const ToolBar = (
                 flexDirection: 'row',
                 justifyContent: 'flex-start',
                 alignItems: 'center',
-                p: '1rem',
                 gap: '1rem',
-                borderRadius: '0.5rem',
-                border: '1px solid lightgray',
             }}
             >
                 <Input
                     placeholder="Search"
                     size="sm"
-                    sx={{ mb: 0, fontSize: 'var(--joy-fontSize-sm)' }}
+                    sx={{fontSize: 'var(--joy-fontSize-sm)' }}
                     onChange={(event) => {
                         const { value } = event.target;
                         setValue(value)
                     }}
                 />
-                {datetimePicker && <DatetimePicker/>}
+                {datetimePicker && <DatetimePicker datetimePicker={datetimePicker}/>}
                 {sortEnabled && <SelectSort updateSort={updateSort}/>}
                 {filters && <FilterMenu filters={filters} updateList={updateList}/>}
         </Box>

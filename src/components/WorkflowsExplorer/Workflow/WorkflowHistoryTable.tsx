@@ -20,8 +20,7 @@ const WorkflowHistoryTable = (props : {data: any[]}) => {
             <Table 
                 size='sm' 
                 hoverRow 
-                color='neutral' 
-                stickyHeader
+                color='neutral'
              >
                 <thead>
                     <tr>

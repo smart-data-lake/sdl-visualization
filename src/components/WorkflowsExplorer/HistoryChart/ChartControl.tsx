@@ -1,4 +1,3 @@
-import { Box } from "@mui/material";
 import HistoryLineChart from "./HistoryLineChart";
 import HistoryBarChart from "./HistoryBarChart";
 import { Indices } from "../Workflow/WorkflowHistory";
@@ -24,7 +23,7 @@ const ChartControl = (props: {rows: any, data: any, indices: Indices }) => {
                     sx={{display: 'flex', flexDirection: 'row', gap: '1rem', alignItems: 'center', pb: '1rem'}}
                 >
                 <Typography level='h5'>Runs</Typography>
-                <Tooltip variant="solid" title="Number of runs per status">
+                <Tooltip variant="solid" placement="bottom-start" title="This chart displays the runs in the current page. You can jump to a detailed run view by clicking on the corresponding bar">
                     <HelpOutlineIcon sx={{scale: '70%'}}/>
                 </Tooltip>
                 </Sheet>
@@ -41,7 +40,7 @@ const ChartControl = (props: {rows: any, data: any, indices: Indices }) => {
                     sx={{display: 'flex', flexDirection: 'row', gap: '0.5rem', alignItems: 'center', pb: '1rem'}}
                 >
                     <Typography level='h5'>Overview</Typography>
-                    <Tooltip variant="solid" title="This charts displays a history of all runs of this workflow. You can zoom on specific part of it using the brush at its bottom">
+                    <Tooltip variant="solid" placement='bottom-end' title="This charts displays a history of all runs of this workflow. You can zoom on specific part of it using the brush at its bottom">
                         <HelpOutlineIcon sx={{scale: '70%'}}/>
                     </Tooltip>
                 </Sheet>
