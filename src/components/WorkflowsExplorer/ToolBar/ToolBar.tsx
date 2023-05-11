@@ -138,9 +138,9 @@ const ToolBar = (
                         setValue(value)
                     }}
                 />
-                {datetimePicker && <DatetimePicker datetimePicker={datetimePicker}/>}
                 {sortEnabled && <SelectSort updateSort={updateSort}/>}
                 {filters && <FilterMenu filters={filters} updateList={updateList}/>}
+                {datetimePicker && <DatetimePicker datetimePicker={datetimePicker}/>}
         </Box>
     )
 }

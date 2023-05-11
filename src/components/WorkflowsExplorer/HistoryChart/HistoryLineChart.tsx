@@ -6,11 +6,10 @@ const HistoryLineChart = (props: {data : {value: number, status: string, name: s
     const { data, indices } = props;
 
     return (
-            <ResponsiveContainer height={160}>
+            <ResponsiveContainer height={140}>
               <LineChart
                 data={data}
                 >
-                  <Brush height={20}/>
                 <Tooltip
                   position={{ y: 10 }}
                   animationDuration={100} 

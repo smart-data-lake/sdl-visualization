@@ -1,17 +1,14 @@
 import { useLocation } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
 import RunsHistoryTable from "./WorkflowHistoryTable";
-import { Box, CircularProgress, Sheet } from "@mui/joy";
+import { CircularProgress, Sheet } from "@mui/joy";
 import ToolBar from "../ToolBar/ToolBar";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import { useEffect, useState } from "react";
 import { TablePagination } from "@mui/material";
 import ChartControl from "../HistoryChart/ChartControl";
 import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import WorkflowDetails from "./WorkflowDetails";
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import DatetimePicker from "../DatetimePicker/DatetimePicker";
 
 export type Indices = {
 	toDisplayLeft: number, 
@@ -35,7 +32,7 @@ const WorkflowHistory = () => {
 	const [rowsPerPage, setRowsPerPage] = useState(25);
 	const [count, setCount] = useState(0);
 	const [barChartData, setBarChartData] = useState<any[]>([])
-	const [areaChartData, setAreaChartData] = useState<any[]>([])
+	const [lineChartData, setLineChartData] = useState<any[]>([])
 	const [indices, setIndices] = useState<Indices>({toDisplayLeft: 0, toDisplayRight: rowsPerPage, rangeLeft: 0})
 	const [open, setOpen] = useState<Boolean>(true)
 	const [startDate, setStartDate] = useState<Date>(new Date(0))
@@ -45,13 +42,14 @@ const WorkflowHistory = () => {
 		if (!isLoading) {
 			updateRows(data.runs);
 			setCount(rows.length)
-			setAreaChartData(generateChartData(data.runs))
+			setLineChartData(generateChartData(data.runs))
 		}
 	}, [data])
 	
 	useEffect(() => {
 		setToDisplay(rows.slice(0, rowsPerPage));
 		setCount(rows.length)
+		setLineChartData(generateChartData(rows))
 		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})
 	}, [rows])
 
@@ -133,14 +131,14 @@ const WorkflowHistory = () => {
 				>
 					<Sheet
 						sx={{
-							py: '1rem',
+							pt: '1rem',
 							pr: '1rem',
 							borderRight: '1px solid lightgray',
-							flex: 4,
+							flex: 3,
 							overflowY: 'scroll', 
 						}}
 					>                   
-						<ChartControl rows={barChartData} data={areaChartData} indices={indices}/>
+						<ChartControl rows={barChartData} data={lineChartData} indices={indices}/>
 						<Sheet
 						sx={{
 							display: 'flex',
@@ -158,38 +156,30 @@ const WorkflowHistory = () => {
 								datetimePicker={handleDateRangeChange}
 								/>
 							</Sheet>
-							<TablePagination
-								rowsPerPageOptions={[10, 25, 50, 100]}
-								rowsPerPage={rowsPerPage}
-								page={page}
-								SelectProps={{
-								  inputProps: {
-									'aria-label': 'rows per page',
-								  },
-								  native: true,
-								}}
-								onPageChange={handleChangePage}
-								onRowsPerPageChange={handleChangeRowsPerPage}
-								component="div"
-								count={count}
-							/> 
 						</Sheet>
 						<Sheet sx={{
 							mt: '1rem',
 							width: '100%',
-							height: '57vh',
 							}}
 						>
 							<RunsHistoryTable data={toDisplay}/>
+						</Sheet>
+						<Sheet
+							sx={{
+								position: 'sticky',
+								bottom: 0,
+							}}
+						>
 							<TablePagination
+								
 								rowsPerPageOptions={[10, 25, 50, 100]}
 								rowsPerPage={rowsPerPage}
 								page={page}
 								SelectProps={{
-								  inputProps: {
+								inputProps: {
 									'aria-label': 'rows per page',
-								  },
-								  native: true,
+								},
+								native: true,
 								}}
 								onPageChange={handleChangePage}
 								onRowsPerPageChange={handleChangeRowsPerPage}
@@ -197,20 +187,21 @@ const WorkflowHistory = () => {
 								count={count}
 							/> 
 						</Sheet>
-						</Sheet>
+					</Sheet>
 					{open && (
 						
 						<Sheet
 						sx={{
-								flex: 1,
-								pt: '2rem',
-								pl: '1rem',
-							}}
+							flex: 1,
+							pt: '2rem',
+							pl: '1rem',
+						}}
 						>
 							<WorkflowDetails data={data}/>
 						</Sheet>
 					)}
 			</Sheet>
+						
 		</>   
 	);
 }

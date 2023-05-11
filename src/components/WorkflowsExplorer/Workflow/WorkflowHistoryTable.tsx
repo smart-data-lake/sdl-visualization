@@ -1,9 +1,5 @@
 import { Box, Table } from "@mui/joy";
-import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import RunsRow from "./RunsRow";
-import { CircularProgress } from "@mui/joy";
-import { TablePagination } from "@mui/material";
-import { useState } from "react";
     
 /**
  * The WorkflowHistoryTable component is the table that displays the history of a workflow.
@@ -25,10 +21,10 @@ const WorkflowHistoryTable = (props : {data: any[]}) => {
                 <thead>
                     <tr>
                         <th>Run ID</th>
-                        <th>Attempt ID</th>
-                        <th>Duration</th>
                         <th>Run Start Time</th>
                         <th>Status</th>
+                        <th>Attempt ID</th>
+                        <th>Duration</th>
                     </tr>
                 </thead>
                 <tbody>

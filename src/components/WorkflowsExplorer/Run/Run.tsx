@@ -3,7 +3,7 @@ import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TabNav from "./Tabs";
 import { useLocation } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
-import { CircularProgress } from "@mui/material";
+import { CircularProgress } from "@mui/joy";
 
 /**
     The Run component displays information about a specific run of a workflow.

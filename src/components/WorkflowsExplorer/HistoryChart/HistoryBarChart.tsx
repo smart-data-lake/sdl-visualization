@@ -24,25 +24,10 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
     };
 
     return (
-      <Sheet
-        sx={{
-          flex: 1,
-          width: '50vw',
-          display: 'flex', 
-          justifyContent: 'flex-end',
-        }}
-      >
-        <Sheet
-          sx={{
-            overflowX: 'auto',
-            overflowY: 'hidden',
-          }}
-        >
+     
 
-        <ResponsiveContainer height={140} width={width}>
-          <BarChart
-            data={data}
-            >
+        <ResponsiveContainer height={140}>
+          <BarChart data={data}>
             <Tooltip 
                 cursor={{fill: 'lightgray', fillOpacity: 0.5, alignmentBaseline: 'middle'}}
                 position={{ y: 0 }}
@@ -62,8 +47,8 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
                 fill="#20af2e"
                 animationDuration={100}
                 onClick={handleClick}
-                barSize={10}
-                radius={[3, 3, 1, 1]}
+                barSize={data.length < 26 ? 15 : undefined}
+                radius={[2, 2, 0, 0]}
                 >
                     {
                       data.map((entry, index) => {
@@ -76,8 +61,6 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-        </Sheet>
-      </Sheet>
     );
     }
  

@@ -11,11 +11,13 @@ const ChartControl = (props: {rows: any, data: any, indices: Indices }) => {
         <Sheet
             sx={{
                 display: 'flex',
+                alignItems: 'center',
                 py: '1rem',
             }}
         >
             <Sheet
                 sx={{
+                    flex: 4,
                     px: '1rem',
                 }}
             >
@@ -31,7 +33,7 @@ const ChartControl = (props: {rows: any, data: any, indices: Indices }) => {
             </Sheet>
             <Sheet
                 sx={{
-                    flex: 1,
+                    flex: 2,
                     borderLeft: '1px solid lightgray',
                     px: '1rem',
                 }}

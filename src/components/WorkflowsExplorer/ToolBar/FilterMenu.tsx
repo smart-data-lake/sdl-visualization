@@ -1,8 +1,11 @@
-import { Box, Checkbox, IconButton, Menu, MenuItem, Sheet, Stack, Switch, Typography } from "@mui/joy";
+import { Box, Checkbox, IconButton, Menu, MenuItem, Sheet, Stack, Radio, Typography, Button } from "@mui/joy";
 import React, { useEffect, useState } from "react";
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { Row } from "../../../types";
-
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import HighlightOffIcon from '@mui/icons-material/HighlightOff';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
+import { get } from "http";
 /**
  * The FilterMenu component is a subcomponent of the ToolBar component that implements the filter functionality.
  * It updates the list of filters that are passed to it based on the user's input.
@@ -30,6 +33,14 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
     const handleClose = () => {
       setAnchorEl(null);
     };
+
+    const getButtonColor = (name: string) => {
+        return name === 'Succeeded' ? 'success' : (name === 'Failed' || name === 'Cancelled' ? 'danger' : 'warning')
+    }
+
+    const getIcon = (name: string) => {
+        return name === 'Succeeded' ? <CheckCircleOutlineIcon sx={{ scale: '80%', ml: '0.5rem' }} /> : (name === 'Failed' || name === 'Cancelled' ? <HighlightOffIcon sx={{ scale: '80%', ml: '0.5rem' }} /> : <AutorenewIcon sx={{ scale: '80%', ml: '0.5rem' }} />)
+    }
     
     if (style === 'vertical') return (
         <Stack>
@@ -67,10 +78,11 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
 
     return (
       <div>
-          <Stack direction="row" spacing={2}>
+          <Sheet sx={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
+            Status:  
             {filters && filters.map((filter, index) => (
                 <>
-                    <Sheet
+                    {/* <Sheet
                         color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'warning')}
                         variant="outlined"
                         sx={{
@@ -85,7 +97,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
                         <Checkbox 
                             color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'warning')}
                             size="sm"
-                            variant="soft"
+                            variant="solid"
                             checked={list[index]}
                             onChange={() => {
                                 setList(list.map((item, i) => i === index ? !item : item));
@@ -93,14 +105,38 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
                             sx={{
                                 mr: '0.5rem'
                             }}
-                            />
-                        <Typography>
-                            {filter.name}
-                        </Typography>
-                    </Sheet>
+                            /> */}
+                            <Sheet
+                                color={getButtonColor(filter.name)}
+                                variant="outlined"
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    py: '0.25rem',
+                                    px: '0.5rem',
+                                    borderRadius: '0.5rem',
+                                }}
+                            >
+                                    <Checkbox 
+                                        color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'warning')}
+                                        size="sm"
+                                        variant="outlined"
+                                        checked={list[index]}
+                                        onChange={() => {
+                                            setList(list.map((item, i) => i === index ? !item : item));
+                                        }} 
+                                        sx={{
+                                            mr: '0.5rem'
+                                        }}
+                                    /> 
+                                    {filter.name}
+                                    {getIcon(filter.name)}
+                            </Sheet>
+                   {/*  </Sheet> */}
                     </>
             ))}
-            </Stack>
+            </Sheet>
       </div>
     );
   }
