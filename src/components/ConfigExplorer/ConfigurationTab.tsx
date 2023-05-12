@@ -34,7 +34,8 @@ function getInputOutputIds(action: any): [string[], string[]]{
 }
 
 function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
-  return <TableContainer component={Paper} elevation={3}>
+  return ( 
+  <TableContainer component={Paper} elevation={0}>
   <Table size="small">
     <TableHead>
       <TableRow>
@@ -53,7 +54,8 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
       </TableRow>
     </TableBody>
   </Table>        
-  </TableContainer>;
+  </TableContainer>
+  );
 }
 
 function createSearchChip(attr: string, value: string, icon: JSX.Element, color: "primary" | "default" | "success" | "secondary" | "error" | "info" | "warning" | undefined = "primary") {

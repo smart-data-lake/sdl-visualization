@@ -6,7 +6,7 @@ export default function MarkdownComponent(props: {markdown: string}){
   return (
     <Sheet
       sx={{
-        width: '44rem'
+        width: '100%'
       }}
     >
       <ReactMarkdown className='markdown-body' children={props.markdown} remarkPlugins={[remarkGfm]} />

@@ -46,8 +46,9 @@ export default function DataDisplayView(props: displayProps) {
 		<Sheet
 			sx={{
 				flex: 3,
-				overflowY: 'scroll',
-				p: '1rem'		
+				overflow: 'auto',
+				py: '1rem',
+				pr: '1rem'		
 			}}
 		>
 			<TabContext value={selectedTyp}>

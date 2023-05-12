@@ -1,24 +1,20 @@
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, Line, LineChart, ReferenceArea, Brush } from 'recharts';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
 import { Indices } from '../Workflow/WorkflowHistory';
+import { CustomTooltip } from './ChartControl';
 
 const HistoryLineChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[], indices: Indices}) => {
     const { data, indices } = props;
 
     return (
-            <ResponsiveContainer height={160}>
+            <ResponsiveContainer height={140}>
               <LineChart
                 data={data}
                 >
-                  <Brush height={20}/>
                 <Tooltip
+                  animationDuration={100}
                   position={{ y: 10 }}
-                  animationDuration={100} 
-                  labelFormatter={(value: string) => {
-                      if (data.length > parseInt(value)) return `Run ${data[value].runId} attempt ${data[value].attemptId}`
-                    }
-                  }
-                  formatter={(value: number, name: string) => {return [formatDuration(value) as any, 'Duration']}}
+                  content={<CustomTooltip active={undefined} payload={undefined} label={undefined} />}
                 />
                 <Line 
                     type="monotone" 

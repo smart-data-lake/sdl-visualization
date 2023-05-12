@@ -5,7 +5,6 @@ import ToolBar from "../ToolBar/ToolBar";
 import { Box, Sheet } from "@mui/joy";
 import useFetchWorkflows from "../../../hooks/useFetchData";
 import { TablePagination } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
 import { durationMicro } from "../../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 import { useNavigate } from "react-router-dom";
