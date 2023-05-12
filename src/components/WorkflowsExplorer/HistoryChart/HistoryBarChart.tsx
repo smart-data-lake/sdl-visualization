@@ -43,7 +43,6 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
               //formatter={(value: number, name: string) => {return [formatDuration(value) as any, 'Duration']}}
               />
             <YAxis width={77} tickFormatter={(value) => formatDuration(value)}/>
-              
             <Bar 
                 dataKey="value" 
                 stackId="a" 

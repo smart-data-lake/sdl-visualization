@@ -4,12 +4,13 @@ import EqualizerIcon from '@mui/icons-material/Equalizer';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import { getIcon } from "./RunsRow";
 import { getISOString } from "../../../util/WorkflowsExplorer/date";
+import HistoryPieChart from "../HistoryChart/HistoryPieChart";
 
 
 
 
-const WorkflowDetails = (props : {data: any}) => {
-    const { data } = props;
+const WorkflowDetails = (props : {data: any, pieChartData: any}) => {
+    const { data, pieChartData } = props;
     
     console.log(data.runs[0])
 
@@ -74,18 +75,21 @@ const WorkflowDetails = (props : {data: any}) => {
                     </Sheet> 
                     {getList(listWorkflowDetails)}
                 </Sheet>
-            <Sheet
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'flex-start',
-                    alignItems: 'center',
-                    gap: '1rem'
-                }}
-                >
-                <EqualizerIcon />
-                <Typography level="h4">Runs overview</Typography>
-            </Sheet>
-            <Sheet
+                <Sheet>
+                    <Sheet
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'flex-start',
+                            alignItems: 'center',
+                            gap: '1rem'
+                        }}
+                        >
+                        <EqualizerIcon />
+                        <Typography level="h4">Runs overview</Typography>
+                    </Sheet>
+                    <HistoryPieChart data={pieChartData}/>
+                </Sheet>
+            {/* <Sheet
                 sx={{
                     display: 'flex',
                     justifyContent: 'flex-start',
@@ -95,7 +99,7 @@ const WorkflowDetails = (props : {data: any}) => {
                 >
                 <TuneRoundedIcon />
                 <Typography level="h4">Configuration</Typography>
-            </Sheet>
+            </Sheet> */}
 
             {/* <Typography level="body1">{data[0].name}</Typography> */}
             </Sheet>

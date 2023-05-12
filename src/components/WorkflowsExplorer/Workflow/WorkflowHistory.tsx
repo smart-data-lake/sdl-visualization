@@ -42,12 +42,14 @@ const WorkflowHistory = () => {
 	const [open, setOpen] = useState<Boolean>(true)
 	const [startDate, setStartDate] = useState<Date>(new Date(0))
 	const [endDate, setEndDate] = useState<Date>(new Date())
+	const [pieChartData, setPieChartData] = useState<any[]>([])
 	
 	useEffect(() => {
 		if (!isLoading) {
 			updateRows(data.runs);
 			setCount(rows.length)
 			setLineChartData(generateChartData(data.runs))
+			setPieChartData(lineChartData)
 		}
 	}, [data])
 	
@@ -142,7 +144,7 @@ const WorkflowHistory = () => {
 							overflowY: 'scroll', 
 						}}
 					>                   
-						<ChartControl rows={barChartData} data={lineChartData} indices={indices}/>
+						<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
 						<ToolBar 
 							style={'horizontal'} 
 							controlledRows={data.runs} 
@@ -198,7 +200,7 @@ const WorkflowHistory = () => {
 							borderLeft: '1px solid lightgray',
 						}}
 						>
-							<WorkflowDetails data={data}/>
+							<WorkflowDetails data={data} pieChartData={pieChartData}/>
 						</Sheet>
 							</>
 					)}

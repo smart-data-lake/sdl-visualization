@@ -1,5 +1,6 @@
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, Line, LineChart, ReferenceArea, Brush } from 'recharts';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
+import { scaleLog } from 'd3-scale';
 import { Indices } from '../Workflow/WorkflowHistory';
 import { CustomTooltip } from './ChartControl';
 
@@ -11,6 +12,7 @@ const HistoryLineChart = (props: {data : {value: number, status: string, name: s
               <LineChart
                 data={data}
                 >
+                <YAxis tickFormatter={(value) => formatDuration(value)}/>
                 <Tooltip
                   animationDuration={100}
                   position={{ y: 10 }}
