@@ -1,6 +1,6 @@
 {
   "name": "sdlb_configuration_visualizer",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.9.3",
@@ -20,6 +20,7 @@
     "d3-state-visualizer": "^1.6.0",
     "dagre": "^0.8.5",
     "github-markdown-css": "^5.1.0",
+    "html-to-image": "^1.11.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-flow-renderer": "^10.3.10",
