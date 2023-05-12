@@ -9,6 +9,11 @@ import { TablePagination } from "@mui/material";
 import ChartControl from "../HistoryChart/ChartControl";
 import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
 import WorkflowDetails from "./WorkflowDetails";
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import IconButton from '@mui/joy/IconButton';
+import { ResponsiveContainer } from "recharts";
+
 
 export type Indices = {
 	toDisplayLeft: number, 
@@ -125,7 +130,6 @@ const WorkflowHistory = () => {
 				<Sheet
 					sx={{
 						display: 'flex',
-						gap: '1rem',
 						height: '85vh'
 					}}
 				>
@@ -133,30 +137,21 @@ const WorkflowHistory = () => {
 						sx={{
 							pt: '1rem',
 							pr: '1rem',
-							borderRight: '1px solid lightgray',
 							flex: 3,
+							scrollbarWidth: 'none',
 							overflowY: 'scroll', 
 						}}
 					>                   
 						<ChartControl rows={barChartData} data={lineChartData} indices={indices}/>
-						<Sheet
-						sx={{
-							display: 'flex',
-							alignItems: 'center',
-						}}
-						>
-							<Sheet sx={{flex: 2}}>
-							<ToolBar 
-								style={'horizontal'} 
-								controlledRows={data.runs} 
-								sortEnabled={true}
-								updateRows={updateRows}
-								searchColumn={'runId'}
-								filters={filters}
-								datetimePicker={handleDateRangeChange}
-								/>
-							</Sheet>
-						</Sheet>
+						<ToolBar 
+							style={'horizontal'} 
+							controlledRows={data.runs} 
+							sortEnabled={true}
+							updateRows={updateRows}
+							searchColumn={'runId'}
+							filters={filters}
+							datetimePicker={handleDateRangeChange}
+							/>
 						<Sheet sx={{
 							mt: '1rem',
 							width: '100%',
@@ -189,16 +184,30 @@ const WorkflowHistory = () => {
 						</Sheet>
 					</Sheet>
 					{open && (
-						
+						<>
+						<Sheet>
+						<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+							<ChevronRightIcon />
+						</IconButton>
+						</Sheet>
 						<Sheet
 						sx={{
 							flex: 1,
 							pt: '2rem',
 							pl: '1rem',
+							borderLeft: '1px solid lightgray',
 						}}
 						>
 							<WorkflowDetails data={data}/>
 						</Sheet>
+							</>
+					)}
+					{!open && (
+						<Sheet>
+							<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+								<ChevronLeftIcon />
+							</IconButton>
+						</Sheet>	
 					)}
 			</Sheet>
 						

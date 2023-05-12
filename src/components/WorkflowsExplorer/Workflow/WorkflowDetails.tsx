@@ -1,11 +1,53 @@
-import { Sheet, Typography } from "@mui/joy";
+import { List, ListItem, Sheet, Stack, Typography } from "@mui/joy";
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
+import { getIcon } from "./RunsRow";
+import { getISOString } from "../../../util/WorkflowsExplorer/date";
+
+
+
 
 const WorkflowDetails = (props : {data: any}) => {
     const { data } = props;
+    
+    console.log(data.runs[0])
 
+    const listWorkflowDetails = [
+        {name: 'Name', value: data.name.toString()}, 
+        {name: 'Number of runs', value: data.runs.length.toString()},
+        {name: 'Latest run' , value: <><div style={{display: 'flex', alignItems: 'center'}}><span>{getISOString(new Date(data.runs[0].runStartTime.toString()))} </span><span>{ getIcon(data.runs[0].status.toString())}</span></div></>},
+        {name: 'Oldest run execution', value: <><div style={{display: 'flex', alignItems: 'center'}}><span>{getISOString(new Date(data.runs[data.runs.length-1].runStartTime.toString()))} </span><span>{ getIcon(data.runs[0].status.toString())}</span></div></>},
+    
+    ]
+    
+    const getList = (list: {name: string, value: string}[]) => {    
+        return (
+            <Sheet
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'flex-start',
+                }}
+            >
+                <List>
+                {list.map((item) => {
+                    return (<>
+                            <ListItem>
+                                <Typography level="body1">{item.name}</Typography>
+                            </ListItem>
+                        </>)})}
+                </List>
+                <List>
+                {list.map((item) => {
+                    return (<>
+                            <ListItem>
+                                <Typography level="body2">{item.value}</Typography>
+                            </ListItem>
+                        </>)})}
+                </List>
+            </Sheet>
+        )
+    }
 
     return ( 
         <>
@@ -17,19 +59,21 @@ const WorkflowDetails = (props : {data: any}) => {
                     alignItems: 'stretch',
                     gap: '4rem'
                 }}
-            >
-
-            <Sheet
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'flex-start',
-                    alignItems: 'center',
-                    gap: '1rem'
-                }}
                 >
-                <ErrorOutlineIcon />
-                <Typography level="h4">Workflow details</Typography>
-            </Sheet>
+                <Sheet>
+                    <Sheet
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'flex-start',
+                            alignItems: 'center',
+                            gap: '1rem'
+                        }}
+                        >
+                        <ErrorOutlineIcon />
+                        <Typography level="h4">Workflow details</Typography>
+                    </Sheet> 
+                    {getList(listWorkflowDetails)}
+                </Sheet>
             <Sheet
                 sx={{
                     display: 'flex',

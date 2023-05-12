@@ -6,11 +6,17 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 
+
+export const getIcon = (name: string) => {
+    return name === 'SUCCEEDED' ? <CheckCircleOutlineIcon color='success' sx={{ scale: '80%', ml: '0.5rem' }} /> : (name === 'CANCELLED' ? <HighlightOffIcon color='error' sx={{ scale: '80%', ml: '0.5rem' }} /> : <AutorenewIcon color='warning' sx={{ scale: '80%', ml: '0.5rem' }} />)
+}
+
 /**
  * The RunsRow component is a row in the WorkflowHistoryTable component.
  * @param props.run - {id: number, run: StateFile}
  * @returns JSX.Element
  */
+
 const RunsRow = (props : {run: any}) => {
     const { run } = props
     const currURL = useLocation().pathname;
@@ -18,11 +24,7 @@ const RunsRow = (props : {run: any}) => {
 
     const handleClick = () => {
         navigate(currURL + '/' + run.runId + '/' + run.attemptId + '/timeline')
-    }
-
-    const getIcon = (name: string) => {
-        return name === 'SUCCEEDED' ? <CheckCircleOutlineIcon color='success' sx={{ scale: '80%', ml: '0.5rem' }} /> : (name === 'CANCELLED' ? <HighlightOffIcon color='error' sx={{ scale: '80%', ml: '0.5rem' }} /> : <AutorenewIcon color='warning' sx={{ scale: '80%', ml: '0.5rem' }} />)
-    }
+    }  
 
     const getChip = (name: string) => {
         if (name === 'SUCCEEDED') {
@@ -37,8 +39,8 @@ const RunsRow = (props : {run: any}) => {
     return ( 
         <tr  onClick={() => handleClick()}>
             <td>{run.runId}</td>
-            <td>{getISOString(new Date(run.attemptStartTime))}</td>
             <td>{getIcon(run.status)}</td>
+            <td>{getISOString(new Date(run.attemptStartTime))}</td>
             <td>{run.attemptId}</td>
             <td>{formatDuration(durationMicro(run.duration))}</td>
         </tr>

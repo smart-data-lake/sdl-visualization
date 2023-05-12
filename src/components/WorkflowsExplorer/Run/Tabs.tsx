@@ -3,7 +3,7 @@ import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab, { tabClasses } from '@mui/joy/Tab';
 import TabPanel from '@mui/joy/TabPanel';
-import { Box, Typography } from "@mui/joy";
+import { Box, Sheet, Typography } from "@mui/joy";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TableOfActions from "./ActionsTable";
 import { ThemeProvider } from 'styled-components';
@@ -86,14 +86,20 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     return ( 
         <>
             {/* Renders the ToolBar component, which contains a set of buttons that allow the user to filter the rows displayed in the actions table */}
-            <ToolBar 
-                controlledRows={defaultRows} 
-                updateRows={updateRows} 
-                filters={filters}
-                sortEnabled={true}
-                searchColumn={"step_name"}
-                style="horizontal"
-            />
+            <Sheet
+                sx={{
+                    mt: '1rem',
+                }}
+            >
+                <ToolBar 
+                    controlledRows={defaultRows} 
+                    updateRows={updateRows} 
+                    filters={filters}
+                    sortEnabled={true}
+                    searchColumn={"step_name"}
+                    style="horizontal"
+                    />
+            </Sheet>
             {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
             {rows.length === 0 ? (
                 <>

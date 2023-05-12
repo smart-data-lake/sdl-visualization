@@ -20,9 +20,9 @@ const WorkflowHistoryTable = (props : {data: any[]}) => {
              >
                 <thead>
                     <tr>
-                        <th>Run ID</th>
+                        <th style={{width: '15%'}}>Run ID</th>
+                        <th style={{width: '15%'}}>Status</th>
                         <th>Run Start Time</th>
-                        <th>Status</th>
                         <th>Attempt ID</th>
                         <th>Duration</th>
                     </tr>
