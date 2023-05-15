@@ -5,12 +5,17 @@ import { Sheet, Tooltip, Typography } from "@mui/joy";
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 import { getIcon } from "../Workflow/RunsRow";
+import { getISOString } from "../../../util/WorkflowsExplorer/date";
+import { PureComponent } from "react";
+
 
 export const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <Sheet sx={{ px: '2rem', py: '1rem', zIndex: 10000, borderRadius: '0.5rem', border: '1px solid lightgray' }}>
+        <Sheet sx={{ px: '2rem', py: '1rem', zIndex: 10000, borderRadius: '0.5rem', border: '1px solid lightgray', gap: '0.5rem', display: 'flex', flexDirection: 'column' }}>
           <Typography level='body1' sx={{display: 'flex', alignItems: 'center'}}>Run {payload[0].payload.runId} attempt {payload[0].payload.attemptId} {getIcon(payload[0].payload.status)}</Typography>
+          <Typography level='body2'>Date: {new Date(payload[0].payload.name).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})}</Typography>
+          <Typography level='body2'>Time: {getISOString(new Date(payload[0].payload.name)).split(' ')[1]}</Typography>
           <Typography level='body2'>Duration: {formatDuration(payload[0].payload.value)}</Typography>
         </Sheet>
       );

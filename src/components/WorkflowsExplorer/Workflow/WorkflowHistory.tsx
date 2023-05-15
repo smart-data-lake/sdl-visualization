@@ -56,7 +56,6 @@ const WorkflowHistory = () => {
 	useEffect(() => {
 		setToDisplay(rows.slice(0, rowsPerPage));
 		setCount(rows.length)
-		setLineChartData(generateChartData(rows))
 		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})
 	}, [rows])
 
@@ -109,7 +108,7 @@ const WorkflowHistory = () => {
 				{
 					value: durationMicro(run.duration),
 					status: run.status,
-					name: getISOString(new Date(run.attemptStartTime)),
+					name: run.attemptStartTime,
 					runId: run.runId,
 					attemptId: run.attemptId    
 				}
@@ -151,6 +150,8 @@ const WorkflowHistory = () => {
 							sortEnabled={true}
 							updateRows={updateRows}
 							searchColumn={'runId'}
+							searchMode={'exact'}
+							searchPlaceholder={'Search by Run ID'}
 							filters={filters}
 							datetimePicker={handleDateRangeChange}
 							/>

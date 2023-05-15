@@ -32,7 +32,7 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
           <BarChart data={data}>
             <Tooltip 
                 /* cursor={{fill: 'lightgray', fillOpacity: 0.5, alignmentBaseline: 'middle'}}*/
-                position={{ y: 10 }}
+                position={{ y: -75 }}
                 animationDuration={100}
                 /*label={false}
                 labelFormatter={(value: string) => {
@@ -43,11 +43,12 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
               //formatter={(value: number, name: string) => {return [formatDuration(value) as any, 'Duration']}}
               />
             <YAxis width={77} tickFormatter={(value) => formatDuration(value)}/>
+            <XAxis dataKey="name" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} padding={'gap'} minTickGap={30}/>
             <Bar 
                 dataKey="value" 
                 stackId="a" 
                 fill="#20af2e"
-                animationDuration={100}
+                animationDuration={45}
                 onClick={handleClick}
                 barSize={data.length < 26 ? 15 : undefined}
                 radius={[2, 2, 0, 0]}

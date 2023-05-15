@@ -3,19 +3,24 @@ import { formatDuration } from '../../../util/WorkflowsExplorer/format';
 import { scaleLog } from 'd3-scale';
 import { Indices } from '../Workflow/WorkflowHistory';
 import { CustomTooltip } from './ChartControl';
+import { Typography } from '@mui/joy';
+import { useState } from 'react';
+
+
 
 const HistoryLineChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[], indices: Indices}) => {
-    const { data, indices } = props;
+    const { data } = props;
 
     return (
             <ResponsiveContainer height={140}>
               <LineChart
                 data={data}
-                >
-                <YAxis tickFormatter={(value) => formatDuration(value)}/>
+              >
+                <YAxis width={100} tickFormatter={(value) => formatDuration(value)}/>
+                <XAxis dataKey="name" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} padding={'gap'} minTickGap={30}/>
                 <Tooltip
-                  animationDuration={100}
-                  position={{ y: 10 }}
+                  animationDuration={45}
+                  position={{y: -75 }}
                   content={<CustomTooltip active={undefined} payload={undefined} label={undefined} />}
                 />
                 <Line 
@@ -27,8 +32,7 @@ const HistoryLineChart = (props: {data : {value: number, status: string, name: s
                     strokeWidth={2}
                     isAnimationActive={false}
                     />
-                {/* <ReferenceArea x1={indices.toDisplayLeft} x2={indices?.toDisplayRight} stroke="blue" strokeOpacity={0.5} />
-                <ReferenceArea x1={indices.rangeLeft} x2={indices?.rangeRight}/> */}
+                  {/* <ReferenceArea x1={indices.left} x2={indices.right} stroke="blue" strokeOpacity={0.3} /> */}
               </LineChart>
             </ResponsiveContainer>
       );

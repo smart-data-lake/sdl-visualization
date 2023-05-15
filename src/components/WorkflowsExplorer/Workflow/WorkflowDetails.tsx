@@ -11,8 +11,6 @@ import HistoryPieChart from "../HistoryChart/HistoryPieChart";
 
 const WorkflowDetails = (props : {data: any, pieChartData: any}) => {
     const { data, pieChartData } = props;
-    
-    console.log(data.runs[0])
 
     const listWorkflowDetails = [
         {name: 'Name', value: data.name.toString()}, 

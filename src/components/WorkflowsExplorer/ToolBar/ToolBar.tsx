@@ -24,6 +24,8 @@ const ToolBar = (
         filters?: {name: string, fun: (rows: any[]) => any}[],
         sortEnabled?: boolean,
         datetimePicker?: (start: Date, end: Date) => void,
+        searchMode?: 'exact' | 'partial',
+        searchPlaceholder?: string
     }) => {
     const { 
         controlledRows, 
@@ -31,7 +33,9 @@ const ToolBar = (
         searchColumn, 
         filters, 
         sortEnabled, 
-        datetimePicker 
+        datetimePicker,
+        searchMode,
+        searchPlaceholder
     } = props;
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
@@ -48,7 +52,7 @@ const ToolBar = (
 
 	useEffect(() => {
 		function handleInput() {
-            const tmp = controlledRows.filter((row) => row[searchColumn].toString().toLowerCase().includes(value.toLowerCase()));
+            const tmp = controlledRows.filter((row) => row[searchColumn].toString().toLowerCase() === (value.toLowerCase()));
             return tmp;
 		}
 		
@@ -60,7 +64,7 @@ const ToolBar = (
 			return filteredRows;
 		}
 		
-		const a = handleInput();
+		const a = value === '' ? controlledRows : handleInput();
         let b : any;
         if (filters && filters.length > 0) {
             b = applyFilters(); 
@@ -130,7 +134,7 @@ const ToolBar = (
             }}
             >
                 <Input
-                    placeholder="Search"
+                    placeholder={searchPlaceholder || "Search"}
                     size="sm"
                     sx={{fontSize: 'var(--joy-fontSize-sm)' }}
                     onChange={(event) => {
