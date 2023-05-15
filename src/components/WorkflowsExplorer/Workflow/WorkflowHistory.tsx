@@ -69,7 +69,7 @@ const WorkflowHistory = () => {
 		setToDisplay(rows.slice(0, parseInt(event.target.value, 10)));
 	}
 	
-	const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number,) => {
+	const handleChangePage = (_: any, newPage: number,) => {
 		setPage(newPage);
 		setToDisplay(rows.slice(newPage*rowsPerPage, newPage*rowsPerPage + rowsPerPage));
 		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})

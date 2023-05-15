@@ -32,7 +32,6 @@ const HistoryLineChart = (props: {data : {value: number, status: string, name: s
                     strokeWidth={2}
                     isAnimationActive={false}
                     />
-                  {/* <ReferenceArea x1={indices.left} x2={indices.right} stroke="blue" strokeOpacity={0.3} /> */}
               </LineChart>
             </ResponsiveContainer>
       );
