@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 
 
-const HistoryLineChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[], indices: Indices}) => {
+const HistoryLineChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[]}) => {
     const { data } = props;
 
     return (
@@ -17,7 +17,7 @@ const HistoryLineChart = (props: {data : {value: number, status: string, name: s
                 data={data}
               >
                 <YAxis width={100} tickFormatter={(value) => formatDuration(value)}/>
-                <XAxis dataKey="name" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} padding={'gap'} minTickGap={30}/>
+                <XAxis dataKey="name" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} padding={'gap'} minTickGap={10} ticks={[data[0]?.name, data[Math.round(data.length/2)]?.name, data[data.length-1]?.name]}/>
                 <Tooltip
                   animationDuration={45}
                   position={{y: -75 }}

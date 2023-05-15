@@ -68,7 +68,7 @@ const ChartControl = (props: {rows: any, data: any, indices: Indices }) => {
                     </Tooltip>
                     <Typography level='body2' sx={{color: 'gray'}}>{data.length} runs selected</Typography>
                 </Sheet>
-                <HistoryLineChart data={data} indices={indices}/>
+                <HistoryLineChart data={data}/>
             </Sheet>
         </Sheet>
      );
