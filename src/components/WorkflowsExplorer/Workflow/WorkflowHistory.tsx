@@ -18,7 +18,7 @@ import { ResponsiveContainer } from "recharts";
 export type Indices = {
 	toDisplayLeft: number, 
 	toDisplayRight?: number, 
-	rangeLeft: number, 
+	rangeLeft?: number, 
 	rangeRight?: number
 }
 
@@ -56,7 +56,7 @@ const WorkflowHistory = () => {
 	useEffect(() => {
 		setToDisplay(rows.slice(0, rowsPerPage));
 		setCount(rows.length)
-		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})
+		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices?.rangeLeft, rangeRight: indices?.rangeRight})
 	}, [rows])
 
 	useEffect(() => {
@@ -72,7 +72,7 @@ const WorkflowHistory = () => {
 	const handleChangePage = (_: any, newPage: number,) => {
 		setPage(newPage);
 		setToDisplay(rows.slice(newPage*rowsPerPage, newPage*rowsPerPage + rowsPerPage));
-		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices.rangeLeft, rangeRight: indices?.rangeRight})
+		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices?.rangeLeft, rangeRight: indices?.rangeRight})
 	}
 
 	const updateRows = (rows: any[]) => {
@@ -91,6 +91,15 @@ const WorkflowHistory = () => {
 			return date >= start && date <= end
 		})
 		updateRows(filteredRows)
+		let rangeRight = 0;
+		
+		for (let i = 0; i < data.runs.length; i++) {
+			if (filteredRows[0].attemptStartTime === data.runs[i].attemptStartTime) {
+				rangeRight = i;
+				break;
+			}
+		}
+		setIndices({toDisplayLeft: indices.toDisplayLeft, toDisplayRight: indices.toDisplayRight, rangeLeft: data.runs.length - (rangeRight + filteredRows.length), rangeRight: data.runs.length - 1 - rangeRight})
 	}
 
 	const generateChartData = (data: any) => {

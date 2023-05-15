@@ -1,15 +1,13 @@
-import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, Line, LineChart, ReferenceArea, Brush } from 'recharts';
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, Line, LineChart, ReferenceArea } from 'recharts';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
-import { scaleLog } from 'd3-scale';
-import { Indices } from '../Workflow/WorkflowHistory';
 import { CustomTooltip } from './ChartControl';
-import { Typography } from '@mui/joy';
-import { useState } from 'react';
+import { Indices } from '../Workflow/WorkflowHistory';
 
 
+const HistoryLineChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[], indices: Indices}) => {
+    const { data, indices } = props;
 
-const HistoryLineChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[]}) => {
-    const { data } = props;
+    console.log(indices )
 
     return (
             <ResponsiveContainer height={140}>
@@ -17,7 +15,7 @@ const HistoryLineChart = (props: {data : {value: number, status: string, name: s
                 data={data}
               >
                 <YAxis width={100} tickFormatter={(value) => formatDuration(value)}/>
-                <XAxis dataKey="name" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} padding={'gap'} minTickGap={10} ticks={[data[0]?.name, data[Math.round(data.length/2)]?.name, data[data.length-1]?.name]}/>
+                <XAxis dataKey="name" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} minTickGap={10} ticks={[data[0]?.name, data[Math.round(data.length/2)]?.name, data[data.length-1]?.name]}/>
                 <Tooltip
                   animationDuration={45}
                   position={{y: -75 }}
@@ -32,6 +30,7 @@ const HistoryLineChart = (props: {data : {value: number, status: string, name: s
                     strokeWidth={2}
                     isAnimationActive={false}
                     />
+                <ReferenceArea x1={indices.rangeLeft} x2={indices.rangeRight}  stroke="blue" strokeOpacity={0.2} />
               </LineChart>
             </ResponsiveContainer>
       );
