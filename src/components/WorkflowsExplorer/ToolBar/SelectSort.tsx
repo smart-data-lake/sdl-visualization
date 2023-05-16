@@ -17,6 +17,8 @@ const SelectSort = (props: {updateSort: (sort: SortType) => void}) => {
   	return (
   	  	<Select
 			size="sm"
+			variant="outlined"
+			color="primary"
 			defaultValue={'start time asc'}
 	  	  	placeholder="Sort by"
 			onChange={(_, v) => updateSort(v as SortType)}

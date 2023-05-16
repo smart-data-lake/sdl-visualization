@@ -1,4 +1,4 @@
-import { Box, Checkbox, IconButton, Menu, MenuItem, Sheet, Stack, Radio, Typography, Button } from "@mui/joy";
+import { Box, Button, Checkbox, Menu, MenuItem, Sheet } from "@mui/joy";
 import React, { useEffect, useState } from "react";
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { Row } from "../../../types";
@@ -17,126 +17,88 @@ import { get } from "http";
  */
 const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vertical' | ' horizontal', filters?: {name: string, fun: (rows: Row[]) => void}[]}) => {
     const { filters, updateList } = props;
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [list, setList] = useState<boolean[]>(Array(props.filters?.length).fill(true));
+    const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+    const [selectedIndex, setSelectedIndex] = React.useState<number>(1);
+
     const open = Boolean(anchorEl);
-    const style = props.style ? props.style : 'horizontal';
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+    const createHandleClose = (index: number) => () => {
+        setAnchorEl(null);
+        if (typeof index === 'number') {
+            setSelectedIndex(index);
+        }
+    };
 
 	useEffect(() => {
 		updateList(list);
 	}, [list]);
 
-    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        setAnchorEl(event.currentTarget);
-    };
   
-    const handleClose = () => {
-      setAnchorEl(null);
-    };
-
     const getButtonColor = (name: string) => {
-        return name === 'Succeeded' ? 'success' : (name === 'Failed' || name === 'Cancelled' ? 'danger' : 'warning')
+        return name === 'Succeeded' ? 'success' : (name === 'Failed' || name === 'Cancelled' ? 'danger' : 'neutral')
     }
 
     const getIcon = (name: string) => {
         return name === 'Succeeded' ? <CheckCircleOutlineIcon sx={{ scale: '80%', ml: '0.5rem' }} /> : (name === 'Failed' || name === 'Cancelled' ? <HighlightOffIcon sx={{ scale: '80%', ml: '0.5rem' }} /> : <AutorenewIcon sx={{ scale: '80%', ml: '0.5rem' }} />)
     }
     
-    if (style === 'vertical') return (
-        <Stack>
-
-            {filters && filters.map((filter, index) => (
-                <>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <Checkbox 
-                            color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Cancelled' ? 'danger' : 'warning')}
-                        	size="sm"
-                            variant="soft"
-                        	checked={list[index]}
-                        	onChange={() => {
-                            	setList(list.map((item, i) => i === index ? !item : item));
-                            }}
-                            sx={{
-                                mr: '1rem'
-                            }}
-                            />
-                        <Typography>
-                            {filter.name}
-                        </Typography>
-                    </Box>
-                        
-                </>
-            ))}
-        </Stack>
-    )
+   
 
     return (
       <div>
-          <Sheet sx={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
-            Status:  
-            {filters && filters.map((filter, index) => (
+            <Button 
+                size="sm" 
+                onClick={handleClick}
+                aria-controls={open ? 'selected-demo-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={open ? 'true' : undefined}
+                variant="outlined"
+                disabled={filters?.length ? (filters.length < 2) : true}
+            >
+                Filter Status
+            </Button>
+            <Menu
+                id="selected-demo-menu"
+                anchorEl={anchorEl}
+                open={open}
+                onClose={createHandleClose(-1)}
+                aria-labelledby="selected-demo-button"
+            >
+                {filters && filters.map((filter, index) => (
                 <>
-                    {/* <Sheet
-                        color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'warning')}
-                        variant="outlined"
+                    <Sheet
+                        color={getButtonColor(filter.name)}
+                        variant="plain"
                         sx={{
-                            p: '0.2rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            py: '0.25rem',
                             px: '0.5rem',
                             borderRadius: '0.5rem',
-                            display: 'flex',
-                            flexDirection: 'row',
-                            alignItems: 'center',
                         }}
-                    >     
-                        <Checkbox 
-                            color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'warning')}
-                            size="sm"
-                            variant="solid"
-                            checked={list[index]}
-                            onChange={() => {
-                                setList(list.map((item, i) => i === index ? !item : item));
-                            }}
-                            sx={{
-                                mr: '0.5rem'
-                            }}
-                            /> */}
-                            <Sheet
-                                color={getButtonColor(filter.name)}
+                    >
+                            <Checkbox 
+                                color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'neutral')}
+                                size="sm"
                                 variant="outlined"
+                                checked={list[index]}
+                                onChange={() => {
+                                    setList(list.map((item, i) => i === index ? !item : item));
+                                }} 
                                 sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    py: '0.25rem',
-                                    px: '0.5rem',
-                                    borderRadius: '0.5rem',
+                                    mr: '0.5rem'
                                 }}
-                            >
-                                    <Checkbox 
-                                        color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'warning')}
-                                        size="sm"
-                                        variant="outlined"
-                                        checked={list[index]}
-                                        onChange={() => {
-                                            setList(list.map((item, i) => i === index ? !item : item));
-                                        }} 
-                                        sx={{
-                                            mr: '0.5rem'
-                                        }}
-                                    /> 
-                                    {filter.name}
-                                    {getIcon(filter.name)}
-                            </Sheet>
-                   {/*  </Sheet> */}
-                    </>
+                            /> 
+                            {filter.name}
+                            {getIcon(filter.name)}
+                    </Sheet>
+                </>
             ))}
-            </Sheet>
+            </Menu>
       </div>
     );
   }

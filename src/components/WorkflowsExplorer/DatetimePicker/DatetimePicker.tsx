@@ -33,6 +33,7 @@ const DatetimePicker = (props : {datetimePicker: (start: Date, end: Date) => voi
 								display: 'flex',
 								justifyContent: 'flex-end',
 								zIndex: 1,
+								width: '27%',
 						}}
 				>
 							<RangePicker

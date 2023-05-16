@@ -13,6 +13,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import IconButton from '@mui/joy/IconButton';
 import { ResponsiveContainer } from "recharts";
+import { checkFiltersAvailability } from "../Workflows/Workflows";
 
 
 export type Indices = {
@@ -38,7 +39,7 @@ const WorkflowHistory = () => {
 	const [count, setCount] = useState(0);
 	const [barChartData, setBarChartData] = useState<any[]>([])
 	const [lineChartData, setLineChartData] = useState<any[]>([])
-	const [indices, setIndices] = useState<Indices>({toDisplayLeft: 0, toDisplayRight: rowsPerPage, rangeLeft: 0})
+	const [indices, setIndices] = useState<Indices>({toDisplayLeft: 0, toDisplayRight: rowsPerPage})
 	const [open, setOpen] = useState<Boolean>(true)
 	const [startDate, setStartDate] = useState<Date>(new Date(0))
 	const [endDate, setEndDate] = useState<Date>(new Date())
@@ -161,7 +162,7 @@ const WorkflowHistory = () => {
 							searchColumn={'runId'}
 							searchMode={'exact'}
 							searchPlaceholder={'Search by Run ID'}
-							filters={filters}
+							filters={checkFiltersAvailability(data.runs, filters)}
 							datetimePicker={handleDateRangeChange}
 							/>
 						<Sheet sx={{

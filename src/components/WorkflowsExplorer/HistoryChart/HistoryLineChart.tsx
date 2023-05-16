@@ -7,8 +7,6 @@ import { Indices } from '../Workflow/WorkflowHistory';
 const HistoryLineChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[], indices: Indices}) => {
     const { data, indices } = props;
 
-    console.log(indices )
-
     return (
             <ResponsiveContainer height={140}>
               <LineChart

@@ -9,6 +9,16 @@ import { durationMicro } from "../../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 import { useNavigate } from "react-router-dom";
 
+export const checkFiltersAvailability = (rows: any, filters: any[]) => {
+    let availableFilters : any = [];
+    filters.forEach(filter => {
+        if (filter.fun(rows).length > 0) {
+            availableFilters.push(filter);
+        }
+    });
+    return availableFilters;
+}
+
 const Workflows = () => {
     const { data, isLoading } = useFetchWorkflows();
     const [rows, setRows] = useState<any[]>([]);
@@ -56,6 +66,12 @@ const Workflows = () => {
         })
     }
 
+    const filters = [
+		{name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row.lastStatus === 'SUCCEEDED')}},
+		{name: 'Running', fun: (rows: any) => {return rows.filter(row => row.lastStatus === 'RUNNING')}},
+		{name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row.status === 'CANCELLED')}}
+	];
+
     return (      
         <>
             <PageHeader title={'Workflows'} noBack={true} />
@@ -75,8 +91,10 @@ const Workflows = () => {
                             style={'horizontal'} 
                             controlledRows={data} 
                             updateRows={updateRows} 
+                            filters={checkFiltersAvailability(data, filters)}
                             searchColumn={"name"}
                             sortEnabled={false}
+                            searchPlaceholder="Search by name"
                         />}
                 <Sheet
                     sx={{
