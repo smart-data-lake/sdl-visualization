@@ -12,9 +12,7 @@ import WorkflowDetails from "./WorkflowDetails";
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import IconButton from '@mui/joy/IconButton';
-import { ResponsiveContainer } from "recharts";
-import { checkFiltersAvailability } from "../Workflows/Workflows";
-import { defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 
 export type Indices = {
@@ -157,7 +155,7 @@ const WorkflowHistory = () => {
 							searchColumn={'runId'}
 							searchMode={'exact'}
 							searchPlaceholder={'Search by Run ID'}
-							filters={checkFiltersAvailability(data.runs, defaultFilters)}
+							filters={checkFiltersAvailability(data.runs, defaultFilters())}
 							datetimePicker={handleDateRangeChange}
 							/>
 						<Sheet sx={{

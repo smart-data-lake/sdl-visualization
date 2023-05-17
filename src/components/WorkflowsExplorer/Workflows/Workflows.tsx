@@ -2,23 +2,13 @@ import React, { useEffect, useState } from "react";
 import PageHeader from "../../../layouts/PageHeader";
 import WorkflowsTable from "./WorkflowsTable";
 import ToolBar from "../ToolBar/ToolBar";
-import { Box, Sheet } from "@mui/joy";
+import { Box, CircularProgress, Sheet } from "@mui/joy";
 import useFetchWorkflows from "../../../hooks/useFetchData";
 import { TablePagination } from "@mui/material";
 import { durationMicro } from "../../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 import { useNavigate } from "react-router-dom";
-import { defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
-
-export const checkFiltersAvailability = (rows: any, filters: any[]) => {
-    let availableFilters : any = [];
-    filters.forEach(filter => {
-        if (filter.fun(rows).length > 0) {
-            availableFilters.push(filter);
-        }
-    });
-    return availableFilters;
-}
+import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 const Workflows = () => {
     const { data, isLoading } = useFetchWorkflows();
@@ -27,7 +17,6 @@ const Workflows = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [count, setCount] = useState(0);
-    const navigate = useNavigate();
 
     useEffect(() => {
         if (!isLoading) {
@@ -55,18 +44,7 @@ const Workflows = () => {
         setRows(rows);
     }
 
-    const formatRows = () => {
-        return rows.map((row: any) => {
-            return {
-                name: row.name,
-                numRuns: row.numRuns,
-                numAttempts: row.numAttempts,
-                lastStatus: row.lastStatus,
-                lastDuration: formatDuration(durationMicro(row.lastDuration)),
-            };
-        })
-    }
-
+    if (isLoading) return <CircularProgress/>;
     return (      
         <>
             <PageHeader title={'Workflows'} noBack={true} />
@@ -82,15 +60,15 @@ const Workflows = () => {
                     gap: '1rem'
                 }}
                 >
-                {data && <ToolBar 
-                            style={'horizontal'} 
-                            controlledRows={data} 
-                            updateRows={updateRows} 
-                            filters={checkFiltersAvailability(data, defaultFilters)}
-                            searchColumn={"name"}
-                            sortEnabled={false}
-                            searchPlaceholder="Search by name"
-                        />}
+                <ToolBar 
+                    style={'horizontal'} 
+                    controlledRows={data} 
+                    updateRows={updateRows} 
+                    filters={checkFiltersAvailability(data, defaultFilters('lastStatus'))}
+                    searchColumn={"name"}
+                    sortEnabled={false}
+                    searchPlaceholder="Search by name"
+                />
                 <Sheet
                     sx={{
                         display: 'flex',

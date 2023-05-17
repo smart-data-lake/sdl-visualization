@@ -1,50 +1,73 @@
-
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 export const getButtonColor = (name: string) => {
-    switch (name) {
-        case 'Succeeded':
+    switch (name.toUpperCase()) {
+        case 'SUCCEEDED':
             return 'success';
-        case 'Failed':
+        case 'FAILED':
             return 'danger';
-        case 'Running':
+        case 'RUNNING':
             return 'warning';
-        case 'Initialized':
+        case 'INITIALIZED':
             return 'primary';
         case 'PREPARED':
             return 'info';
-        /* case 'Cancelled':
-            return 'warning'; */
         default:
-            return 'neutral';
+            return 'neutral'
     }
 }
 
-export const getIcon = (name: string) => {
-    switch (name) {
+export const getIcon = (status: string) => {
+    const tmp = getButtonColor(getSDLBStatus(status));
+    const color = tmp === 'neutral' ? 'disabled' : (tmp === 'danger' ? 'error' : tmp);
+
+    switch (status) {
         case 'SUCCEEDED':
-            return <CheckCircleOutlineIcon color='success' sx={{ scale: '80%', ml: '0.5rem' }} />
+            return <CheckCircleOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
         case 'FAILED':
-            return <HighlightOffIcon color='error' sx={{ scale: '80%', ml: '0.5rem' }} />
-        /* case 'CANCELLED':
-            return <ErrorOutlineIcon color='warning' sx={{ scale: '80%', ml: '0.5rem' }} /> */
+            return <HighlightOffIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
         case 'INITIALIZED':
-            return <ErrorOutlineIcon color='primary' sx={{ scale: '80%', ml: '0.5rem' }} /> 
+            return <ErrorOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} /> 
         case 'PREPARED':
-            return <ErrorOutlineIcon color='info' sx={{ scale: '80%', ml: '0.5rem' }} />
+            return <ErrorOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
         default:
-            return <HelpOutlineIcon color='disabled' sx={{ scale: '80%', ml: '0.5rem' }} />
+            return <HelpOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
     }
 }
 
-export const defaultFilters = [
-    {name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row.status === 'SUCCEEDED')}},
-    {name: 'Running', fun: (rows: any) => {return rows.filter(row => row.status === 'RUNNING')}},
-    {name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row.status === 'CANCELLED')}},
-    {name: 'Failed', fun: (rows: any) => {return rows.filter(row => row.status === 'FAILED')}},
-    {name: 'Prepared', fun: (rows: any) => {return rows.filter(row => row.status === 'Prepared')}},
-    {name: 'Initialized', fun: (rows: any) => {return rows.filter(row => row.status === 'Initialized')}},
-];
+export const defaultFilters = (columnName?: string) => {    
+    const column = columnName ? columnName : 'status';
+    return [
+        {name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row[column] === 'SUCCEEDED')}},
+        {name: 'Running', fun: (rows: any) => {return rows.filter(row => row[column] === 'RUNNING')}},
+        {name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row[column] === 'CANCELLED')}},
+        {name: 'Failed', fun: (rows: any) => {return rows.filter(row => row[column] === 'FAILED')}},
+        {name: 'Prepared', fun: (rows: any) => {return rows.filter(row => row[column] === 'PREPARED')}},
+        {name: 'Initialized', fun: (rows: any) => {return rows.filter(row => row[column] === 'INITIALIZED')}},
+        {name: 'Completed', fun: (rows: any) => {return rows.filter(row => row[column] === 'completed')}},
+        {name: 'Unknown', fun: (rows: any) => {return rows.filter(row => row[column] === 'unknown')}},
+        {name: 'Failed', fun: (rows: any) => {return rows.filter(row => row[column] === 'failed')}},
+    ]
+};
+
+export const checkFiltersAvailability = (rows: any, filters: any[]) => {
+    let availableFilters : any = [];
+    filters.forEach(filter => {
+        if (filter.fun(rows).length > 0) {
+            availableFilters.push(filter);
+        }
+    });
+    return availableFilters;
+}
+
+export const getSDLBStatus = (status: string) => {
+    if (status === 'completed') {
+        return 'SUCCEEDED';
+    } else if (status === 'unknown') {
+        return 'SKIPPED';
+    } 
+    return status;
+}

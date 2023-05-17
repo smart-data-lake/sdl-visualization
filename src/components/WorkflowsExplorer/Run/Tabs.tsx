@@ -19,7 +19,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { DataGrid } from "@mui/x-data-grid";
 import { getISOString } from "../../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
-import { defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 export const defaultDrawerWidth = 600;
 
@@ -38,8 +38,6 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const { attempt, open } = props;
     const defaultRows = attempt.rows;
     const [rows, setRows] = useState<Row[]>(defaultRows);
-    const navigate = useNavigate();
-    const currURL = useLocation().pathname;
 
     /**
    * Updates the rows displayed in the table of actions.
@@ -49,39 +47,6 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
    */
     const updateRows = (rows: Row[]) => {
         setRows(rows);
-    }
-
-    // Defines an array of filters that can be used to filter the rows displayed in the actions table.
-    const filters = [
-        {name: 'Succeeded', fun: (rows: Row[]) => {return rows.filter(row => row.status === 'completed')}},
-        {name: 'Unknown', fun: (rows: Row[]) => {return rows.filter(row => row.status === 'unknown')}},
-        {name: 'Failed', fun: (rows: Row[]) => {return rows.filter(row => row.status === 'failed')}}
-    ];
-    
-    const columns = [
-        { field: 'step_name', headerName: 'Step Name', flex: 1 },
-        { field: 'status', headerName: 'Step Name', flex: 1 },
-        { field: 'task_id', headerName: 'Step Name', flex: 1 },
-        { field: 'started_at', headerName: 'Step Name', flex: 1 },
-        { field: 'finished_at', headerName: 'Step Name', flex: 1 },
-        { field: 'duration', headerName: 'Step Name', flex: 1 },
-    ];
-
-    const formatRow = () => {
-        return rows.map(row => {
-            return {
-                id: row.step_name,
-                step_name: row.step_name,
-                status: row.status,
-                task_id: row.task_id,
-                started_at: getISOString(new Date(row.started_at || 0)),
-                finished_at: getISOString(new Date(row.finished_at || 0)),
-                duration: formatDuration(row.duration || 0),
-                flow_id: row.flow_id,
-                run_number: row.run_number,
-
-            }
-        })
     }
     
     return ( 
@@ -95,35 +60,39 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                 <ToolBar 
                     controlledRows={defaultRows} 
                     updateRows={updateRows} 
-                    filters={defaultFilters}
+                    filters={checkFiltersAvailability(defaultRows, defaultFilters())}
                     sortEnabled={true}
                     searchColumn={"step_name"}
+                    searchPlaceholder="Search by action name"
                     style="horizontal"
                     />
             </Sheet>
             {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
             {rows.length === 0 ? (
-                <>
-                    <Box
+                <Sheet
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        mt: '1rem',
+                        p: '10rem',
+                        gap: '5rem',
+                        border: '1px solid lightgray',
+                        borderRadius: '0.5rem',
+                        height: '67vh',
+                    }}
+                >
+                    <InboxIcon
+                        color="disabled"
                         sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            p: '10rem',
-                            gap: '5rem',
-                            border: '1px solid lightgray',
-                            borderRadius: '0.5rem',
-                        }}
-                    >
-                        <InboxIcon sx={{
                             scale: '5',
-                        }}/>
-                        <Typography>
-                            No actions found
-                        </Typography>
-                    </Box>
-                </>
+                        }}
+                    />
+                    <Typography>
+                        No actions found
+                    </Typography>
+                </Sheet>
             ) : (
                 <>
                     <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
