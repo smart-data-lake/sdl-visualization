@@ -14,6 +14,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import IconButton from '@mui/joy/IconButton';
 import { ResponsiveContainer } from "recharts";
 import { checkFiltersAvailability } from "../Workflows/Workflows";
+import { defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 
 export type Indices = {
@@ -127,12 +128,6 @@ const WorkflowHistory = () => {
 		return res;
 	}
 
-	const filters = [
-		{name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row.status === 'SUCCEEDED')}},
-		{name: 'Running', fun: (rows: any) => {return rows.filter(row => row.status === 'RUNNING')}},
-		{name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row.status === 'CANCELLED')}}
-	];
-
 	if (isLoading || isFetching) return (<CircularProgress/>)
 
 	return (
@@ -162,7 +157,7 @@ const WorkflowHistory = () => {
 							searchColumn={'runId'}
 							searchMode={'exact'}
 							searchPlaceholder={'Search by Run ID'}
-							filters={checkFiltersAvailability(data.runs, filters)}
+							filters={checkFiltersAvailability(data.runs, defaultFilters)}
 							datetimePicker={handleDateRangeChange}
 							/>
 						<Sheet sx={{

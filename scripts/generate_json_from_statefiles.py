@@ -45,7 +45,6 @@ def create_dict(path):
 
     for data in statefiles:
         # Get the important variable of the statefile
-        uid = id.hex
         runId = data["runId"]
         attemptId = data["attemptId"]
         name = data["appConfig"]["applicationName"]
@@ -117,10 +116,14 @@ def getFirstRun(runs):
 
 def getStatus(actionsState):
     """Get the status of a state file."""
+    curr = "SUCCEEDED"
     for action in actionsState.values():
         if action["state"] == "CANCELLED":
-            return "CANCELLED"
-    return "SUCCEEDED"
+            curr = "CANCELLED"
+        elif action["state"] == "FAILED":
+            curr = "FAILED"
+            
+    return curr
 
 def getDuration(stateFile):
     """Get the duration of a state file."""

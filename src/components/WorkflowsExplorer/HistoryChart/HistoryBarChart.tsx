@@ -1,9 +1,7 @@
-import React, { PureComponent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
-import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush, ReferenceLine } from 'recharts';
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Sheet, Typography } from '@mui/joy';
-import { getIcon } from '../Workflow/RunsRow';
 import { CustomTooltip } from './ChartControl';
 
 const HistoryBarChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[]}) => {
@@ -31,16 +29,9 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
         <ResponsiveContainer height={140}>
           <BarChart data={data}>
             <Tooltip 
-                /* cursor={{fill: 'lightgray', fillOpacity: 0.5, alignmentBaseline: 'middle'}}*/
                 position={{ y: -75 }}
                 animationDuration={100}
-                /*label={false}
-                labelFormatter={(value: string) => {
-                  if (data.length > parseInt(value)) return `Run ${data[value].runId} attempt ${data[value].attemptId}`
-                }
-              } */
-              content={<CustomTooltip active={undefined} payload={undefined} label={undefined}/>}
-              //formatter={(value: number, name: string) => {return [formatDuration(value) as any, 'Duration']}}
+                content={<CustomTooltip active={undefined} payload={undefined} label={undefined}/>}
               />
             <YAxis width={77} tickFormatter={(value) => formatDuration(value)}/>
             <XAxis dataKey="name" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} padding={'gap'} minTickGap={30}/>

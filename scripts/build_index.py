@@ -15,7 +15,6 @@ def list_files(path, extension):
     list = []
     for path, subdirs, files in os.walk(path):
         for name in files:
-            print(name)
             if (name.endswith(extension) and (not name.startswith("index"))):
                 list.append(os.path.join(path, name))
     return list
@@ -47,7 +46,6 @@ def create_dict(files):
 
     for statefile in statefiles:
         # Get the important variable of the statefile
-        uid = id.hex
         data = statefile["data"]
         runId = data["runId"]
         attemptId = data["attemptId"]
@@ -119,10 +117,14 @@ def getFirstRun(runs):
 
 def getStatus(actionsState):
     """Get the status of a state file."""
+    curr = "SUCCEEDED"
     for action in actionsState.values():
         if action["state"] == "CANCELLED":
-            return "CANCELLED"
-    return "SUCCEEDED"
+            curr = "CANCELLED"
+        elif action["state"] == "FAILED":
+            curr = "FAILED"
+            
+    return curr
 
 def getDuration(stateFile):
     """Get the duration of a state file."""

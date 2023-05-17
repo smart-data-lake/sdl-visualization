@@ -29,12 +29,9 @@ const DatetimePicker = (props : {datetimePicker: (start: Date, end: Date) => voi
 		
 		return (
 				<Sheet
-						sx={{
-								display: 'flex',
-								justifyContent: 'flex-end',
-								zIndex: 1,
-								width: '27%',
-						}}
+					sx={{
+						width: '27%',
+					}}
 				>
 							<RangePicker
 								presets={rangePresets}

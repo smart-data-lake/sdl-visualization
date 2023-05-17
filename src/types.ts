@@ -66,7 +66,7 @@ export class Row implements MetaDataBaseObject {
       this.run_number = properties.runInfo.runId;
       this.attempt_id = properties.runInfo.attemptId;
       this.ts_epoch = new Date(properties.action.startTstmp).getTime();
-      this.status = properties.action.state === 'SUCCEEDED' ? 'completed' : (properties.action.state === 'CANCELLED' ? 'failed' : 'unknown');
+      this.status = properties.action.state === 'SUCCEEDED' ? 'completed' : (properties.action.state === 'FAILED' ? 'failed' : 'unknown');
       this.started_at = this.ts_epoch;
       this.duration = durationMicro(properties.action.duration === 'PT0S' ? 'PT0.001S' : properties.action.duration);
       this.finished_at = this.started_at + (this.duration === 0 ? 1 : this.duration);

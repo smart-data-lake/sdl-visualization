@@ -8,6 +8,7 @@ import { TablePagination } from "@mui/material";
 import { durationMicro } from "../../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 import { useNavigate } from "react-router-dom";
+import { defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 export const checkFiltersAvailability = (rows: any, filters: any[]) => {
     let availableFilters : any = [];
@@ -66,12 +67,6 @@ const Workflows = () => {
         })
     }
 
-    const filters = [
-		{name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row.lastStatus === 'SUCCEEDED')}},
-		{name: 'Running', fun: (rows: any) => {return rows.filter(row => row.lastStatus === 'RUNNING')}},
-		{name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row.status === 'CANCELLED')}}
-	];
-
     return (      
         <>
             <PageHeader title={'Workflows'} noBack={true} />
@@ -91,7 +86,7 @@ const Workflows = () => {
                             style={'horizontal'} 
                             controlledRows={data} 
                             updateRows={updateRows} 
-                            filters={checkFiltersAvailability(data, filters)}
+                            filters={checkFiltersAvailability(data, defaultFilters)}
                             searchColumn={"name"}
                             sortEnabled={false}
                             searchPlaceholder="Search by name"

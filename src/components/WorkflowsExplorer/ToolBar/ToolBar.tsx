@@ -97,7 +97,6 @@ const ToolBar = (
                                 sx={{
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    gap: '0.5rem',
                                 }}
                             >
                                 <Typography level="body1">

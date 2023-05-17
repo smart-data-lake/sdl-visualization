@@ -19,6 +19,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { DataGrid } from "@mui/x-data-grid";
 import { getISOString } from "../../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
+import { defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 export const defaultDrawerWidth = 600;
 
@@ -94,7 +95,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                 <ToolBar 
                     controlledRows={defaultRows} 
                     updateRows={updateRows} 
-                    filters={filters}
+                    filters={defaultFilters}
                     sortEnabled={true}
                     searchColumn={"step_name"}
                     style="horizontal"

@@ -1,7 +1,7 @@
-import { Chip } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
 import { durationMicro } from "../../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
+import { getIcon } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 /**
  * The WorkflowRow component is a row in the WorkflowsTable component.
@@ -18,14 +18,12 @@ const WorkflowRow = (props: {data: any}) => {
             <>
                 <tr onClick={() => handleClick()}>
                     <td>{data.name}</td>
-                    <td>{data.numRuns}</td>
-                    <td>{data.numAttempts}</td>
                     <td>
-                        <Chip variant="soft" size="sm" color={data.lastStatus === 'SUCCEEDED' ? 'success' : 'danger'}>
-                            {data.lastStatus}
-                        </Chip>
+                        {getIcon(data.lastStatus)}
                     </td>
                     <td>{formatDuration(durationMicro(data.lastDuration))}</td>
+                    <td>{data.numRuns}</td>
+                    <td>{data.numAttempts}</td>
                 </tr>
             </>
         )

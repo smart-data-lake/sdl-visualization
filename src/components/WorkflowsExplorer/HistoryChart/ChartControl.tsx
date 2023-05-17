@@ -4,10 +4,8 @@ import { Indices } from "../Workflow/WorkflowHistory";
 import { Sheet, Tooltip, Typography } from "@mui/joy";
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
-import { getIcon } from "../Workflow/RunsRow";
 import { getISOString } from "../../../util/WorkflowsExplorer/date";
-import { PureComponent } from "react";
-
+import { getIcon } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 export const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -25,7 +23,8 @@ export const CustomTooltip = ({ active, payload, label }) => {
 
 const ChartControl = (props: {rows: any, data: any, indices: Indices }) => {
     const {rows, data, indices } = props;
-    
+    const selected = indices?.rangeLeft ? (indices?.rangeRight ? indices.rangeRight - indices.rangeLeft + 1: data.length) : data.length;
+
     return ( 
         <Sheet
             sx={{
@@ -66,7 +65,7 @@ const ChartControl = (props: {rows: any, data: any, indices: Indices }) => {
                     <Tooltip variant="solid" placement='bottom-end' title="This charts displays a history of all runs of this workflow. You can zoom on specific part of it using the brush at its bottom">
                         <HelpOutlineIcon sx={{scale: '70%'}}/>
                     </Tooltip>
-                    <Typography level='body2' sx={{color: 'gray'}}>{data.length} runs selected</Typography>
+                    <Typography level='body2' sx={{color: 'gray'}}>{selected} runs selected</Typography>
                 </Sheet>
                 <HistoryLineChart data={data} indices={indices}/>
             </Sheet>

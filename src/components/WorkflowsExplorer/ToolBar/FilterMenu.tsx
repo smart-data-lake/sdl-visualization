@@ -1,11 +1,7 @@
-import { Box, Button, Checkbox, Menu, MenuItem, Sheet } from "@mui/joy";
+import { Button, Checkbox, Menu, Sheet } from "@mui/joy";
 import React, { useEffect, useState } from "react";
-import FilterListIcon from '@mui/icons-material/FilterList';
 import { Row } from "../../../types";
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import HighlightOffIcon from '@mui/icons-material/HighlightOff';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
-import { get } from "http";
+import { getButtonColor, getIcon } from "../../../util/WorkflowsExplorer/StatusInfo";
 /**
  * The FilterMenu component is a subcomponent of the ToolBar component that implements the filter functionality.
  * It updates the list of filters that are passed to it based on the user's input.
@@ -36,16 +32,6 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
 		updateList(list);
 	}, [list]);
 
-  
-    const getButtonColor = (name: string) => {
-        return name === 'Succeeded' ? 'success' : (name === 'Failed' || name === 'Cancelled' ? 'danger' : 'neutral')
-    }
-
-    const getIcon = (name: string) => {
-        return name === 'Succeeded' ? <CheckCircleOutlineIcon sx={{ scale: '80%', ml: '0.5rem' }} /> : (name === 'Failed' || name === 'Cancelled' ? <HighlightOffIcon sx={{ scale: '80%', ml: '0.5rem' }} /> : <AutorenewIcon sx={{ scale: '80%', ml: '0.5rem' }} />)
-    }
-    
-   
 
     return (
       <div>
@@ -82,7 +68,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
                         }}
                     >
                             <Checkbox 
-                                color={filter.name === 'Succeeded' ? 'success' : (filter.name === 'Failed' || filter.name === 'Cancelled' ? 'danger' : 'neutral')}
+                                color={getButtonColor(filter.name)}
                                 size="sm"
                                 variant="outlined"
                                 checked={list[index]}
@@ -94,7 +80,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
                                 }}
                             /> 
                             {filter.name}
-                            {getIcon(filter.name)}
+                            {getIcon(filter.name.toUpperCase())}
                     </Sheet>
                 </>
             ))}

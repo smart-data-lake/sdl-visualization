@@ -1,10 +1,9 @@
 import { List, ListItem, Sheet, Stack, Typography } from "@mui/joy";
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
-import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
-import { getIcon } from "./RunsRow";
 import { getISOString } from "../../../util/WorkflowsExplorer/date";
 import HistoryPieChart from "../HistoryChart/HistoryPieChart";
+import { getIcon } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 
 
