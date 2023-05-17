@@ -13,6 +13,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import IconButton from '@mui/joy/IconButton';
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
+import WorkflowHistoryTable from "./WorkflowHistoryTable";
 
 
 export type Indices = {
@@ -75,11 +76,13 @@ const WorkflowHistory = () => {
 		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices?.rangeLeft, rangeRight: indices?.rangeRight})
 	}
 
-	const updateRows = (rows: any[]) => {
-		setRows(rows.sort(cmp));
+	const updateRows = (rows?: any[], cmp?: (a: any, b: any) => number) => {
+		const cmpAlgorithm = cmp ? cmp : defaultCmp;
+		const targetRows = rows ? rows : data.runs;
+		setRows(targetRows.sort(cmpAlgorithm));
 	}
 
-	const cmp = (a: any, b: any) => {
+	const defaultCmp = (a: any, b: any) => {
 		return new Date(b.attemptStartTime).getTime() - new Date(a.attemptStartTime).getTime();
 	}
 
@@ -150,7 +153,7 @@ const WorkflowHistory = () => {
 						<ToolBar 
 							style={'horizontal'} 
 							controlledRows={data.runs} 
-							sortEnabled={true}
+							sortEnabled={false}
 							updateRows={updateRows}
 							searchColumn={'runId'}
 							searchMode={'exact'}
@@ -163,7 +166,7 @@ const WorkflowHistory = () => {
 							width: '100%',
 							}}
 						>
-							<RunsHistoryTable data={toDisplay}/>
+							<WorkflowHistoryTable data={toDisplay} updateRows={updateRows}/>
 						</Sheet>
 						<Sheet
 							sx={{
