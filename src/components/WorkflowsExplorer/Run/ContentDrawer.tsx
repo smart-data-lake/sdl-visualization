@@ -172,7 +172,9 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
         <Sheet
             sx={{
                 p: '1rem',
-                height: '68vh',
+                height: '70vh',
+                display: 'flex',
+                flexDirection: 'column',
             }}
             >
             
@@ -181,6 +183,7 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     position: 'sticky',
+                    mb: '1rem',
                 }}
             >
 
@@ -196,7 +199,15 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
                     <CloseIcon />
                 </IconButton>
             </Box>
-            <ContentSheet action={action}/>
+            <Box
+                sx={{
+                    overflowY: 'scroll',
+                    overflowX: 'hidden',
+                    scrollbarWidth: 'none',
+                }}
+            >
+                <ContentSheet action={action}/>
+            </Box>
         </Sheet>
      );
 }

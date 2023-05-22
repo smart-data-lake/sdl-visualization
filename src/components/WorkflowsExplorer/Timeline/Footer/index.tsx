@@ -32,9 +32,7 @@ const TimelineFooterContainer = styled.div`
   display: flex;
   position: relative;
   width: 100%;
-  height: 2.5rem;
   margin-bottom: 1.5625rem;
-  border-top: ${(p) => p.theme.border.mediumLight};
 `;
 
 const TimelineFooterLeft = styled.div`

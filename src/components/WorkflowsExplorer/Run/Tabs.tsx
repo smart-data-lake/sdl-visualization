@@ -106,15 +106,14 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                         <Sheet 
                             sx={{
                                 display: 'flex',
-                                height: '70vh',
-                                gap: '1.5rem',
+                                gap: '0.5rem',
                             }}
                         >
                             <Sheet
                                 sx={{
-                                    overflowY: 'scroll',
-                                    scrollbarWidth: 'thin',
                                     overflowX: 'hidden',
+                                    scrollbarWidth: 'none',
+                                    maxHeight: '70vh',
                                     flex: '1',
                                 }}
                             >
@@ -143,7 +142,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                             sx={{
                                 display: 'flex',
                                 height: '70vh',
-                                gap: '1.5rem',
+                                gap: '0.5rem',
                             }}
                         >
                             <Sheet

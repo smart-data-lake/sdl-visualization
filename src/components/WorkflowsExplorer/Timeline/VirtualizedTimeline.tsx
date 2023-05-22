@@ -66,7 +66,11 @@ const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
   );
   
   return (
-    <>
+    <Sheet
+      sx={{
+        height: '70vh',
+      }}
+    >
         {rows.length > 0 && (
           <Timeline
           rows={rows}
@@ -82,7 +86,7 @@ const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
           onMove={handleMove}
           />
           )}
-          </>
+    </Sheet>
   );
 };
 
