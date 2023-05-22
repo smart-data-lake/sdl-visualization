@@ -4,6 +4,7 @@ export class fetchAPI_local_statefiles implements fetchApi {
     url: string;
     
     constructor(url: string) {
+        
         this.url = url;
     }
 

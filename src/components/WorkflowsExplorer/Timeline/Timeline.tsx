@@ -82,11 +82,7 @@ const Timeline: React.FC<TimelineProps> = ({
           rowCount={rows.length}
           rowHeight={ROW_HEIGHT}
           rowRenderer={rowRenderer}
-          height={
-            height - SPACE_UNDER_TIMELINE(footerType) > rows.length * ROW_HEIGHT
-              ? rows.length * ROW_HEIGHT
-              : height - SPACE_UNDER_TIMELINE(footerType)
-          }
+          height={rows.length * ROW_HEIGHT}
           width={width}
           style={listStyle}
         />

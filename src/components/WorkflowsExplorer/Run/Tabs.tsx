@@ -3,7 +3,7 @@ import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab, { tabClasses } from '@mui/joy/Tab';
 import TabPanel from '@mui/joy/TabPanel';
-import { Box, Sheet, Typography } from "@mui/joy";
+import { Box, Button, IconButton, Sheet, Typography } from "@mui/joy";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TableOfActions from "./ActionsTable";
 import { ThemeProvider } from 'styled-components';
@@ -15,10 +15,12 @@ import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
 import { Row } from "../../../types";
 import ToolBar from "../ToolBar/ToolBar";
 import InboxIcon from '@mui/icons-material/Inbox';
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { DataGrid } from "@mui/x-data-grid";
-import { getISOString } from "../../../util/WorkflowsExplorer/date";
-import { formatDuration } from "../../../util/WorkflowsExplorer/format";
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import StartIcon from '@mui/icons-material/Start';
+import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 export const defaultDrawerWidth = 600;
@@ -38,6 +40,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const { attempt, open } = props;
     const defaultRows = attempt.rows;
     const [rows, setRows] = useState<Row[]>(defaultRows);
+    
 
     /**
    * Updates the rows displayed in the table of actions.
@@ -54,7 +57,10 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
             {/* Renders the ToolBar component, which contains a set of buttons that allow the user to filter the rows displayed in the actions table */}
             <Sheet
                 sx={{
-                    mt: '1rem',
+                    py: '1rem',
+                    my: '1.2rem',
+                    position: 'sticky',
+                    borderRadius: '0.5rem',
                 }}
             >
                 <ToolBar 
@@ -66,6 +72,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                     searchPlaceholder="Search by action name"
                     style="horizontal"
                     />
+                    {/* <Sheet sx={{borderBottom: '1px solid lightgray', mb: '1rem', mt: '1.5rem'}}/> */}
             </Sheet>
             {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
             {rows.length === 0 ? (
@@ -94,100 +101,80 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                     </Typography>
                 </Sheet>
             ) : (
-                <>
+                <Sheet>
                     <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
-                        <PanelGroup direction="horizontal">
-                            <Box 
+                        <Sheet 
+                            sx={{
+                                display: 'flex',
+                                height: '70vh',
+                                gap: '1.5rem',
+                            }}
+                        >
+                            <Sheet
                                 sx={{
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    overflow: 'auto',
-                                    minWidth: '100%',
+                                    overflowY: 'scroll',
+                                    scrollbarWidth: 'thin',
+                                    overflowX: 'hidden',
+                                    flex: '1',
                                 }}
                             >
-                                <Panel
-                                    collapsible={false}
-                                    order={1}
-                                    minSize={30}
-                                >
-                                    <Box sx={{height: '100%',}}>
-
-                                    <ThemeProvider theme={theme}>
-                                    <GlobalStyle />
-                                        <VirtualizedTimeline run={attempt.run} rows={rows}/>
-                                    </ThemeProvider>
-                                    </Box>
-                                </Panel>
-                                {open && (
-                                    <>
-                                        <PanelResizeHandle >
-                                            <Box
-                                                sx={{
-                                                    mx: '1rem',
-                                                    overflow: 'auto',
-                                                    border: '1px solid',
-                                                    borderColor: 'divider',
-                                                }}
-                                                />
-                                        </PanelResizeHandle >
-                                        <Panel 
-                                            collapsible={false} 
-                                            order={2}
-                                            defaultSize={50}
-                                            minSize={30}
-                                        >
-                                            <ContentDrawer attempt={attempt}/>
-                                        </Panel>
-                                    </>
-                                )}
-                            </Box>
-                        </PanelGroup> 
+                                <ThemeProvider theme={theme}>
+                                <GlobalStyle />
+                                    <VirtualizedTimeline run={attempt.run} rows={rows}/>
+                                </ThemeProvider>
+                            </Sheet>
+                            {open && (
+                                <>
+                                    {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
+                                    <Sheet
+                                        sx={{
+                                            flex: '1', 
+                                            minWidth: '15vw',
+                                        }}
+                                    >
+                                        <ContentDrawer attempt={attempt}/>
+                                    </Sheet>
+                                </>
+                            )}
+                        </Sheet> 
                     </TabPanel>
                     <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
-                        <PanelGroup direction="horizontal">
-                            <Box 
+                        <Sheet 
+                            sx={{
+                                display: 'flex',
+                                height: '70vh',
+                                gap: '1.5rem',
+                            }}
+                        >
+                            <Sheet
                                 sx={{
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    minWidth: '100%',
+                                    overflowY: 'scroll',
+                                    scrollbarWidth: 'thin',
+                                    flex: '1',
                                 }}
                             >
-                                    <Panel
-                                        collapsible={false}
-                                        order={1}
-                                        minSize={30}
-                                    >
-                                        <TableOfActions rows={rows}/>
-                                    </Panel>
-                                    {open && (
-                                    <>
-                                        <PanelResizeHandle >
-                                            <Box
-                                                sx={{
-                                                    mx: '1rem',
-                                                    overflow: 'auto',
-                                                    border: '1px solid',
-                                                    borderColor: 'divider',
-                                                }}   
-                                            />
-                                        </PanelResizeHandle >
-                                        <Panel 
-                                            collapsible={false} 
-                                            order={2} 
-                                            defaultSize={50}
-                                            minSize={30}
-                                        > 
-                                            <ContentDrawer attempt={attempt}/>
-                                        </Panel>
-                                    </>
-                                )}
-                            </Box>
-                        </PanelGroup>
+                                    
+                                <TableOfActions rows={rows}/>
+                            </Sheet>
+                            {open && (
+                                <>
+                                    {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
+                                    <Sheet
+                                        sx={{
+                                            flex: '1', 
+                                            minWidth: '15vw',
+                                        }}
+                                        >
+                                        <ContentDrawer attempt={attempt}/>
+                                    </Sheet>
+                                </>
+                            )}
+                        </Sheet>
                     </TabPanel>
                     <TabPanel value={2} sx={{ py: '1rem' }}>
                         <b>Lineage</b> tab panel
                     </TabPanel>
-                </>
+                </Sheet>
             )}
         </> 
     );
@@ -201,6 +188,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
 const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
     const { stepName, tab } = useParams();
     const [value, setValue] = React.useState(tab === 'timeline' ? 0: 1);
+    const [openLineage, setOpenLineage] = useState<boolean>(false);
     const { attempt, panelOpen } = props;
     const navigate =  useNavigate();
 
@@ -210,29 +198,56 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
         if (stepName) navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}/${stepName}`)
     }
     return ( 
-        <>
-            <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        mt: '1rem',
-                    }}
-                >
-                    <TabList variant="plain" sx={style}>
-                        <Tab>Timeline</Tab>
-                        <Tab>Actions table</Tab>
-                    </TabList>
-                </Box>
-                <TabsPanels attempt={attempt} open = {panelOpen}/>
-            </Tabs>
-        </>
+        <Sheet sx={{display: 'flex', height: '85vh'}}>
+            <Sheet 
+                sx={{
+                    flex: 3,
+                }}
+            >
+                <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            mt: '1rem',
+                            justifyContent: 'space-between',
+                        }}
+                        >
+                        <TabList variant="plain" sx={style}>
+                            <Tab>Timeline</Tab>
+                            <Tab>Actions table</Tab>
+                        </TabList>
+                        {!openLineage ?
+                            (
+                                <IconButton color={'neutral'} size="md" variant="soft" sx={{ml: '1rem', px: '1rem', scale: '90%', border: '1px solid lightgray'}} onClick={() => setOpenLineage(!openLineage)}>
+                                    Open lineage
+                                    <OpenInFullIcon sx={{ml: '0.5rem', scale: '70%'}}/>
+                                </IconButton>
+                            ) : (
+                                <IconButton color={'neutral'} size="md" variant="soft" sx={{ml: '0.5rem', px: '0.5rem', scale: '90%', border: '1px solid lightgray'}} onClick={() => setOpenLineage(!openLineage)}>
+                                    <StartIcon sx={{ml: '0.5rem', scale: '90%'}}/>
+                                </IconButton>
+                            )
+                        }
+                    </Box>
+                    <TabsPanels attempt={attempt} open = {panelOpen}/>
+                </Tabs>
+            </Sheet>
+            {openLineage && (
+                <>
+                    <Sheet sx={{borderLeft: '1px solid lightgray', mx: '1rem'}}/>
+                    <Sheet sx={{width: '50%', flex: 3}}>
+                        Hey
+                    </Sheet>
+                </>
+            )}
+        </Sheet>
      );
 }
 
 const style = {
-    '--List-radius': '4px',
-    '--ListItem-minHeight': '48px',
+    '--List-radius': '12px',
+    '--ListItem-minHeight': '32px',
     [`& .${tabClasses.root}`]: {
         boxShadow: 'none',
         fontWeight: 'md',
@@ -243,7 +258,7 @@ const style = {
             left: '0', // change to `0` to stretch to the edge.
             right: '0', // change to `0` to stretch to the edge.
             bottom: 0,
-            height: 3,
+            height: 2,
             bgcolor: 'primary.500',
         },
     },

@@ -27,30 +27,22 @@ const ActionsTable = (props: { rows: Row[];}) => {
     }
 
     return (
-        
-            <Sheet
-                sx={{
-                    display: 'flex',
-                    overflow: 'auto',
-                }}
-            >
-                <Table size="sm" hoverRow color='neutral'>
-                    <thead>
-                        <tr>
-                            <th><b>Name</b></th>
-                            <th><b>Status</b></th>
-                            <th style={{width: '15%'}}><b>Attempt</b></th>
-                            <th style={{width: '15%'}}><b>Start</b></th>
-                            <th style={{width: '15%'}}><b>Finish</b></th>
-                            <th style={{width: '15%'}}><b>Duration</b></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {/** Render the rows of the table */}
-                        {renderTable(rows)}
-                    </tbody>
-                </Table>
-            </Sheet>
+        <Table size="sm" hoverRow color='neutral' stickyHeader>
+            <thead>
+                <tr>
+                    <th><b>Name</b></th>
+                    <th><b>Status</b></th>
+                    <th style={{width: '15%'}}><b>Attempt</b></th>
+                    <th style={{width: '15%'}}><b>Start</b></th>
+                    <th style={{width: '15%'}}><b>Finish</b></th>
+                    <th style={{width: '15%'}}><b>Duration</b></th>
+                </tr>
+            </thead>
+            <tbody>
+                {/** Render the rows of the table */}
+                {renderTable(rows)}
+            </tbody>
+        </Table>
 
     );
 }
