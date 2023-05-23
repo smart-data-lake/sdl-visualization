@@ -3,7 +3,6 @@ import { Run, Row } from '../../../types';
 import styled from 'styled-components';
 import Timeline from './Timeline';
 import useTimelineControls from './useTimelineControls';
-import { Sheet } from '@mui/joy';
 
 
 type MyTimelineProps = {
@@ -69,19 +68,19 @@ const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
     <VirtualizedTimelineContainer>
         {rows.length > 0 && (
           <Timeline
-          rows={rows}
-          timeline={{
-            startTime: timelineControls.min,
-            endTime: timelineControls.max,
-            visibleStartTime: timelineControls.timelineStart,
-            visibleEndTime: timelineControls.timelineEnd,
-            sortBy: "startTime",
-            groupingEnabled: false
-          }}
-          onHandleMove={footerHandleUpdate}
-          onMove={handleMove}
+            rows={rows}
+            timeline={{
+              startTime: timelineControls.min,
+              endTime: timelineControls.max,
+              visibleStartTime: timelineControls.timelineStart,
+              visibleEndTime: timelineControls.timelineEnd,
+              sortBy: "startTime",
+              groupingEnabled: false
+            }}
+            onHandleMove={footerHandleUpdate}
+            onMove={handleMove}
           />
-          )}
+        )}
     </VirtualizedTimelineContainer>
   );
 };
@@ -90,7 +89,10 @@ const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
 // Style
 //
 
-const VirtualizedTimelineContainer = styled.div`s
+const VirtualizedTimelineContainer = styled.div`
+  display: flex;
+  height: 100%;
+  width: 100%;
   user-select: none;
 `;
 

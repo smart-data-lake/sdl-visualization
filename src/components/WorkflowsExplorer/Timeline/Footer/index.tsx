@@ -31,10 +31,10 @@ const TimelineFooter: React.FC<TimelineFooterProps> = (props) => {
 const TimelineFooterContainer = styled.div`
   display: flex;
   position: relative;
-  height: 2.5rem;
   width: 100%;
-  border-top: ${(p) => p.theme.border.mediumLight};
+  height: 2.5rem;
   margin-bottom: 1.5625rem;
+  border-top: ${(p) => p.theme.border.mediumLight};
 `;
 
 const TimelineFooterLeft = styled.div`

@@ -48,6 +48,7 @@ const Timeline: React.FC<TimelineProps> = ({
   searchStatus,
   footerType = 'minimap',
   paramsString = '',
+  customMinimumHeight = 31.25,
   onHandleMove = () => null,
   onMove = () => null,
 }) => {
@@ -81,7 +82,11 @@ const Timeline: React.FC<TimelineProps> = ({
           rowCount={rows.length}
           rowHeight={ROW_HEIGHT}
           rowRenderer={rowRenderer}
-          height={ROW_HEIGHT * rows.length}
+          height={
+            height - SPACE_UNDER_TIMELINE(footerType) > rows.length * ROW_HEIGHT
+              ? rows.length * ROW_HEIGHT
+              : height - SPACE_UNDER_TIMELINE(footerType)
+          }
           width={width}
           style={listStyle}
         />
@@ -124,9 +129,10 @@ const Timeline: React.FC<TimelineProps> = ({
   );
 
   return (
-    <ListContainer >
+    <ListContainer customMinHeight={customMinimumHeight*2}>
       <AutoSizer>{autosizerContents}</AutoSizer>
     </ListContainer>
+      
   );
 };
 
@@ -178,9 +184,9 @@ function createRowRenderer({
 // Style
 //
 
-const ListContainer = styled.div`
+const ListContainer = styled.div<{ customMinHeight: number }>`
     width: 100%;  
-    height: 100%;
+    height: 100rem;
 `;
 
 export default Timeline;
