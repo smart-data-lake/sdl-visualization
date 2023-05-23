@@ -66,11 +66,7 @@ const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
   );
   
   return (
-    <Sheet
-      sx={{
-        height: '70vh',
-      }}
-    >
+    <VirtualizedTimelineContainer>
         {rows.length > 0 && (
           <Timeline
           rows={rows}
@@ -86,7 +82,7 @@ const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
           onMove={handleMove}
           />
           )}
-    </Sheet>
+    </VirtualizedTimelineContainer>
   );
 };
 
@@ -94,11 +90,7 @@ const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
 // Style
 //
 
-const VirtualizedTimelineContainer = styled.div`
-  display: flex;
-  overflowY: scroll;
-  scrollbarWidth: none;
-  width: 100%;
+const VirtualizedTimelineContainer = styled.div`s
   user-select: none;
 `;
 

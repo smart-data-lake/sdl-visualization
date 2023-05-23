@@ -111,15 +111,22 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                         >
                             <Sheet
                                 sx={{
-                                    overflowX: 'hidden',
-                                    scrollbarWidth: 'none',
-                                    maxHeight: '70vh',
+                                    height: '70vh',
                                     flex: '1',
                                 }}
                             >
                                 <ThemeProvider theme={theme}>
                                 <GlobalStyle />
-                                    <VirtualizedTimeline run={attempt.run} rows={rows}/>
+                                    <Sheet
+                                        sx={{
+                                            height: '100%',
+                                            overflowY: 'scroll',
+                                            overflowX: 'inherit',
+                                            scrollbarWidth: 'thin',
+                                        }}
+                                    >
+                                        <VirtualizedTimeline run={attempt.run} rows={rows}/>
+                                    </Sheet>
                                 </ThemeProvider>
                             </Sheet>
                             {open && (
@@ -129,6 +136,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                         sx={{
                                             flex: '1', 
                                             minWidth: '15vw',
+                                            height: '100%',
                                         }}
                                     >
                                         <ContentDrawer attempt={attempt}/>
@@ -141,7 +149,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                         <Sheet 
                             sx={{
                                 display: 'flex',
-                                height: '70vh',
+                                height: '100%',
                                 gap: '0.5rem',
                             }}
                         >
@@ -161,6 +169,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                     <Sheet
                                         sx={{
                                             flex: '1', 
+                                            height: '100%',
                                             minWidth: '15vw',
                                         }}
                                         >

@@ -81,7 +81,7 @@ const Timeline: React.FC<TimelineProps> = ({
           rowCount={rows.length}
           rowHeight={ROW_HEIGHT}
           rowRenderer={rowRenderer}
-          height={580}
+          height={ROW_HEIGHT * rows.length}
           width={width}
           style={listStyle}
         />
@@ -124,7 +124,7 @@ const Timeline: React.FC<TimelineProps> = ({
   );
 
   return (
-    <ListContainer customMinHeight={0}>
+    <ListContainer >
       <AutoSizer>{autosizerContents}</AutoSizer>
     </ListContainer>
   );
@@ -178,8 +178,9 @@ function createRowRenderer({
 // Style
 //
 
-const ListContainer = styled.div<{ customMinHeight: number }>`
+const ListContainer = styled.div`
     width: 100%;  
+    height: 100%;
 `;
 
 export default Timeline;
