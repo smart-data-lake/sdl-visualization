@@ -91,6 +91,7 @@ interface flowProps {
   data: object,
   elementName: string,
   elementType: string,
+  runContext?: boolean,
 }
 
 type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of ReactFlow with an (optional) String attribute. 
@@ -258,8 +259,8 @@ function LineageTab(props: flowProps) {
         edges={edges}
         onInit={init}
         defaultPosition={[0,0]} 
-        onNodeClick={(event, node) => {clickOnNode(node)}}
-        onEdgeClick={(event, edge) => {clickOnEdge(edge)}}
+        onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
+        onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodesConnectable={false} //prevents adding new edges

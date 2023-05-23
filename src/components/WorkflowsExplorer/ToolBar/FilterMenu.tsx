@@ -80,7 +80,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
                                 }}
                             /> 
                             {filter.name}
-                            {getIcon(getSDLBStatus(filter.name.toLowerCase()))}
+                            {getIcon(filter.name.toLowerCase())}
                     </Sheet>
                 </>
             ))}

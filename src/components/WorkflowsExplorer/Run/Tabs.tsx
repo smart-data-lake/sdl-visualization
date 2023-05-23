@@ -127,7 +127,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                             top: 0,
                                             left: 0,
                                             backgroundColor: open ? 'primary.main' : 'none',
-                                            opacity: open ? [0.5, 0.5, 0.5] : [],
+                                            opacity: open ? [0.4, 0.4, 0.4] : [],
                                             transition: 'opacity 0.2s ease-in-out',
                                             cursor: 'context-menu'
                                         }}
@@ -141,13 +141,13 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                     <Sheet
                                         sx={{
                                             flex: '1', 
-                                            maxWidth: '50%',
+                                            maxWidth: '40%',
                                             position: 'absolute',
                                             top: 0,
-                                            left: '50%',
-                                            boxShadow: '-10px 8px 10px lightgray',
-                                            borderLeft: open ? '1px solid lightgray' : 'none',
-                                            borderRadius: '1rem',
+                                            left: '60%',
+                                            boxShadow: '-10px 10px 10px lightgray',
+                                            bordder: '1px solid lightgray',
+                                            borderRadius: '2rem',
                                         }}
                                     >
                                         <ContentDrawer attempt={attempt}/>
@@ -175,7 +175,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                     top: 0,
                                     left: 0,
                                     backgroundColor: open ? 'primary.main' : 'none',
-                                    opacity: open ? [0.5, 0.5, 0.5] : [],
+                                    opacity: open ? [0.4, 0.4, 0.4] : [],
                                     transition: 'opacity 0.2s ease-in-out',
                                 }}
                             >
@@ -186,13 +186,13 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                     {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
                                     <Sheet
                                         sx={{
-                                            maxWidth: '50%',
+                                            maxWidth: '40%',
                                             position: 'absolute',
                                             top: 0,
-                                            left: '50%',
-                                            boxShadow: '-10px 8px 10px lightgray',
-                                            borderLeft: open ? '1px solid lightgray' : 'none',
-                                            borderRadius: '1rem',
+                                            left: '60%',
+                                            boxShadow: '-10px 10px 10px lightgray',
+                                            bordder: '1px solid lightgray',
+                                            borderRadius: '2rem',
                                         }}
                                         >
                                         <ContentDrawer attempt={attempt}/>
@@ -267,9 +267,9 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
             {openLineage && (
                 <>
                     <Sheet sx={{borderLeft: '1px solid lightgray', mx: '1rem'}}/>
-                    <Sheet sx={{width: '50%', flex: 3}}>
+                    <Sheet sx={{width: '40%', flex: 2}}>
                         <ReactFlowProvider>
-                            <LineageTab data={props.lineageData} elementName={'btl-distances' as string} elementType={'dataObjects' as string} />
+                            <LineageTab data={props.lineageData} elementName={'btl-distances' as string} elementType={'dataObjects' as string} runContext={true} />
                         </ReactFlowProvider>
                     </Sheet>
                 </>
