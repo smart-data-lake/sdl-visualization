@@ -40,8 +40,8 @@ export default function App() {
         <Route path='/' element={<Home/>}/>
         <Route path='/workflows/' element={<Workflows/>}/>
         <Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
-        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
-        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true}/>}/>
+        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run lineageData={data}/>}/>
+        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run lineageData={data} panelOpen={true}/>}/>
         <Route path='*' element={<NotFound/>}/>
         <Route path='/config' element={<ConfigExplorer data={data}/>}>
           <Route

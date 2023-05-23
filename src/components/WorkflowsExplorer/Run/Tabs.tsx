@@ -24,6 +24,9 @@ import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { displayProps } from "../../ConfigExplorer/DataDisplayView";
+import LineageTab from "../../ConfigExplorer/LineageTab";
+import { ReactFlowProvider } from "react-flow-renderer";
 
 export const defaultDrawerWidth = 600;
 
@@ -212,7 +215,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
  * @param props {attempt: Attempt, panelOpen?: boolean}
  * @returns JSX.Element
  */
-const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
+const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?: boolean}) => {
     const { stepName, tab } = useParams();
     const [value, setValue] = React.useState(tab === 'timeline' ? 0: 1);
     const [openLineage, setOpenLineage] = useState<boolean>(false);
@@ -225,7 +228,7 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
         if (stepName) navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}/${stepName}`)
     }
     return ( 
-        <Sheet sx={{display: 'flex', height: '100vh'}}>
+        <Sheet sx={{display: 'flex', height: '86vh'}}>
             <Sheet 
                 sx={{
                     flex: 3,
@@ -246,14 +249,14 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
                         </TabList>
                         {!openLineage ?
                             (
-                                <IconButton color={'primary'} size="md" variant="soft" sx={{ml: '1rem', px: '1rem', scale: '90%', border: '1px solid'}} onClick={() => setOpenLineage(!openLineage)}>
+                                <IconButton color={'primary'} size="md" variant="solid" sx={{ml: '1rem', px: '1rem', scale: '80%'}} onClick={() => setOpenLineage(!openLineage)}>
                                     Open lineage
-                                    <KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem', scale: '70%'}}/>
+                                    <KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
                                 </IconButton>
                             ) : (
-                                <IconButton color={'primary'} size="md" variant="soft" sx={{ml: '0.5rem', px: '0.5rem', scale: '90%', border: '1px solid'}} onClick={() => setOpenLineage(!openLineage)}>
+                                <IconButton color={'primary'} size="md" variant="soft" sx={{ml: '0.5rem', px: '0.5rem', scale: '80%'}} onClick={() => setOpenLineage(!openLineage)}>
                                     Close lineage
-                                    <KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem', scale: '70%'}}/>
+                                    <KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem'}}/>
                                 </IconButton>
                             )
                         }
@@ -265,7 +268,9 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
                 <>
                     <Sheet sx={{borderLeft: '1px solid lightgray', mx: '1rem'}}/>
                     <Sheet sx={{width: '50%', flex: 3}}>
-                        Hey
+                        <ReactFlowProvider>
+                            <LineageTab data={props.lineageData} elementName={'btl-departures-arrivals-airports' as string} elementType={'dataObjects' as string} />
+                        </ReactFlowProvider>
                     </Sheet>
                 </>
             )}

@@ -38,8 +38,8 @@ export const router = createHashRouter(
         <Route path='/configviewer' element={<ConfigViewer/>}/> */}
         <Route path='/workflows/' element={<Workflows/>}/>
         <Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
-        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
-        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true}/>}/>
+        {/* <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
+        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true} lineageData={[]}/>}/> */}
         <Route path='*' element={<NotFound/>}/>
       </Route>
     )
