@@ -110,6 +110,8 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                 display: 'flex',
                                 gap: '0.5rem',
                                 height: '70vh',
+                                position: 'relative',  
+                                
                             }}
                         >
                                 <ThemeProvider theme={theme}>
@@ -117,7 +119,14 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                     <Sheet
                                         sx={{
                                             flex: '1',
-                                            width: '100%', 
+                                            width: '99%',
+                                            position: 'absolute', 
+                                            top: 0,
+                                            left: 0,
+                                            backgroundColor: open ? 'primary.main' : 'none',
+                                            opacity: open ? [0.5, 0.5, 0.5] : [],
+                                            transition: 'opacity 0.2s ease-in-out',
+                                            cursor: 'context-menu'
                                         }}
                                     >
                                         <VirtualizedTimeline run={attempt.run} rows={rows}/>
@@ -130,6 +139,12 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                         sx={{
                                             flex: '1', 
                                             maxWidth: '50%',
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: '50%',
+                                            boxShadow: '-10px 8px 10px lightgray',
+                                            borderLeft: open ? '1px solid lightgray' : 'none',
+                                            borderRadius: '1rem',
                                         }}
                                     >
                                         <ContentDrawer attempt={attempt}/>
@@ -170,7 +185,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                         sx={{
                                             maxWidth: '50%',
                                             position: 'absolute',
-                                            top: '0rem',
+                                            top: 0,
                                             left: '50%',
                                             boxShadow: '-10px 8px 10px lightgray',
                                             borderLeft: open ? '1px solid lightgray' : 'none',
@@ -210,7 +225,7 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
         if (stepName) navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}/${stepName}`)
     }
     return ( 
-        <Sheet sx={{display: 'flex', height: '85vh'}}>
+        <Sheet sx={{display: 'flex', height: '100vh'}}>
             <Sheet 
                 sx={{
                     flex: 3,
@@ -231,12 +246,12 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
                         </TabList>
                         {!openLineage ?
                             (
-                                <IconButton color={'neutral'} size="md" variant="soft" sx={{ml: '1rem', px: '1rem', scale: '90%', border: '1px solid lightgray'}} onClick={() => setOpenLineage(!openLineage)}>
+                                <IconButton color={'primary'} size="md" variant="soft" sx={{ml: '1rem', px: '1rem', scale: '90%', border: '1px solid'}} onClick={() => setOpenLineage(!openLineage)}>
                                     Open lineage
                                     <KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem', scale: '70%'}}/>
                                 </IconButton>
                             ) : (
-                                <IconButton color={'neutral'} size="md" variant="soft" sx={{ml: '0.5rem', px: '0.5rem', scale: '90%', border: '1px solid lightgray'}} onClick={() => setOpenLineage(!openLineage)}>
+                                <IconButton color={'primary'} size="md" variant="soft" sx={{ml: '0.5rem', px: '0.5rem', scale: '90%', border: '1px solid'}} onClick={() => setOpenLineage(!openLineage)}>
                                     Close lineage
                                     <KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem', scale: '70%'}}/>
                                 </IconButton>

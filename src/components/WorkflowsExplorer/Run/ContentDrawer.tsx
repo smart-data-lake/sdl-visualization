@@ -1,4 +1,4 @@
-import { Box, IconButton, Sheet, Table, Typography } from "@mui/joy";
+import { Box, IconButton, Sheet, Table, Tooltip, Typography } from "@mui/joy";
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useParams } from "react-router-dom";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
@@ -180,10 +180,11 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
                     mb: '1rem',
                 }}
             >
-
-                <Typography noWrap level='h3'>
-                    {action.step_name}
-                </Typography>
+                <Tooltip title={action.step_name}>
+                    <Typography sx={{cursor: 'default'}} noWrap level='h3'>
+                        {action.step_name}
+                    </Typography>
+                </Tooltip>
                 <IconButton
                     variant="plain" 
                     color="neutral" 

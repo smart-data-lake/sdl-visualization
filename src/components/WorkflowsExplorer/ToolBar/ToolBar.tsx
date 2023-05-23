@@ -135,7 +135,7 @@ const ToolBar = (
                 <Input
                     placeholder={searchPlaceholder || "Search"}
                     size="sm"
-                    sx={{fontSize: 'var(--joy-fontSize-sm)' }}
+                    sx={{fontSize: 'var(--joy-fontSize-sm)', zIndex: 'auto',}}
                     onChange={(event) => {
                         const { value } = event.target;
                         setValue(value)
