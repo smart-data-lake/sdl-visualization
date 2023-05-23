@@ -22,6 +22,7 @@ const WorkflowHistoryTable = (props : {data: any[], updateRows: (rows?: any[], c
                 size='sm' 
                 hoverRow 
                 color='neutral'
+                
              >
                 <thead>
                     <tr>

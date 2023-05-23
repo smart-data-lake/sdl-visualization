@@ -72,19 +72,12 @@ const ResultsTable = (props: {metrics?: any, subFeed?: any}) => {
  * If available, it also displays the message of the task.
  * @param props action: Row - the row to display
  * @returns 
- */
+*/
 const ContentSheet = (props: {action: Row}) => {
     const { action } = props;
     
     return (
-        
-            <Box
-                sx={{
-                    overflowY: 'scroll',
-                    overflowX: 'hidden',
-                    scrollbarWidth: 'none',
-                }}
-            >
+        <>
                 {action.metadata.map((meta) => {
                     const toDisplay : any[] = [];
                     if (meta.mainMetrics) {
@@ -152,7 +145,7 @@ const ContentSheet = (props: {action: Row}) => {
                         {action.message}
                     </code>
                 </Sheet>}
-            </Box>
+                </>
     )
 }
 
@@ -172,6 +165,7 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
         <Sheet
             sx={{
                 p: '1rem',
+                pl: '1.5rem',
                 height: '70vh',
                 display: 'flex',
                 flexDirection: 'column',
@@ -202,8 +196,9 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
             <Box
                 sx={{
                     overflowY: 'scroll',
-                    overflowX: 'hidden',
                     scrollbarWidth: 'none',
+                    overflowX: 'hidden',
+                    pr: '1rem',
                 }}
             >
                 <ContentSheet action={action}/>
