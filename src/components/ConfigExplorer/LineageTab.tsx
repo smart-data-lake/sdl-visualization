@@ -258,8 +258,8 @@ function LineageTab(props: flowProps) {
         edges={edges}
         onInit={init}
         defaultPosition={[0,0]} 
-        onNodeClick={(event, node) => {false && clickOnNode(node)}}
-        onEdgeClick={(event, edge) => {false && clickOnEdge(edge)}}
+        onNodeClick={(event, node) => {clickOnNode(node)}}
+        onEdgeClick={(event, edge) => {clickOnEdge(edge)}}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodesConnectable={false} //prevents adding new edges

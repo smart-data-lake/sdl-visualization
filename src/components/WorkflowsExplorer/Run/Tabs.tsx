@@ -269,7 +269,7 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
                     <Sheet sx={{borderLeft: '1px solid lightgray', mx: '1rem'}}/>
                     <Sheet sx={{width: '50%', flex: 3}}>
                         <ReactFlowProvider>
-                            <LineageTab data={props.lineageData} elementName={'btl-departures-arrivals-airports' as string} elementType={'dataObjects' as string} />
+                            <LineageTab data={props.lineageData} elementName={'btl-distances' as string} elementType={'dataObjects' as string} />
                         </ReactFlowProvider>
                     </Sheet>
                 </>
