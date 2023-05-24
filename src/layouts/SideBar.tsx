@@ -1,4 +1,4 @@
-import { List, ListItem/* , ListItemContent */, ListItemButton, Sheet, Box, Divider } from '@mui/joy';
+import { List, ListItem/* , ListItemContent */, ListItemButton, Sheet, Box, Divider, Tooltip } from '@mui/joy';
 import React from 'react'
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
@@ -14,15 +14,18 @@ const SideBar = () => {
     const buttons = [
         {
             icon : <HomeRoundedIcon/>,
-            link : '/'
+            link : '/',
+            description: 'Home'
         },
         {
             icon : <SpeedRoundedIcon/>,
-            link : '/workflows'
+            link : '/workflows',
+            description: 'Workflows Explorer'
         },
         {
             icon : <TuneRoundedIcon/>,
-            link : '/config'
+            link : '/config',
+            description: 'Config Viewer'
         }
     ]
     const navigate = useNavigate();
@@ -56,16 +59,18 @@ const SideBar = () => {
                     {buttons.map((component) => (
                         <>    
                             <ListItem>
-                                <ListItemButton 
-                                    sx={{
-                                        borderRadius: 4, 
-                                        scale: '90%',
-                                        justifyContent: 'center',
-                                    }}
-                                    onClick={() => navigate(component.link)}
-                                >
-                                    {component.icon}
-                                </ListItemButton>
+                                <Tooltip title={component.description} placement='right'> 
+                                    <ListItemButton 
+                                        sx={{
+                                            borderRadius: 4, 
+                                            scale: '90%',
+                                            justifyContent: 'center',
+                                        }}
+                                        onClick={() => navigate(component.link)}
+                                        >
+                                        {component.icon}
+                                    </ListItemButton>
+                                </Tooltip>
                             </ListItem>
                         </>
                     ))}
