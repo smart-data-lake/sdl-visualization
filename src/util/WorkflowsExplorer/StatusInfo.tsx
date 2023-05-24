@@ -21,7 +21,7 @@ export const getButtonColor = (name: string) => {
 }
 
 export const getIcon = (status: string) => {
-    const tmp = getButtonColor(getSDLBStatus(status));
+    const tmp = getButtonColor(status);
     const color = tmp === 'neutral' ? 'disabled' : (tmp === 'danger' ? 'error' : tmp);
 
     switch (status) {
@@ -59,13 +59,4 @@ export const checkFiltersAvailability = (rows: any, filters: any[]) => {
         }
     });
     return availableFilters;
-}
-
-export const getSDLBStatus = (status: string) => {
-    if (status === 'SUCCEEDED') {
-        return 'SUCCEEDED';
-    } else if (status === 'SKIPPED') {
-        return 'SKIPPED';
-    } 
-    return status;
 }
