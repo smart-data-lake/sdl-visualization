@@ -59,14 +59,14 @@ export class Row implements MetaDataBaseObject {
     foreach_label?: string;
     metadata: Metadata;
     message: string;
-    
+   
     constructor({ properties }: { properties: TaskProperty; }) {
       this.flow_id = properties.runInfo.workflowName;
       this.step_name = properties.actionName;
       this.run_number = properties.runInfo.runId;
       this.attempt_id = properties.runInfo.attemptId;
       this.ts_epoch = new Date(properties.action.startTstmp).getTime();
-      this.status = properties.action.state === 'SUCCEEDED' ? 'completed' : (properties.action.state === 'FAILED' ? 'failed' : 'unknown');
+      this.status = properties.action.state as TaskStatus;
       this.started_at = this.ts_epoch;
       this.duration = durationMicro(properties.action.duration === 'PT0S' ? 'PT0.001S' : properties.action.duration);
       this.finished_at = this.started_at + (this.duration === 0 ? 1 : this.duration);
@@ -89,7 +89,7 @@ export class Row implements MetaDataBaseObject {
      * current time. Note that we are not camparing current time to ts_epoch field, which is just time for task object, not actual task time itself.
      */
     getTaskDuration(): number | null {
-      return this.status === 'running' && this.started_at
+      return this.status === 'RUNNING' && this.started_at
         ? Date.now() - this.started_at
         : this.duration
         ? this.duration
@@ -98,7 +98,7 @@ export class Row implements MetaDataBaseObject {
   }
   
   
-  export type TaskStatus = 'running' | 'completed' | 'failed' | 'unknown' | 'pending' | 'refining';
+  export type TaskStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'SKIPPED' | 'PREPARED' | 'INITIALIZED';
   
   export interface TaskProperty {
     runInfo: RunInfo,

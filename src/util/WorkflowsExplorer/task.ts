@@ -12,7 +12,7 @@ export function getTaskId(task: Row): string {
  * current time. Note that we are not camparing current time to ts_epoch field, which is just time for task object, not actual task time itself.
  */
 export function getTaskDuration(task: Row): number | null {
-  return task.status === 'running' && task.started_at
+  return task.status === 'RUNNING' && task.started_at
     ? Date.now() - task.started_at
     : task.duration
     ? task.duration
