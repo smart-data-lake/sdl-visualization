@@ -24,7 +24,7 @@ const ToolBar = (
         filters?: {name: string, fun: (rows: any[]) => any}[],
         sortEnabled?: boolean,
         datetimePicker?: (start: Date, end: Date) => void,
-        searchMode?: 'exact' | 'partial',
+        searchMode?: 'equals' | 'contains',
         searchPlaceholder?: string
     }) => {
     const { 
@@ -52,9 +52,9 @@ const ToolBar = (
 
 	useEffect(() => {
 		function handleInput() {
-            const tmp = controlledRows.filter((row) => row[searchColumn].toString().toLowerCase() === (value.toLowerCase()));
-            return tmp;
-		}
+            if (searchMode === 'equals') return controlledRows.filter((row) => row[searchColumn].toString().toLowerCase() === (value.toLowerCase()));
+            return controlledRows.filter((row) => row[searchColumn].toString().toLowerCase().includes(value.toLowerCase()));
+        }
 		
 		function applyFilters() {
 			const filteredRows: any[] = []

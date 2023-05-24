@@ -68,6 +68,7 @@ const Workflows = () => {
                     searchColumn={"name"}
                     sortEnabled={false}
                     searchPlaceholder="Search by name"
+                    searchMode="contains"
                 />
                 <Sheet
                     sx={{

@@ -76,6 +76,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                     searchColumn={"step_name"}
                     searchPlaceholder="Search by action name"
                     style="horizontal"
+                    searchMode="contains"
                     />
                     {/* <Sheet sx={{borderBottom: '1px solid lightgray', mb: '1rem', mt: '1.5rem'}}/> */}
             </Sheet>
