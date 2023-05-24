@@ -47,9 +47,7 @@ export const defaultFilters = (columnName?: string) => {
         {name: 'Failed', fun: (rows: any) => {return rows.filter(row => row[column] === 'FAILED')}},
         {name: 'Prepared', fun: (rows: any) => {return rows.filter(row => row[column] === 'PREPARED')}},
         {name: 'Initialized', fun: (rows: any) => {return rows.filter(row => row[column] === 'INITIALIZED')}},
-        {name: 'Completed', fun: (rows: any) => {return rows.filter(row => row[column] === 'completed')}},
-        {name: 'Unknown', fun: (rows: any) => {return rows.filter(row => row[column] === 'unknown')}},
-        {name: 'Failed', fun: (rows: any) => {return rows.filter(row => row[column] === 'failed')}},
+        {name: 'Skipped', fun: (rows: any) => {return rows.filter(row => row[column] === 'SKIPPED')}},
     ]
 };
 
@@ -64,9 +62,9 @@ export const checkFiltersAvailability = (rows: any, filters: any[]) => {
 }
 
 export const getSDLBStatus = (status: string) => {
-    if (status === 'completed') {
+    if (status === 'SUCCEEDED') {
         return 'SUCCEEDED';
-    } else if (status === 'unknown') {
+    } else if (status === 'SKIPPED') {
         return 'SKIPPED';
     } 
     return status;
