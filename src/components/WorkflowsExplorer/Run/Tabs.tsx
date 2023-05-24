@@ -3,7 +3,7 @@ import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab, { tabClasses } from '@mui/joy/Tab';
 import TabPanel from '@mui/joy/TabPanel';
-import { Box, Button, IconButton, Sheet, Typography } from "@mui/joy";
+import { Box, IconButton, Sheet, Typography } from "@mui/joy";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TableOfActions from "./ActionsTable";
 import { ThemeProvider } from 'styled-components';
@@ -46,6 +46,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const defaultRows = attempt.rows;
     const [rows, setRows] = useState<Row[]>(defaultRows);
     const navigate = useNavigate();
+    const location = useLocation().pathname;
 
     /**
    * Updates the rows displayed in the table of actions.
@@ -121,6 +122,11 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                 <ThemeProvider theme={theme}>
                                 <GlobalStyle />
                                     <Sheet
+                                        onClick={() => {
+                                            if (open) {
+                                                navigate(`${location.split('timeline')[0]}timeline`);
+                                            }
+                                        }}
                                         sx={{
                                             flex: '1',
                                             width: '99%',
@@ -132,7 +138,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                             transition: 'opacity 0.2s ease-in-out',
                                             cursor: 'context-menu'
                                         }}
-                                    >
+                                        >
                                         <VirtualizedTimeline run={attempt.run} rows={rows}/>
                                     </Sheet>
                                 </ThemeProvider>
@@ -168,6 +174,11 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                         >
 
                             <Sheet
+                                onClick={() => {
+                                    if (open) {
+                                        navigate(`${location.split('table')[0]}table`);
+                                    }
+                                }}
                                 sx={{
                                     overflowY: 'scroll',
                                     position: 'absolute',
@@ -178,6 +189,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                     backgroundColor: open ? 'primary.main' : 'none',
                                     opacity: open ? [0.4, 0.4, 0.4] : [],
                                     transition: 'opacity 0.2s ease-in-out',
+                                    cursor: 'context-menu'
                                 }}
                             >
                                 <TableOfActions rows={rows}/>
