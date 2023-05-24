@@ -60,19 +60,21 @@ export const getLongestRowDuration = (rows: Row[]): number => {
  */
 export const getTaskLineStatus = (rows: Row[]): TaskStatus => {
   const statuses = rows.map((row) => {
-    return row.status || 'unknown';
+    return row.status || 'UNKNOWN';
   });
-  if (statuses.indexOf('running') > -1) return 'running';
-  if (statuses.indexOf('failed') > -1) return 'failed';
-  if (statuses.indexOf('unknown') > -1) return 'unknown';
-  return 'completed';
+  if (statuses.indexOf('RUNNING') > -1) return 'RUNNING';
+  if (statuses.indexOf('FAILED') > -1) return 'FAILED';
+  if (statuses.indexOf('SKIPPED') > -1) return 'SKIPPED';
+  if (statuses.indexOf('PREPARED') > -1) return 'PREPARED';
+  if (statuses.indexOf('INITIALIZED') > -1) return 'INITIALIZED';
+  return 'SUCCEEDED';
 };
 
 /**
  * Get current step name	
  */
 export const getCurrentStepName = (rows: Row[]): string =>
-  rows.find((row) => row.status === 'running')?.step_name || '';
+  rows.find((row) => row.status === 'RUNNING')?.step_name || '';
 
 
 export const sortRows = (rows: any, sortType: SortType) => {

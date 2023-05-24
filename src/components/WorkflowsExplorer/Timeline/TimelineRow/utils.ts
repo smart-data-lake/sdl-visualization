@@ -37,7 +37,7 @@ export function getRowStatus(
     if (row.data.status) {
       return row.data.status;
     } else {
-      return row.data.finished_at ? 'completed' : 'running';
+      return row.data.finished_at ? 'SUCCEEDED' : 'RUNNING';
     }
   }
 }
@@ -47,17 +47,20 @@ export function lineColor(theme: DefaultTheme, grayed: boolean, state: string, i
     return '#c7c7c7';
   } else {
     switch (state) {
-      case 'completed':
-      case 'ok':
+      case 'SUCCEEDED':
         return !isFirst ? lighten(0.3, theme.color.bg.red) : theme.color.bg.green;
-      case 'running':
+      case 'RUNNING':
         return theme.color.bg.greenLight;
-      case 'pending':
+      case 'PENDING':
         return theme.color.bg.yellow;
-      case 'failed':
+      case 'FAILED':
         return !isFirst ? lighten(0.3, theme.color.bg.red) : theme.color.bg.red;
-      case 'unknown':
+      case 'SKIPPED':
         return !isFirst ? lighten(0.3, theme.color.bg.dark) : theme.color.bg.dark;
+      case 'INITIALIZED':
+        return !isFirst ? lighten(0.3, theme.color.bg.blue) : theme.color.bg.blue;
+      case 'PREPARED':
+        return !isFirst ? lighten(0.3, theme.color.bg.violet) : theme.color.bg.violet;
       default:
         return lighten(0.5, theme.color.bg.dark);
     }

@@ -32,14 +32,18 @@ export function toRelativeSize(normalsize: number): number {
  */
 export function colorByStatus(theme: DefaultTheme, status: string): string {
   switch (status) {
-    case 'completed':
+    case 'SUCCEEEDED':
       return theme.color.bg.green;
-    case 'failed':
+    case 'FAILED':
       return theme.color.bg.red;
-    case 'running':
+    case 'RUNNING':
       return theme.color.bg.greenLight;
-    case 'pending':
+    case 'PENDING':
       return theme.color.bg.yellow;
+    case 'INITIALIZED':
+      return theme.color.bg.blue;
+    case 'PREPARED':
+      return theme.color.bg.violet;
     default:
       return theme.color.bg.dark;
   }

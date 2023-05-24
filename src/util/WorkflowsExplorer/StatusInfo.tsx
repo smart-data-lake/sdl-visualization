@@ -21,7 +21,7 @@ export const getButtonColor = (name: string) => {
 }
 
 export const getIcon = (status: string) => {
-    const tmp = getButtonColor(getSDLBStatus(status));
+    const tmp = getButtonColor(status);
     const color = tmp === 'neutral' ? 'disabled' : (tmp === 'danger' ? 'error' : tmp);
 
     switch (status) {
@@ -47,9 +47,7 @@ export const defaultFilters = (columnName?: string) => {
         {name: 'Failed', fun: (rows: any) => {return rows.filter(row => row[column] === 'FAILED')}},
         {name: 'Prepared', fun: (rows: any) => {return rows.filter(row => row[column] === 'PREPARED')}},
         {name: 'Initialized', fun: (rows: any) => {return rows.filter(row => row[column] === 'INITIALIZED')}},
-        {name: 'Completed', fun: (rows: any) => {return rows.filter(row => row[column] === 'completed')}},
-        {name: 'Unknown', fun: (rows: any) => {return rows.filter(row => row[column] === 'unknown')}},
-        {name: 'Failed', fun: (rows: any) => {return rows.filter(row => row[column] === 'failed')}},
+        {name: 'Skipped', fun: (rows: any) => {return rows.filter(row => row[column] === 'SKIPPED')}},
     ]
 };
 
@@ -61,13 +59,4 @@ export const checkFiltersAvailability = (rows: any, filters: any[]) => {
         }
     });
     return availableFilters;
-}
-
-export const getSDLBStatus = (status: string) => {
-    if (status === 'completed') {
-        return 'SUCCEEDED';
-    } else if (status === 'unknown') {
-        return 'SKIPPED';
-    } 
-    return status;
 }

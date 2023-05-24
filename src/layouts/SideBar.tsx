@@ -19,25 +19,25 @@ const SideBar = () => {
     
     const buttons = [
         {
-            name : 'home',
             icon : <HomeRoundedIcon/>,
             link : '/',
             disabled : false,
-            filetype : 'none'
+            filetype : 'none',
+            description: 'Home'
         },
         {
-            name : 'workflows explorer',
             icon : <SpeedRoundedIcon/>,
             link : '/workflows',
             disabled : !(data.localSetup && data.fallbackStatefiles),
-            filetype : 'state'
+            filetype : 'state',
+            description: 'Workflows Explorer'
         },
         {
-            name : 'config viewer',
             icon : <TuneRoundedIcon/>,
             link : '/config',
             disabled : !(data.localSetup && data.fallbackConfigfiles),
-            filetype : 'config'
+            filetype : 'config',
+            description: 'Config Viewer'
         }
     ]
 
@@ -72,7 +72,9 @@ const SideBar = () => {
                     {buttons.map((component) => (
                         <>    
                             <ListItem>
+
                                 {!component.disabled && (
+                                  <Tooltip title={component.description} placement='right'>
                                     <ListItemButton 
                                             sx={{
                                                 borderRadius: 4, 
@@ -83,9 +85,10 @@ const SideBar = () => {
                                         >   
                                             {component.icon}
                                     </ListItemButton>
+                                   <Tooltip title={component.description} placement='right'>
                                 )}
                                 {component.disabled && (
-                                    <Tooltip title={`No data was found for the menu "${component.name}". Please check that the ${component.filetype} files are at the expected location according to the manifest.`} placement='right'>
+                                    <Tooltip title={`No data was found for the menu "${component.description.toLowerCase()}". Please check that the ${component.filetype} files are at the expected location according to the manifest.`} placement='right'>
                                         <div>
                                         <ListItemButton 
                                             sx={{

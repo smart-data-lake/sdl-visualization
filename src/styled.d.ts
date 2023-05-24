@@ -47,6 +47,7 @@ declare module 'styled-components' {
         red: string;
         green: string;
         greenLight: string;
+        violet: string;
       };
       text: {
         white: string;

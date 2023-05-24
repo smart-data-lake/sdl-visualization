@@ -118,14 +118,14 @@ export function getStepStatus(stepTaskData: Record<string, Row[]>): TaskStatus {
   for (const data of Object.entries(stepTaskData)) {
     const statuses = data[1].map((item) => item.status);
     const statusOfLastItem = statuses[statuses.length - 1];
-    if (statusOfLastItem === 'running') {
-      return 'running';
+    if (statusOfLastItem === 'RUNNING') {
+      return 'RUNNING';
     }
-    if (statusOfLastItem === 'failed') {
-      return 'failed';
+    if (statusOfLastItem === 'FAILED') {
+      return 'FAILED';
     }
   }
-  return 'completed';
+  return 'SUCCEEDED';
 }
 
 //
