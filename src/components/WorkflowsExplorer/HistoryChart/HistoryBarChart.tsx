@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
-import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CustomTooltip } from './ChartControl';
 
@@ -33,6 +33,7 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
                 animationDuration={100}
                 content={<CustomTooltip active={undefined} payload={undefined} label={undefined}/>}
               />
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <YAxis width={77} tickFormatter={(value) => formatDuration(value)}/>
             <XAxis dataKey="name" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} padding={'gap'} minTickGap={30}/>
             <Bar 

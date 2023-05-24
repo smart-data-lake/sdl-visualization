@@ -1,4 +1,4 @@
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, Line, LineChart, ReferenceArea } from 'recharts';
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, Line, LineChart, ReferenceArea, CartesianGrid } from 'recharts';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
 import { CustomTooltip } from './ChartControl';
 import { Indices } from '../Workflow/WorkflowHistory';
@@ -12,6 +12,7 @@ const HistoryLineChart = (props: {data : {value: number, status: string, name: s
               <LineChart
                 data={data}
               >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <YAxis width={100} tickFormatter={(value) => formatDuration(value)}/>
                 <XAxis dataKey="name" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} minTickGap={10} ticks={[data[0]?.name, data[Math.round(data.length/2)]?.name, data[data.length-1]?.name]}/>
                 <Tooltip
