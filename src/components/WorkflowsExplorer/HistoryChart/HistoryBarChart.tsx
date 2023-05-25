@@ -48,7 +48,7 @@ const HistoryBarChart = (props: {data : {value: number, status: string, name: st
                     {
                       data.map((entry, index) => {
                         return (
-                          <Cell key={`cell-${index}`} fill={entry.status === 'SUCCEEDED' ? '#20af2e':'#eb3428'} />
+                          <Cell key={`cell-${index}`} fill={entry.status === 'SUCCEEDED' ? '#20af2e':'#eb3428'} style={{cursor: 'pointer'}} />
                           )
                         }
                         )

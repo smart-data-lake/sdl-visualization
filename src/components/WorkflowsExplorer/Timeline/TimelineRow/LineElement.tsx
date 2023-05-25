@@ -86,7 +86,7 @@ const LineElement: React.FC<LineElementProps> = ({
         }}
         data-testid="boxgraphic"
         dragging={dragging}
-        title={formatDuration(duration) + `${status === 'unknown' ? ` (${t('task.unable-to-find-status')})` : ''}`}
+        title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (${t('task.unable-to-find-status')})` : ''}`}
         onClick={(e) => {
           if (row.type === 'task') {
             e.stopPropagation();
@@ -95,7 +95,7 @@ const LineElement: React.FC<LineElementProps> = ({
           }
         }}
       >
-        {(isLastAttempt || status === 'running') && (
+        {(isLastAttempt || status === 'RUNNING') && (
           <RowMetricLabel duration={duration} labelPosition={labelPosition} data-testid="boxgraphic-label" />
         )}
         <BoxGraphicLine grayed={grayed} state={status} isLastAttempt={isLastAttempt} />

@@ -93,14 +93,14 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
 
         if (timeline.sortBy !== 'duration') {
           const { start, end } = startAndEndpointsOfRows(grp);
-          return { status, start, end: status === 'running' ? timeline.endTime : end };
+          return { status, start, end: status === 'RUNNING' ? timeline.endTime : end };
         } else {
           const timings = startAndEndpointsOfRows(grp);
           const longest = getLongestRowDuration(grp);
 
           return {
-            start: status === 'running' ? timeline.startTime : timings.start,
-            end: status === 'running' ? timeline.endTime : timings.start + longest,
+            start: status === 'RUNNING' ? timeline.startTime : timings.start,
+            end: status === 'RUNNING' ? timeline.endTime : timings.start + longest,
             status,
           };
         }
