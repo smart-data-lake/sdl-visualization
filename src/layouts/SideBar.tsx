@@ -70,23 +70,8 @@ const SideBar = () => {
                     }}
                 >   
                     {buttons.map((component) => (
-                        <>    
+                        <>  
                             <ListItem>
-
-                                {!component.disabled && (
-                                  <Tooltip title={component.description} placement='right'>
-                                    <ListItemButton 
-                                            sx={{
-                                                borderRadius: 4, 
-                                                scale: '90%',
-                                                justifyContent: 'center',
-                                            }}
-                                            onClick={() => navigate(component.link)}
-                                        >   
-                                            {component.icon}
-                                    </ListItemButton>
-                                   <Tooltip title={component.description} placement='right'>
-                                )}
                                 {component.disabled && (
                                     <Tooltip title={`No data was found for the menu "${component.description.toLowerCase()}". Please check that the ${component.filetype} files are at the expected location according to the manifest.`} placement='right'>
                                         <div>
