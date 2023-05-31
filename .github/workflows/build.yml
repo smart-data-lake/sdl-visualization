@@ -5,7 +5,9 @@ on:
     branches:
       - 'master'
       - 'develop'
-      - 'test/**'
+      
+  # allow for manual builds from feature branches
+  workflow_dispatch:
 
 jobs:
   build-and-create-release:
