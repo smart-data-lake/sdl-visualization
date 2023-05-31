@@ -72,23 +72,21 @@ const SideBar = () => {
                     {buttons.map((component) => (
                         <>  
                             <ListItem>
-                                {component.disabled && (
-                                    <Tooltip title={`No data was found for the menu "${component.description.toLowerCase()}". Please check that the ${component.filetype} files are at the expected location according to the manifest.`} placement='right'>
-                                        <div>
-                                        <ListItemButton 
-                                            sx={{
-                                                borderRadius: 4, 
-                                                scale: '90%',
-                                                justifyContent: 'center',
-                                            }}
-                                            onClick={() => navigate(component.link)}
-                                            disabled
-                                            >   
-                                            {component.icon}
-                                        </ListItemButton>
-                                        </div>
-                                    </Tooltip>
-                                )}
+                                <Tooltip title={component.disabled ? `No data was found for the menu "${component.description.toLowerCase()}". Please check that the ${component.filetype} files are at the expected location according to the manifest.` : component.description} placement='right'>
+                                    <div>
+                                    <ListItemButton 
+                                        sx={{
+                                            borderRadius: 4, 
+                                            scale: '90%',
+                                            justifyContent: 'center',
+                                        }}
+                                        onClick={() => navigate(component.link)}
+                                        disabled={component.disabled}
+                                        >   
+                                        {component.icon}
+                                    </ListItemButton>
+                                    </div>
+                                </Tooltip>
                             </ListItem>
                         </>
                     ))}
