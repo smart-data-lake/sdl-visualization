@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import time
 from wonderwords import RandomWord
 import isodate
 import json
@@ -158,19 +159,37 @@ def main():
     
     print("\n\n=====================================")
     print("~~ Welcome to the index building tool ~~ \n")
-    print("The tool will compile all state files in \"/public/state\" and its subdirectories into \"/public/state/index.json\". If no statefiles are present, a default empty index is returned:")
+    print("In the following steps, indicate the paths relative to the location of the root folder of the project. \n")
+    time.sleep(1.2)
+    print("Please enter the path to the directory containing you statefiles. Press enter if you have no statefiles.")
+    statefiles_path = input("Path: ")
+    while (statefiles_path != '' and not os.path.isdir(os.path.join(script_dir, '../', statefiles_path))):
+        print("The path you entered does not exist. Please enter a valid path.")
+        statefiles_path = input("Path: ")
     
-    path = os.path.join(script_dir, f"../public/state")
-    print(f"Retrieving summaries \"{path}\"...")
-    files = list_files(path, ".json")
-    print(f"{len(files)} files found.")
-    if len(files) > 0:
-        print("Creating summaries...")
-        db = create_dict(files)
-        print("Writing summaries...")
-        with open(f"{path}/index.json", "w") as outfile:
-            json.dump(db, outfile, ensure_ascii=False, indent=4)
-        print("Summaries written. \n \n")
+    if (statefiles_path != ''):
+        print(f"The tool will compile all state files in \"{statefiles_path}\" and its subdirectories into \"public/state/index.json\". If no statefiles are present, a default empty index is returned:")
+        path = os.path.join(script_dir, "../", statefiles_path)
+        print(f"Retrieving summaries \"{path}\"...")
+        files = list_files(path, ".json")
+        print(f"{len(files)} files found.")
+        if len(files) > 0:
+            print("Creating summaries...")
+            db = create_dict(files)
+            print("Writing summaries...")
+            with open(os.path.join(script_dir, "../public/state/index.json"), "w") as outfile:
+                json.dump(db, outfile, ensure_ascii=False, indent=4)
+            print("Summaries written. \n \n")
+        
+        with open(os.path.join(script_dir, "../public/manifest.json")) as json_file:
+            manifest = json.load(json_file)
+            manifest["statefilesIndex"] = "state/index.json"
+            json.dump(manifest, open(os.path.join(script_dir, "../public/manifest.json"), "w"), ensure_ascii=False, indent=4)
+
+        print(manifest)
+    else:
+        print('No statefiles path provided. Skipping statefile index creation.')
+     
 
     print("The tool will compile all config files in \"/public/config\" and its subdirectories into \"/public/config/index.json\". If no config files are present, a default empty index is returned:")
     
@@ -184,7 +203,7 @@ def main():
         print("Writing summaries...")
         with open(f"{path}/index.json", "w") as outfile:
             json.dump(db, outfile, ensure_ascii=False, indent=4)
-        print("Summaries written. \n \n")
+        print("Summaries written. \n \n") 
     
 
     

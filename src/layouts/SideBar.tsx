@@ -28,20 +28,19 @@ const SideBar = () => {
         {
             icon : <SpeedRoundedIcon/>,
             link : '/workflows',
-            disabled : !(data.localSetup && data.fallbackStatefiles),
+            disabled : !(data.localSetup && data.statefilesIndex),
             filetype : 'state',
             description: 'Workflows Explorer'
         },
         {
             icon : <TuneRoundedIcon/>,
             link : '/config',
-            disabled : !(data.localSetup && data.fallbackConfigfiles),
+            disabled : !(data.localSetup && data.configIndex),
             filetype : 'config',
             description: 'Config Viewer'
         }
     ]
 
-    console.log(buttons)
 
     return ( 
         <Sheet
