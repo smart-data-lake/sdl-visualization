@@ -10,8 +10,8 @@ export class fetchAPI_local_statefiles implements fetchApi {
     getWorkflows = async () => {
         const query = await fetch('/manifest.json');
         const manifest = await query.json();
-
-        return fetch(manifest.statefilesIndex)
+        
+        return fetch(manifest.statefilesIndex + "/index.json")
         .then(res => res.json())
         .then(data => data["workflows"]);
     };
@@ -21,7 +21,7 @@ export class fetchAPI_local_statefiles implements fetchApi {
         const query = await fetch('/manifest.json');
         const manifest = await query.json();
 
-        return fetch(manifest.statefilesIndex)
+        return fetch(manifest.statefilesIndex + "/index.json")
         .then(res => res.json())
         .then(data => data["workflow"].filter(workflow => workflow.name === name))
         .then(value => value[0])
@@ -32,7 +32,7 @@ export class fetchAPI_local_statefiles implements fetchApi {
         const query = await fetch('/manifest.json');
         const manifest = await query.json();
 
-        return fetch(manifest.statefilesIndex)
+        return fetch(manifest.statefilesIndex + "/index.json")
         .then(res => res.json())
         .then(data => data["runs"].filter(run => (run.name === args.name && run.runId === args.runId && run.attemptId === args.attemptId))[0])
         .then(val => { 

@@ -13,6 +13,5 @@
     "theme_color": "#000000",
     "background_color": "#ffffff",
     "localSetup": true,
-    "apiBaseURL": "",
-    "statefilesIndex": "state/index.json"
+    "statefilesIndex": "/state/heidi"
 }

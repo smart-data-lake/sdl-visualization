@@ -21,7 +21,7 @@ def list_files(path, extension):
     return list
 
 # Function that create dictionary from the file names 
-def create_dict(files):
+def create_dict(path, files):
     statefiles = []
     id = uuid.uuid4()
     workflows = []
@@ -62,7 +62,7 @@ def create_dict(files):
                 "runId": runId,
                 "attemptId": attemptId,
                 "name": appConfig["applicationName"],
-                "path": statefile["path"].split("scripts/../public")[1],
+                "path": "/state" + statefile["path"].split('/state')[1],
             }
         )
 
@@ -168,25 +168,24 @@ def main():
         statefiles_path = input("Path: ")
     
     if (statefiles_path != ''):
-        print(f"The tool will compile all state files in \"{statefiles_path}\" and its subdirectories into \"public/state/index.json\". If no statefiles are present, a default empty index is returned:")
+        print(f"The tool will compile all state files in \"{statefiles_path}\" and its subdirectories into \"{statefiles_path}/index.json\". If no statefiles are present, a default empty index is returned:")
         path = os.path.join(script_dir, "../", statefiles_path)
         print(f"Retrieving summaries \"{path}\"...")
         files = list_files(path, ".json")
         print(f"{len(files)} files found.")
         if len(files) > 0:
             print("Creating summaries...")
-            db = create_dict(files)
+            db = create_dict(path, files)
             print("Writing summaries...")
-            with open(os.path.join(script_dir, "../public/state/index.json"), "w") as outfile:
+            with open(os.path.join(path, "index.json"), "w") as outfile:
                 json.dump(db, outfile, ensure_ascii=False, indent=4)
             print("Summaries written. \n \n")
         
         with open(os.path.join(script_dir, "../public/manifest.json")) as json_file:
             manifest = json.load(json_file)
-            manifest["statefilesIndex"] = "state/index.json"
+            manifest["statefilesIndex"] = os.path.join("/state", path.split("/public")[1])
             json.dump(manifest, open(os.path.join(script_dir, "../public/manifest.json"), "w"), ensure_ascii=False, indent=4)
 
-        print(manifest)
     else:
         print('No statefiles path provided. Skipping statefile index creation.')
      
