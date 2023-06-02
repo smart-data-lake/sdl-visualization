@@ -48,6 +48,8 @@ jobs:
           build/sdl_logo192.png
           build/lighttpd.conf
           build/README.md
+          build/build_index.sh
+          build/build_index.py
           
     - name: 'If build on master branch, bump version on develop'
       if: ${{ github.ref_name == 'master' }}

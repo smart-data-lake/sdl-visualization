@@ -163,13 +163,13 @@ def main():
     time.sleep(1.2)
     print("Please enter the path to the directory containing you statefiles. Press enter if you have no statefiles.")
     statefiles_path = input("Path: ")
-    while (statefiles_path != '' and not os.path.isdir(os.path.join(script_dir, '../', statefiles_path))):
+    while (statefiles_path != '' and not os.path.isdir(os.path.join(script_dir, statefiles_path))):
         print("The path you entered does not exist. Please enter a valid path.")
         statefiles_path = input("Path: ")
     
     if (statefiles_path != ''):
         print(f"The tool will compile all state files in \"{statefiles_path}\" and its subdirectories into \"{statefiles_path}/index.json\". If no statefiles are present, a default empty index is returned:")
-        path = os.path.join(script_dir, "../", statefiles_path)
+        path = os.path.join(script_dir, statefiles_path)
         print(f"Retrieving summaries \"{path}\"...")
         files = list_files(path, ".json")
         print(f"{len(files)} files found.")
@@ -181,10 +181,18 @@ def main():
                 json.dump(db, outfile, ensure_ascii=False, indent=4)
             print("Summaries written. \n \n")
         
-        with open(os.path.join(script_dir, "../public/manifest.json")) as json_file:
+        print("Are you using the tool in production? (y/n)")
+        prod = input()
+        while (prod != 'y' and prod != 'n'):
+            print("Please enter y or n.")
+            prod = input()
+        
+        path_to_manifest = os.path.join(script_dir, "public/manifest.json") if prod == 'n' else "manifest.json"
+        
+        with open(path_to_manifest) as json_file:
             manifest = json.load(json_file)
             manifest["statefilesIndex"] = os.path.join("/state", path.split("/public")[1])
-            json.dump(manifest, open(os.path.join(script_dir, "../public/manifest.json"), "w"), ensure_ascii=False, indent=4)
+            json.dump(manifest, open(path_to_manifest, "w"), ensure_ascii=False, indent=4)
 
     else:
         print('No statefiles path provided. Skipping statefile index creation.')
