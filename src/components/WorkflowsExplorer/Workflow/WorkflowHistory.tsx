@@ -134,90 +134,88 @@ const WorkflowHistory = () => {
 	return (
 		<>
 			<PageHeader title={workflowName} />             
+			<Sheet
+				sx={{
+					flex: 1,
+					display: 'flex',
+				}}
+			>
 				<Sheet
 					sx={{
-						display: 'flex',
-						height: '85vh'
+						pt: '1rem',
+						pr: '1rem',
+						flex: 3,
+						
 					}}
-				>
+				>                   
+					<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
+					<ToolBar 
+						style={'horizontal'} 
+						controlledRows={data.runs} 
+						sortEnabled={false}
+						updateRows={updateRows}
+						searchColumn={'runId'}
+						searchMode={'exact'}
+						searchPlaceholder={'Search by Run ID'}
+						filters={checkFiltersAvailability(data.runs, defaultFilters())}
+						datetimePicker={handleDateRangeChange}
+						/>
+					<Sheet sx={{
+						mt: '1rem',
+						width: '100%',
+						}}
+					>
+						<WorkflowHistoryTable data={toDisplay} updateRows={updateRows}/>
+					</Sheet>
 					<Sheet
 						sx={{
-							pt: '1rem',
-							pr: '1rem',
-							flex: 3,
-							scrollbarWidth: 'none',
-							overflowY: 'scroll', 
+							position: 'sticky',
+							bottom: 0,
 						}}
-					>                   
-						<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
-						<ToolBar 
-							style={'horizontal'} 
-							controlledRows={data.runs} 
-							sortEnabled={false}
-							updateRows={updateRows}
-							searchColumn={'runId'}
-							searchMode={'exact'}
-							searchPlaceholder={'Search by Run ID'}
-							filters={checkFiltersAvailability(data.runs, defaultFilters())}
-							datetimePicker={handleDateRangeChange}
-							/>
-						<Sheet sx={{
-							mt: '1rem',
-							width: '100%',
+					>
+						<TablePagination
+							rowsPerPageOptions={[10, 25, 50, 100]}
+							rowsPerPage={rowsPerPage}
+							page={page}
+							SelectProps={{
+							inputProps: {
+								'aria-label': 'rows per page',
+							},
+							native: true,
 							}}
-						>
-							<WorkflowHistoryTable data={toDisplay} updateRows={updateRows}/>
-						</Sheet>
-						<Sheet
-							sx={{
-								position: 'sticky',
-								bottom: 0,
-							}}
-						>
-							<TablePagination
-								
-								rowsPerPageOptions={[10, 25, 50, 100]}
-								rowsPerPage={rowsPerPage}
-								page={page}
-								SelectProps={{
-								inputProps: {
-									'aria-label': 'rows per page',
-								},
-								native: true,
-								}}
-								onPageChange={handleChangePage}
-								onRowsPerPageChange={handleChangeRowsPerPage}
-								component="div"
-								count={count}
-							/> 
-						</Sheet>
+							onPageChange={handleChangePage}
+							onRowsPerPageChange={handleChangeRowsPerPage}
+							component="div"
+							count={count}
+						/> 
 					</Sheet>
-					{open && (
-						<>
-						<Sheet>
+				</Sheet>
+				{open && (
+					<>
+					<Sheet>
+					<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+						<ChevronRightIcon />
+					</IconButton>
+					</Sheet>
+					<Sheet
+					sx={{
+						flex: 1,
+						pt: '2rem',
+						pl: '1rem',
+						borderLeft: '1px solid lightgray',
+					}}
+					>
+						<WorkflowDetails data={data} pieChartData={pieChartData}/>
+					</Sheet>
+						</>
+				)}
+				{!open && (
+					<Sheet>
 						<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
-							<ChevronRightIcon />
+							<ChevronLeftIcon />
 						</IconButton>
-						</Sheet>
-						<Sheet
-						sx={{
-							flex: 1,
-							pt: '2rem',
-							pl: '1rem',
-							borderLeft: '1px solid lightgray',
-						}}
-						>
-							<WorkflowDetails data={data} pieChartData={pieChartData}/>
-						</Sheet>
-							</>
-					)}
-					{!open && (
-						<Sheet>
-							<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
-								<ChevronLeftIcon />
-							</IconButton>
-						</Sheet>	
-					)}
+					</Sheet>	
+				)}
 			</Sheet>
 						
 		</>   
