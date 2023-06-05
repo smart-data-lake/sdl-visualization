@@ -191,7 +191,7 @@ def main():
         
         with open(path_to_manifest) as json_file:
             manifest = json.load(json_file)
-            manifest["statefilesIndex"] = os.path.join("/state", path.split("/public")[1])
+            manifest["statefilesIndex"] = "/state" + path.split("/state")[1]
             json.dump(manifest, open(path_to_manifest, "w"), ensure_ascii=False, indent=4)
 
     else:
