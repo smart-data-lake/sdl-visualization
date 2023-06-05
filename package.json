@@ -81,7 +81,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build  && cp buid_index.sh build && cp build_index.py build",
+    "build": "react-scripts build  && cp build_index.sh build && cp build_index.py build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "scriptIlias": "cd src/components/util && node markdown_parser.js && npm run start"
