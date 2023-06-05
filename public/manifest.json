@@ -12,6 +12,5 @@
     "display": "standalone",
     "theme_color": "#000000",
     "background_color": "#ffffff",
-    "localSetup": true,
-    "statefilesIndex": "/state/sika_data"
+    "localSetup": true
 }
