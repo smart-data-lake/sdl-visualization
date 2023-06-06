@@ -35,7 +35,7 @@ const SideBar = () => {
         {
             icon : <TuneRoundedIcon/>,
             link : '/config',
-            disabled : !(data.localSetup && data.configIndex),
+            disabled : !(data.localSetup && data.configfilesIndex),
             filetype : 'config',
             description: 'Config Viewer'
         }

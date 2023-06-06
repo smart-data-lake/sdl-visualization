@@ -12,5 +12,7 @@
     "display": "standalone",
     "theme_color": "#000000",
     "background_color": "#ffffff",
-    "localSetup": true
+    "localSetup": true,
+    "statefilesIndex": "/state",
+    "configfilesIndex": "/config"
 }

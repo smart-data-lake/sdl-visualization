@@ -6,6 +6,7 @@ import json
 import math
 import os
 import uuid
+import sys
 
 def randomWord(type):
     """Generate a random word."""
@@ -159,62 +160,55 @@ def main():
     
     print("\n\n=====================================")
     print("~~ Welcome to the index building tool ~~ \n")
-    print("In the following steps, indicate the paths relative to the location of the root folder of the project. \n")
-    time.sleep(1.2)
-    print("Please enter the path to the directory containing you statefiles. Press enter if you have no statefiles.")
-    statefiles_path = input("Path: ")
-    while (statefiles_path != '' and not os.path.isdir(os.path.join(script_dir, statefiles_path))):
-        print("The path you entered does not exist. Please enter a valid path.")
-        statefiles_path = input("Path: ")
-    
-    if (statefiles_path != ''):
-        print(f"The tool will compile all state files in \"{statefiles_path}\" and its subdirectories into \"{statefiles_path}/index.json\". If no statefiles are present, a default empty index is returned:")
-        path = os.path.join(script_dir, statefiles_path)
-        print(f"Retrieving summaries \"{path}\"...")
-        files = list_files(path, ".json")
-        print(f"{len(files)} files found.")
-        if len(files) > 0:
+
+    # Create statefiles index
+
+    if len(sys.argv) < 2:
+        print("No path provided as argument. Exiting index building tool.")
+    else: 
+
+        statefiles_path = sys.argv[1]
+        if (not os.path.isdir(os.path.join(script_dir, statefiles_path))):
+            print("The path you provided as argument does not exist. Skipping state index building.")
+        
+        else: 
+            print(f"The tool will compile all state files in \"{statefiles_path}\" and its subdirectories into \"../state/index.json\" of your SLDB projct. If no statefiles are present, a default empty index is returned:")
+            path = os.path.join(script_dir, statefiles_path)
+            print(f"Retrieving summaries \"{path}\"...")
+            files = list_files(path, ".json")
+            print(f"{len(files)} files found.")
             print("Creating summaries...")
             db = create_dict(path, files)
-            print("Writing summaries...")
-            with open(os.path.join(path, "index.json"), "w") as outfile:
+            index_path = "../state" if os.path.isdir("../state") else ("public/state" if os.path.isdir("public/state") else "")
+            with open(index_path + "/index.json", "w") as outfile:
                 json.dump(db, outfile, ensure_ascii=False, indent=4)
+                if len(files) == 0:
+                    print('No statefiles path provided. Skipping statefile index creation.')
             print("Summaries written. \n \n")
-        
-        print("Are you using the tool in production? (y/n)")
-        prod = input()
-        while (prod != 'y' and prod != 'n'):
-            print("Please enter y or n.")
-            prod = input()
-        
-        path_to_manifest = os.path.join(script_dir, "public/manifest.json") if prod == 'n' else "manifest.json"
-        
-        with open(path_to_manifest) as json_file:
-            manifest = json.load(json_file)
-            manifest["statefilesIndex"] = "/state" + path.split("/state")[1]
-            json.dump(manifest, open(path_to_manifest, "w"), ensure_ascii=False, indent=4)
 
-    else:
-        print('No statefiles path provided. Skipping statefile index creation.')
-     
+        # Create config index
+        if len(sys.argv) < 3:
+            print("No path provided as argument for config index building. Exiting index building tool...")
+        else:
+            configfiles_path = sys.argv[2]
+            if (not os.path.isdir(os.path.join(script_dir, configfiles_path))):
 
-    print("The tool will compile all config files in \"/public/config\" and its subdirectories into \"/public/config/index.json\". If no config files are present, a default empty index is returned:")
+                print(f"The tool will compile all config files in \"{configfiles_path}\" and its subdirectories into \"../config/index.json\". If no config files are present, a default empty index is returned:")
+                path = os.path.join(script_dir, f"../public/config")
+                print(f"Retrieving configs \"{path}\"...")
+                files = list_files(path, ".conf")
+                print(f"{len(files)} files found.")
+                print("Creating index...")
+                db = [f.split("scripts/../public/config")[1] for f in files]
+                print("Writing summaries...")
+                index_path = "../config/" if os.path.isdir("../config") else ("public/config" if os.path.isdir("public/config") else "")
+                with open(index_path + "index.json", "w") as outfile:
+                    json.dump(db, outfile, ensure_ascii=False, indent=4)
+                if len(files) == 0:
+                    print('No statefiles path provided. Skipping statefile index creation.')
+                print("Summaries written. \n \n") 
     
-    path = os.path.join(script_dir, f"../public/config")
-    print(f"Retrieving configs \"{path}\"...")
-    files = list_files(path, ".conf")
-    print(f"{len(files)} files found.")
-    if len(files) > 0:
-        print("Creating index...")
-        db = [f.split("scripts/../public/config")[1] for f in files]
-        print("Writing summaries...")
-        with open(f"{path}/index.json", "w") as outfile:
-            json.dump(db, outfile, ensure_ascii=False, indent=4)
-        print("Summaries written. \n \n") 
-    
-
-    
-    print("\n~~ Index building complete ~~")
+    print("\n~~ Index building done ~~")
     print("=====================================\n\n")
 
 if __name__ == "__main__":
