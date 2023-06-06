@@ -59,7 +59,16 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     }
     
     return ( 
-        <>
+        <Sheet
+        sx={{
+            display: 'flex',
+        }}
+        >
+        <Sheet
+            sx={{
+                flex: 1,
+            }}
+        >
             {/* Renders the ToolBar component, which contains a set of buttons that allow the user to filter the rows displayed in the actions table */}
             <Sheet
                 sx={{
@@ -79,7 +88,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                     style="horizontal"
                     searchMode="contains"
                     />
-                    {/* <Sheet sx={{borderBottom: '1px solid lightgray', mb: '1rem', mt: '1.5rem'}}/> */}
+                
             </Sheet>
             {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
             {rows.length === 0 ? (
@@ -142,25 +151,6 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                         <VirtualizedTimeline run={attempt.run} rows={rows}/>
                                     </Sheet>
                                 </ThemeProvider>
-                            {open && (
-                                <>
-                                    {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
-                                    <Sheet
-                                        sx={{
-                                            flex: '1', 
-                                            maxWidth: '40%',
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: '60%',
-                                            boxShadow: '-10px 10px 10px lightgray',
-                                            bordder: '1px solid lightgray',
-                                            borderRadius: '2rem',
-                                        }}
-                                    >
-                                        <ContentDrawer attempt={attempt}/>
-                                    </Sheet>
-                                </>
-                            )}
                         </Sheet> 
                     </TabPanel>
                     <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
@@ -194,24 +184,6 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                             >
                                 <TableOfActions rows={rows}/>
                             </Sheet>
-                            {open && (
-                                <>
-                                    {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
-                                    <Sheet
-                                        sx={{
-                                            maxWidth: '40%',
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: '60%',
-                                            boxShadow: '-10px 10px 10px lightgray',
-                                            bordder: '1px solid lightgray',
-                                            borderRadius: '2rem',
-                                        }}
-                                        >
-                                        <ContentDrawer attempt={attempt}/>
-                                    </Sheet>
-                                </>
-                            )}
                         </Sheet>
                     </TabPanel>
                     <TabPanel value={2} sx={{ py: '1rem' }}>
@@ -219,7 +191,25 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                     </TabPanel>
                 </Sheet>
             )}
-        </> 
+        </Sheet> 
+            {open && (
+                <>
+                    {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
+                    <Sheet
+                        sx={{
+                            flex: '1', 
+                            position: 'absolute',
+                            top: 0,
+                            left: '50%',
+                            height: '100%',
+                            boxShadow: '-10px 10px 10px lightgray',
+                        }}
+                    >
+                        <ContentDrawer attempt={attempt}/>
+                    </Sheet>
+                </>
+            )}
+        </Sheet> 
     );
 }
 
