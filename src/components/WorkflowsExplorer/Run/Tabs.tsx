@@ -147,7 +147,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                                             transition: 'opacity 0.2s ease-in-out',
                                             cursor: 'context-menu'
                                         }}
-                                        >
+                                    >
                                         <VirtualizedTimeline run={attempt.run} rows={rows}/>
                                     </Sheet>
                                 </ThemeProvider>
