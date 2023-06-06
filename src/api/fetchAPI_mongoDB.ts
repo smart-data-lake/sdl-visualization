@@ -8,21 +8,19 @@ export class fetchAPI_mongoDB implements fetchApi {
     }
 
     getWorkflows = () => {
-        return fetch(`${this.url}/workflows`)
+        return fetch(`${this.url}/workflows`, {mode:'cors'})
         .then(res => res.json())
-        .then(data => {console.log(data); return data});
     };
     
     
     getWorkflow = (name: string) => {
-        return fetch(`${this.url}/workflow?name=${name}`)
+        return fetch(`${this.url}/workflow?name=${name}`, {mode:'cors'})
         .then(res => res.json())
-        .then(data => data[0])
     };
     
     
     getRun = (args: {name: string, runId: number, attemptId: number}) => {
-        return fetch(`${this.url}/runs?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`)
+        return fetch(`${this.url}/runs?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, {mode:'cors'})
         .then(res => res.json())
         .then(data => data[0])
     };    
