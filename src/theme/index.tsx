@@ -11,7 +11,7 @@ const spacer = {
 
 const brandColor = {
   gray: '#333',
-  blue: '#146EE6',
+  blue: '#096bde',
   teal: '#00BBCE',
 };
 
@@ -31,13 +31,14 @@ const bgColor = {
   black: '#444',
   light: 'rgba(0,0,0,0.03)', // '#f6f6f6',
   blue: brandColor.blue,
-  blueLight: '#e4f0ff',
+  blueLight: '#b5d7ff',
   silver: '#E8EAED',
   teal: brandColor.teal,
   yellow: '#E5A90C',
   red: '#EB3428',
   green: '#20AF2E',
   greenLight: '#BCE307',
+  violet: '#a023e8',
 };
 
 const borderColor = {
