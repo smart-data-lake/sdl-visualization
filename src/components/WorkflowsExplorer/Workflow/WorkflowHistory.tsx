@@ -198,14 +198,14 @@ const WorkflowHistory = () => {
 					</IconButton>
 					</Sheet>
 					<Sheet
-					sx={{
-						flex: 1,
-						pt: '2rem',
-						pl: '1rem',
-						borderLeft: '1px solid lightgray',
-					}}
+						sx={{
+							flex: 1,
+							pt: '2rem',
+							pl: '1rem',
+							borderLeft: '1px solid lightgray',
+						}}
 					>
-						<WorkflowDetails data={data} pieChartData={pieChartData}/>
+						{/* <WorkflowDetails data={data} pieChartData={pieChartData}/> */}
 					</Sheet>
 						</>
 				)}

@@ -20,8 +20,7 @@ export class fetchAPI_mongoDB implements fetchApi {
     
     
     getRun = (args: {name: string, runId: number, attemptId: number}) => {
-        return fetch(`${this.url}/runs?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, {mode:'cors'})
+        return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, {mode:'cors'})
         .then(res => res.json())
-        .then(data => data[0])
     };    
 }
