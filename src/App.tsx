@@ -12,6 +12,7 @@ import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
 import { QueryClient, QueryClientProvider } from 'react-query'
 import Home from './components/HomeMenu/Home';
+import { useManifest } from './hooks/useManifest';
 
 /**
  * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
@@ -19,14 +20,13 @@ import Home from './components/HomeMenu/Home';
 
 export default function App() {
   // Declare and initialize the `data` state variable with `useState`
-  const [data, setData] = useState<any>({});
-
+  const [configData, setConfigData] = useState<any>({});
    /**
    * `storeData` is a function that takes in data as an argument and sets the `data` state variable to that value when called.
    * @param data - The data to be stored in the `data` state variable.
    */
   const storeData = (data: any) => {
-    setData(data)
+    setConfigData(data)
   }
   
   /**
@@ -43,22 +43,22 @@ export default function App() {
         <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
         <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true}/>}/>
         <Route path='*' element={<NotFound/>}/>
-        <Route path='/config' element={<ConfigExplorer data={data}/>}>
+        <Route path='/config' element={<ConfigExplorer data={configData}/>}>
           <Route
               path='/config/search/:ownSearchString' //the ownSearchString is our definition of a 
               //search because of problems with routing Search Parameters
               element={
-                <SearchResults data={data}/>
+                <SearchResults data={configData}/>
               } />
           <Route
             path="/config/:elementType/:elementName"
             element={
-              <DataDisplayView data={data} />
+              <DataDisplayView data={configData} />
             } />
           <Route
             path="/config/globalOptions"
             element={
-              <GlobalConfigView data={data.global}/>
+              <GlobalConfigView data={configData.global}/>
             } />
         </Route> 
       </Route>
@@ -73,15 +73,14 @@ export default function App() {
    * @see https://react-query.tanstack.com/guides/using-queryclientprovider
    * @see https://react-query.tanstack.com/guides/using-queryclientprovider#using-queryclientprovider
     */
-  const queryClient = new QueryClient()
+  
 
   return (
     <>
       <CssBaseline />
-      <QueryClientProvider client={queryClient}>
+      
         {/* Provide the router object to the rest of the application with `RouterProvider` */}
         <RouterProvider router={router()}/>
-      </QueryClientProvider>
     </>
   );
 }

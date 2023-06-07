@@ -12,6 +12,8 @@
 /public/state/vmdl
 /public/state/heidi
 
+/data_directory
+
 /src/data/random_db.json
 
 .venv
