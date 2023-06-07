@@ -50,6 +50,7 @@ jobs:
           build/README.md
           build/build_index.sh
           build/build_index.py
+          build/requirements.txt
           
     - name: 'If build on master branch, bump version on develop'
       if: ${{ github.ref_name == 'master' }}
