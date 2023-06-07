@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import App from "./App";
 import * as ReactDOMClient from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "react-query";
 
 // react 17
 // import { render } from "react-dom";
@@ -14,8 +15,12 @@ import * as ReactDOMClient from "react-dom/client";
 // react 18
 const rootElement = document.getElementById("root");
 const root = ReactDOMClient.createRoot(rootElement as HTMLElement);
+const queryClient = new QueryClient();
 root.render(
   <StrictMode>
+    <QueryClientProvider client={queryClient}>
+
     <App />
+    </QueryClientProvider>
   </StrictMode>
 );

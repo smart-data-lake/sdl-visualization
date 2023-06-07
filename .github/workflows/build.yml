@@ -5,7 +5,9 @@ on:
     branches:
       - 'master'
       - 'develop'
-      - 'test/**'
+
+  # allow for manual builds from feature branches
+  workflow_dispatch:
 
 jobs:
   build-and-create-release:
@@ -46,6 +48,9 @@ jobs:
           build/sdl_logo192.png
           build/lighttpd.conf
           build/README.md
+          build/build_index.sh
+          build/build_index.py
+          build/requirements.txt
           
     - name: 'If build on master branch, bump version on develop'
       if: ${{ github.ref_name == 'master' }}
