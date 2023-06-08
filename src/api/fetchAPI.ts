@@ -8,7 +8,7 @@
  * A specific implementation must return the data that is needed by the UI. For an example, see the "fetchAPI_local_statefiles.ts" implementation 
  */
 export interface fetchApi {
-    url: string;
+    url?: string;
 
     getWorkflows: () => Promise<any>;
     getWorkflow: (name: string) => Promise<any>;
