@@ -53,12 +53,19 @@ export class Row implements MetaDataBaseObject {
     started_at: number;
     finished_at: number;
     duration: number;
+    metadata: Metadata;
+    message: string;
     tags?: string[] | undefined;
     run_id?: string;
     task_name?: string;
     foreach_label?: string;
-    metadata: Metadata;
-    message: string;
+    endTstmp?: string;
+    startTstmpPrepare? : string;
+    endTstmpPrepare?: string;
+    startTstmpInit? : string;
+    endTstmpInit?: string;
+    inputId?: string[];
+    outputId?: string[];
    
     constructor({ properties }: { properties: TaskProperty; }) {
       this.flow_id = properties.runInfo.workflowName;
@@ -75,6 +82,13 @@ export class Row implements MetaDataBaseObject {
       this.user_name = '';
       this.system_tags = [];
       this.message = properties.action.msg;
+      this.endTstmp = properties.action.endTstmp;
+      this.startTstmpPrepare = properties.action.startTstmpPrepare;
+      this.endTstmpPrepare = properties.action.endTstmpPrepare;
+      this.startTstmpInit = properties.action.startTstmpInit;
+      this.endTstmpInit = properties.action.endTstmpInit;
+      this.inputId = properties.action.inputId;
+      this.outputId = properties.action.outputId;
     }
 
     /**
@@ -149,9 +163,16 @@ export class Row implements MetaDataBaseObject {
     state : string,
     startTstmp : string,
     duration: string,
-    actionFinishTime?: number,
     msg: string,
-    results: Metadata
+    results: Metadata,
+    actionFinishTime?: number,
+    endTstmp?: string,
+    startTstmpPrepare? : string,
+    endTstmpPrepare?: string,
+    startTstmpInit? : string,
+    endTstmpInit?: string,
+    inputId?: string[],
+    outputId?: string[],
   }
   export type Metadata = [{
     subFeed?: {
