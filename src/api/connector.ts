@@ -5,7 +5,7 @@ export class connector implements fetchApi {
     isLocal = async () => {
         const manifest = await fetch('manifest.json');
         const manifest_json = await manifest.json();
-        return manifest_json.localSetup;
+        return manifest_json.localSetup || !manifest_json.mongoDB;
     }
     
     getUrl = async () => {
