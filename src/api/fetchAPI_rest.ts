@@ -1,6 +1,6 @@
 import { fetchAPI } from "./fetchAPI";
 
-export class fetchAPI_mongoDB implements fetchAPI {
+export class fetchAPI_rest implements fetchAPI {
     url: string;
     
     constructor(url: string) {
@@ -22,5 +22,5 @@ export class fetchAPI_mongoDB implements fetchAPI {
     getRun = (args: {name: string, runId: number, attemptId: number}) => {
         return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, {mode:'cors'})
         .then(res => res.json())
-    };    
+    };   
 }

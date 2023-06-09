@@ -12,8 +12,5 @@
     "display": "standalone",
     "theme_color": "#000000",
     "background_color": "#ffffff",
-    "localSetup": true,
-    "mongoDB": "http://127.0.0.1:8000/api/v1",
-    "statefilesIndex": "/state",
-    "configfilesIndex": "/config"
+    "backendConfig": "rest;localhost:8000/api/v1"
 }

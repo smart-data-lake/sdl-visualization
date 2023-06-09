@@ -28,14 +28,12 @@ const SideBar = () => {
         {
             icon : <SpeedRoundedIcon/>,
             link : '/workflows',
-            disabled : !(data.localSetup || data.mongoDB),
             filetype : 'state',
             description: 'Workflows Explorer'
         },
         {
             icon : <TuneRoundedIcon/>,
             link : '/config',
-            disabled : !(data.localSetup || data.mongoDB),
             filetype : 'config',
             description: 'Config Viewer'
         }
