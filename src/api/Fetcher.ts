@@ -34,12 +34,11 @@ export class Fetcher implements fetchAPI {
         const config = await this.config()
         const fetchType = config.backendConfig.split(';')[0];
         const url = config.backendConfig.split(';')[1];
-
         return new (Loader.getFetcher(fetchType))(url);
     } 
 
     getWorkflows = async () => {
-        return (await this.fetcher).getWorkflows()
+        return (await this.fetcher).getWorkflows();
     };
     
     

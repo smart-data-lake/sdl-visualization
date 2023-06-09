@@ -19,7 +19,8 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     getWorkflows = async () => {
             return fetch((this.config.statefilesIndex ? this.config.statefilesIndex : "/state") + "/index.json")
             .then(res => res.json())
-            .then(data => data["workflows"]);
+            .then(data => data["workflows"])
+            .catch(err => console.log("Not able to find local statefiles", err));
         
     };
     
@@ -29,18 +30,19 @@ export class fetchAPI_local_statefiles implements fetchAPI {
             .then(res => res.json())
             .then(data => data["workflow"].filter(workflow => workflow.name === name))
             .then(value => value[0])
+            .catch(err => console.log("Not able to find local statefiles", err));
     };
 
     
     getRun = async (args: {name: string, runId: number, attemptId: number}) => {            
-            return fetch((this.config.statefilesIndex ? this.config.statefilesIndex : "/state") + "/index.json")
-            .then(res => res.json())
-            .then(data => data["runs"].filter(run => (run.name === args.name && run.runId === args.runId && run.attemptId === args.attemptId))[0])
-            .then(val => { 
-                return fetch(val.path)
-                      .then(res => res.json())
-
+        return fetch((this.config.statefilesIndex ? this.config.statefilesIndex : "/state") + "/index.json")
+        .then(res => res.json())
+        .then(data => data["runs"].filter(run => (run.name === args.name && run.runId === args.runId && run.attemptId === args.attemptId))[0])
+        .then(val => { 
+            return fetch(val.path)
+                  .then(res => res.json())
         })
+        .catch(err => console.log("Not able to find local statefiles", err))
         
     };    
 }

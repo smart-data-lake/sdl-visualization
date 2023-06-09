@@ -8,8 +8,10 @@ export class fetchAPI_rest implements fetchAPI {
     }
 
     getWorkflows = () => {
+        console.log(this.url)
         return fetch(`${this.url}/workflows`, {mode:'cors'})
         .then(res => res.json())
+        .catch(err => console.log(err))
     };
     
     
