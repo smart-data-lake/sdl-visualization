@@ -170,10 +170,10 @@ const LineElement: React.FC<LineElementProps> = ({
 			widthInit, 
 			row, 
 			dragging, 
-			labelPositionInit, 
+			'none', 
 			init_duration, 
 			grayed, 
-			'INIT', 
+			'INITIALIZED', 
 			isLastAttempt
 		)}
 		{valueFromLeftInit && constructLine(
@@ -181,10 +181,10 @@ const LineElement: React.FC<LineElementProps> = ({
 			widthPrepare, 
 			row, 
 			dragging, 
-			labelPositionPrepare, 
+			'none', 
 			init_duration, 
 			grayed, 
-			'PREPARE', 
+			'PREPARED', 
 			isLastAttempt
 		)}
     </>
