@@ -10,7 +10,8 @@ import { LabelPosition } from './LineElement';
  * @param width Width of given element
  * @returns Position where label should be positioned
  */
-export function getLengthLabelPosition(fromLeft: number, width: number): LabelPosition {
+export function getLengthLabelPosition(fromLeft: number | undefined, width: number | undefined): LabelPosition {
+  if (!(fromLeft && width)) return 'none';
   if (fromLeft + width < 90) {
     return 'right';
   } else if (fromLeft + width > 90 && fromLeft > 10) {

@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 //
 
 type LineElementProps = {
-  row: { type: 'step'; data: Step; rowObject: StepRowData } | { type: 'task'; data: Row };
+  row: { type: 'task'; data: Row };
   timeline: {
     startTime: number;
     visibleEndTime: number;
@@ -25,9 +25,13 @@ type LineElementProps = {
   grayed?: boolean;
   isLastAttempt: boolean;
   duration: number | null;
-  startTimeOfFirstAttempt?: number;
   dragging: boolean;
+  startTimeOfFirstAttempt?: number;
   paramsString?: string;
+  init_duration?: number;
+  init_ts_epoch?: number;
+  prepare_duration?: number;
+  prepare_ts_epoch?: number;
 };
 
 export type LabelPosition = 'left' | 'right' | 'none';
@@ -37,72 +41,153 @@ export type LabelPosition = 'left' | 'right' | 'none';
 //
 
 const LineElement: React.FC<LineElementProps> = ({
-  row,
-  timeline,
-  grayed,
-  isLastAttempt,
-  duration,
-  startTimeOfFirstAttempt,
-  dragging,
+	row,
+	timeline,
+	grayed,
+	isLastAttempt,
+	duration,
+	dragging,
+	init_duration,
+	init_ts_epoch,
+	prepare_duration,
+	prepare_ts_epoch,
+  
   //paramsString,
 }) => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const status = getRowStatus(row);
-  // Extend visible area little bit to prevent lines seem like going out of bounds. Happens
-  // in some cases with short end task
-  const extendAmount = (timeline.visibleEndTime - timeline.visibleStartTime) * 0.01;
-  const visibleDuration = timeline.visibleEndTime - timeline.visibleStartTime + extendAmount;
-  const boxStartTime = row.type === 'step' ? row.data.ts_epoch : row.data.started_at;
+	const { t } = useTranslation();
+	const navigate = useNavigate();
+	const status = getRowStatus(row);
+	// Extend visible area little bit to prevent lines seem like going out of bounds. Happens
+	// in some cases with short end task
+	const extendAmount = (timeline.visibleEndTime - timeline.visibleStartTime) * 0.01;
+	const visibleDuration = timeline.visibleEndTime - timeline.visibleStartTime + extendAmount;
+	
+	
+	const _boxStartTime = (phase: string) => {
+		switch (phase) {
+			case 'init':
+				return init_ts_epoch;
+			case 'prepare':
+				return prepare_ts_epoch;
+			}
+		return row.data.ts_epoch;
+	}
+	const boxStartTime = row.data.ts_epoch;
 
-  if (!boxStartTime || status === 'pending') {
-    return null;
+	// Legacy mechanism that used to handle pending tasks
+	/* if (!boxStartTime || status === 'pending') {
+		return null;
+	} */
+
+	// Calculate have much box needs to be pushed from (or to) left
+	const valueFromLeft = (boxStartTime: number | undefined) => {
+		if (!boxStartTime) return undefined;
+		return (boxStartTime - timeline.visibleStartTime) / visibleDuration * 100;
+	}
+	const width = (duration: number | null | undefined, valueFromLeft: number | undefined) => {
+		if (!valueFromLeft) return undefined;
+		return duration && status !== 'running' ? (duration / visibleDuration) * 100 : 100 - valueFromLeft;
+	}
+
+
+	const constructLine = (
+		valueFromLeft: number | undefined, 
+		width: number | undefined, 
+		row: any, 
+		dragging: boolean, 
+		labelPosition: LabelPosition, 
+		duration: any, 
+		grayed: boolean | undefined, 
+		status: string, 
+		isLastAttempt: boolean
+	) => {
+		return (
+			<>
+				<LineElementContainer
+					style={{ transform: `translateX(${valueFromLeft}%)` }}
+					dragging={dragging}
+					data-testid="boxgraphic-container"
+				>
+				<BoxGraphic
+					root={row.type === 'step'}
+					style={{
+					width: `${width}%`,
+					}}
+					data-testid="boxgraphic"
+					dragging={dragging}
+					title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (${t('task.unable-to-find-status')})` : ''}`}
+					onClick={(e) => {
+					if (row.type === 'task') {
+						e.stopPropagation();
+						e.preventDefault();
+						navigate(`${getPathFor.attempt(row.data)}`);
+					}
+					}}
+				>
+					{(isLastAttempt || status === 'RUNNING') && (
+					<RowMetricLabel duration={duration} labelPosition={labelPosition} data-testid="boxgraphic-label" />
+					)}
+					<BoxGraphicLine grayed={grayed} state={status} isLastAttempt={isLastAttempt} />
+					<BoxGraphicMarkerStart />
+					{status !== 'running' && <BoxGraphicMarkerEnd />}
+				</BoxGraphic>
+				</LineElementContainer>
+			</>
+		)
   }
 
-  // Calculate have much box needs to be pushed from (or to) left
-  const valueFromLeft =
-    timeline.sortBy === 'duration'
-      ? ((timeline.startTime -
-          timeline.visibleStartTime +
-          (startTimeOfFirstAttempt ? boxStartTime - startTimeOfFirstAttempt : 0)) /
-          visibleDuration) *
-        100
-      : ((boxStartTime - timeline.visibleStartTime) / visibleDuration) * 100;
 
-  const width = duration && status !== 'running' ? (duration / visibleDuration) * 100 : 100 - valueFromLeft;
+  const valueFromLeftExec = valueFromLeft(_boxStartTime('exec'));
+  const widthExec = width(duration, valueFromLeftExec);
+  const labelPositionExec = getLengthLabelPosition(valueFromLeftExec, widthExec);
 
-  const labelPosition = getLengthLabelPosition(valueFromLeft, width);
+  const valueFromLeftInit = valueFromLeft(_boxStartTime('init'));
+  const widthInit = width(init_duration, valueFromLeftInit);
+  const labelPositionInit = getLengthLabelPosition(valueFromLeftInit, widthInit);
+
+  const valueFromLeftPrepare = valueFromLeft(_boxStartTime('prepare'));
+  const widthPrepare = width(prepare_duration, valueFromLeftPrepare);
+  const labelPositionPrepare = getLengthLabelPosition(valueFromLeftPrepare, widthPrepare);
+  
+  console.log(duration, init_duration, prepare_duration)
+
 
   return (
-    <LineElementContainer
-      style={{ transform: `translateX(${valueFromLeft}%)` }}
-      dragging={dragging}
-      data-testid="boxgraphic-container"
-    >
-      <BoxGraphic
-        root={row.type === 'step'}
-        style={{
-          width: `${width}%`,
-        }}
-        data-testid="boxgraphic"
-        dragging={dragging}
-        title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (${t('task.unable-to-find-status')})` : ''}`}
-        onClick={(e) => {
-          if (row.type === 'task') {
-            e.stopPropagation();
-            e.preventDefault();
-            navigate(`${getPathFor.attempt(row.data)}`);
-          }
-        }}
-      >
-        {(isLastAttempt || status === 'RUNNING') && (
-          <RowMetricLabel duration={duration} labelPosition={labelPosition} data-testid="boxgraphic-label" />
-        )}
-        <BoxGraphicLine grayed={grayed} state={status} isLastAttempt={isLastAttempt} />
-        <BoxGraphicMarkerStart />
-        {status !== 'running' && <BoxGraphicMarkerEnd />}
-      </BoxGraphic>
-    </LineElementContainer>
+    <>
+		{constructLine(
+			valueFromLeftExec,
+			widthExec,
+			row, 
+			dragging, 
+			labelPositionExec,
+			duration, 
+			grayed, 
+			status, 
+			isLastAttempt
+		)}
+		{valueFromLeftInit && constructLine(
+			valueFromLeftInit, 
+			widthInit, 
+			row, 
+			dragging, 
+			labelPositionInit, 
+			init_duration, 
+			grayed, 
+			'INIT', 
+			isLastAttempt
+		)}
+		{valueFromLeftInit && constructLine(
+			valueFromLeftPrepare, 
+			widthPrepare, 
+			row, 
+			dragging, 
+			labelPositionPrepare, 
+			init_duration, 
+			grayed, 
+			'PREPARE', 
+			isLastAttempt
+		)}
+    </>
   );
 };
 

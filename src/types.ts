@@ -59,11 +59,11 @@ export class Row implements MetaDataBaseObject {
     run_id?: string;
     task_name?: string;
     foreach_label?: string;
-    endTstmp?: string;
-    startTstmpPrepare? : string;
-    endTstmpPrepare?: string;
-    startTstmpInit? : string;
-    endTstmpInit?: string;
+    endTstmp?: number;
+    startTstmpPrepare? : number;
+    endTstmpPrepare?: number;
+    startTstmpInit? : number;
+    endTstmpInit?: number;
     inputId?: string[];
     outputId?: string[];
    
@@ -82,11 +82,11 @@ export class Row implements MetaDataBaseObject {
       this.user_name = '';
       this.system_tags = [];
       this.message = properties.action.msg;
-      this.endTstmp = properties.action.endTstmp;
-      this.startTstmpPrepare = properties.action.startTstmpPrepare;
-      this.endTstmpPrepare = properties.action.endTstmpPrepare;
-      this.startTstmpInit = properties.action.startTstmpInit;
-      this.endTstmpInit = properties.action.endTstmpInit;
+      this.endTstmp = properties.action.endTstmp ? new Date(properties.action.endTstmp).getTime() : undefined;
+      this.startTstmpPrepare = properties.action.startTstmpPrepare ? new Date(properties.action.startTstmpPrepare).getTime() : undefined;
+      this.endTstmpPrepare = properties.action.endTstmpPrepare ? new Date(properties.action.endTstmpPrepare).getTime() : undefined;
+      this.startTstmpInit = properties.action.startTstmpInit ? new Date(properties.action.startTstmpInit).getTime() : undefined;
+      this.endTstmpInit = properties.action.endTstmpInit ? new Date(properties.action.endTstmpInit).getTime() : undefined;
       this.inputId = properties.action.inputId;
       this.outputId = properties.action.outputId;
     }
