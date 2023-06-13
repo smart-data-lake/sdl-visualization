@@ -48,7 +48,8 @@ export default class Attempt {
             attemptStartTime: stateFile.attemptStartTime,
             parallelism: stateFile.appConfig.parallelism,
             streaming: stateFile.appConfig.streaming,
-            actionsState: stateFile.actionsState
+            actionsState: stateFile.actionsState,
+            runStateFormatVersion: stateFile.runStateFormatVersion
         }
     }
 

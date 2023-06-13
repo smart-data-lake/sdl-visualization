@@ -34,6 +34,7 @@ export interface RunInfo {
   attemptStartTime: string;
   parallelism: number;
   streaming: boolean;
+  runStateFormatVersion?: number;
 }   
 
 
@@ -147,7 +148,8 @@ export class Row implements MetaDataBaseObject {
     attemptId : number,
     runStartTime : string,
     attemptStartTime : string,
-    actionsState: ActionsState
+    actionsState: ActionsState,
+    runStateFormatVersion?: number
   } 
   
   export type ActionsState = {

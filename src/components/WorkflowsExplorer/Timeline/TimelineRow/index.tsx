@@ -22,6 +22,7 @@ type TimelineRowProps = {
 	t: TFunction;
 	// Flag if we are dragging footer section. Need to remove animation in that case so rows don't seem clunky
 	dragging: boolean;
+	displayPhases: boolean;
 };
 
 const TimelineRow: React.FC<TimelineRowProps> = ({
@@ -31,6 +32,7 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
 	paramsString,
 	sticky,
 	dragging,
+	displayPhases,
 }) => {
 	if (!item || !item) return null;
 	const Element = sticky ? StickyStyledRow : StyledRow;
@@ -50,6 +52,7 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
 							duration={item.getTaskDuration()}
 							startTimeOfFirstAttempt={timeline.sortBy === 'duration' ? item.started_at || 0 : undefined}
 							dragging={dragging}
+							displayPhases={displayPhases}
 							paramsString={paramsString}
 							init_ts_epoch={item.startTstmpInit}
 							init_duration={item.startTstmpInit && item.endTstmpInit ? item.endTstmpInit - item.startTstmpInit : undefined}

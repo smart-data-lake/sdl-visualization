@@ -26,6 +26,7 @@ type LineElementProps = {
   isLastAttempt: boolean;
   duration: number | null;
   dragging: boolean;
+  displayPhases: boolean;
   startTimeOfFirstAttempt?: number;
   paramsString?: string;
   init_duration?: number;
@@ -47,6 +48,7 @@ const LineElement: React.FC<LineElementProps> = ({
 	isLastAttempt,
 	duration,
 	dragging,
+	displayPhases,
 	init_duration,
 	init_ts_epoch,
 	prepare_duration,
@@ -148,9 +150,6 @@ const LineElement: React.FC<LineElementProps> = ({
   const valueFromLeftPrepare = valueFromLeft(_boxStartTime('prepare'));
   const widthPrepare = width(prepare_duration, valueFromLeftPrepare);
   const labelPositionPrepare = getLengthLabelPosition(valueFromLeftPrepare, widthPrepare);
-  
-  console.log(duration, init_duration, prepare_duration)
-
 
   return (
     <>
@@ -165,7 +164,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			status, 
 			isLastAttempt
 		)}
-		{valueFromLeftInit && constructLine(
+		{valueFromLeftInit && displayPhases && constructLine(
 			valueFromLeftInit, 
 			widthInit, 
 			row, 
@@ -176,7 +175,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			'INITIALIZED', 
 			isLastAttempt
 		)}
-		{valueFromLeftInit && constructLine(
+		{valueFromLeftInit && displayPhases && constructLine(
 			valueFromLeftPrepare, 
 			widthPrepare, 
 			row, 

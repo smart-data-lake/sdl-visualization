@@ -23,6 +23,7 @@ type TimelineProps = {
   customMinimumHeight?: number;
   onHandleMove?: (which: 'left' | 'right', to: number) => void;
   onMove?: (change: number) => void;
+  displayPhases: boolean;
 };
 
 export type TimelineMetrics = {
@@ -51,6 +52,7 @@ const Timeline: React.FC<TimelineProps> = ({
   customMinimumHeight = 31.25,
   onHandleMove = () => null,
   onMove = () => null,
+  displayPhases,
 }) => {
   const { t } = useTranslation();
 
@@ -69,6 +71,7 @@ const Timeline: React.FC<TimelineProps> = ({
         paramsString,
         t: t,
         dragging: dragging,
+        displayPhases: displayPhases,
       }),
     [dragging, paramsString, rows, searchStatus, t, timeline],
   );
@@ -146,6 +149,7 @@ type RowRendererProps = {
   paramsString: string;
   t: TFunction;
   dragging: boolean;
+  displayPhases: boolean;
 };
 
 function getUniqueKey(index: number, row: Row) {
@@ -160,6 +164,7 @@ function createRowRenderer({
   paramsString = '',
   t,
   dragging,
+  displayPhases,
 }: RowRendererProps) {
   return ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const row = rows[index];
@@ -173,6 +178,7 @@ function createRowRenderer({
           paramsString={paramsString}
           t={t}
           dragging={dragging}
+          displayPhases={displayPhases}
         />
       </div>
     );

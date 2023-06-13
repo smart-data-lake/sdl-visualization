@@ -5,6 +5,7 @@ import { sortRows } from "../../../util/WorkflowsExplorer/row";
 import FilterMenu from "./FilterMenu";
 import SelectSort from "./SelectSort";
 import DatetimePicker from "../DatetimePicker/DatetimePicker";
+import Phases from "./Phases";
 
 
 /**
@@ -25,7 +26,9 @@ const ToolBar = (
         sortEnabled?: boolean,
         datetimePicker?: (start: Date, end: Date) => void,
         searchMode?: 'equals' | 'contains',
-        searchPlaceholder?: string
+        searchPlaceholder?: string,
+        updateChecked?: (checked: boolean) => void
+        phases?: boolean
     }) => {
     const { 
         controlledRows, 
@@ -35,11 +38,13 @@ const ToolBar = (
         sortEnabled, 
         datetimePicker,
         searchMode,
-        searchPlaceholder
+        searchPlaceholder,
+        updateChecked,
     } = props;
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
     const [sort, setSort] = useState<SortType>('start time asc');
+    const [checked, setChecked] = useState<boolean>(false);
 	const style = props.style ? props.style : 'vertical';
 
 	const updateList = (list: boolean[]) => {
@@ -49,6 +54,11 @@ const ToolBar = (
 	const updateSort = (sort: SortType) => {
 		setSort(sort);
 	}
+
+    const updatePhases = (checked: boolean) => {
+        if (updateChecked) updateChecked(checked);
+        setChecked(checked);
+    }
 
 	useEffect(() => {
 		function handleInput() {
@@ -143,6 +153,7 @@ const ToolBar = (
                 />
                 {sortEnabled && <SelectSort updateSort={updateSort}/>}
                 {filters && <FilterMenu filters={filters} updateList={updateList}/>}
+                {updateChecked && <Phases updatePhases={updatePhases}/>}
                 {datetimePicker && <DatetimePicker datetimePicker={datetimePicker}/>}
         </Box>
     )

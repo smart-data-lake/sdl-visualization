@@ -45,6 +45,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const { attempt, open } = props;
     const defaultRows = attempt.rows;
     const [rows, setRows] = useState<Row[]>(defaultRows);
+    const [checked, setChecked] = useState(false);
     const navigate = useNavigate();
     const location = useLocation().pathname;
 
@@ -57,141 +58,146 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const updateRows = (rows: Row[]) => {
         setRows(rows);
     }
+
+    const updateChecked = (checked: boolean) => {
+        setChecked(checked);
+    }
     
     return ( 
         <Sheet
-        sx={{
-            display: 'flex',
-        }}
-        >
-        <Sheet
             sx={{
-                flex: 1,
+                display: 'flex',
             }}
         >
-            {/* Renders the ToolBar component, which contains a set of buttons that allow the user to filter the rows displayed in the actions table */}
             <Sheet
                 sx={{
-                    py: '1rem',
-                    my: '1.2rem',
-                    position: 'sticky',
-                    borderRadius: '0.5rem',
+                    flex: 1,
                 }}
             >
-                <ToolBar 
-                    controlledRows={defaultRows} 
-                    updateRows={updateRows} 
-                    filters={checkFiltersAvailability(defaultRows, defaultFilters())}
-                    sortEnabled={true}
-                    searchColumn={"step_name"}
-                    searchPlaceholder="Search by action name"
-                    style="horizontal"
-                    searchMode="contains"
-                    />
-                
-            </Sheet>
-            {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
-            {rows.length === 0 ? (
+                {/* Renders the ToolBar component, which contains a set of buttons that allow the user to filter the rows displayed in the actions table */}
                 <Sheet
                     sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        mt: '1rem',
-                        p: '10rem',
-                        gap: '5rem',
-                        border: '1px solid lightgray',
+                        py: '1rem',
+                        my: '1.2rem',
+                        position: 'sticky',
                         borderRadius: '0.5rem',
-                        height: '67vh',
                     }}
                 >
-                    <InboxIcon
-                        color="disabled"
-                        sx={{
-                            scale: '5',
-                        }}
-                    />
-                    <Typography>
-                        No actions found
-                    </Typography>
+                    <ToolBar 
+                        controlledRows={defaultRows} 
+                        updateRows={updateRows} 
+                        filters={checkFiltersAvailability(defaultRows, defaultFilters())}
+                        sortEnabled={true}
+                        searchColumn={"step_name"}
+                        searchPlaceholder="Search by action name"
+                        style="horizontal"
+                        searchMode="contains"
+                        updateChecked={attempt.runInfo.runStateFormatVersion && attempt.runInfo.runStateFormatVersion > 1 ? updateChecked : undefined}
+                        />
+                    
                 </Sheet>
-            ) : (
-                <Sheet>
-                    <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
-                        <Sheet 
+                {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
+                {rows.length === 0 ? (
+                    <Sheet
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            mt: '1rem',
+                            p: '10rem',
+                            gap: '5rem',
+                            border: '1px solid lightgray',
+                            borderRadius: '0.5rem',
+                            height: '67vh',
+                        }}
+                    >
+                        <InboxIcon
+                            color="disabled"
                             sx={{
-                                display: 'flex',
-                                gap: '0.5rem',
-                                height: '70vh',
-                                position: 'relative',  
-                                
+                                scale: '5',
                             }}
-                        >
-                                <ThemeProvider theme={theme}>
-                                <GlobalStyle />
-                                    <Sheet
-                                        onClick={() => {
-                                            if (open) {
-                                                navigate(`${location.split('timeline')[0]}timeline`);
-                                            }
-                                        }}
-                                        sx={{
-                                            flex: '1',
-                                            width: '99%',
-                                            position: 'absolute', 
-                                            top: 0,
-                                            left: 0,
-                                            backgroundColor: open ? 'primary.main' : 'none',
-                                            opacity: open ? [0.4, 0.4, 0.4] : [],
-                                            transition: 'opacity 0.2s ease-in-out',
-                                            cursor: 'context-menu'
-                                        }}
-                                    >
-                                        <VirtualizedTimeline run={attempt.run} rows={rows}/>
-                                    </Sheet>
-                                </ThemeProvider>
-                        </Sheet> 
-                    </TabPanel>
-                    <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
-                        <Sheet 
-                            sx={{
-                                gap: '0.5rem',
-                                height: '70vh',
-                                position: 'relative',
-                                display: 'flex',
-                            }}
-                        >
-
-                            <Sheet
-                                onClick={() => {
-                                    if (open) {
-                                        navigate(`${location.split('table')[0]}table`);
-                                    }
-                                }}
+                        />
+                        <Typography>
+                            No actions found
+                        </Typography>
+                    </Sheet>
+                ) : (
+                    <Sheet>
+                        <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
+                            <Sheet 
                                 sx={{
-                                    overflowY: 'scroll',
-                                    position: 'absolute',
-                                    flex: '1', 
+                                    display: 'flex',
+                                    gap: '0.5rem',
                                     height: '70vh',
-                                    top: 0,
-                                    left: 0,
-                                    backgroundColor: open ? 'primary.main' : 'none',
-                                    opacity: open ? [0.4, 0.4, 0.4] : [],
-                                    transition: 'opacity 0.2s ease-in-out',
-                                    cursor: 'context-menu'
+                                    position: 'relative',  
+                                    
                                 }}
                             >
-                                <TableOfActions rows={rows}/>
+                                    <ThemeProvider theme={theme}>
+                                    <GlobalStyle />
+                                        <Sheet
+                                            onClick={() => {
+                                                if (open) {
+                                                    navigate(`${location.split('timeline')[0]}timeline`);
+                                                }
+                                            }}
+                                            sx={{
+                                                flex: '1',
+                                                width: '99%',
+                                                position: 'absolute', 
+                                                top: 0,
+                                                left: 0,
+                                                backgroundColor: open ? 'primary.main' : 'none',
+                                                opacity: open ? [0.4, 0.4, 0.4] : [],
+                                                transition: 'opacity 0.2s ease-in-out',
+                                                cursor: 'context-menu'
+                                            }}
+                                        >
+                                            <VirtualizedTimeline run={attempt.run} rows={rows} displayPhases={checked}/>
+                                        </Sheet>
+                                    </ThemeProvider>
+                            </Sheet> 
+                        </TabPanel>
+                        <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
+                            <Sheet 
+                                sx={{
+                                    gap: '0.5rem',
+                                    height: '70vh',
+                                    position: 'relative',
+                                    display: 'flex',
+                                }}
+                            >
+
+                                <Sheet
+                                    onClick={() => {
+                                        if (open) {
+                                            navigate(`${location.split('table')[0]}table`);
+                                        }
+                                    }}
+                                    sx={{
+                                        overflowY: 'scroll',
+                                        position: 'absolute',
+                                        flex: '1', 
+                                        height: '70vh',
+                                        top: 0,
+                                        left: 0,
+                                        backgroundColor: open ? 'primary.main' : 'none',
+                                        opacity: open ? [0.4, 0.4, 0.4] : [],
+                                        transition: 'opacity 0.2s ease-in-out',
+                                        cursor: 'context-menu'
+                                    }}
+                                >
+                                    <TableOfActions rows={rows}/>
+                                </Sheet>
                             </Sheet>
-                        </Sheet>
-                    </TabPanel>
-                    <TabPanel value={2} sx={{ py: '1rem' }}>
-                        <b>Lineage</b> tab panel
-                    </TabPanel>
-                </Sheet>
-            )}
-        </Sheet> 
+                        </TabPanel>
+                        <TabPanel value={2} sx={{ py: '1rem' }}>
+                            <b>Lineage</b> tab panel
+                        </TabPanel>
+                    </Sheet>
+                )}
+            </Sheet> 
             {open && (
                 <>
                     {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
