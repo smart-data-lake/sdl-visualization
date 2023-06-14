@@ -46,7 +46,7 @@ const Workflows = () => {
 
     if (isLoading) return <CircularProgress/>;
     return (      
-        <>
+        <Sheet>
             <PageHeader title={'Workflows'} noBack={true} />
             
             <Sheet
@@ -90,7 +90,7 @@ const Workflows = () => {
                     )}
                 </Sheet>
             </Sheet>
-        </>
+        </Sheet>
     );
 }
 

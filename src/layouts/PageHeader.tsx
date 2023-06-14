@@ -26,11 +26,9 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
     }
 
     return ( 
-        <>
             <Sheet sx={{
                 display: 'flex',
-                flexDirection: 'row',
-                justifyContent: 'left',
+                justifyContent: 'flex-start',
                 position: 'sticky',
                 top: 0,
                 width: '100%',
@@ -39,6 +37,7 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                 pb : '1.5rem',
                 pt : '4rem',
                 gap: '1rem',
+                flex: 1,
 
             }}>
                 {!noBack && <IconButton  onClick={handleClick} variant="plain" color="neutral" size="sm">
@@ -47,8 +46,6 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                 <Box sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    top: '0px',
-                    position: 'sticky',
                     verticalAlign: 'middle',
 
                 }}>
@@ -57,7 +54,6 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                     {description && <Typography level="body2" sx={{py: '1rem'}}>{description}</Typography>}
                 </Box>
             </Sheet>
-        </>
      );
 }
  

@@ -1,4 +1,4 @@
-import { Box, CircularProgress } from "@mui/joy";
+import { Box, CircularProgress, Sheet } from "@mui/joy";
 import { Outlet } from "react-router-dom";
 import Header from "./Header";
 import SideBar from "./SideBar";
@@ -25,27 +25,34 @@ function RootLayout(props: {storeData?: (data: any) => void, currData?: any}) {
     }, [isLoading])
         
     return ( 
-        <>
+        <Box
+            sx={{
+                display: 'flex',
+                height: '100vh',
+                alignItems: 'stretch',
+            }}
+        >
             <Header />
-            <SideBar/>
-            <main>
+            <Box
+                sx={{
+                    display: 'flex',
+                    height: '100%',
+                    justifyContent: 'flex-start',
+                    alignItems: 'stretch',
+                }}
+                >
+                <SideBar/>
                 <Box
                     sx={{
                         display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'stretch',
                         flexDirection: 'column',
-                        width: '100%',
-                        height: '100%',
-                        pl: '5rem',
-                        pr:'2rem'
                     }}
                 >
                     {isLoading && <CircularProgress />}
-                    <Outlet />
+                    {!isLoading && <Outlet />}
                 </Box>
-            </main>
-        </>
+            </Box>
+        </Box>
      );
 }
 
