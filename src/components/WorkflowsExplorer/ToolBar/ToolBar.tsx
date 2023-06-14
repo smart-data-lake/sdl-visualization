@@ -27,7 +27,7 @@ const ToolBar = (
         datetimePicker?: (start: Date, end: Date) => void,
         searchMode?: 'equals' | 'contains',
         searchPlaceholder?: string,
-        updateChecked?: (checked: boolean) => void
+        updateChecked?: (phases: {name: string, checked: boolean}[]) => void
         phases?: boolean
     }) => {
     const { 
@@ -44,7 +44,6 @@ const ToolBar = (
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
     const [sort, setSort] = useState<SortType>('start time asc');
-    const [checked, setChecked] = useState<boolean>(false);
 	const style = props.style ? props.style : 'vertical';
 
 	const updateList = (list: boolean[]) => {
@@ -55,9 +54,8 @@ const ToolBar = (
 		setSort(sort);
 	}
 
-    const updatePhases = (checked: boolean) => {
+    const updatePhases = (checked: { name: string; checked: boolean; }[]) => {
         if (updateChecked) updateChecked(checked);
-        setChecked(checked);
     }
 
 	useEffect(() => {

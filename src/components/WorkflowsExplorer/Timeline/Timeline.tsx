@@ -23,7 +23,7 @@ type TimelineProps = {
   customMinimumHeight?: number;
   onHandleMove?: (which: 'left' | 'right', to: number) => void;
   onMove?: (change: number) => void;
-  displayPhases: boolean;
+  displayPhases: { name: string; checked: boolean }[];
 };
 
 export type TimelineMetrics = {
@@ -149,7 +149,7 @@ type RowRendererProps = {
   paramsString: string;
   t: TFunction;
   dragging: boolean;
-  displayPhases: boolean;
+  displayPhases: { name: string; checked: boolean }[];
 };
 
 function getUniqueKey(index: number, row: Row) {

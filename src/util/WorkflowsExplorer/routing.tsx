@@ -1,7 +1,4 @@
-import React from 'react';
 import { createHashRouter, createRoutesFromElements, Route } from 'react-router-dom';
-import ConfigViewer from '../../components/ConfigExplorer/ConfigExplorer';
-import Run from '../../components/WorkflowsExplorer/Run/Run';
 import WorkflowHistory from '../../components/WorkflowsExplorer/Workflow/WorkflowHistory';
 import Workflows from '../../components/WorkflowsExplorer/Workflows/Workflows';
 import NotFound from '../../layouts/NotFound';

@@ -45,7 +45,11 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const { attempt, open } = props;
     const defaultRows = attempt.rows;
     const [rows, setRows] = useState<Row[]>(defaultRows);
-    const [checked, setChecked] = useState(false);
+    const [checked, setChecked] = useState([
+        {name: 'Execution', checked: true}, 
+        {name: 'Initialization', checked: false}, 
+        {name: 'Finalization', checked: false}
+    ]);
     const navigate = useNavigate();
     const location = useLocation().pathname;
 
@@ -59,7 +63,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
         setRows(rows);
     }
 
-    const updateChecked = (checked: boolean) => {
+    const updateChecked = (checked: {name: string; checked: boolean; }[]) => {
         setChecked(checked);
     }
     

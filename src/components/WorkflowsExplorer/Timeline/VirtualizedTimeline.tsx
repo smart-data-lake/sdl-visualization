@@ -8,7 +8,7 @@ import useTimelineControls from './useTimelineControls';
 type MyTimelineProps = {
   run: Run;
   rows: Row[];
-  displayPhases: boolean;
+  displayPhases: { name: string; checked: boolean }[];
 };
 
 //

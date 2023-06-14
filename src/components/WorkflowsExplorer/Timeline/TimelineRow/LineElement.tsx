@@ -26,7 +26,7 @@ type LineElementProps = {
   isLastAttempt: boolean;
   duration: number | null;
   dragging: boolean;
-  displayPhases: boolean;
+  displayPhases: { name: string; checked: boolean }[];
   startTimeOfFirstAttempt?: number;
   paramsString?: string;
   init_duration?: number;
@@ -142,18 +142,19 @@ const LineElement: React.FC<LineElementProps> = ({
   const valueFromLeftExec = valueFromLeft(_boxStartTime('exec'));
   const widthExec = width(duration, valueFromLeftExec);
   const labelPositionExec = getLengthLabelPosition(valueFromLeftExec, widthExec);
+  const displayExec = displayPhases.find((phase) => phase.name === 'Execution')?.checked;
 
   const valueFromLeftInit = valueFromLeft(_boxStartTime('init'));
   const widthInit = width(init_duration, valueFromLeftInit);
-  const labelPositionInit = getLengthLabelPosition(valueFromLeftInit, widthInit);
+  const displayInit = init_duration && displayPhases.find((phase) => phase.name === 'Initialized')?.checked;
 
   const valueFromLeftPrepare = valueFromLeft(_boxStartTime('prepare'));
   const widthPrepare = width(prepare_duration, valueFromLeftPrepare);
-  const labelPositionPrepare = getLengthLabelPosition(valueFromLeftPrepare, widthPrepare);
+  const displayPrepare = prepare_duration && displayPhases.find((phase) => phase.name === 'Prepared')?.checked;
 
   return (
     <>
-		{constructLine(
+		{displayExec && constructLine(
 			valueFromLeftExec,
 			widthExec,
 			row, 
@@ -164,7 +165,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			status, 
 			isLastAttempt
 		)}
-		{valueFromLeftInit && displayPhases && constructLine(
+		{valueFromLeftInit && displayInit && constructLine(
 			valueFromLeftInit, 
 			widthInit, 
 			row, 
@@ -175,7 +176,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			'INITIALIZED', 
 			isLastAttempt
 		)}
-		{valueFromLeftInit && displayPhases && constructLine(
+		{valueFromLeftInit && displayPrepare && constructLine(
 			valueFromLeftPrepare, 
 			widthPrepare, 
 			row, 
