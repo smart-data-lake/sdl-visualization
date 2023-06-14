@@ -1,6 +1,6 @@
-import { fetchApi } from "./fetchAPI";
+import { fetchAPI } from "./fetchAPI";
 
-export class fetchAPI_json_server implements fetchApi {
+export class fetchAPI_json_server implements fetchAPI {
     url: string;
     
     constructor(url: string) {
