@@ -162,8 +162,6 @@ function LineageTab(props: flowProps) {
   const [edges, setEdges] = useState(initial_render[0]);
   let [hidden, setHidden] = useState(useParams().elementType === 'dataObjects' ? true : false); //Hidden action labels
 
-
-
   const hide = (hidden: boolean) => (edge: any) => {
     if (hidden){
       edge.label = '';
@@ -180,7 +178,6 @@ function LineageTab(props: flowProps) {
     setEdges((eds) => eds.map(hide(hidden)));
   }, [hidden, onlyDirectNeighbours]); //edges must be hidden at each render (that is, also when we expand/compress the graph)
 
-
   //DEPRECATED
   function renderPartialGraph(nodeId: string){
 
@@ -196,14 +193,11 @@ function LineageTab(props: flowProps) {
     setEdges(newEdges);
   }
 
-
-
   //Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
   const onNodesChange = useCallback(
     (changes: any) => setNodes((nds: any) => applyNodeChanges(changes, nds)),
     [setNodes]
   );
-
   
   const onEdgesChange = useCallback(
     (changes: any) => setEdges((eds: any) => applyEdgeChanges(changes, eds)),
@@ -216,6 +210,7 @@ function LineageTab(props: flowProps) {
     //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
     navigate(`/config/dataObjects/${node.id}`); //Link programmatically
   }
+
   function clickOnEdge(edge: flowEdgeWithString){
     navigate(`/config/actions/${edge.old_id}`); //Link programmatically
   }
@@ -223,7 +218,6 @@ function LineageTab(props: flowProps) {
   // container holding SVG needs manual height resizing to fill 100%
   const chartBox = useRef<HTMLDivElement>();
   const [contentHeight, setContentHeight] = useState(100);
-
 
   const reactFlow = useReactFlow();
 
@@ -243,8 +237,6 @@ function LineageTab(props: flowProps) {
     }, 1);
     window.addEventListener('resize', () => handleResize());
   }
-
-
 
   return (
     <Box 

@@ -27,7 +27,7 @@ type position = {
     y: number
 }
 
-class Node{
+export class Node{
     public id: id;
     public position: position;
     public width: number;
@@ -35,31 +35,36 @@ class Node{
     public level: number;
     public backgroundColor: string;
     public isCenterNode: boolean;
+    public data: {id: string};
 
-    constructor(id: id, level: number = -1){
+    constructor(id: id, position?: {x: number, y: number}, level: number = -1){
         this.id = id;
         this.level = level //level defines the longest path starting from all input nodes
-        this.position = {x:0, y:0};
+        this.position = position ? position : {x:0, y:0};
         this.width = 172;
         this.height = 36;
         this.backgroundColor = '#FFFFFF';
         this.isCenterNode = false;
+        this.data = {id: this.id}
     }
 } 
 
-class Edge{
+export class Edge{
 
     public fromNode: Node;
     public toNode: Node;
     public id: id;
     public isCentral: boolean;
+    public source: string;
+    public target: string;
 
     constructor(fromNode: Node, toNode: Node, id: id){
         this.fromNode = fromNode;
         this.toNode = toNode;
         this.id = id; //Ids are not unique identifiers, since we can have the same Edge/Action connecting several Nodes/DataObjects.
         this.isCentral = false;
-
+        this.source = this.fromNode.id;
+        this.target = this.toNode.id;
     }
 }
 

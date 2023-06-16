@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab, { tabClasses } from '@mui/joy/Tab';
@@ -26,7 +26,9 @@ import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArro
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import { displayProps } from "../../ConfigExplorer/DataDisplayView";
 import LineageTab from "../../ConfigExplorer/LineageTab";
-import { ReactFlowProvider } from "react-flow-renderer";
+import ReactFlow, { Background, Controls, ReactFlowProvider, useReactFlow } from "react-flow-renderer";
+import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
+import { DAGraph } from "../../../util/ConfigExplorer/Graphs";
 
 export const defaultDrawerWidth = 600;
 
@@ -66,7 +68,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const updateChecked = (checked: {name: string; checked: boolean; }[]) => {
         setChecked(checked);
     }
-    
+
     return ( 
         <Sheet
             sx={{
@@ -240,6 +242,23 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
         navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}`)
         if (stepName) navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}/${stepName}`)
     }
+
+    
+    const prepareGraph = (rows: Row[]) => {
+        let data: {action: string, inputIds: {id: string}[], outputIds: {id: string}[]}[] = []; 
+        rows.forEach((row: Row) => {
+            data.push({
+                action: row.step_name,
+                inputIds: row.inputIds ? row.inputIds : [],
+                outputIds: row.outputIds ? row.outputIds : []
+            })
+        })
+
+        return data;
+    }
+
+    const graph: DAGraph = new Lineage(prepareGraph(attempt.rows)).graph;
+
     return ( 
         <Sheet sx={{display: 'flex', height: '86vh'}}>
             <Sheet 
@@ -282,7 +301,14 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
                     <Sheet sx={{borderLeft: '1px solid lightgray', mx: '1rem'}}/>
                     <Sheet sx={{width: '40%', flex: 2}}>
                         <ReactFlowProvider>
-                            <LineageTab data={props.lineageData} elementName={'btl-distances' as string} elementType={'dataObjects' as string} runContext={true} />
+                            <ReactFlow 
+                                nodes={graph.nodes} 
+                                edges={graph.edges}
+                                defaultPosition={[0,0]}     
+                            >
+                                <Background />
+                                <Controls />
+                            </ReactFlow>
                         </ReactFlowProvider>
                     </Sheet>
                 </>
