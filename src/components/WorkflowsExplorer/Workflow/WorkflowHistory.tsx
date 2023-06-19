@@ -136,13 +136,11 @@ const WorkflowHistory = () => {
 			<PageHeader title={workflowName} />             
 			<Sheet
 				sx={{
-					flex: 1,
 					display: 'flex',
 				}}
 			>
 				<Sheet
 					sx={{
-						pt: '1rem',
 						px: '1rem',
 						flex: 3,
 					}}
