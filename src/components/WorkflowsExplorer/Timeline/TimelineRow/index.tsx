@@ -25,6 +25,8 @@ type TimelineRowProps = {
 	displayPhases: { name: string; checked: boolean }[];
 };
 
+
+
 const TimelineRow: React.FC<TimelineRowProps> = ({
 	item,
 	timeline,
