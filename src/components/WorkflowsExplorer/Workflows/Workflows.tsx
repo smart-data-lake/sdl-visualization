@@ -56,7 +56,7 @@ const Workflows = () => {
                     justifyContent: 'space-evenly',
                     alignItems: 'left',
                     
-                    py: '1rem',
+                    p: '1rem',
                     gap: '1rem'
                 }}
                 >

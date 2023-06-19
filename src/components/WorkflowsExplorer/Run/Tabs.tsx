@@ -113,7 +113,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                             gap: '5rem',
                             border: '1px solid lightgray',
                             borderRadius: '0.5rem',
-                            height: '67vh',
+                            height: '100%',
                         }}
                     >
                         <InboxIcon
@@ -241,7 +241,7 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
         if (stepName) navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}/${stepName}`)
     }
     return ( 
-        <Sheet sx={{display: 'flex', height: '86vh'}}>
+        <Sheet sx={{display: 'flex', height: '100%', px: '1rem'}}>
             <Sheet 
                 sx={{
                     flex: 3,

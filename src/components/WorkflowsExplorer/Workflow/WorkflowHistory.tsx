@@ -40,7 +40,7 @@ const WorkflowHistory = () => {
 	const [barChartData, setBarChartData] = useState<any[]>([])
 	const [lineChartData, setLineChartData] = useState<any[]>([])
 	const [indices, setIndices] = useState<Indices>({toDisplayLeft: 0, toDisplayRight: rowsPerPage})
-	const [open, setOpen] = useState<Boolean>(true)
+	const [open, setOpen] = useState<Boolean>(false)
 	const [startDate, setStartDate] = useState<Date>(new Date(0))
 	const [endDate, setEndDate] = useState<Date>(new Date())
 	const [pieChartData, setPieChartData] = useState<any[]>([])
@@ -143,9 +143,8 @@ const WorkflowHistory = () => {
 				<Sheet
 					sx={{
 						pt: '1rem',
-						pr: '1rem',
+						px: '1rem',
 						flex: 3,
-						
 					}}
 				>                   
 					<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
@@ -163,6 +162,7 @@ const WorkflowHistory = () => {
 					<Sheet sx={{
 						mt: '1rem',
 						width: '100%',
+						display: 'flex',
 						}}
 					>
 						<WorkflowHistoryTable data={toDisplay} updateRows={updateRows}/>
@@ -211,7 +211,7 @@ const WorkflowHistory = () => {
 				)}
 				{!open && (
 					<Sheet>
-						<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+						<IconButton disabled sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
 							<ChevronLeftIcon />
 						</IconButton>
 					</Sheet>	
