@@ -182,7 +182,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			row, 
 			dragging, 
 			'none', 
-			init_duration, 
+			prepare_duration, 
 			grayed, 
 			'PREPARED', 
 			isLastAttempt
