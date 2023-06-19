@@ -42,6 +42,9 @@ export interface RunInfo {
 export type SortType = 'start time asc' | 'start time desc' | 'duration asc' | 'duration desc'
 
 export class Row implements MetaDataBaseObject {
+    getPhaseDuration(name: string) {
+      throw new Error('Method not implemented.');
+    }
     flow_id: string;
     step_name: string;
     run_number: number;

@@ -10,15 +10,33 @@ import { get } from 'http';
 // Component
 //
 
-const TaskListLabel = (props: {item: Row}) => {
-  const { item } = props
+const TaskListLabel = (props: {item: Row, displayPhases: {name: string; checked: boolean;}[]}) => {
+  const { item, displayPhases } = props
 
-  const getTotalDuration = (item: Row) => {
-    if (item.endTstmpInit && item.startTstmpInit && item.endTstmpPrepare && item.startTstmpPrepare) {
-      return item.duration + (item.endTstmpInit - item.startTstmpInit) + (item.endTstmpPrepare - item.startTstmpPrepare)
-    }
+  
+
+  const getTotalDuration = () => {
+    let duration = 0;
+
+    displayPhases.map((phase) => {
+      if (phase.checked) {
+        switch (phase.name) {
+          case 'Execution':
+            duration += item.duration;
+            break;
+          case 'Initialized':
+            duration += item.endTstmpInit && item.startTstmpInit ? item.endTstmpInit - item.startTstmpInit : 0;
+            break;
+          case 'Prepared':
+            duration += item.endTstmpPrepare && item.startTstmpPrepare ? item.endTstmpPrepare - item.startTstmpPrepare : 0;
+            break;
+          default:
+            break;
+        }
+      }
+    });
     
-    return item.duration
+    return duration
   }
 
   return (
@@ -44,7 +62,7 @@ const TaskListLabel = (props: {item: Row}) => {
               </RowTaskName>
             </RowLabelTaskName>
             <RowDuration data-testid="tasklistlabel-duration">
-              {formatDuration(getTotalDuration(item))}
+              {formatDuration(getTotalDuration())}
             </RowDuration>
           </RowLabelContent>
         </Link>
@@ -119,3 +137,5 @@ const RowTaskName = styled.div`
 
   text-overflow: ellipsis;
 `;
+
+

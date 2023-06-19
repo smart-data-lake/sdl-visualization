@@ -47,8 +47,8 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const [rows, setRows] = useState<Row[]>(defaultRows);
     const [checked, setChecked] = useState([
         {name: 'Execution', checked: true}, 
-        {name: 'Initialization', checked: false}, 
-        {name: 'Finalization', checked: false}
+        {name: 'Initialized', checked: false}, 
+        {name: 'Prepared', checked: false}
     ]);
     const navigate = useNavigate();
     const location = useLocation().pathname;

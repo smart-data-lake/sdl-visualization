@@ -155,7 +155,7 @@ const WorkflowHistory = () => {
 						sortEnabled={false}
 						updateRows={updateRows}
 						searchColumn={'runId'}
-						searchMode={'exact'}
+						searchMode={'equals'}
 						searchPlaceholder={'Search by Run ID'}
 						filters={checkFiltersAvailability(data.runs, defaultFilters())}
 						datetimePicker={handleDateRangeChange}

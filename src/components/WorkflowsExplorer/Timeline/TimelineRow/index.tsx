@@ -44,7 +44,7 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
 	return (
 		<>
 			<Element>
-				<TaskListLabel item={item}/>
+				<TaskListLabel item={item} displayPhases={displayPhases}/>
 				<RowElement item={item} paramsString={paramsString} onOpen={onOpen}>
 						<LineElement
 							key={item.finished_at}
