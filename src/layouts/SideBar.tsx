@@ -28,14 +28,12 @@ const SideBar = () => {
         {
             icon : <SpeedRoundedIcon/>,
             link : '/workflows',
-            disabled : !(data.localSetup && data.statefilesIndex),
             filetype : 'state',
             description: 'Workflows Explorer'
         },
         {
             icon : <TuneRoundedIcon/>,
             link : '/config',
-            disabled : !(data.localSetup && data.configfilesIndex),
             filetype : 'config',
             description: 'Config Viewer'
         }
@@ -48,16 +46,12 @@ const SideBar = () => {
             invertedColors
             variant='outlined'
             sx={{
-                position: 'fixed',
-                top: 43,
                 display: 'flex',
-                flexShrink: 0,
-                zIndex: 1,
                 flexDirection: 'column',
-                justifyContent: 'space-between',
-                height: '100%',
-                pb: 5,
-                backgroundColor: 'lightgray'
+                backgroundColor: 'lightgray',
+                maxWidth: '3.5rem',
+                flex: 1,
+                pt: '3rem',
             }}
         >
             <Box>
