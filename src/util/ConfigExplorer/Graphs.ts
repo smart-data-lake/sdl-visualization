@@ -282,7 +282,7 @@ function getActions(actionsJSON: any, dataObjects: any){
 }
 
 
-function computeNodePositions(nodes: Node[], edges: Edge[]){
+export function computeNodePositions(nodes: Node[], edges: Edge[]){
     //instantiate dagre Graph
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({});

@@ -1,4 +1,4 @@
-import { Node, Edge, DAGraph } from '../ConfigExplorer/Graphs'
+import { Node, Edge, DAGraph, computeNodePositions } from '../ConfigExplorer/Graphs'
 
 export class Lineage {
     lineageData: any;
@@ -6,7 +6,10 @@ export class Lineage {
 
     constructor(data: {action: string, inputIds: {id: string}[], outputIds: {id: string}[]}[]) {
         const preprocessedData: {id: string, node: Node, edges: {id: string, to: Node}[]}[] = this.prepareGraphData(data)
-        this.graph = new DAGraph(this.getNodes(preprocessedData), this.getEdges(preprocessedData))
+        const nodes = this.getNodes(preprocessedData);
+        const edges = this.getEdges(preprocessedData);
+
+        this.graph = new DAGraph(computeNodePositions(nodes, edges), edges)
     }
 
     getNodes = (data: {id: string, node: Node, edges: {id: string, to: Node}[]}[]) => {
@@ -42,10 +45,8 @@ export class Lineage {
             });
         });
 
-        let py = 0;
         nodes.forEach(node => {
-            graph.push({id: node, node: new Node(node, {y: py, x: 0}), edges: []})
-            py = py+50
+            graph.push({id: node, node: new Node(node, {y: 0, x: 0}), edges: []})
         })
 
         nodes.forEach(node => {
@@ -64,7 +65,6 @@ export class Lineage {
             })
         })
 
-        console.log(graph)
         return graph
     }
 }

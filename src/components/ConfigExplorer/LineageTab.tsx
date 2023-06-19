@@ -88,9 +88,10 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
 
 
 interface flowProps {
-  data: object,
-  elementName: string,
-  elementType: string,
+  dataSource: 'config' | 'statefiles',
+  data?: object,
+  elementName?: string,
+  elementType?: string,
   runContext?: boolean,
 }
 
