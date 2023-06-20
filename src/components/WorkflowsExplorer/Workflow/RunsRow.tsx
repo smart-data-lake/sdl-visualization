@@ -22,7 +22,7 @@ const RunsRow = (props : {run: any}) => {
 
 
     return ( 
-        <tr  onClick={() => handleClick()}>
+        <tr style={{cursor: 'pointer'}} onClick={() => handleClick()}>
             <td>{run.runId}</td>
             <td>{getIcon(run.status)}</td>
             <td>{getISOString(new Date(run.attemptStartTime))}</td>

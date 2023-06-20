@@ -1,8 +1,9 @@
-import { Box, IconButton, Sheet, Table, Typography } from "@mui/joy";
+import { Box, IconButton, Sheet, Table, Tooltip, Typography } from "@mui/joy";
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useParams } from "react-router-dom";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import { Row } from "../../../types"
+import { position } from "polished";
 
 const getRow = (attempt: Attempt, taskName: string) => {
     if (taskName === 'err') throw('was not able to fetch task name');
@@ -71,50 +72,48 @@ const ResultsTable = (props: {metrics?: any, subFeed?: any}) => {
  * If available, it also displays the message of the task.
  * @param props action: Row - the row to display
  * @returns 
- */
+*/
 const ContentSheet = (props: {action: Row}) => {
     const { action } = props;
     
     return (
-        <Box
-            sx={{mt: '2rem'}}
-        >
-            {action.metadata.map((meta) => {
-                const toDisplay : any[] = [];
+        <>
+                {action.metadata.map((meta) => {
+                    const toDisplay : any[] = [];
                     if (meta.mainMetrics) {
                         toDisplay.push(
                             <Box 
-                                key='meta.mainMetrics'
-                                sx={{mb: '1.5rem'}}
+                            key='meta.mainMetrics'
+                            sx={{mb: '1.5rem'}}
                             >
-                                <Typography noWrap level='h5'>
-                                    Main metrics
-                                </Typography>
-                                <ResultsTable metrics={meta.mainMetrics}/>
-                            </Box>
-                        )
-                    } 
-                    if (meta.subFeed) {
-                        toDisplay.push(
-                            <Box 
+                                    <Typography noWrap level='h5'>
+                                        Main metrics
+                                    </Typography>
+                                    <ResultsTable metrics={meta.mainMetrics}/>
+                                </Box>
+                            )
+                        } 
+                        if (meta.subFeed) {
+                            toDisplay.push(
+                                <Box 
                                 key='meta.subFeed'
-                            >
-                                <Typography noWrap level='h5'>
-                                    Subfeed
+                                >
+                                    <Typography noWrap level='h5'>
+                                        Subfeed
+                                    </Typography>
+                                    <ResultsTable subFeed={meta.subFeed}/>
+                                </Box>
+                            )
+                        } 
+                        if (!meta.mainMetrics && !meta.subFeed) {
+                            toDisplay.push(
+                                <Typography noWrap level='h5' key='noData'>
+                                    Error: found no metadata to display
                                 </Typography>
-                                <ResultsTable subFeed={meta.subFeed}/>
-                            </Box>
-                        )
-                    } 
-                    if (!meta.mainMetrics && !meta.subFeed) {
-                        toDisplay.push(
-                            <Typography noWrap level='h5' key='noData'>
-                                Error: found no metadata to display
-                            </Typography>
-                        )
-                    }
-                    return (
-                        <Sheet 
+                            )
+                        }
+                        return (
+                            <Sheet 
                             color="neutral" 
                             variant="outlined"
                             key='resultSheet'
@@ -124,29 +123,29 @@ const ContentSheet = (props: {action: Row}) => {
                                 borderRadius: '0.5rem',
                                 height: 'auto',
                             }}>
-                            {toDisplay}
-                        </Sheet>
-                    )
-                })
-            }
-            {action.message && <Sheet 
-                color="info" 
-                variant="soft"
-                key='resultSheet'
-                invertedColors
-                sx={{
-                    p: '1rem',
-                    mt: '1rem',
-                    borderRadius: '0.5rem',
-            }}>
-                <Typography color="info" level='body2'>
-                    Info:
-                </Typography>
-                <code>
-                    {action.message}
-                </code>
-            </Sheet>}
-        </Box>
+                                {toDisplay}
+                            </Sheet>
+                        )
+                    })
+                }
+                {action.message && <Sheet 
+                    color="info" 
+                    variant="soft"
+                    key='resultSheet'
+                    invertedColors
+                    sx={{
+                        p: '1rem',
+                        mt: '1rem',
+                        borderRadius: '0.5rem',
+                    }}>
+                    <Typography color="info" level='body2'>
+                        Info:
+                    </Typography>
+                    <code>
+                        {action.message}
+                    </code>
+                </Sheet>}
+                </>
     )
 }
 
@@ -166,19 +165,26 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
         <Sheet
             sx={{
                 p: '1rem',
+                pl: '1.5rem',
+                height: '70vh',
+                display: 'flex',
+                flexDirection: 'column',
             }}
             >
             
             <Box 
                 sx={{
                     display: 'flex',
-                    flexDirection: 'row',
-                    justifyContent: 'space-between'
-                }}>
-
-                <Typography noWrap level='h3'>
-                    {action.step_name}
-                </Typography>
+                    justifyContent: 'space-between',
+                    position: 'sticky',
+                    mb: '1rem',
+                }}
+            >
+                <Tooltip title={action.step_name}>
+                    <Typography sx={{cursor: 'default'}} noWrap level='h3'>
+                        {action.step_name}
+                    </Typography>
+                </Tooltip>
                 <IconButton
                     variant="plain" 
                     color="neutral" 
@@ -188,7 +194,16 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
                     <CloseIcon />
                 </IconButton>
             </Box>
-            <ContentSheet action={action}/>
+            <Box
+                sx={{
+                    overflowY: 'scroll',
+                    scrollbarWidth: 'none',
+                    overflowX: 'hidden',
+                    pr: '1rem',
+                }}
+            >
+                <ContentSheet action={action}/>
+            </Box>
         </Sheet>
      );
 }

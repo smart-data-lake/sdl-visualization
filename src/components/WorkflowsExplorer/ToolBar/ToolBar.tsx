@@ -5,6 +5,7 @@ import { sortRows } from "../../../util/WorkflowsExplorer/row";
 import FilterMenu from "./FilterMenu";
 import SelectSort from "./SelectSort";
 import DatetimePicker from "../DatetimePicker/DatetimePicker";
+import Phases from "./Phases";
 
 
 /**
@@ -24,8 +25,10 @@ const ToolBar = (
         filters?: {name: string, fun: (rows: any[]) => any}[],
         sortEnabled?: boolean,
         datetimePicker?: (start: Date, end: Date) => void,
-        searchMode?: 'exact' | 'partial',
-        searchPlaceholder?: string
+        searchMode?: 'equals' | 'contains',
+        searchPlaceholder?: string,
+        updateChecked?: (phases: {name: string, checked: boolean}[]) => void
+        phases?: boolean
     }) => {
     const { 
         controlledRows, 
@@ -35,7 +38,8 @@ const ToolBar = (
         sortEnabled, 
         datetimePicker,
         searchMode,
-        searchPlaceholder
+        searchPlaceholder,
+        updateChecked,
     } = props;
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
@@ -50,11 +54,15 @@ const ToolBar = (
 		setSort(sort);
 	}
 
+    const updatePhases = (checked: { name: string; checked: boolean; }[]) => {
+        if (updateChecked) updateChecked(checked);
+    }
+
 	useEffect(() => {
 		function handleInput() {
-            const tmp = controlledRows.filter((row) => row[searchColumn].toString().toLowerCase() === (value.toLowerCase()));
-            return tmp;
-		}
+            if (searchMode === 'equals') return controlledRows.filter((row) => row[searchColumn].toString().toLowerCase() === (value.toLowerCase()));
+            return controlledRows.filter((row) => row[searchColumn].toString().toLowerCase().includes(value.toLowerCase()));
+        }
 		
 		function applyFilters() {
 			const filteredRows: any[] = []
@@ -135,7 +143,7 @@ const ToolBar = (
                 <Input
                     placeholder={searchPlaceholder || "Search"}
                     size="sm"
-                    sx={{fontSize: 'var(--joy-fontSize-sm)' }}
+                    sx={{fontSize: 'var(--joy-fontSize-sm)', zIndex: 'auto',}}
                     onChange={(event) => {
                         const { value } = event.target;
                         setValue(value)
@@ -143,6 +151,7 @@ const ToolBar = (
                 />
                 {sortEnabled && <SelectSort updateSort={updateSort}/>}
                 {filters && <FilterMenu filters={filters} updateList={updateList}/>}
+                {updateChecked && <Phases updatePhases={updatePhases}/>}
                 {datetimePicker && <DatetimePicker datetimePicker={datetimePicker}/>}
         </Box>
     )

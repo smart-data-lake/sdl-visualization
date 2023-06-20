@@ -34,6 +34,7 @@ export interface RunInfo {
   attemptStartTime: string;
   parallelism: number;
   streaming: boolean;
+  runStateFormatVersion?: number;
 }   
 
 
@@ -41,6 +42,9 @@ export interface RunInfo {
 export type SortType = 'start time asc' | 'start time desc' | 'duration asc' | 'duration desc'
 
 export class Row implements MetaDataBaseObject {
+    getPhaseDuration(name: string) {
+      throw new Error('Method not implemented.');
+    }
     flow_id: string;
     step_name: string;
     run_number: number;
@@ -53,12 +57,19 @@ export class Row implements MetaDataBaseObject {
     started_at: number;
     finished_at: number;
     duration: number;
+    metadata: Metadata;
+    message: string;
     tags?: string[] | undefined;
     run_id?: string;
     task_name?: string;
     foreach_label?: string;
-    metadata: Metadata;
-    message: string;
+    endTstmp?: number;
+    startTstmpPrepare? : number;
+    endTstmpPrepare?: number;
+    startTstmpInit? : number;
+    endTstmpInit?: number;
+    inputId?: string[];
+    outputId?: string[];
    
     constructor({ properties }: { properties: TaskProperty; }) {
       this.flow_id = properties.runInfo.workflowName;
@@ -75,6 +86,13 @@ export class Row implements MetaDataBaseObject {
       this.user_name = '';
       this.system_tags = [];
       this.message = properties.action.msg;
+      this.endTstmp = properties.action.endTstmp ? new Date(properties.action.endTstmp).getTime() : undefined;
+      this.startTstmpPrepare = properties.action.startTstmpPrepare ? new Date(properties.action.startTstmpPrepare).getTime() : undefined;
+      this.endTstmpPrepare = properties.action.endTstmpPrepare ? new Date(properties.action.endTstmpPrepare).getTime() : undefined;
+      this.startTstmpInit = properties.action.startTstmpInit ? new Date(properties.action.startTstmpInit).getTime() : undefined;
+      this.endTstmpInit = properties.action.endTstmpInit ? new Date(properties.action.endTstmpInit).getTime() : undefined;
+      this.inputId = properties.action.inputId;
+      this.outputId = properties.action.outputId;
     }
 
     /**
@@ -133,7 +151,8 @@ export class Row implements MetaDataBaseObject {
     attemptId : number,
     runStartTime : string,
     attemptStartTime : string,
-    actionsState: ActionsState
+    actionsState: ActionsState,
+    runStateFormatVersion?: number
   } 
   
   export type ActionsState = {
@@ -149,9 +168,16 @@ export class Row implements MetaDataBaseObject {
     state : string,
     startTstmp : string,
     duration: string,
-    actionFinishTime?: number,
     msg: string,
-    results: Metadata
+    results: Metadata,
+    actionFinishTime?: number,
+    endTstmp?: string,
+    startTstmpPrepare? : string,
+    endTstmpPrepare?: string,
+    startTstmpInit? : string,
+    endTstmpInit?: string,
+    inputId?: string[],
+    outputId?: string[],
   }
   export type Metadata = [{
     subFeed?: {

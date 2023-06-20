@@ -4,13 +4,41 @@ import { Row } from '../../../types';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
 import { getPath } from '../../../util/WorkflowsExplorer/routing';
 import { colorByStatus } from '../../../util/WorkflowsExplorer/style';
+import { get } from 'http';
 
 //
 // Component
 //
 
-const TaskListLabel = (props: {item: Row}) => {
-  const { item } = props
+const TaskListLabel = (props: {item: Row, displayPhases: {name: string; checked: boolean;}[]}) => {
+  const { item, displayPhases } = props
+
+  
+
+  const getTotalDuration = () => {
+    let duration = 0;
+
+    displayPhases.map((phase) => {
+      if (phase.checked) {
+        switch (phase.name) {
+          case 'Execution':
+            duration += item.duration;
+            break;
+          case 'Initialized':
+            duration += item.endTstmpInit && item.startTstmpInit ? item.endTstmpInit - item.startTstmpInit : 0;
+            break;
+          case 'Prepared':
+            duration += item.endTstmpPrepare && item.startTstmpPrepare ? item.endTstmpPrepare - item.startTstmpPrepare : 0;
+            break;
+          default:
+            break;
+        }
+      }
+    });
+    
+    return duration
+  }
+
   return (
     <RowLabel type={'task'} isOpen={false} group={false} status={item.status}>
         <Link
@@ -34,7 +62,7 @@ const TaskListLabel = (props: {item: Row}) => {
               </RowTaskName>
             </RowLabelTaskName>
             <RowDuration data-testid="tasklistlabel-duration">
-              {formatDuration(item.getTaskDuration(), 1)}
+              {formatDuration(getTotalDuration())}
             </RowDuration>
           </RowLabelContent>
         </Link>
@@ -109,3 +137,5 @@ const RowTaskName = styled.div`
 
   text-overflow: ellipsis;
 `;
+
+

@@ -19,7 +19,6 @@ const WorkflowHistoryTable = (props : {data: any[], updateRows: (rows?: any[], c
     return (
         <Box
             sx={{
-                display: 'flex',
                 overflowY: 'scroll',
                 height: 'calc(100vh - 30rem)',
             }}
@@ -29,6 +28,7 @@ const WorkflowHistoryTable = (props : {data: any[], updateRows: (rows?: any[], c
                 hoverRow 
                 stickyHeader
                 color='neutral'
+                
              >
                 <thead>
                     <tr>

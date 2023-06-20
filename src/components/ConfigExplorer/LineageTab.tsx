@@ -78,9 +78,9 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
       label: action.id,
       label_copy: action.id,
       labelBgPadding: [8, 4],
-      labelBgStyle: { fill: action.isCentral ? '#ffc0cb' : '#ffffff', color: '#FFF', fillOpacity: 0.7 },
+      labelBgStyle: { fill: action.isCentral ? '#096bde' : '#ffffff', color: '#FFF', fillOpacity: 0.7 },
       //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
-      style: { stroke: 'red' },
+      style: { stroke: '#096bde' },
     });
   });
   return result;
@@ -91,6 +91,7 @@ interface flowProps {
   data: object,
   elementName: string,
   elementType: string,
+  runContext?: boolean,
 }
 
 type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of ReactFlow with an (optional) String attribute. 
@@ -250,8 +251,7 @@ function LineageTab(props: flowProps) {
       className='data-flow' 
       ref={chartBox}
       sx={{
-        height: '85vh',
-        borderLeft: '1px solid lightgray'
+        height: '100%',
       }} 
     >
       <ReactFlow 
@@ -259,8 +259,8 @@ function LineageTab(props: flowProps) {
         edges={edges}
         onInit={init}
         defaultPosition={[0,0]} 
-        onNodeClick={(event, node) => clickOnNode(node)}
-        onEdgeClick={(event, edge) => clickOnEdge(edge)}
+        onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
+        onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodesConnectable={false} //prevents adding new edges

@@ -1,6 +1,6 @@
 import dagre from 'dagre';
 
-const central_node_color = '#ffc0cb';
+const central_node_color = '#addbff';
 
 //Union of two sets
 function union<T>(setA: Set<T>, setB: Set<T>) {

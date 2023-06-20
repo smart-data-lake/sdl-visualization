@@ -47,6 +47,7 @@ const SideBar = () => {
             variant='outlined'
             sx={{
                 display: 'flex',
+                justifyContent: 'space-between',
                 flexDirection: 'column',
                 backgroundColor: 'lightgray',
                 maxWidth: '3.5rem',

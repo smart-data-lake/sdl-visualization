@@ -46,7 +46,7 @@ const Workflows = () => {
 
     if (isLoading) return <CircularProgress/>;
     return (      
-        <Sheet>
+        <>
             <PageHeader title={'Workflows'} noBack={true} />
             
             <Sheet
@@ -56,7 +56,7 @@ const Workflows = () => {
                     justifyContent: 'space-evenly',
                     alignItems: 'left',
                     
-                    py: '1rem',
+                    p: '1rem',
                     gap: '1rem'
                 }}
                 >
@@ -68,6 +68,7 @@ const Workflows = () => {
                     searchColumn={"name"}
                     sortEnabled={false}
                     searchPlaceholder="Search by name"
+                    searchMode="contains"
                 />
                 <Sheet
                     sx={{
@@ -90,7 +91,7 @@ const Workflows = () => {
                     )}
                 </Sheet>
             </Sheet>
-        </Sheet>
+        </>
     );
 }
 

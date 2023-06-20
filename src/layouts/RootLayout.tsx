@@ -36,9 +36,10 @@ function RootLayout(props: {storeData?: (data: any) => void, currData?: any}) {
             <Box
                 sx={{
                     display: 'flex',
-                    height: '100%',
+                    height: '100vh',
                     justifyContent: 'flex-start',
                     alignItems: 'stretch',
+                    flex: 1,
                 }}
                 >
                 <SideBar/>
@@ -46,6 +47,7 @@ function RootLayout(props: {storeData?: (data: any) => void, currData?: any}) {
                     sx={{
                         display: 'flex',
                         flexDirection: 'column',
+                        flex: 1,
                     }}
                 >
                     {isLoading && <CircularProgress />}

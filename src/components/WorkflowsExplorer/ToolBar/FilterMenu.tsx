@@ -34,18 +34,17 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
 
 
     return (
-      <div>
-            <Button 
-                size="sm" 
-                onClick={handleClick}
-                aria-controls={open ? 'selected-demo-menu' : undefined}
-                aria-haspopup="true"
-                aria-expanded={open ? 'true' : undefined}
-                variant="outlined"
-                disabled={filters?.length ? (filters.length < 2) : true}
-            >
-                Filter Status
-            </Button>
+        <Button 
+            size="sm" 
+            onClick={handleClick}
+            aria-controls={open ? 'selected-demo-menu' : undefined}
+            aria-haspopup="true"
+            aria-expanded={open ? 'true' : undefined}
+            variant="outlined"
+            disabled={filters?.length ? (filters.length < 2) : true}
+        >
+            Filter Status
+            
             <Menu
                 id="selected-demo-menu"
                 anchorEl={anchorEl}
@@ -85,7 +84,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vert
                 </>
             ))}
             </Menu>
-      </div>
+        </Button>
     );
   }
 

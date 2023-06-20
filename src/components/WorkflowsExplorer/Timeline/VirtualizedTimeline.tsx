@@ -8,6 +8,7 @@ import useTimelineControls from './useTimelineControls';
 type MyTimelineProps = {
   run: Run;
   rows: Row[];
+  displayPhases: { name: string; checked: boolean }[];
 };
 
 //
@@ -17,6 +18,7 @@ type MyTimelineProps = {
 const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
   run,
   rows,
+  displayPhases,
 }) => {
   const { timelineControls, dispatch: timelineControlDispatch } = useTimelineControls(run, rows);
 
@@ -79,6 +81,7 @@ const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
             }}
             onHandleMove={footerHandleUpdate}
             onMove={handleMove}
+            displayPhases={displayPhases}
           />
         )}
     </VirtualizedTimelineContainer>

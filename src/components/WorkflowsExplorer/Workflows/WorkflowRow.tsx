@@ -16,7 +16,7 @@ const WorkflowRow = (props: {data: any}) => {
     const render = () => {
         return (
             <>
-                <tr onClick={() => handleClick()}>
+                <tr style={{cursor: 'pointer'}} onClick={() => handleClick()}>
                     <td>{data.name}</td>
                     <td>
                         {getIcon(data.lastStatus)}

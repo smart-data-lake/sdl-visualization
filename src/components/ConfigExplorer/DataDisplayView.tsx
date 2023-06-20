@@ -10,7 +10,7 @@ import { useParams } from "react-router-dom";
 import { ReactFlowProvider } from "react-flow-renderer";
 import { Sheet } from "@mui/joy";
 
-interface displayProps {
+export interface displayProps {
   data: any; // complete configuration
 }
 

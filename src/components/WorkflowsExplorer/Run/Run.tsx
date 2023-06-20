@@ -4,6 +4,7 @@ import TabNav from "./Tabs";
 import { useLocation } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
 import { CircularProgress } from "@mui/joy";
+import { displayProps } from "../../ConfigExplorer/DataDisplayView";
 
 /**
     The Run component displays information about a specific run of a workflow.
@@ -13,7 +14,7 @@ import { CircularProgress } from "@mui/joy";
     @param {boolean} props.panelOpen - Indicates whether the details panel is open or not.
     @returns {JSX.Element} - The Run component UI.
 */
-const Run = (props : {panelOpen?: boolean}) => {
+const Run = (props : {panelOpen?: boolean, lineageData: displayProps}) => {
     const links = [...useLocation().pathname.split('/')].splice(1);
     const { data, isLoading, isFetching } = useFetchRun(links[1], parseInt(links[2]), parseInt(links[3]));
 
@@ -24,7 +25,7 @@ const Run = (props : {panelOpen?: boolean}) => {
         <>
             <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId} />
             {/* <RunDetails attempt={attempt}/> */}
-            <TabNav attempt={attempt} panelOpen={props.panelOpen}/>
+            <TabNav attempt={attempt} panelOpen={props.panelOpen} lineageData={props.lineageData}/>
         </>
     );
 }

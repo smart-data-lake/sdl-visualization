@@ -3,7 +3,7 @@ import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab, { tabClasses } from '@mui/joy/Tab';
 import TabPanel from '@mui/joy/TabPanel';
-import { Box, Sheet, Typography } from "@mui/joy";
+import { Box, IconButton, Sheet, Typography } from "@mui/joy";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TableOfActions from "./ActionsTable";
 import { ThemeProvider } from 'styled-components';
@@ -15,11 +15,18 @@ import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
 import { Row } from "../../../types";
 import ToolBar from "../ToolBar/ToolBar";
 import InboxIcon from '@mui/icons-material/Inbox';
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { DataGrid } from "@mui/x-data-grid";
-import { getISOString } from "../../../util/WorkflowsExplorer/date";
-import { formatDuration } from "../../../util/WorkflowsExplorer/format";
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import StartIcon from '@mui/icons-material/Start';
+import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { displayProps } from "../../ConfigExplorer/DataDisplayView";
+import LineageTab from "../../ConfigExplorer/LineageTab";
+import { ReactFlowProvider } from "react-flow-renderer";
 
 export const defaultDrawerWidth = 600;
 
@@ -38,6 +45,13 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const { attempt, open } = props;
     const defaultRows = attempt.rows;
     const [rows, setRows] = useState<Row[]>(defaultRows);
+    const [checked, setChecked] = useState([
+        {name: 'Execution', checked: true}, 
+        {name: 'Initialized', checked: false}, 
+        {name: 'Prepared', checked: false}
+    ]);
+    const navigate = useNavigate();
+    const location = useLocation().pathname;
 
     /**
    * Updates the rows displayed in the table of actions.
@@ -48,148 +62,164 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const updateRows = (rows: Row[]) => {
         setRows(rows);
     }
+
+    const updateChecked = (checked: {name: string; checked: boolean; }[]) => {
+        setChecked(checked);
+    }
     
     return ( 
-        <>
-            {/* Renders the ToolBar component, which contains a set of buttons that allow the user to filter the rows displayed in the actions table */}
+        <Sheet
+            sx={{
+                display: 'flex',
+            }}
+        >
             <Sheet
                 sx={{
-                    mt: '1rem',
+                    flex: 1,
                 }}
             >
-                <ToolBar 
-                    controlledRows={defaultRows} 
-                    updateRows={updateRows} 
-                    filters={checkFiltersAvailability(defaultRows, defaultFilters())}
-                    sortEnabled={true}
-                    searchColumn={"step_name"}
-                    searchPlaceholder="Search by action name"
-                    style="horizontal"
-                    />
-            </Sheet>
-            {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
-            {rows.length === 0 ? (
+                {/* Renders the ToolBar component, which contains a set of buttons that allow the user to filter the rows displayed in the actions table */}
                 <Sheet
                     sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        mt: '1rem',
-                        p: '10rem',
-                        gap: '5rem',
-                        border: '1px solid lightgray',
+                        py: '1rem',
+                        my: '1.2rem',
+                        position: 'sticky',
                         borderRadius: '0.5rem',
-                        height: '67vh',
                     }}
                 >
-                    <InboxIcon
-                        color="disabled"
-                        sx={{
-                            scale: '5',
-                        }}
-                    />
-                    <Typography>
-                        No actions found
-                    </Typography>
+                    <ToolBar 
+                        controlledRows={defaultRows} 
+                        updateRows={updateRows} 
+                        filters={checkFiltersAvailability(defaultRows, defaultFilters())}
+                        sortEnabled={true}
+                        searchColumn={"step_name"}
+                        searchPlaceholder="Search by action name"
+                        style="horizontal"
+                        searchMode="contains"
+                        updateChecked={attempt.runInfo.runStateFormatVersion && attempt.runInfo.runStateFormatVersion > 1 ? updateChecked : undefined}
+                        />
+                    
                 </Sheet>
-            ) : (
-                <>
-                    <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
-                        <PanelGroup direction="horizontal">
-                            <Box 
+                {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
+                {rows.length === 0 ? (
+                    <Sheet
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            mt: '1rem',
+                            p: '10rem',
+                            gap: '5rem',
+                            border: '1px solid lightgray',
+                            borderRadius: '0.5rem',
+                            height: '100%',
+                        }}
+                    >
+                        <InboxIcon
+                            color="disabled"
+                            sx={{
+                                scale: '5',
+                            }}
+                        />
+                        <Typography>
+                            No actions found
+                        </Typography>
+                    </Sheet>
+                ) : (
+                    <Sheet>
+                        <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
+                            <Sheet 
                                 sx={{
                                     display: 'flex',
-                                    flexDirection: 'row',
-                                    overflow: 'auto',
-                                    minWidth: '100%',
+                                    gap: '0.5rem',
+                                    height: '70vh',
+                                    position: 'relative',  
+                                    
                                 }}
                             >
-                                <Panel
-                                    collapsible={false}
-                                    order={1}
-                                    minSize={30}
-                                >
-                                    <Box sx={{height: '100%',}}>
-
                                     <ThemeProvider theme={theme}>
                                     <GlobalStyle />
-                                        <VirtualizedTimeline run={attempt.run} rows={rows}/>
-                                    </ThemeProvider>
-                                    </Box>
-                                </Panel>
-                                {open && (
-                                    <>
-                                        <PanelResizeHandle >
-                                            <Box
-                                                sx={{
-                                                    mx: '1rem',
-                                                    overflow: 'auto',
-                                                    border: '1px solid',
-                                                    borderColor: 'divider',
-                                                }}
-                                                />
-                                        </PanelResizeHandle >
-                                        <Panel 
-                                            collapsible={false} 
-                                            order={2}
-                                            defaultSize={50}
-                                            minSize={30}
+                                        <Sheet
+                                            onClick={() => {
+                                                if (open) {
+                                                    navigate(`${location.split('timeline')[0]}timeline`);
+                                                }
+                                            }}
+                                            sx={{
+                                                flex: '1',
+                                                width: '99%',
+                                                position: 'absolute', 
+                                                top: 0,
+                                                left: 0,
+                                                backgroundColor: open ? 'primary.main' : 'none',
+                                                opacity: open ? [0.4, 0.4, 0.4] : [],
+                                                transition: 'opacity 0.2s ease-in-out',
+                                                cursor: 'context-menu'
+                                            }}
                                         >
-                                            <ContentDrawer attempt={attempt}/>
-                                        </Panel>
-                                    </>
-                                )}
-                            </Box>
-                        </PanelGroup> 
-                    </TabPanel>
-                    <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
-                        <PanelGroup direction="horizontal">
-                            <Box 
+                                            <VirtualizedTimeline run={attempt.run} rows={rows} displayPhases={checked}/>
+                                        </Sheet>
+                                    </ThemeProvider>
+                            </Sheet> 
+                        </TabPanel>
+                        <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
+                            <Sheet 
                                 sx={{
+                                    gap: '0.5rem',
+                                    height: '70vh',
+                                    position: 'relative',
                                     display: 'flex',
-                                    flexDirection: 'row',
-                                    minWidth: '100%',
                                 }}
                             >
-                                    <Panel
-                                        collapsible={false}
-                                        order={1}
-                                        minSize={30}
-                                    >
-                                        <TableOfActions rows={rows}/>
-                                    </Panel>
-                                    {open && (
-                                    <>
-                                        <PanelResizeHandle >
-                                            <Box
-                                                sx={{
-                                                    mx: '1rem',
-                                                    overflow: 'auto',
-                                                    border: '1px solid',
-                                                    borderColor: 'divider',
-                                                }}   
-                                            />
-                                        </PanelResizeHandle >
-                                        <Panel 
-                                            collapsible={false} 
-                                            order={2} 
-                                            defaultSize={50}
-                                            minSize={30}
-                                        > 
-                                            <ContentDrawer attempt={attempt}/>
-                                        </Panel>
-                                    </>
-                                )}
-                            </Box>
-                        </PanelGroup>
-                    </TabPanel>
-                    <TabPanel value={2} sx={{ py: '1rem' }}>
-                        <b>Lineage</b> tab panel
-                    </TabPanel>
+
+                                <Sheet
+                                    onClick={() => {
+                                        if (open) {
+                                            navigate(`${location.split('table')[0]}table`);
+                                        }
+                                    }}
+                                    sx={{
+                                        overflowY: 'scroll',
+                                        position: 'absolute',
+                                        flex: '1', 
+                                        height: '70vh',
+                                        top: 0,
+                                        left: 0,
+                                        backgroundColor: open ? 'primary.main' : 'none',
+                                        opacity: open ? [0.4, 0.4, 0.4] : [],
+                                        transition: 'opacity 0.2s ease-in-out',
+                                        cursor: 'context-menu'
+                                    }}
+                                >
+                                    <TableOfActions rows={rows}/>
+                                </Sheet>
+                            </Sheet>
+                        </TabPanel>
+                        <TabPanel value={2} sx={{ py: '1rem' }}>
+                            <b>Lineage</b> tab panel
+                        </TabPanel>
+                    </Sheet>
+                )}
+            </Sheet> 
+            {open && (
+                <>
+                    {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
+                    <Sheet
+                        sx={{
+                            flex: '1', 
+                            position: 'absolute',
+                            top: 0,
+                            left: '50%',
+                            height: '100%',
+                            boxShadow: '-10px 10px 10px lightgray',
+                        }}
+                    >
+                        <ContentDrawer attempt={attempt}/>
+                    </Sheet>
                 </>
             )}
-        </> 
+        </Sheet> 
     );
 }
 
@@ -198,9 +228,10 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
  * @param props {attempt: Attempt, panelOpen?: boolean}
  * @returns JSX.Element
  */
-const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
+const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?: boolean}) => {
     const { stepName, tab } = useParams();
     const [value, setValue] = React.useState(tab === 'timeline' ? 0: 1);
+    const [openLineage, setOpenLineage] = useState<boolean>(false);
     const { attempt, panelOpen } = props;
     const navigate =  useNavigate();
 
@@ -210,29 +241,59 @@ const TabNav = (props : {attempt: Attempt, panelOpen?: boolean}) => {
         if (stepName) navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}/${stepName}`)
     }
     return ( 
-        <>
-            <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        mt: '1rem',
-                    }}
-                >
-                    <TabList variant="plain" sx={style}>
-                        <Tab>Timeline</Tab>
-                        <Tab>Actions table</Tab>
-                    </TabList>
-                </Box>
-                <TabsPanels attempt={attempt} open = {panelOpen}/>
-            </Tabs>
-        </>
+        <Sheet sx={{display: 'flex', height: '100%', px: '1rem'}}>
+            <Sheet 
+                sx={{
+                    flex: 3,
+                }}
+            >
+                <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            mt: '1rem',
+                            justifyContent: 'space-between',
+                        }}
+                        >
+                        <TabList variant="plain" sx={style}>
+                            <Tab>Timeline</Tab>
+                            <Tab>Actions table</Tab>
+                        </TabList>
+                        {!openLineage ?
+                            (
+                                <IconButton color={'primary'} size="md" variant="solid" sx={{ml: '1rem', px: '1rem', scale: '80%'}} onClick={() => setOpenLineage(!openLineage)}>
+                                    Open lineage
+                                    <KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
+                                </IconButton>
+                            ) : (
+                                <IconButton color={'primary'} size="md" variant="soft" sx={{ml: '0.5rem', px: '0.5rem', scale: '80%'}} onClick={() => setOpenLineage(!openLineage)}>
+                                    Close lineage
+                                    <KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem'}}/>
+                                </IconButton>
+                            )
+                        }
+                    </Box>
+                    <TabsPanels attempt={attempt} open = {panelOpen}/>
+                </Tabs>
+            </Sheet>
+            {openLineage && (
+                <>
+                    <Sheet sx={{borderLeft: '1px solid lightgray', mx: '1rem'}}/>
+                    <Sheet sx={{width: '40%', flex: 2}}>
+                        <ReactFlowProvider>
+                            <LineageTab data={props.lineageData} elementName={'btl-distances' as string} elementType={'dataObjects' as string} runContext={true} />
+                        </ReactFlowProvider>
+                    </Sheet>
+                </>
+            )}
+        </Sheet>
      );
 }
 
 const style = {
-    '--List-radius': '4px',
-    '--ListItem-minHeight': '48px',
+    '--List-radius': '12px',
+    '--ListItem-minHeight': '32px',
     [`& .${tabClasses.root}`]: {
         boxShadow: 'none',
         fontWeight: 'md',
@@ -243,7 +304,7 @@ const style = {
             left: '0', // change to `0` to stretch to the edge.
             right: '0', // change to `0` to stretch to the edge.
             bottom: 0,
-            height: 3,
+            height: 2,
             bgcolor: 'primary.500',
         },
     },
