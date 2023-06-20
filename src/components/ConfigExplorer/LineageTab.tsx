@@ -9,6 +9,7 @@ import { useParams } from 'react-router-dom';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import DownloadButton from './DownloadLineageButton';
+import { Lineage } from '../../util/WorkflowsExplorer/Lineage';
 
 
 
@@ -67,6 +68,7 @@ function createReactFlowNodes_Old(dataObjectsAndActions: DAGraph){
 function createReactFlowEdges(dataObjectsAndActions: DAGraph){
   var result: any[] = [];
   dataObjectsAndActions.edges.forEach(edge => {
+    console.log(edge)
     //const action = edge as Action; //downcasting in order to access jsonObject
     const action = edge; //downcasting in order to access jsonObject
     result.push({
@@ -88,10 +90,10 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
 
 
 interface flowProps {
-  dataSource: 'config' | 'statefiles',
+  elementName: string,
+  elementType: string,
   data?: object,
-  elementName?: string,
-  elementType?: string,
+  graph?: PartialDataObjectsAndActions, 
   runContext?: boolean,
 }
 
@@ -100,10 +102,10 @@ type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of 
 type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 
 
-
 function LineageTab(props: flowProps) {
+  console.log(typeof props.data)
 
-  const doa = new DataObjectsAndActions(props.data);
+  const doa = props.graph ? props.graph : new DataObjectsAndActions(props.data);
   let nodes_init: any[] = [];
   let edges_init: any[] = [];
   const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']);

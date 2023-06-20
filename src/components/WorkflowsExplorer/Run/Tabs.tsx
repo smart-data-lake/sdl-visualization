@@ -281,7 +281,7 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
                         </TabList>
                         {!openLineage ?
                             (
-                                <IconButton color={'primary'} size="md" variant="solid" sx={{ml: '1rem', px: '1rem', scale: '80%'}} onClick={() => setOpenLineage(!openLineage)}>
+                                <IconButton disabled={attempt.rows[0].inputIds ? false : true} color={'primary'} size="md" variant="solid" sx={{ml: '1rem', px: '1rem', scale: '80%'}} onClick={() => setOpenLineage(!openLineage)}>
                                     Open lineage
                                     <KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
                                 </IconButton>
@@ -301,14 +301,7 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
                     <Sheet sx={{borderLeft: '1px solid lightgray', mx: '1rem'}}/>
                     <Sheet sx={{width: '40%', flex: 2}}>
                         <ReactFlowProvider>
-                            <ReactFlow 
-                                nodes={graph.nodes} 
-                                edges={graph.edges}
-                                defaultPosition={[0,0]}     
-                            >
-                                <Background />
-                                <Controls />
-                            </ReactFlow>
+                            <LineageTab graph={graph} elementName="" elementType=""/>
                         </ReactFlowProvider>
                     </Sheet>
                 </>
