@@ -15,12 +15,17 @@ import { QueryClient, QueryClientProvider } from "react-query";
 // react 18
 const rootElement = document.getElementById("root");
 const root = ReactDOMClient.createRoot(rootElement as HTMLElement);
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // default: true
+    },
+  },
+});
 root.render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-
-    <App />
+      <App />
     </QueryClientProvider>
   </StrictMode>
 );
