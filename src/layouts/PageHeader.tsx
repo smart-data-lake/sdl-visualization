@@ -34,7 +34,6 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                 top: 0,
                 width: '100%',
                 borderBottom: '1px solid lightgray',
-                zIndex: 11,
                 px : '1rem',
                 pt : '4rem',
                 pb : '1rem',
