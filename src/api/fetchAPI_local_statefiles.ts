@@ -39,8 +39,8 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         .then(res => res.json())
         .then(data => data["runs"].filter(run => (run.name === args.name && run.runId === args.runId && run.attemptId === args.attemptId))[0])
         .then(val => { 
-            return fetch(val.path)
-                  .then(res => res.json())
+            return fetch("/state/"+val.path)
+                    .then(res => res.json())
         })
         .catch(err => console.log("Not able to find local statefiles", err))
         
