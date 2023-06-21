@@ -59,6 +59,7 @@ function createReactFlowNodes_Old(dataObjectsAndActions: DAGraph){
         type: nodeType,
         position: {x: pos_x, y: pos_y},
         data: { label: dataObjectsInLevel[i].id },
+        style: {onclick: () => console.log("hello")},
         //jsonString: JSON.stringify(dataObjectsInLevel[i].jsonObject , null, '\t'),
       });
     }
@@ -82,9 +83,9 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
       label_copy: action.id,
       labelBgPadding: [7, 7],
       labelBgBorderRadius: 8,
-      labelBgStyle: { fill: '#ffd796', color: '#FFF', fillOpacity: 1, stroke: '#ed7b24' },
+      labelBgStyle: { fill: '#fff', fillOpacity: 1, stroke: '#ed7b24' },
       //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
-      style: { stroke: '#096bde', strokeWidth: 2, hover: { backgroundColor: 'gold' }},
+      style: { stroke: '#096bde', strokeWidth: 2},
       // type: 'runLineage',
     });
   });
@@ -175,7 +176,6 @@ function LineageTab(props: flowProps) {
   const hide = (hidden: boolean) => (edge: any) => {
     if (hidden){
       edge.label = '';
-      edge.markerEnd = {type: MarkerType.ArrowClosed, color: 'red', width: 20, height: 20};
     }else{
       edge.label = edge.label_copy;
       edge.markerEnd = {};
@@ -218,12 +218,16 @@ function LineageTab(props: flowProps) {
   const navigate = useNavigate();   
   function clickOnNode(node: flowNodeWithString){
     //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
-    if (props.data) navigate(`/config/dataObjects/${node.id}`); //Link programmatically
-  }
-  
+    if (props.data) {
+      navigate(`/config/dataObjects/${node.id}`); //Link programmatically
+    }
+  } 
   function clickOnEdge(edge: flowEdgeWithString){
-    if (props.data) navigate(`/config/actions/${edge.old_id}`); //Link programmatically
-    navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${edge.old_id}`);
+    if (props.data) { 
+      navigate(`/config/actions/${edge.old_id}`); //Link programmatically
+    } else {
+      navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${edge.old_id}`);
+    }
   }
 
   // container holding SVG needs manual height resizing to fill 100%

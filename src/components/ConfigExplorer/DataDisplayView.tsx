@@ -39,8 +39,8 @@ export default function DataDisplayView(props: displayProps) {
   };
 
   return (
-	<Sheet sx={{display: 'flex', height: '100%', flex: 1, p: '1rem'}}>
-		<Sheet sx={{display: 'flex', flexDirection: 'column', flex: 2, overflowY: 'scroll', scrollbarWidth: 'none'}}>
+	<Sheet sx={{display: 'flex', height: '100%', flex: 1,}}>
+		<Sheet sx={{display: 'flex', flexDirection: 'column', flex: 2, overflowY: 'scroll', scrollbarWidth: 'none',  p: '1rem'}}>
 
 			<TabContext value={selectedTyp}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between', position: 'sticky'}}>
@@ -62,7 +62,7 @@ export default function DataDisplayView(props: displayProps) {
 				</TabPanel>
 			</TabContext> 
 		</Sheet>
-		<Sheet>
+		<Sheet sx={{borderRight: openLineage ? '1px solid lightgrey' : undefined}}>
 			{!openLineage ?
 				(
 					<Button size="sm" sx={{m: '1rem'}} onClick={() => setOpenLineage(!openLineage)}>
