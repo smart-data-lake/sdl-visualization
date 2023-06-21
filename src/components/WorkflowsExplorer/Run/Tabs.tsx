@@ -115,7 +115,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                             gap: '5rem',
                             border: '1px solid lightgray',
                             borderRadius: '0.5rem',
-                            height: '67vh',
+                            height: '100%',
                         }}
                     >
                         <InboxIcon
@@ -263,7 +263,7 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
         <Sheet sx={{display: 'flex', height: '86vh'}}>
             <Sheet 
                 sx={{
-                    flex: 3,
+                    flex: 1,
                 }}
             >
                 <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)}>
@@ -299,7 +299,7 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
             {openLineage && (
                 <>
                     <Sheet sx={{borderLeft: '1px solid lightgray', mx: '1rem'}}/>
-                    <Sheet sx={{width: '40%', flex: 2}}>
+                    <Sheet sx={{width: '40%', flex: 1}}>
                         <ReactFlowProvider>
                             <LineageTab graph={graph} elementName="" elementType=""/>
                         </ReactFlowProvider>

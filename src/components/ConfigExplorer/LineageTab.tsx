@@ -68,7 +68,6 @@ function createReactFlowNodes_Old(dataObjectsAndActions: DAGraph){
 function createReactFlowEdges(dataObjectsAndActions: DAGraph){
   var result: any[] = [];
   dataObjectsAndActions.edges.forEach(edge => {
-    console.log(edge)
     //const action = edge as Action; //downcasting in order to access jsonObject
     const action = edge; //downcasting in order to access jsonObject
     result.push({
@@ -79,10 +78,12 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
       //animated: true, 
       label: action.id,
       label_copy: action.id,
-      labelBgPadding: [8, 4],
-      labelBgStyle: { fill: action.isCentral ? '#096bde' : '#ffffff', color: '#FFF', fillOpacity: 0.7 },
+      labelBgPadding: [7, 7],
+      labelBgBorderRadius: 8,
+      labelBgStyle: { fill: '#ffd796', color: '#FFF', fillOpacity: 1, stroke: '#ed7b24' },
       //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
-      style: { stroke: '#096bde' },
+      style: { stroke: '#096bde', strokeWidth: 2},
+      selected: () => {console.log('mouse over')},
     });
   });
   return result;
@@ -103,7 +104,7 @@ type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 
 
 function LineageTab(props: flowProps) {
-  console.log(typeof props.data)
+  const url = useParams();
 
   const doa = props.graph ? props.graph : new DataObjectsAndActions(props.data);
   let nodes_init: any[] = [];
@@ -211,11 +212,12 @@ function LineageTab(props: flowProps) {
   const navigate = useNavigate();   
   function clickOnNode(node: flowNodeWithString){
     //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
-    navigate(`/config/dataObjects/${node.id}`); //Link programmatically
+    if (props.data) navigate(`/config/dataObjects/${node.id}`); //Link programmatically
   }
-
+  
   function clickOnEdge(edge: flowEdgeWithString){
-    navigate(`/config/actions/${edge.old_id}`); //Link programmatically
+    if (props.data) navigate(`/config/actions/${edge.old_id}`); //Link programmatically
+    navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${edge.old_id}`);
   }
 
   // container holding SVG needs manual height resizing to fill 100%
@@ -227,7 +229,6 @@ function LineageTab(props: flowProps) {
   function handleResize() {
     if (chartBox.current) {
       const height = window.innerHeight - chartBox.current.offsetTop - 25; // 25px bottom margin...
-      console.log('resized to: ', height);
       setContentHeight(height);
     }
   }
@@ -263,7 +264,9 @@ function LineageTab(props: flowProps) {
         <Background />
         <MiniMap />
         <Controls />
-        <div title='Display / Hide action IDs' style={{ position: 'absolute', left: 9, bottom: 125, zIndex: 4, cursor: 'pointer' }}>
+        <Box sx={{position: 'absolute', left: 9, bottom: 135, display: 'flex', flexDirection: 'column-reverse'}}>
+
+        <div title='Display / Hide action IDs' style={{ zIndex: 4, cursor: 'pointer' }}>
           <IconButton 
             color={hidden ? 'inherit' : 'primary'}
             onClick={() => setHidden(!hidden)}>
@@ -271,17 +274,18 @@ function LineageTab(props: flowProps) {
           </IconButton>
         </div>
 
-        <div title={onlyDirectNeighbours[1] as string} style={{ position: 'absolute', left: 9, bottom: 155, zIndex: 4, cursor: 'pointer' }}>
+        {props.data && <div title={onlyDirectNeighbours[1] as string} style={{  zIndex: 4, cursor: 'pointer' }}>
           <IconButton 
             color='inherit'
             onClick={expandGraph}>
             {onlyDirectNeighbours[0] ? <OpenWithIcon/> : <CloseFullscreenIcon/>}
           </IconButton>
-        </div>
+        </div>}
 
-        <div title='Download image as PNG file' style={{ position: 'absolute', left: 9, bottom: 185, zIndex: 4, cursor: 'pointer' }}>
+        <div title='Download image as PNG file' style={{ zIndex: 4, cursor: 'pointer' }}>
           <DownloadButton />
         </div>
+        </Box>
 
       </ReactFlow>
     </Box>

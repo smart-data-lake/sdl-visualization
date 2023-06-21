@@ -57,14 +57,16 @@ export class Edge{
     public isCentral: boolean;
     public source: string;
     public target: string;
+    public type?: string;
 
-    constructor(fromNode: Node, toNode: Node, id: id){
+    constructor(fromNode: Node, toNode: Node, id: id, type?: string){
         this.fromNode = fromNode;
         this.toNode = toNode;
         this.id = id; //Ids are not unique identifiers, since we can have the same Edge/Action connecting several Nodes/DataObjects.
         this.isCentral = false;
         this.source = this.fromNode.id;
         this.target = this.toNode.id;
+        this.type = type;
     }
 }
 

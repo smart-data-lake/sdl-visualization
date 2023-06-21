@@ -1,4 +1,4 @@
-import { Box, IconButton, Sheet, Table, Tooltip, Typography } from "@mui/joy";
+import { Box, Button, IconButton, Sheet, Table, Tooltip, Typography } from "@mui/joy";
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useParams } from "react-router-dom";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
@@ -77,75 +77,75 @@ const ContentSheet = (props: {action: Row}) => {
     const { action } = props;
     
     return (
-        <>
-                {action.metadata.map((meta) => {
-                    const toDisplay : any[] = [];
-                    if (meta.mainMetrics) {
+        <Sheet>
+            {action.metadata.map((meta) => {
+                const toDisplay : any[] = [];
+                if (meta.mainMetrics) {
+                    toDisplay.push(
+                        <Box 
+                        key='meta.mainMetrics'
+                        sx={{mb: '1.5rem'}}
+                        >
+                                <Typography noWrap level='h5'>
+                                    Main metrics
+                                </Typography>
+                                <ResultsTable metrics={meta.mainMetrics}/>
+                            </Box>
+                        )
+                    } 
+                    if (meta.subFeed) {
                         toDisplay.push(
                             <Box 
-                            key='meta.mainMetrics'
-                            sx={{mb: '1.5rem'}}
+                            key='meta.subFeed'
                             >
-                                    <Typography noWrap level='h5'>
-                                        Main metrics
-                                    </Typography>
-                                    <ResultsTable metrics={meta.mainMetrics}/>
-                                </Box>
-                            )
-                        } 
-                        if (meta.subFeed) {
-                            toDisplay.push(
-                                <Box 
-                                key='meta.subFeed'
-                                >
-                                    <Typography noWrap level='h5'>
-                                        Subfeed
-                                    </Typography>
-                                    <ResultsTable subFeed={meta.subFeed}/>
-                                </Box>
-                            )
-                        } 
-                        if (!meta.mainMetrics && !meta.subFeed) {
-                            toDisplay.push(
-                                <Typography noWrap level='h5' key='noData'>
-                                    Error: found no metadata to display
+                                <Typography noWrap level='h5'>
+                                    Subfeed
                                 </Typography>
-                            )
-                        }
-                        return (
-                            <Sheet 
-                            color="neutral" 
-                            variant="outlined"
-                            key='resultSheet'
-                            sx={{
-                                p: '1rem',
-                                mt: '1rem',
-                                borderRadius: '0.5rem',
-                                height: 'auto',
-                            }}>
-                                {toDisplay}
-                            </Sheet>
+                                <ResultsTable subFeed={meta.subFeed}/>
+                            </Box>
                         )
-                    })
-                }
-                {action.message && <Sheet 
-                    color="info" 
-                    variant="soft"
-                    key='resultSheet'
-                    invertedColors
-                    sx={{
-                        p: '1rem',
-                        mt: '1rem',
-                        borderRadius: '0.5rem',
-                    }}>
-                    <Typography color="info" level='body2'>
-                        Info:
-                    </Typography>
-                    <code>
-                        {action.message}
-                    </code>
-                </Sheet>}
-                </>
+                    } 
+                    if (!meta.mainMetrics && !meta.subFeed) {
+                        toDisplay.push(
+                            <Typography noWrap level='h5' key='noData'>
+                                Error: found no metadata to display
+                            </Typography>
+                        )
+                    }
+                    return (
+                        <Sheet 
+                        color="neutral" 
+                        variant="outlined"
+                        key='resultSheet'
+                        sx={{
+                            p: '1rem',
+                            mt: '1rem',
+                            borderRadius: '0.5rem',
+                            height: 'auto',
+                        }}>
+                            {toDisplay}
+                        </Sheet>
+                    )
+                })
+            }
+            {action.message && <Sheet 
+                color="info" 
+                variant="soft"
+                key='resultSheet'
+                invertedColors
+                sx={{
+                    p: '1rem',
+                    mt: '1rem',
+                    borderRadius: '0.5rem',
+                }}>
+                <Typography color="info" level='body2'>
+                    Info:
+                </Typography>
+                <code>
+                    {action.message}
+                </code>
+            </Sheet>}
+        </Sheet>
     )
 }
 
@@ -165,10 +165,9 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
         <Sheet
             sx={{
                 p: '1rem',
-                pl: '1.5rem',
-                height: '70vh',
                 display: 'flex',
                 flexDirection: 'column',
+                height: '100%'
             }}
             >
             
@@ -196,13 +195,18 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
             </Box>
             <Box
                 sx={{
-                    overflowY: 'scroll',
-                    scrollbarWidth: 'none',
-                    overflowX: 'hidden',
-                    pr: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem',
+                    height: '100%',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-end',
                 }}
             >
-                <ContentSheet action={action}/>
+                <Box>
+                    <ContentSheet action={action}/>
+                </Box>
+                <Button size="sm" variant="solid">Open in Config Viewer</Button>
             </Box>
         </Sheet>
      );

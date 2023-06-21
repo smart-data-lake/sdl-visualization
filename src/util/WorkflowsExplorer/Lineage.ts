@@ -26,7 +26,6 @@ export class Lineage {
         data.forEach(fromNode => {
             fromNode.edges.forEach(toNode => {
                 edges.push(new Edge(fromNode.node, toNode.to, toNode.id))
-                console.log(toNode.id)
             })
         })
 
