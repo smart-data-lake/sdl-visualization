@@ -4,12 +4,8 @@ import remarkGfm from 'remark-gfm';
 
 export default function MarkdownComponent(props: {markdown: string}){
   return (
-    <Sheet
-      sx={{
-        width: '100%'
-      }}
-    >
+    <>
       <ReactMarkdown className='markdown-body' children={props.markdown} remarkPlugins={[remarkGfm]} />
-    </Sheet>
+    </>
   )
 }

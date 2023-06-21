@@ -155,12 +155,23 @@ const ContentSheet = (props: {action: Row}) => {
  * @param props attempt: Attempt
  * @returns 
  */
-const ContentDrawer = (props: {attempt: Attempt}) => {
-    const { attempt } = props;
+const ContentDrawer = (props: {attempt: Attempt, configData: any}) => {
+    const { attempt, configData } = props;
     const { flowId, runNumber, taskId, tab, stepName } = useParams();
     const navigate = useNavigate();
     const action : Row = getRow(attempt, stepName || 'err');
     
+    const isActionInConfig = () => {
+        const allActions = Object.keys(configData.actions).sort();
+        const isIn = allActions.includes(action.step_name);
+        console.log(isIn);
+        return isIn;
+    }
+
+    const handleClick = () => {
+        navigate(`/config/actions/${action.step_name}`);
+    }
+
     return ( 
         <Sheet
             sx={{
@@ -206,7 +217,7 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
                 <Box>
                     <ContentSheet action={action}/>
                 </Box>
-                <Button size="sm" variant="solid">Open in Config Viewer</Button>
+                <Button disabled={!isActionInConfig()} onClick={() => handleClick() } size="sm" variant="solid">Open in Config Viewer</Button>
             </Box>
         </Sheet>
      );

@@ -14,7 +14,7 @@ import { displayProps } from "../../ConfigExplorer/DataDisplayView";
     @param {boolean} props.panelOpen - Indicates whether the details panel is open or not.
     @returns {JSX.Element} - The Run component UI.
 */
-const Run = (props : {panelOpen?: boolean, lineageData: displayProps}) => {
+const Run = (props : {panelOpen?: boolean, configData: displayProps}) => {
     const links = [...useLocation().pathname.split('/')].splice(1);
     const { data, isLoading, isFetching } = useFetchRun(links[1], parseInt(links[2]), parseInt(links[3]));
 
@@ -25,7 +25,7 @@ const Run = (props : {panelOpen?: boolean, lineageData: displayProps}) => {
         <>
             <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId} />
             {/* <RunDetails attempt={attempt}/> */}
-            <TabNav attempt={attempt} panelOpen={props.panelOpen} lineageData={props.lineageData}/>
+            <TabNav attempt={attempt} panelOpen={props.panelOpen} configData={props.configData}/>
         </>
     );
 }

@@ -25,10 +25,10 @@ export class Lineage {
         let edges : Edge[] = [];
         data.forEach(fromNode => {
             fromNode.edges.forEach(toNode => {
-                edges.push(new Edge(fromNode.node, toNode.to, toNode.id))
+                edges.push(new Edge(fromNode.node, toNode.to, toNode.id, 'runLineage'))
             })
         })
-
+        
         return edges
     }
 

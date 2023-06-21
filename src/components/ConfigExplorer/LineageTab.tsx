@@ -10,6 +10,8 @@ import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import DownloadButton from './DownloadLineageButton';
 import { Lineage } from '../../util/WorkflowsExplorer/Lineage';
+import Run from '../WorkflowsExplorer/Run/Run';
+import RunLineageEdge from '../WorkflowsExplorer/Run/RunLineageEdge';
 
 
 
@@ -82,8 +84,8 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
       labelBgBorderRadius: 8,
       labelBgStyle: { fill: '#ffd796', color: '#FFF', fillOpacity: 1, stroke: '#ed7b24' },
       //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
-      style: { stroke: '#096bde', strokeWidth: 2},
-      selected: () => {console.log('mouse over')},
+      style: { stroke: '#096bde', strokeWidth: 2, hover: { backgroundColor: 'gold' }},
+      // type: 'runLineage',
     });
   });
   return result;
@@ -101,6 +103,10 @@ interface flowProps {
 type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of ReactFlow with an (optional) String attribute. 
 
 type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
+
+const edgeTypes = {
+  runLineage: RunLineageEdge,
+}
 
 
 function LineageTab(props: flowProps) {
@@ -260,6 +266,7 @@ function LineageTab(props: flowProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodesConnectable={false} //prevents adding new edges
+        //edgeTypes={edgeTypes}
       >
         <Background />
         <MiniMap />
@@ -286,7 +293,6 @@ function LineageTab(props: flowProps) {
           <DownloadButton />
         </div>
         </Box>
-
       </ReactFlow>
     </Box>
   );

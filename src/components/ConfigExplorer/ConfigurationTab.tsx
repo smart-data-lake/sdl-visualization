@@ -156,9 +156,7 @@ export default function ConfigurationTab(props: ElementProps) {
   let topAttributesCmp = createPropertiesComponent({properties: topAttributesPrep, width: "100%", rowHeight: "45px"})
 
   return (
-    <Box>
-      <Grid container spacing={2}>
-        <Grid item xs={12} xl={6}>
+    <Box sx={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
           <Box>
           {typeChip()}
           {feedChip()}
@@ -166,11 +164,9 @@ export default function ConfigurationTab(props: ElementProps) {
           {subjectAreaChip()}
           {tags.map(tag => createSearchChip("tags", tag, <SellIcon />, "secondary"))}
           </Box>
-        </Grid>
         {topAttributesCmp && <Grid item xs={12} xl={6}>{topAttributesCmp}</Grid>}
         {inputs.length > 0 && <Grid item xs={12} xl={6}>{formatInputsOutputs(inputs,outputs)}</Grid>}
-        <Grid item xs={12}>{mainContent()}</Grid>
-      </Grid>
+        {mainContent()}
     </Box>
   )
 }

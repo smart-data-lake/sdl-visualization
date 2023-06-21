@@ -43,8 +43,8 @@ export const defaultDrawerWidth = 600;
  * @param {boolean} props.open - Determines whether or not the content drawer is open for the timeline and actions table components 
  * @returns A set of three React components (ToolBar, Tabs, TabPanel) rendered inside a parent component.
  */
-const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
-    const { attempt, open } = props;
+const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolean}) => {
+    const { attempt, open, configData } = props;
     const defaultRows = attempt.rows;
     const [rows, setRows] = useState<Row[]>(defaultRows);
     const [checked, setChecked] = useState([
@@ -217,7 +217,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                             boxShadow: '-10px 10px 10px lightgray',
                         }}
                     >
-                        <ContentDrawer attempt={attempt}/>
+                        <ContentDrawer attempt={attempt} configData={configData}/>
                     </Sheet>
                 </>
             )}
@@ -230,11 +230,11 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
  * @param props {attempt: Attempt, panelOpen?: boolean}
  * @returns JSX.Element
  */
-const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?: boolean}) => {
+const TabNav = (props : {attempt: Attempt, configData: displayProps, panelOpen?: boolean}) => {
     const { stepName, tab } = useParams();
     const [value, setValue] = React.useState(tab === 'timeline' ? 0: 1);
     const [openLineage, setOpenLineage] = useState<boolean>(false);
-    const { attempt, panelOpen } = props;
+    const { attempt, panelOpen, configData } = props;
     const navigate =  useNavigate();
 
     const handleChange = (_e : any, v: any) => {
@@ -266,7 +266,7 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
                     flex: 1,
                 }}
             >
-                <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)}>
+                <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)} >
                     <Box
                         sx={{
                             display: 'flex',
@@ -293,7 +293,7 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
                             )
                         }
                     </Box>
-                    <TabsPanels attempt={attempt} open = {panelOpen}/>
+                    <TabsPanels attempt={attempt} open = {panelOpen} configData={configData}/>
                 </Tabs>
             </Sheet>
             {openLineage && (
