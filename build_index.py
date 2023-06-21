@@ -22,7 +22,7 @@ def list_files(path, extension):
     return list
 
 # Function that create dictionary from the file names 
-def create_dict(path, files):
+def create_dict(files):
     statefiles = []
     id = uuid.uuid4()
     workflows = []
@@ -47,41 +47,46 @@ def create_dict(path, files):
         }
 
     for statefile in statefiles:
-        # Get the important variable of the statefile
-        data = statefile["data"]
-        runId = data["runId"]
-        attemptId = data["attemptId"]
-        name = data["appConfig"]["applicationName"]
-        appConfig = data["appConfig"]
-        actionsState = data["actionsState"]
-        runStartTime = data["runStartTime"]
-        attemptStartTime = data["attemptStartTime"]
+        try:
+            # Get the important variable of the statefile
+            data = statefile["data"]
+            runId = data["runId"]
+            attemptId = data["attemptId"]
+            name = data["appConfig"]["applicationName"]
+            appConfig = data["appConfig"]
+            actionsState = data["actionsState"]
+            runStartTime = data["runStartTime"]
+            attemptStartTime = data["attemptStartTime"]
 
-        runs.append(
-            {
-                "id": str(id),
-                "runId": runId,
-                "attemptId": attemptId,
-                "name": appConfig["applicationName"],
-                "path": "/state" + statefile["path"].split('/state')[1],
-            }
-        )
+            runs.append(
+                {
+                    "id": str(id),
+                    "runId": runId,
+                    "attemptId": attemptId,
+                    "name": appConfig["applicationName"],
+                    "path": statefile["path"].lstrip("./"),
+                }
+            )
 
-        status = getStatus(actionsState)
-        duration = "PT0.0S"
-        if(status != "CANCELLED"): duration = getDuration(data)
+            status = getStatus(actionsState)
+            duration = "PT0.0S"
+            if(status != "CANCELLED"): duration = getDuration(data)
 
-        workflow_tmp[name]["runs"].append(
-            {
-                "id": str(id),
-                "runId": runId,
-                "attemptId": attemptId,
-                "runStartTime": runStartTime,
-                "attemptStartTime": attemptStartTime,
-                "status": status,
-                "duration": duration,
-            }
-        )
+            workflow_tmp[name]["runs"].append(
+                {
+                    "id": str(id),
+                    "runId": runId,
+                    "attemptId": attemptId,
+                    "runStartTime": runStartTime,
+                    "attemptStartTime": attemptStartTime,
+                    "status": status,
+                    "duration": duration,
+                }
+            )
+
+        except Exception as ex:
+            print("ERROR while reading file "+statefile["path"])
+            raise ex        
     
     workflow = []
     for workflow_p in workflow_tmp.values():
@@ -98,7 +103,6 @@ def create_dict(path, files):
             }
         )
     
-    # Note: the "runs" is legacy and should be removed in the future
     return {"workflows": workflows, "runs": runs, "workflow": workflow}
 
 def getLastRun(runs):
@@ -155,9 +159,46 @@ def formatDuration(seconds):
     else:
         return f"PT{ms//(1000*60*60)}H{(ms%(1000*60*60))//(1000*60)}M{(ms%(1000*60))/1000}S"
 
+def buildStateIndex(path):
+    if (not os.path.isdir(path)):
+        print("The path you provided as argument does not exist. Skipping state index building.")
+
+    else: 
+        print(f"The tool will compile all state files in \"{path}\" and its subdirectories into \"index.json\" of your SLDB projct. If no statefiles are present, a default empty index is returned:")
+        print(f"Retrieving summaries \"{path}\"...")
+        cwd = os.getcwd()
+        os.chdir(path)
+        files = list_files(".", ".json")
+        print(f"{len(files)} files found.")
+        print("Creating summaries...")
+        db = create_dict(files)
+        indexFile = "index.json"
+        with open(indexFile, "w") as outfile:
+            json.dump(db, outfile, ensure_ascii=False, indent=4)
+        print(f"Summaries written to {path}/{indexFile}\n \n")
+        os.chdir(cwd)
+
+def buildConfigIndex(path):
+    if (not os.path.isdir(path)):
+        print("The path you provided as argument does not exist. Skipping config index building.")
+
+    else:
+        print(f"The tool will compile all config files in \"{path}\" and its subdirectories into \"index.json\". If no config files are present, a default empty index is returned:")
+        print(f"Retrieving configs \"{path}\"...")
+        cwd = os.getcwd()
+        os.chdir(path)
+        files = list_files(".", ".conf")
+        print(f"{len(files)} files found.")
+        print("Creating index...")
+        db = list(map(lambda f: f.lstrip("./"), files))
+        indexFile = "index.json"
+        with open(indexFile, "w") as outfile:
+            json.dump(db, outfile, ensure_ascii=False, indent=4)
+        print(f"Index written to {path}/{indexFile}\n \n")
+        os.chdir(cwd)
+
 def main():
-    script_dir = os.path.dirname(__file__)
-    
+
     print("\n\n=====================================")
     print("~~ Welcome to the index building tool ~~ \n")
 
@@ -167,46 +208,13 @@ def main():
         print("No path provided as argument. Exiting index building tool.")
     else: 
 
-        statefiles_path = sys.argv[1]
-        if (not os.path.isdir(os.path.join(script_dir, statefiles_path))):
-            print("The path you provided as argument does not exist. Skipping state index building.")
-        
-        else: 
-            print(f"The tool will compile all state files in \"{statefiles_path}\" and its subdirectories into \"../state/index.json\" of your SLDB projct. If no statefiles are present, a default empty index is returned:")
-            path = os.path.join(script_dir, statefiles_path)
-            print(f"Retrieving summaries \"{path}\"...")
-            files = list_files(path, ".json")
-            print(f"{len(files)} files found.")
-            print("Creating summaries...")
-            db = create_dict(path, files)
-            index_path = "../state" if os.path.isdir("../state") else ("public/state" if os.path.isdir("public/state") else "")
-            with open(index_path + "/index.json", "w") as outfile:
-                json.dump(db, outfile, ensure_ascii=False, indent=4)
-                if len(files) == 0:
-                    print('No statefiles path provided. Skipping statefile index creation.')
-            print("Summaries written. \n \n")
+        buildStateIndex(sys.argv[1].rstrip("/"))
 
         # Create config index
         if len(sys.argv) < 3:
             print("No path provided as argument for config index building. Exiting index building tool...")
         else:
-            configfiles_path = sys.argv[2]
-            if (not os.path.isdir(os.path.join(script_dir, configfiles_path))):
-
-                print(f"The tool will compile all config files in \"{configfiles_path}\" and its subdirectories into \"../config/index.json\". If no config files are present, a default empty index is returned:")
-                path = os.path.join(script_dir, f"../public/config")
-                print(f"Retrieving configs \"{path}\"...")
-                files = list_files(path, ".conf")
-                print(f"{len(files)} files found.")
-                print("Creating index...")
-                db = [f.split("scripts/../public/config")[1] for f in files]
-                print("Writing summaries...")
-                index_path = "../config/" if os.path.isdir("../config") else ("public/config" if os.path.isdir("public/config") else "")
-                with open(index_path + "index.json", "w") as outfile:
-                    json.dump(db, outfile, ensure_ascii=False, indent=4)
-                if len(files) == 0:
-                    print('No statefiles path provided. Skipping statefile index creation.')
-                print("Summaries written. \n \n") 
+            buildConfigIndex(sys.argv[2].rstrip("/"))
     
     print("\n~~ Index building done ~~")
     print("=====================================\n\n")
