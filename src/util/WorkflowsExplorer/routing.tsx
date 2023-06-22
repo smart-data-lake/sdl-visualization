@@ -31,7 +31,7 @@ export const getPathFor = {
 
 export const router = createHashRouter(
     createRoutesFromElements(
-      <Route path='/' element={<RootLayout/>}>{/* 
+      <Route path='/' element={<RootLayout isLoading={false}/>}>{/* 
         <Route path='/configviewer' element={<ConfigViewer/>}/> */}
         <Route path='/workflows/' element={<Workflows/>}/>
         <Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>

@@ -1,9 +1,8 @@
-import { List, ListItem/* , ListItemContent */, ListItemButton, Sheet, Box, Divider, Tooltip } from '@mui/joy';
-import React from 'react'
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
-import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
+import { Box, Divider, List, ListItem /* , ListItemContent */, ListItemButton, Sheet, Tooltip } from '@mui/joy';
 import { useNavigate } from 'react-router-dom';
 import { useManifest } from '../hooks/useManifest';
 
@@ -12,10 +11,10 @@ import { useManifest } from '../hooks/useManifest';
  * @returns JSX element that represents the SideBar component
  */
 const SideBar = () => {
-    const {data, isLoading} = useManifest();
+    const manifest = useManifest();
     const navigate = useNavigate();
     
-    if (isLoading) return <></>
+    if (manifest.isLoading) return <></>
     
     const buttons = [
         {
