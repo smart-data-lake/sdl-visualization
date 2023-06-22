@@ -9,6 +9,9 @@ import { useParams } from 'react-router-dom';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import DownloadButton from './DownloadLineageButton';
+import { Lineage } from '../../util/WorkflowsExplorer/Lineage';
+import Run from '../WorkflowsExplorer/Run/Run';
+import RunLineageEdge from '../WorkflowsExplorer/Run/RunLineageEdge';
 
 
 
@@ -56,6 +59,7 @@ function createReactFlowNodes_Old(dataObjectsAndActions: DAGraph){
         type: nodeType,
         position: {x: pos_x, y: pos_y},
         data: { label: dataObjectsInLevel[i].id },
+        style: {onclick: () => console.log("hello")},
         //jsonString: JSON.stringify(dataObjectsInLevel[i].jsonObject , null, '\t'),
       });
     }
@@ -77,10 +81,12 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
       //animated: true, 
       label: action.id,
       label_copy: action.id,
-      labelBgPadding: [8, 4],
-      labelBgStyle: { fill: action.isCentral ? '#096bde' : '#ffffff', color: '#FFF', fillOpacity: 0.7 },
+      labelBgPadding: [7, 7],
+      labelBgBorderRadius: 8,
+      labelBgStyle: { fill: '#fff', fillOpacity: 1, stroke: '#ed7b24' },
       //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
-      style: { stroke: '#096bde' },
+      style: { stroke: '#096bde', strokeWidth: 2},
+      // type: 'runLineage',
     });
   });
   return result;
@@ -88,9 +94,10 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
 
 
 interface flowProps {
-  data: object,
   elementName: string,
   elementType: string,
+  data?: object,
+  graph?: PartialDataObjectsAndActions, 
   runContext?: boolean,
 }
 
@@ -98,11 +105,15 @@ type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of 
 
 type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 
+const edgeTypes = {
+  runLineage: RunLineageEdge,
+}
 
 
 function LineageTab(props: flowProps) {
+  const url = useParams();
 
-  const doa = new DataObjectsAndActions(props.data);
+  const doa = props.graph ? props.graph : new DataObjectsAndActions(props.data);
   let nodes_init: any[] = [];
   let edges_init: any[] = [];
   const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']);
@@ -162,12 +173,9 @@ function LineageTab(props: flowProps) {
   const [edges, setEdges] = useState(initial_render[0]);
   let [hidden, setHidden] = useState(useParams().elementType === 'dataObjects' ? true : false); //Hidden action labels
 
-
-
   const hide = (hidden: boolean) => (edge: any) => {
     if (hidden){
       edge.label = '';
-      edge.markerEnd = {type: MarkerType.ArrowClosed, color: 'red', width: 20, height: 20};
     }else{
       edge.label = edge.label_copy;
       edge.markerEnd = {};
@@ -179,7 +187,6 @@ function LineageTab(props: flowProps) {
   useEffect(() => {
     setEdges((eds) => eds.map(hide(hidden)));
   }, [hidden, onlyDirectNeighbours]); //edges must be hidden at each render (that is, also when we expand/compress the graph)
-
 
   //DEPRECATED
   function renderPartialGraph(nodeId: string){
@@ -196,14 +203,11 @@ function LineageTab(props: flowProps) {
     setEdges(newEdges);
   }
 
-
-
   //Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
   const onNodesChange = useCallback(
     (changes: any) => setNodes((nds: any) => applyNodeChanges(changes, nds)),
     [setNodes]
   );
-
   
   const onEdgesChange = useCallback(
     (changes: any) => setEdges((eds: any) => applyEdgeChanges(changes, eds)),
@@ -214,23 +218,27 @@ function LineageTab(props: flowProps) {
   const navigate = useNavigate();   
   function clickOnNode(node: flowNodeWithString){
     //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
-    navigate(`/config/dataObjects/${node.id}`); //Link programmatically
-  }
+    if (props.data) {
+      navigate(`/config/dataObjects/${node.id}`); //Link programmatically
+    }
+  } 
   function clickOnEdge(edge: flowEdgeWithString){
-    navigate(`/config/actions/${edge.old_id}`); //Link programmatically
+    if (props.data) { 
+      navigate(`/config/actions/${edge.old_id}`); //Link programmatically
+    } else {
+      navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${edge.old_id}`);
+    }
   }
 
   // container holding SVG needs manual height resizing to fill 100%
   const chartBox = useRef<HTMLDivElement>();
   const [contentHeight, setContentHeight] = useState(100);
 
-
   const reactFlow = useReactFlow();
 
   function handleResize() {
     if (chartBox.current) {
       const height = window.innerHeight - chartBox.current.offsetTop - 25; // 25px bottom margin...
-      console.log('resized to: ', height);
       setContentHeight(height);
     }
   }
@@ -243,8 +251,6 @@ function LineageTab(props: flowProps) {
     }, 1);
     window.addEventListener('resize', () => handleResize());
   }
-
-
 
   return (
     <Box 
@@ -264,11 +270,14 @@ function LineageTab(props: flowProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodesConnectable={false} //prevents adding new edges
+        //edgeTypes={edgeTypes}
       >
         <Background />
         <MiniMap />
         <Controls />
-        <div title='Display / Hide action IDs' style={{ position: 'absolute', left: 9, bottom: 125, zIndex: 4, cursor: 'pointer' }}>
+        <Box sx={{position: 'absolute', left: 9, bottom: 135, display: 'flex', flexDirection: 'column-reverse'}}>
+
+        <div title='Display / Hide action IDs' style={{ zIndex: 4, cursor: 'pointer' }}>
           <IconButton 
             color={hidden ? 'inherit' : 'primary'}
             onClick={() => setHidden(!hidden)}>
@@ -276,18 +285,18 @@ function LineageTab(props: flowProps) {
           </IconButton>
         </div>
 
-        <div title={onlyDirectNeighbours[1] as string} style={{ position: 'absolute', left: 9, bottom: 155, zIndex: 4, cursor: 'pointer' }}>
+        {props.data && <div title={onlyDirectNeighbours[1] as string} style={{  zIndex: 4, cursor: 'pointer' }}>
           <IconButton 
             color='inherit'
             onClick={expandGraph}>
             {onlyDirectNeighbours[0] ? <OpenWithIcon/> : <CloseFullscreenIcon/>}
           </IconButton>
-        </div>
+        </div>}
 
-        <div title='Download image as PNG file' style={{ position: 'absolute', left: 9, bottom: 185, zIndex: 4, cursor: 'pointer' }}>
+        <div title='Download image as PNG file' style={{ zIndex: 4, cursor: 'pointer' }}>
           <DownloadButton />
         </div>
-
+        </Box>
       </ReactFlow>
     </Box>
   );

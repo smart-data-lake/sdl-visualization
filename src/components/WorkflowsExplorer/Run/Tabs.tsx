@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab, { tabClasses } from '@mui/joy/Tab';
@@ -26,7 +26,9 @@ import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArro
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import { displayProps } from "../../ConfigExplorer/DataDisplayView";
 import LineageTab from "../../ConfigExplorer/LineageTab";
-import { ReactFlowProvider } from "react-flow-renderer";
+import ReactFlow, { Background, Controls, ReactFlowProvider, useReactFlow } from "react-flow-renderer";
+import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
+import { DAGraph } from "../../../util/ConfigExplorer/Graphs";
 
 export const defaultDrawerWidth = 600;
 
@@ -41,8 +43,8 @@ export const defaultDrawerWidth = 600;
  * @param {boolean} props.open - Determines whether or not the content drawer is open for the timeline and actions table components 
  * @returns A set of three React components (ToolBar, Tabs, TabPanel) rendered inside a parent component.
  */
-const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
-    const { attempt, open } = props;
+const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolean}) => {
+    const { attempt, open, configData } = props;
     const defaultRows = attempt.rows;
     const [rows, setRows] = useState<Row[]>(defaultRows);
     const [checked, setChecked] = useState([
@@ -66,7 +68,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
     const updateChecked = (checked: {name: string; checked: boolean; }[]) => {
         setChecked(checked);
     }
-    
+
     return ( 
         <Sheet
             sx={{
@@ -215,7 +217,7 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
                             boxShadow: '-10px 10px 10px lightgray',
                         }}
                     >
-                        <ContentDrawer attempt={attempt}/>
+                        <ContentDrawer attempt={attempt} configData={configData}/>
                     </Sheet>
                 </>
             )}
@@ -228,11 +230,11 @@ const TabsPanels = (props : {attempt: Attempt, open?: boolean}) => {
  * @param props {attempt: Attempt, panelOpen?: boolean}
  * @returns JSX.Element
  */
-const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?: boolean}) => {
+const TabNav = (props : {attempt: Attempt, configData: displayProps, panelOpen?: boolean}) => {
     const { stepName, tab } = useParams();
     const [value, setValue] = React.useState(tab === 'timeline' ? 0: 1);
     const [openLineage, setOpenLineage] = useState<boolean>(false);
-    const { attempt, panelOpen } = props;
+    const { attempt, panelOpen, configData } = props;
     const navigate =  useNavigate();
 
     const handleChange = (_e : any, v: any) => {
@@ -240,14 +242,31 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
         navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}`)
         if (stepName) navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v === 0 ? 'timeline' : 'table'}/${stepName}`)
     }
+
+    
+    const prepareGraph = (rows: Row[]) => {
+        let data: {action: string, inputIds: {id: string}[], outputIds: {id: string}[]}[] = []; 
+        rows.forEach((row: Row) => {
+            data.push({
+                action: row.step_name,
+                inputIds: row.inputIds ? row.inputIds : [],
+                outputIds: row.outputIds ? row.outputIds : []
+            })
+        })
+
+        return data;
+    }
+
+    const graph: DAGraph = new Lineage(prepareGraph(attempt.rows)).graph;
+
     return ( 
         <Sheet sx={{display: 'flex', height: '100%', px: '1rem'}}>
             <Sheet 
                 sx={{
-                    flex: 3,
+                    flex: 1,
                 }}
             >
-                <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)}>
+                <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)} >
                     <Box
                         sx={{
                             display: 'flex',
@@ -262,7 +281,7 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
                         </TabList>
                         {!openLineage ?
                             (
-                                <IconButton color={'primary'} size="md" variant="solid" sx={{ml: '1rem', px: '1rem', scale: '80%'}} onClick={() => setOpenLineage(!openLineage)}>
+                                <IconButton disabled={attempt.rows[0].inputIds ? false : true} color={'primary'} size="md" variant="solid" sx={{ml: '1rem', px: '1rem', scale: '80%'}} onClick={() => setOpenLineage(!openLineage)}>
                                     Open lineage
                                     <KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
                                 </IconButton>
@@ -274,15 +293,15 @@ const TabNav = (props : {attempt: Attempt, lineageData: displayProps, panelOpen?
                             )
                         }
                     </Box>
-                    <TabsPanels attempt={attempt} open = {panelOpen}/>
+                    <TabsPanels attempt={attempt} open = {panelOpen} configData={configData}/>
                 </Tabs>
             </Sheet>
             {openLineage && (
                 <>
                     <Sheet sx={{borderLeft: '1px solid lightgray', mx: '1rem'}}/>
-                    <Sheet sx={{width: '40%', flex: 2}}>
+                    <Sheet sx={{width: '40%', flex: 1}}>
                         <ReactFlowProvider>
-                            <LineageTab data={props.lineageData} elementName={'btl-distances' as string} elementType={'dataObjects' as string} runContext={true} />
+                            <LineageTab graph={graph} elementName="" elementType=""/>
                         </ReactFlowProvider>
                     </Sheet>
                 </>

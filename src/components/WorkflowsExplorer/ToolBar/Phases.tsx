@@ -26,7 +26,6 @@ const Phases = (props: {updatePhases: (phases: {name: string, checked: boolean}[
     };
 
     useEffect(() => {
-        console.log(phases);
         updatePhases(phases);
     }, [phases])
 

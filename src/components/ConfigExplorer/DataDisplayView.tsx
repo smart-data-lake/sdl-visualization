@@ -8,7 +8,9 @@ import ConfigurationTab from "./ConfigurationTab";
 import DescriptionTab from "./DescriptionTab";
 import { useParams } from "react-router-dom";
 import { ReactFlowProvider } from "react-flow-renderer";
-import { Sheet } from "@mui/joy";
+import { Button, Sheet } from "@mui/joy";
+import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 
 export interface displayProps {
   data: any; // complete configuration
@@ -21,6 +23,7 @@ export default function DataDisplayView(props: displayProps) {
   const [configObj, setConfigObj] = React.useState();
   const [connectionConfigObj, setConnectionConfigObj] = React.useState();
   const [selectedTyp, setSelectedTab] = React.useState('description');
+  const [openLineage, setOpenLineage] = React.useState(false);
 
   React.useEffect(() => {
     if (elementType && elementName) {
@@ -36,49 +39,57 @@ export default function DataDisplayView(props: displayProps) {
   };
 
   return (
-	<Sheet
-		sx={{
-			display: 'flex',
-			width: '100%',
-			height: '86vh'
-		}}
-		>
-		<Sheet
-			sx={{
-				flex: 3,
-				overflow: 'auto',
-				py: '1rem',
-				pr: '1rem'		
-			}}
-		>
-			<TabContext value={selectedTyp}>
-    	  	<Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-    	  	  <Tabs value={selectedTyp} onChange={handleChange} aria-label="element tabs">
-    	  	    <Tab label="Description" value="description" sx={{height: "15px"}} />
-    	  	    <Tab label="Configuration" value="configuration" sx={{height: "15px"}} />
-    	  	   {/*  {(elementType==="actions" || elementType==="dataObjects") && <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />} */}
-    	  	  </Tabs>
-    	  	</Box>
-    	  	<TabPanel value="description" className="content-panel">
-    	  	  <DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
-    	  	</TabPanel>
-    	  	<TabPanel value="configuration" className="content-panel">
-    	  	  <ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} connection={connectionConfigObj} />
-    	  	</TabPanel>
-    	  	{/* <TabPanel value="lineage" className="content-panel">
+	<Sheet sx={{display: 'flex', height: '100%', flex: 1,}}>
+		<Sheet sx={{display: 'flex', flexDirection: 'column', flex: 2, overflowY: 'scroll', scrollbarWidth: 'none',  p: '1rem'}}>
 
-</TabPanel> */}
-    	</TabContext> 
+			<TabContext value={selectedTyp}>
+				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
+					<Tabs value={selectedTyp} onChange={handleChange} aria-label="element tabs">
+						<Tab label="Description" value="description" />
+						<Tab label="Configuration" value="configuration" />
+					{/*  {(elementType==="actions" || elementType==="dataObjects") && <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />} */}
+					</Tabs>
+					<Sheet sx={{display: 'flex', alignItems: 'center'}}>
+						{!openLineage ?
+							(
+								<Button size="sm" onClick={() => setOpenLineage(!openLineage)}>
+									Open lineage
+									<KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
+								</Button>
+							) : (
+								<Button variant='soft' size="sm" onClick={() => setOpenLineage(!openLineage)}>
+									Close lineage
+									<KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem'}}/>
+								</Button>
+						)}
+					</Sheet>
+				</Sheet>
+				<TabPanel value="description" className="content-panel">
+					<Sheet sx={{maxWidth: '100rem', flex: 1}}>
+						<DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
+					</Sheet>
+				</TabPanel>
+				<TabPanel value="configuration" className="content-panel">
+					<Sheet sx={{width: 'auto', flex: 1}}>
+					<ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} connection={connectionConfigObj} />
+					</Sheet>
+				</TabPanel>
+			</TabContext> 
 		</Sheet>
+		<Sheet sx={{borderRight: openLineage ? '1px solid lightgrey' : undefined}}>
+			
+		</Sheet>
+		{openLineage &&
 		<Sheet
-			sx={{
-				flex: 2,
-			}}
+		sx={{
+			flex: 3,
+			height: '100%',
+		}}
 		>
 			<ReactFlowProvider>
 				<LineageTab data={props.data} elementName={elementName as string} elementType={elementType as string} />
 			</ReactFlowProvider>
-		</Sheet>
+		</Sheet>}
 	</Sheet>
   );
 } 
