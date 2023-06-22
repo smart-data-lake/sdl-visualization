@@ -1,19 +1,25 @@
 import { useQuery } from "react-query";
-import { Fetcher } from "../api/Fetcher";
+import { getConfiguredFetcher } from "../api/Fetcher";
+import { fetchAPI } from "../api/fetchAPI";
 
 
-export const fetcher = new Fetcher();
+// lazy initialized
+var _fetcher: fetchAPI;
+function fetcher() {
+    if (!_fetcher) _fetcher = getConfiguredFetcher();
+    return _fetcher;
+}
 
 export const useFetchWorkflows = () => {
-    return useQuery('workflows', () => fetcher.getWorkflows());
+    return useQuery('workflows', () => fetcher().getWorkflows());
 }
 
 export const useFetchWorkflow = (workflow: string) => {
-    return useQuery('workflow', () => fetcher.getWorkflow(workflow))
+    return useQuery('workflow', () => fetcher().getWorkflow(workflow))
 }
 
 export const useFetchRun = (name: string, runId: number, attemptId: number) => {
-    return useQuery('run', () => fetcher.getRun({name, runId, attemptId}))
+    return useQuery('run', () => fetcher().getRun({name, runId, attemptId}))
 }
 
 export default useFetchWorkflows;

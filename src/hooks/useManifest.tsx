@@ -1,11 +1,34 @@
 import { useQuery } from "react-query";
 
+export interface Manifest {
+    backendConfig: string; // config string for connecting to workflow backend api
+    baseUrl?: string; // website base url if not "/"
+    env?: string; // environment
+}
+
+/**
+ * Provide the webapp configuration (Manifest) to nested code, 
+ * avoiding lots of useManifest hooks and passing the manifest to the corresponding place where it's needed.
+ */
+var _persistedManifest: Manifest;
+export function getPersistedManifest() {
+    if (!_persistedManifest) throw Error("Oop, manifest is not yet read. Please take care that useManifest is executed before this code! Hint: useQuery(..., enabled=!manifestIsLoading)...");
+    return _persistedManifest;
+}
+
 const getManifest = () => {
     return fetch('/manifest.json')
-        .then(res => res.json())
-        .then(data => data);
+        .then(res => {
+            if (!res.ok) throw new Error(res.statusText);
+            return res.json();
+        })
+        .then(data => {
+            _persistedManifest = data as Manifest;
+            return _persistedManifest;
+        })
 }
 
 export const useManifest = () => {
-    return useQuery('manifest', getManifest);
+    return useQuery({ queryKey: 'manifest', queryFn: getManifest, retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
 }
+

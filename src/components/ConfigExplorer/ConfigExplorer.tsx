@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import {Box, Toolbar } from '@mui/material';
 import { Routes, Route, Outlet } from "react-router-dom";
 import { CircularProgress, Sheet } from '@mui/joy';
-import { useConfig } from '../../hooks/useConfig';
 import PageHeader from '../../layouts/PageHeader';
 
 

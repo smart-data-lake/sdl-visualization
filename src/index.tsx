@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import App from "./App";
 import * as ReactDOMClient from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "react-query";
+import { ReactQueryDevtools } from 'react-query/devtools'
 
 // react 17
 // import { render } from "react-dom";
@@ -25,7 +26,10 @@ const queryClient = new QueryClient({
 root.render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
+
       <App />
+      <ReactQueryDevtools initialIsOpen={false} />
+
     </QueryClientProvider>
   </StrictMode>
 );
