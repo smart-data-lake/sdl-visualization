@@ -43,38 +43,41 @@ export default function DataDisplayView(props: displayProps) {
 		<Sheet sx={{display: 'flex', flexDirection: 'column', flex: 2, overflowY: 'scroll', scrollbarWidth: 'none',  p: '1rem'}}>
 
 			<TabContext value={selectedTyp}>
-				<Sheet sx={{ display: 'flex', justifyContent: 'space-between', position: 'sticky'}}>
+				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
 					<Tabs value={selectedTyp} onChange={handleChange} aria-label="element tabs">
 						<Tab label="Description" value="description" />
 						<Tab label="Configuration" value="configuration" />
 					{/*  {(elementType==="actions" || elementType==="dataObjects") && <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />} */}
 					</Tabs>
+					<Sheet sx={{display: 'flex', alignItems: 'center'}}>
+						{!openLineage ?
+							(
+								<Button size="sm" onClick={() => setOpenLineage(!openLineage)}>
+									Open lineage
+									<KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
+								</Button>
+							) : (
+								<Button variant='soft' size="sm" onClick={() => setOpenLineage(!openLineage)}>
+									Close lineage
+									<KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem'}}/>
+								</Button>
+						)}
+					</Sheet>
 				</Sheet>
 				<TabPanel value="description" className="content-panel">
-					<Sheet sx={{maxWidth: '75rem', flex: 1}}>
+					<Sheet sx={{maxWidth: '100rem', flex: 1}}>
 						<DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
 					</Sheet>
 				</TabPanel>
 				<TabPanel value="configuration" className="content-panel">
-					<Sheet sx={{width: 'auto', flex: 1, pr: '1rem'}}>
+					<Sheet sx={{width: 'auto', flex: 1}}>
 					<ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} connection={connectionConfigObj} />
 					</Sheet>
 				</TabPanel>
 			</TabContext> 
 		</Sheet>
 		<Sheet sx={{borderRight: openLineage ? '1px solid lightgrey' : undefined}}>
-			{!openLineage ?
-				(
-					<Button size="sm" sx={{m: '1rem'}} onClick={() => setOpenLineage(!openLineage)}>
-						Open lineage
-						<KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
-					</Button>
-				) : (
-					<Button variant='soft' size="sm" sx={{m: '1rem'}} onClick={() => setOpenLineage(!openLineage)}>
-						Close lineage
-						<KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem'}}/>
-					</Button>
-				)}
+			
 		</Sheet>
 		{openLineage &&
 		<Sheet
