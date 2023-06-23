@@ -84,6 +84,7 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                         py: '1rem',
                         my: '1.2rem',
                         position: 'sticky',
+                        top: '0',
                         borderRadius: '0.5rem',
                     }}
                 >
@@ -158,7 +159,16 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                                                 cursor: 'context-menu'
                                             }}
                                         >
+                                            <Sheet 
+                                sx={{
+                                    gap: '0.5rem',
+                                    height: '67vh',
+                                    display: 'flex',
+                                }}
+                            >
+
                                             <VirtualizedTimeline run={attempt.run} rows={rows} displayPhases={checked}/>
+                            </Sheet>
                                         </Sheet>
                                     </ThemeProvider>
                             </Sheet> 
@@ -167,9 +177,9 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                             <Sheet 
                                 sx={{
                                     gap: '0.5rem',
-                                    height: '100%',
-                                    position: 'relative',
+                                    height: '65vh',
                                     display: 'flex',
+                                    overflowY: 'scroll'
                                 }}
                             >
 
@@ -180,10 +190,7 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                                         }
                                     }}
                                     sx={{
-                                        overflowY: 'scroll',
-                                        position: 'absolute',
-                                        flex: '1', 
-                                        height: '70vh',
+                                        height: '100%',
                                         top: 0,
                                         left: 0,
                                         backgroundColor: open ? 'primary.main' : 'none',
@@ -270,8 +277,9 @@ const TabNav = (props : {attempt: Attempt, configData: displayProps, panelOpen?:
                     <Box
                         sx={{
                             display: 'flex',
+                            flex: 1,
                             mt: '1rem',
-                            justifyContent: 'space-between',
+                            justifyContent: 'space-between'
                         }}
                         >
                         <TabList variant="plain" sx={style}>
