@@ -162,7 +162,7 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                                             <Sheet 
                                 sx={{
                                     gap: '0.5rem',
-                                    height: '67vh',
+                                    height: '69vh',
                                     display: 'flex',
                                 }}
                             >
@@ -177,7 +177,7 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                             <Sheet 
                                 sx={{
                                     gap: '0.5rem',
-                                    height: '65vh',
+                                    height: '69vh',
                                     display: 'flex',
                                     overflowY: 'scroll'
                                 }}

@@ -18,7 +18,7 @@ function ConfigExplorer(props: {data: any}) {
     	<Sheet
 			sx={{
 				display: 'flex',
-				height: '86vh',
+				height: '100%',
 			}}
 			>
     	  	<ElementList data={data} />

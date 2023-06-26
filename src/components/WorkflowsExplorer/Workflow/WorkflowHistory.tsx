@@ -137,10 +137,12 @@ const WorkflowHistory = () => {
 			<Sheet
 				sx={{
 					display: 'flex',
+					height: '100%',
 				}}
 			>
 				<Sheet
 					sx={{
+						height: '100%',
 						px: '1rem',
 						flex: 3,
 					}}
@@ -160,6 +162,7 @@ const WorkflowHistory = () => {
 					<Sheet sx={{
 						mt: '1rem',
 						width: '100%',
+						height: '53vh',
 						display: 'flex',
 						}}
 					>
