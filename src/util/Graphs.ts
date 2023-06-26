@@ -232,46 +232,27 @@ function getDataObjects(dataObjectsJSON: any){
     return result;
 }
 
-function getActionAux(actionObject: any){
-    if (actionObject['inputIds'] !== undefined && actionObject['outputIds'] !== undefined){return 'n-to-n'};
-    if (actionObject['inputIds'] === undefined && actionObject['outputIds'] !== undefined){return '1-to-n'};
-    if (actionObject['inputIds'] === undefined && actionObject['outputIds'] !== undefined){return 'n-to-1'};
-    if (actionObject['inputIds'] === undefined && actionObject['outputIds'] === undefined){return '1-to-1'};
-}
-
-
 function getActions(actionsJSON: any, dataObjects: any){
-    var result: Action[] = [];
+    const result: Action[] = [];
     const allActions: string[] = Object.keys(actionsJSON);
     allActions.forEach(actionId => {
-        if (getActionAux(actionsJSON[actionId])==='n-to-n'){
-            actionsJSON[actionId]['inputIds'].forEach((inputId: string | number) => {
-                actionsJSON[actionId]['outputIds'].forEach((outputId: string | number) =>{
-                    const a = new Action(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, actionsJSON[actionId]);
-                    result.push(a);
-                });
-            });
-        }
-        else if (getActionAux(actionsJSON[actionId])==='1-to-n'){
-            actionsJSON[actionId]['outputIds'].forEach((outputId: string | number) =>{
-                const inputId = actionsJSON[actionId]['inputId'];
-                const a = new Action(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, actionsJSON[actionId]);
+        const action = actionsJSON[actionId];
+        // collect input/outputIds
+        const inputIds: string[] = [];
+        const outputIds: string[] = [];
+        if (action['inputIds']) action['inputIds'].forEach((id: string) => inputIds.push(id));
+        if (action['outputIds']) action['outputIds'].forEach((id: string) => outputIds.push(id));
+        if (action['inputId']) inputIds.push(action['inputId']);
+        if (action['outputId']) outputIds.push(action['outputId']);
+        // attributes for MLflow*Actions have non-standard namings...
+        if (action.type === 'MLflowPredictAction') inputIds.push(action.mlflowId);
+        if (action.type === 'MLflowTrainAction') outputIds.push(action.mlflowId);
+        inputIds.forEach((inputId: string) => {
+            outputIds.forEach((outputId: string) => {
+                const a = new Action(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, action);
                 result.push(a);
             });
-        }
-        else if (getActionAux(actionsJSON[actionId])==='n-to-1'){
-            actionsJSON[actionId]['inputIds'].forEach((inputId: number | string) =>{
-                const outputId = actionsJSON[actionId]['outputId'];
-                const a = new Action(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, actionsJSON[actionId]);
-                result.push(a);
-            });
-        }
-        else {
-            const inputId = actionsJSON[actionId]['inputId'];
-            const outputId = actionsJSON[actionId]['outputId'];
-            const a = new Action(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o:any) => o.id === outputId), actionId, actionsJSON[actionId]);
-            result.push(a);
-        }
+        });
     });
     return result;    
 }
