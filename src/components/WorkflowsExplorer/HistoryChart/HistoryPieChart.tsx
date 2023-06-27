@@ -26,7 +26,7 @@ const HistoryPieChart = (props: {data : {value: number, status: string, name: st
     const toDisplay = processData();
 
     return (
-        <ResponsiveContainer width="99%" height="100%">
+        <ResponsiveContainer width="99%" height="99%">
           <PieChart >
             <Pie data={toDisplay} dataKey="value" cx="50%" cy="50%" innerRadius={44} outerRadius={54} fill="#82ca9d" label >
             {toDisplay.map((entry, index) => (

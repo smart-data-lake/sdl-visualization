@@ -214,8 +214,9 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                     {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
                     <Sheet
                         sx={{ 
-                            position: 'fixed',
-                            bottom: 0,
+                            position: 'absolute',
+                            top: 0,
+                            height: '80vh',
                             left: '50%',
                             display: 'flex',
                             flexDirection: 'column',

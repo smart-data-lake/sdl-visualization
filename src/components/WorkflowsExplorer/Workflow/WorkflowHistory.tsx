@@ -193,26 +193,34 @@ const WorkflowHistory = () => {
 				</Sheet>
 				{open && (
 					<>
-					<Sheet>
-					<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
-						<ChevronRightIcon />
-					</IconButton>
-					</Sheet>
-					<Sheet
-						sx={{
-							flex: 1,
-							pt: '2rem',
-							pl: '1rem',
-							borderLeft: '1px solid lightgray',
-						}}
-					>
-						{/* <WorkflowDetails data={data} pieChartData={pieChartData}/> */}
-					</Sheet>
-						</>
+						<Sheet>
+							<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+								<ChevronRightIcon />
+							</IconButton>
+						</Sheet>
+						<Sheet
+							sx={{
+								flex: 1,
+								pt: '2rem',
+								pl: '1rem',
+								borderLeft: '1px solid lightgray',
+								position: 'absolute',
+								top: 0,
+								height: '86vh',
+								left: '70%',
+								display: 'flex',
+								flexDirection: 'column',
+								boxShadow: '-10px 30px 20px lightgray',
+								p: '1rem'
+							}}
+						>
+							<WorkflowDetails data={data} pieChartData={pieChartData}/> 
+						</Sheet>
+					</>
 				)}
 				{!open && (
 					<Sheet>
-						<IconButton disabled sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+						<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
 							<ChevronLeftIcon />
 						</IconButton>
 					</Sheet>	
