@@ -57,6 +57,5 @@ function getConfig(manifest:Manifest) {
  * The useConfig hook is used to fetch the SDLB config from the backend. The result.data of the query is a large json object.
  */
 export function useConfig(manifest?: Manifest) {
-  console.log("useConfig", manifest)
   return useQuery({queryKey: 'config', queryFn: getConfig(manifest!), enabled: manifest !== undefined, retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
 }
