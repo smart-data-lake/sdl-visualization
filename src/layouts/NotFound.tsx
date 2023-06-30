@@ -16,7 +16,7 @@ const NotFound = (props: {errorType?: number, errorMessage?: string}) => {
             }}
         >
             <Typography level='h1' sx={{pb: '10rem', pt: '3rem'}}>
-                Error {props.errorType ? props.errorType : 404}
+                Ooops... Error {props.errorType ? props.errorType : 404}
             </Typography>
             <Sheet variant='soft' color='info' sx={{display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '1rem', mx: '15rem', p: '2rem', borderRadius: '0.5rem'}}>
                 <Typography color="info" level='body1' >

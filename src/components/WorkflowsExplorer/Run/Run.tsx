@@ -22,6 +22,7 @@ const Run = (props : {panelOpen?: boolean, configData: displayProps}) => {
     if (isLoading || isFetching) return <CircularProgress/>
     
     const attempt = data.detail ? undefined : new Attempt(data);
+    if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
 
     return (
         <>
@@ -34,7 +35,7 @@ const Run = (props : {panelOpen?: boolean, configData: displayProps}) => {
                 </>
                 ):(
                     <>
-                        <NotFound errorType={500} errorMessage={data.detail}/>
+                        <NotFound errorType={500}/>
                     </>
                 )
             ):(

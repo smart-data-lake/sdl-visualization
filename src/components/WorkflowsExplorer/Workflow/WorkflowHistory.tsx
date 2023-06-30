@@ -126,7 +126,8 @@ const WorkflowHistory = () => {
 		}, [toDisplay])
 
 		if (isLoading || isFetching) return (<CircularProgress/>)
-		
+		if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
+
 		return (
 			<>
 			{data ? (
@@ -217,7 +218,7 @@ const WorkflowHistory = () => {
 					</>   
 					):(
 						<>
-							<NotFound errorType={500} errorMessage={data.detail}/>
+							<NotFound errorType={500}/>
 						</>
 					)
 				):(

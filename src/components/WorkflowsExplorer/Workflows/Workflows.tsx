@@ -45,8 +45,8 @@ const Workflows = () => {
     }
 
     if (isLoading) return <CircularProgress/>;
-
-    console.log(data && (!data.detail))
+    if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
+    
     return (      
         <>
             {data ? (
@@ -93,7 +93,7 @@ const Workflows = () => {
                     </>
                 ):(
                     <>
-                        <NotFound errorType={500} errorMessage={data.detail}/>
+                        <NotFound errorType={500}/>
                     </>
                 )
             ):(
