@@ -14,6 +14,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import IconButton from '@mui/joy/IconButton';
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import WorkflowHistoryTable from "./WorkflowHistoryTable";
+import NotFound from "../../../layouts/NotFound";
 
 
 export type Indices = {
@@ -46,11 +47,13 @@ const WorkflowHistory = () => {
 	const [pieChartData, setPieChartData] = useState<any[]>([])
 	
 	useEffect(() => {
-		if (!isLoading) {
+		if (!isLoading && !data.detail) {
 			updateRows(data.runs);
 			setCount(rows.length)
 			setLineChartData(generateChartData(data.runs))
 			setPieChartData(lineChartData)
+		} else if (!isLoading && data.detail) {
+			setRows([]);
 		}
 	}, [data])
 	
@@ -133,90 +136,105 @@ const WorkflowHistory = () => {
 
 	return (
 		<>
-			<PageHeader title={workflowName} />             
-			<Sheet
-				sx={{
-					display: 'flex',
-				}}
-			>
-				<Sheet
-					sx={{
-						px: '1rem',
-						flex: 3,
-					}}
-				>                   
-					<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
-					<ToolBar 
-						style={'horizontal'} 
-						controlledRows={data.runs} 
-						sortEnabled={false}
-						updateRows={updateRows}
-						searchColumn={'runId'}
-						searchMode={'equals'}
-						searchPlaceholder={'Search by Run ID'}
-						filters={checkFiltersAvailability(data.runs, defaultFilters())}
-						datetimePicker={handleDateRangeChange}
-						/>
-					<Sheet sx={{
-						mt: '1rem',
-						width: '100%',
-						display: 'flex',
-						}}
-					>
-						<WorkflowHistoryTable data={toDisplay} updateRows={updateRows}/>
-					</Sheet>
-					<Sheet
-						sx={{
-							position: 'sticky',
-							bottom: 0,
-						}}
-					>
-						<TablePagination
-							rowsPerPageOptions={[10, 25, 50, 100]}
-							rowsPerPage={rowsPerPage}
-							page={page}
-							SelectProps={{
-							inputProps: {
-								'aria-label': 'rows per page',
-							},
-							native: true,
-							}}
-							onPageChange={handleChangePage}
-							onRowsPerPageChange={handleChangeRowsPerPage}
-							component="div"
-							count={count}
-						/> 
-					</Sheet>
-				</Sheet>
-				{open && (
+			{data ? (
+				(!data.detail) ? (
 					<>
-					<Sheet>
-					<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
-						<ChevronRightIcon />
-					</IconButton>
-					</Sheet>
-					<Sheet
-						sx={{
-							flex: 1,
-							pt: '2rem',
-							pl: '1rem',
-							borderLeft: '1px solid lightgray',
-						}}
-					>
-						{/* <WorkflowDetails data={data} pieChartData={pieChartData}/> */}
-					</Sheet>
+						<PageHeader title={workflowName} />             
+						<Sheet
+							sx={{
+								display: 'flex',
+							}}
+						>
+							<Sheet
+								sx={{
+									px: '1rem',
+									flex: 3,
+								}}
+							>                   
+								<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
+								<ToolBar 
+									style={'horizontal'} 
+									controlledRows={data.runs} 
+									sortEnabled={false}
+									updateRows={updateRows}
+									searchColumn={'runId'}
+									searchMode={'equals'}
+									searchPlaceholder={'Search by Run ID'}
+									filters={checkFiltersAvailability(data.runs, defaultFilters())}
+									datetimePicker={handleDateRangeChange}
+									/>
+								<Sheet sx={{
+									mt: '1rem',
+									width: '100%',
+									display: 'flex',
+									}}
+								>
+									<WorkflowHistoryTable data={toDisplay} updateRows={updateRows}/>
+								</Sheet>
+								<Sheet
+									sx={{
+										position: 'sticky',
+										bottom: 0,
+									}}
+								>
+									<TablePagination
+										rowsPerPageOptions={[10, 25, 50, 100]}
+										rowsPerPage={rowsPerPage}
+										page={page}
+										SelectProps={{
+										inputProps: {
+											'aria-label': 'rows per page',
+										},
+										native: true,
+										}}
+										onPageChange={handleChangePage}
+										onRowsPerPageChange={handleChangeRowsPerPage}
+										component="div"
+										count={count}
+									/> 
+								</Sheet>
+							</Sheet>
+							{open && (
+								<>
+								<Sheet>
+								<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+									<ChevronRightIcon />
+								</IconButton>
+								</Sheet>
+								<Sheet
+									sx={{
+										flex: 1,
+										pt: '2rem',
+										pl: '1rem',
+										borderLeft: '1px solid lightgray',
+									}}
+								>
+									{/* <WorkflowDetails data={data} pieChartData={pieChartData}/> */}
+								</Sheet>
+									</>
+							)}
+							{!open && (
+								<Sheet>
+									<IconButton disabled sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+										<ChevronLeftIcon />
+									</IconButton>
+								</Sheet>	
+							)}
+						</Sheet>
+									
+					</>   
+					):(
+						<>
+							<NotFound errorType={500} errorMessage={data.detail}/>
 						</>
-				)}
-				{!open && (
-					<Sheet>
-						<IconButton disabled sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
-							<ChevronLeftIcon />
-						</IconButton>
-					</Sheet>	
-				)}
-			</Sheet>
-						
-		</>   
+					)
+				):(
+					<>
+						<NotFound/>
+					</>
+				)
+			}
+		</>
 	);
 }
  
