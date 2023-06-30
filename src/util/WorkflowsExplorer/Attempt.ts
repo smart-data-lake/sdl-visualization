@@ -12,7 +12,7 @@ export default class Attempt {
             this.rows = this.getTaskRow(stateFile.actionsState).sort(this.cmp);
             this.run =  this.getRun();
         } else {
-            throw('Error: no statefile found')
+            throw new Error("Error: no statefile found");
         }
     }
 

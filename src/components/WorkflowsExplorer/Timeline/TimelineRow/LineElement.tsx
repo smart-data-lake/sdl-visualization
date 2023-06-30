@@ -1,7 +1,6 @@
 import React from 'react';
 import styled, { DefaultTheme, keyframes, css } from 'styled-components';
-import { Step, Row } from '../../../../types';
-import { StepRowData } from '../useTaskData';
+import { Row } from '../../../../types';
 import { lineColor, getRowStatus, getLengthLabelPosition } from './utils';
 import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
 import { lighten } from 'polished';
@@ -74,7 +73,6 @@ const LineElement: React.FC<LineElementProps> = ({
 			}
 		return row.data.ts_epoch;
 	}
-	const boxStartTime = row.data.ts_epoch;
 
 	// Legacy mechanism that used to handle pending tasks
 	/* if (!boxStartTime || status === 'pending') {

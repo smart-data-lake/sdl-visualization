@@ -2,12 +2,9 @@ import React, { useEffect, useState } from "react";
 import PageHeader from "../../../layouts/PageHeader";
 import WorkflowsTable from "./WorkflowsTable";
 import ToolBar from "../ToolBar/ToolBar";
-import { Box, CircularProgress, Sheet, Typography } from "@mui/joy";
+import { CircularProgress, Sheet } from "@mui/joy";
 import useFetchWorkflows from "../../../hooks/useFetchData";
 import { TablePagination } from "@mui/material";
-import { durationMicro } from "../../../util/WorkflowsExplorer/date";
-import { formatDuration } from "../../../util/WorkflowsExplorer/format";
-import { useNavigate } from "react-router-dom";
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import NotFound from "../../../layouts/NotFound";
 
@@ -30,7 +27,7 @@ const Workflows = () => {
     useEffect(() => {
         setToDisplay(rows.slice(0, rowsPerPage));
         setCount(rows.length)
-    }, [rows])
+    }, [rows, rowsPerPage])
 
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
@@ -68,7 +65,6 @@ const Workflows = () => {
                             }}
                         >
                             <ToolBar 
-                                style={'horizontal'} 
                                 controlledRows={data} 
                                 updateRows={updateRows} 
                                 filters={checkFiltersAvailability(data, defaultFilters('lastStatus'))}

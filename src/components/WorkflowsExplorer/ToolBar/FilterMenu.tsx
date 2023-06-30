@@ -11,7 +11,7 @@ import { getButtonColor, getIcon } from "../../../util/WorkflowsExplorer/StatusI
  * @param props.filters - filters to be applied
  * @returns 
  */
-const FilterMenu = (props: {updateList: (list: boolean[]) => void, style?: 'vertical' | ' horizontal', filters?: {name: string, fun: (rows: Row[]) => void}[]}) => {
+const FilterMenu = (props: {updateList: (list: boolean[]) => void, mode?: 'vertical' | ' horizontal', filters?: {name: string, fun: (rows: Row[]) => void}[]}) => {
     const { filters, updateList } = props;
     const [list, setList] = useState<boolean[]>(Array(props.filters?.length).fill(true));
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);

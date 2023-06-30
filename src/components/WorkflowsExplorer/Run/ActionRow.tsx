@@ -1,4 +1,4 @@
-import { Chip, Typography } from "@mui/joy";
+import { Typography } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
 import { Row } from "../../../types";
 import { getISOString } from "../../../util/WorkflowsExplorer/date";
@@ -15,7 +15,7 @@ const ActionRow = (props: { row: Row }) => {
     return ( 
         
             <tr style={{cursor: 'pointer'}} onClick={() => navigate(`/workflows/${row.flow_id}/${row.run_number}/${row.task_id}/table/${row.step_name}`)}>
-                <td scope="row"><Typography noWrap={true}>{row.step_name}</Typography></td>
+                <td><Typography noWrap={true}>{row.step_name}</Typography></td>
                 <td>
                     {getIcon(row.status)}
                 </td>

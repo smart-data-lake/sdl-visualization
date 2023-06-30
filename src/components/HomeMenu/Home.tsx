@@ -1,5 +1,4 @@
 import PageHeader from "../../layouts/PageHeader";
-import DemoGrid from "./DemoGrid";
 
 const Home = () => {
     return ( 

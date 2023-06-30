@@ -1,7 +1,7 @@
 import LineageTab from "./LineageTab";
 import React from 'react';
 import './ComponentsStyles.css';
-import { Box, Tab, Tabs } from "@mui/material";
+import { Tab, Tabs } from "@mui/material";
 import TabPanel from '@mui/lab/TabPanel';
 import TabContext from '@mui/lab/TabContext';
 import ConfigurationTab from "./ConfigurationTab";

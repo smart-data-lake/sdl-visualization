@@ -73,7 +73,7 @@ const Timeline: React.FC<TimelineProps> = ({
         dragging: dragging,
         displayPhases: displayPhases,
       }),
-    [dragging, paramsString, rows, searchStatus, t, timeline],
+    [dragging, paramsString, rows, searchStatus, t, timeline, displayPhases],
   );
 
 

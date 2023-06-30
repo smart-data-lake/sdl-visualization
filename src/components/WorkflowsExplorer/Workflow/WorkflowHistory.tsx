@@ -1,14 +1,12 @@
 import { useLocation } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
-import RunsHistoryTable from "./WorkflowHistoryTable";
 import { CircularProgress, Sheet } from "@mui/joy";
 import ToolBar from "../ToolBar/ToolBar";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import { useEffect, useState } from "react";
 import { TablePagination } from "@mui/material";
 import ChartControl from "../HistoryChart/ChartControl";
-import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
-import WorkflowDetails from "./WorkflowDetails";
+import { durationMicro } from "../../../util/WorkflowsExplorer/date";
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import IconButton from '@mui/joy/IconButton';
@@ -42,30 +40,7 @@ const WorkflowHistory = () => {
 	const [lineChartData, setLineChartData] = useState<any[]>([])
 	const [indices, setIndices] = useState<Indices>({toDisplayLeft: 0, toDisplayRight: rowsPerPage})
 	const [open, setOpen] = useState<Boolean>(false)
-	const [startDate, setStartDate] = useState<Date>(new Date(0))
-	const [endDate, setEndDate] = useState<Date>(new Date())
-	const [pieChartData, setPieChartData] = useState<any[]>([])
 	
-	useEffect(() => {
-		if (!isLoading && !data.detail) {
-			updateRows(data.runs);
-			setCount(rows.length)
-			setLineChartData(generateChartData(data.runs))
-			setPieChartData(lineChartData)
-		} else if (!isLoading && data.detail) {
-			setRows([]);
-		}
-	}, [data])
-	
-	useEffect(() => {
-		setToDisplay(rows.slice(0, rowsPerPage));
-		setCount(rows.length)
-		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices?.rangeLeft, rangeRight: indices?.rangeRight})
-	}, [rows])
-
-	useEffect(() => {
-		setBarChartData(generateChartData(toDisplay))
-	}, [toDisplay])
 	
 	const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		setRowsPerPage(parseInt(event.target.value, 10));
@@ -84,14 +59,12 @@ const WorkflowHistory = () => {
 		const targetRows = rows ? rows : data.runs;
 		setRows(targetRows.sort(cmpAlgorithm));
 	}
-
+	
 	const defaultCmp = (a: any, b: any) => {
 		return new Date(b.attemptStartTime).getTime() - new Date(a.attemptStartTime).getTime();
 	}
-
+	
 	const handleDateRangeChange = (start: Date, end: Date) => {
-		setStartDate(start)
-		setEndDate(end)
 		const filteredRows = data.runs.filter((row) => {
 			const date = new Date(row.attemptStartTime)
 			return date >= start && date <= end
@@ -107,7 +80,7 @@ const WorkflowHistory = () => {
 		}
 		setIndices({toDisplayLeft: indices.toDisplayLeft, toDisplayRight: indices.toDisplayRight, rangeLeft: data.runs.length - (rangeRight + filteredRows.length), rangeRight: data.runs.length - 1 - rangeRight})
 	}
-
+	
 	const generateChartData = (data: any) => {
 		const res : {
 			value: number,
@@ -116,7 +89,7 @@ const WorkflowHistory = () => {
 			runId: number,
 			attemptId: number
 		}[] = [];
-	
+		
 		
 		data.forEach((run) => {
 			res.push(
@@ -127,15 +100,35 @@ const WorkflowHistory = () => {
 					runId: run.runId,
 					attemptId: run.attemptId    
 				}
-			)
-		});
-		return res;
-	}
+				)
+			});
+			return res;
+		}
+		
+		useEffect(() => {
+			if (!isLoading && !data.detail) {
+				updateRows(data.runs);
+				setCount(rows.length)
+				setLineChartData(generateChartData(data.runs))
+			} else if (!isLoading && data.detail) {
+				setRows([]);
+			}
+		}, [data, isLoading, rows.length])
+		
+		useEffect(() => {
+			setToDisplay(rows.slice(0, rowsPerPage));
+			setCount(rows.length)
+			setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices?.rangeLeft, rangeRight: indices?.rangeRight})
+		}, [rows, indices?.rangeLeft, indices?.rangeRight, rowsPerPage, page])
+	
+		useEffect(() => {
+			setBarChartData(generateChartData(toDisplay))
+		}, [toDisplay])
 
-	if (isLoading || isFetching) return (<CircularProgress/>)
-
-	return (
-		<>
+		if (isLoading || isFetching) return (<CircularProgress/>)
+		
+		return (
+			<>
 			{data ? (
 				(!data.detail) ? (
 					<>
@@ -153,7 +146,6 @@ const WorkflowHistory = () => {
 							>                   
 								<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
 								<ToolBar 
-									style={'horizontal'} 
 									controlledRows={data.runs} 
 									sortEnabled={false}
 									updateRows={updateRows}

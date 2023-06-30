@@ -3,10 +3,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useParams } from "react-router-dom";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import { Row } from "../../../types"
-import { position } from "polished";
 
 const getRow = (attempt: Attempt, taskName: string) => {
-    if (taskName === 'err') throw('was not able to fetch task name');
+    if (taskName === 'err') throw(new Error('was not able to fetch task name'));
 
     return attempt.rows.filter((row) => {return row.step_name === taskName})[0];
 }
