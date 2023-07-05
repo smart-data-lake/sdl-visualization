@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab, { tabClasses } from '@mui/joy/Tab';
@@ -15,18 +15,12 @@ import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
 import { Row } from "../../../types";
 import ToolBar from "../ToolBar/ToolBar";
 import InboxIcon from '@mui/icons-material/Inbox';
-import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import OpenInFullIcon from '@mui/icons-material/OpenInFull';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import StartIcon from '@mui/icons-material/Start';
-import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward';
-import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import { displayProps } from "../../ConfigExplorer/DataDisplayView";
 import LineageTab from "../../ConfigExplorer/LineageTab";
-import ReactFlow, { Background, Controls, ReactFlowProvider, useReactFlow } from "react-flow-renderer";
+import  { ReactFlowProvider } from "react-flow-renderer";
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
 import { DAGraph } from "../../../util/ConfigExplorer/Graphs";
 
@@ -73,11 +67,15 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
         <Sheet
             sx={{
                 display: 'flex',
+                height: '100%',
             }}
         >
             <Sheet
                 sx={{
                     flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%', 
                 }}
             >
                 {/* Renders the ToolBar component, which contains a set of buttons that allow the user to filter the rows displayed in the actions table */}
@@ -86,6 +84,7 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                         py: '1rem',
                         my: '1.2rem',
                         position: 'sticky',
+                        top: '0',
                         borderRadius: '0.5rem',
                     }}
                 >
@@ -135,7 +134,7 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                                 sx={{
                                     display: 'flex',
                                     gap: '0.5rem',
-                                    height: '70vh',
+                                    height: '100%',
                                     position: 'relative',  
                                     
                                 }}
@@ -160,7 +159,16 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                                                 cursor: 'context-menu'
                                             }}
                                         >
+                                            <Sheet 
+                                sx={{
+                                    gap: '0.5rem',
+                                    height: '69vh',
+                                    display: 'flex',
+                                }}
+                            >
+
                                             <VirtualizedTimeline run={attempt.run} rows={rows} displayPhases={checked}/>
+                            </Sheet>
                                         </Sheet>
                                     </ThemeProvider>
                             </Sheet> 
@@ -169,9 +177,9 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                             <Sheet 
                                 sx={{
                                     gap: '0.5rem',
-                                    height: '70vh',
-                                    position: 'relative',
+                                    height: '69vh',
                                     display: 'flex',
+                                    overflowY: 'scroll'
                                 }}
                             >
 
@@ -182,10 +190,7 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                                         }
                                     }}
                                     sx={{
-                                        overflowY: 'scroll',
-                                        position: 'absolute',
-                                        flex: '1', 
-                                        height: '70vh',
+                                        height: '100%',
                                         top: 0,
                                         left: 0,
                                         backgroundColor: open ? 'primary.main' : 'none',
@@ -208,13 +213,15 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                 <>
                     {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
                     <Sheet
-                        sx={{
-                            flex: '1', 
+                        sx={{ 
                             position: 'absolute',
                             top: 0,
+                            height: '80vh',
                             left: '50%',
-                            height: '100%',
-                            boxShadow: '-10px 10px 10px lightgray',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            boxShadow: '-10px 30px 20px lightgray',
+                            p: '1rem'
                         }}
                     >
                         <ContentDrawer attempt={attempt} configData={configData}/>
@@ -264,15 +271,16 @@ const TabNav = (props : {attempt: Attempt, configData: displayProps, panelOpen?:
             <Sheet 
                 sx={{
                     flex: 1,
+                    height: '100%',
                 }}
             >
                 <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)} >
                     <Box
                         sx={{
                             display: 'flex',
-                            flexDirection: 'row',
+                            flex: 1,
                             mt: '1rem',
-                            justifyContent: 'space-between',
+                            justifyContent: 'space-between'
                         }}
                         >
                         <TabList variant="plain" sx={style}>

@@ -54,8 +54,8 @@ const WorkflowDetails = (props : {data: any, pieChartData: any}) => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-start',
-                    alignItems: 'stretch',
-                    gap: '4rem'
+                    gap: '4rem',
+                    height: '100%',
                 }}
                 >
                 <Sheet>
@@ -64,7 +64,8 @@ const WorkflowDetails = (props : {data: any, pieChartData: any}) => {
                             display: 'flex',
                             justifyContent: 'flex-start',
                             alignItems: 'center',
-                            gap: '1rem'
+                            gap: '1rem',
+                            height: '100%',
                         }}
                         >
                         <ErrorOutlineIcon />
@@ -72,7 +73,15 @@ const WorkflowDetails = (props : {data: any, pieChartData: any}) => {
                     </Sheet> 
                     {getList(listWorkflowDetails)}
                 </Sheet>
-                <Sheet>
+                <Sheet
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-start',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        height: '100%',
+                    }}
+                >
                     <Sheet
                         sx={{
                             display: 'flex',

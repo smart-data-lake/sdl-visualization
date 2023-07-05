@@ -77,12 +77,19 @@ const ContentSheet = (props: {action: Row}) => {
     const { action } = props;
     
     return (
-        <Sheet>
+        <Sheet
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                mr: '1rem',
+            }}
+        >
             {action.metadata.map((meta) => {
                 const toDisplay : any[] = [];
                 if (meta.mainMetrics) {
                     toDisplay.push(
-                        <Box 
+                        <Sheet 
                         key='meta.mainMetrics'
                         sx={{mb: '1.5rem'}}
                         >
@@ -90,19 +97,19 @@ const ContentSheet = (props: {action: Row}) => {
                                     Main metrics
                                 </Typography>
                                 <ResultsTable metrics={meta.mainMetrics}/>
-                            </Box>
+                            </Sheet>
                         )
                     } 
                     if (meta.subFeed) {
                         toDisplay.push(
-                            <Box 
+                            <Sheet 
                             key='meta.subFeed'
                             >
                                 <Typography noWrap level='h5'>
                                     Subfeed
                                 </Typography>
                                 <ResultsTable subFeed={meta.subFeed}/>
-                            </Box>
+                            </Sheet>
                         )
                     } 
                     if (!meta.mainMetrics && !meta.subFeed) {
@@ -173,52 +180,66 @@ const ContentDrawer = (props: {attempt: Attempt, configData: any}) => {
     }
 
     return ( 
-        <Sheet
+        <Sheet 
             sx={{
-                p: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
-                height: '100%'
+                justifyContent: 'space-between',
+                gap: '1rem',
+                height: '100%', 
+                alignItems: 'flex-start',
             }}
             >
-            
-            <Box 
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    position: 'sticky',
-                    mb: '1rem',
-                }}
-            >
-                <Tooltip title={action.step_name}>
-                    <Typography sx={{cursor: 'default'}} noWrap level='h3'>
-                        {action.step_name}
-                    </Typography>
-                </Tooltip>
-                <IconButton
-                    variant="plain" 
-                    color="neutral" 
-                    size="sm" 
-                    onClick={() => navigate(`/workflows/${flowId}/${runNumber}/${taskId}/${tab}`)}
-                    >
-                    <CloseIcon />
-                </IconButton>
-            </Box>
-            <Box
+            <Sheet
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '1rem',
-                    height: '100%',
                     justifyContent: 'space-between',
-                    alignItems: 'flex-end',
+                    gap: '1rem',
+                    height: '100%', 
+                    alignItems: 'flex-start',
+                    
+                
                 }}
             >
-                <Box>
-                    <ContentSheet action={action}/>
-                </Box>
-                <Button disabled={!isActionInConfig()} onClick={() => handleClick() } size="sm" variant="solid">Open in Config Viewer</Button>
-            </Box>
+            <Sheet>
+                <Sheet 
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        position: 'sticky',
+                        mb: '1rem',
+                    }}
+                >
+                    <Tooltip title={action.step_name}>
+                        <Typography sx={{cursor: 'default'}} noWrap level='h3'>
+                            {action.step_name}
+                        </Typography>
+                    </Tooltip>
+                    <IconButton
+                        variant="plain" 
+                        color="neutral" 
+                        size="sm" 
+                        onClick={() => navigate(`/workflows/${flowId}/${runNumber}/${taskId}/${tab}`)}
+                        >
+                        <CloseIcon />
+                    </IconButton>
+                </Sheet>
+                <Sheet
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1rem',
+                        height: '65vh',
+                        justifyContent: 'space-between',
+                        overflowY: 'scroll',
+                    }}
+                    >
+                        <ContentSheet action={action}/>
+                </Sheet>
+            </Sheet>
+            <Button disabled={!isActionInConfig()} onClick={() => handleClick() } size="sm" variant="solid">Open in Config Viewer</Button>
+            </Sheet>
         </Sheet>
      );
 }
