@@ -4,7 +4,7 @@ SDL Visualizer is a single page web application to show SDLB configuration and w
 # Configuration and setup
 SDL Visualizer can parse and resolve SDLB configuration files and state files in the Browser by using a corresponding Javascript library. This is done when loading the URL in the browser and might take some time for large configurations.
 
-## Install
+## Development mode
 
 ### Prerequisites
 You need to have installed the following in your environment before begining:
@@ -12,7 +12,7 @@ You need to have installed the following in your environment before begining:
 - Yarn ([see](https://classic.yarnpkg.com/lang/en/docs/install/#windows-stable))
 - Python3
 
-### Development mode
+### Installation
 #### Intro
 For testing the app in a development mode (i.e. locally) you will first have to **install the prerequisits**. We will then use the script `setup.sh` to take care the the installation of dependencies and the generation of index and summaries used by the app to navigate your config and statefiles.
 
