@@ -194,7 +194,7 @@ const WorkflowHistory = () => {
 				{open && (
 					<>
 						<Sheet>
-							<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+							<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' disabled onClick={() => setOpen(!open)}>
 								<ChevronRightIcon />
 							</IconButton>
 						</Sheet>
@@ -220,7 +220,7 @@ const WorkflowHistory = () => {
 				)}
 				{!open && (
 					<Sheet>
-						<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+						<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' disabled onClick={() => setOpen(!open)}>
 							<ChevronLeftIcon />
 						</IconButton>
 					</Sheet>	
