@@ -50,7 +50,7 @@ const SideBar = () => {
                 flexDirection: 'column',
                 backgroundColor: 'lightgray',
                 maxWidth: '3.5rem',
-                flex: 1,
+                position: 'sticky',
                 pt: '3rem',
             }}
         >

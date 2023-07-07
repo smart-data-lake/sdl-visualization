@@ -17,7 +17,7 @@ const WorkflowsTable = (props : {data : any[]}) => {
                         <th>Last run status</th>
                         <th>Last run duration</th>
                         <th>Number of runs</th>
-                        <th>Number of attempt</th>
+                        <th>Number of attempts</th>
                     </tr>
                 </thead>
                 <tbody>

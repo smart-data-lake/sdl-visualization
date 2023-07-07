@@ -65,7 +65,7 @@ export default function DataDisplayView(props: displayProps) {
 					</Sheet>
 				</Sheet>
 				<TabPanel value="description" className="content-panel">
-					<Sheet sx={{maxWidth: '100rem', flex: 1}}>
+					<Sheet sx={{maxWidth: '90rem', flex: 1}}>
 						<DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
 					</Sheet>
 				</TabPanel>
