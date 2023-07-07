@@ -2,12 +2,9 @@ import React, { useEffect, useState } from "react";
 import PageHeader from "../../../layouts/PageHeader";
 import WorkflowsTable from "./WorkflowsTable";
 import ToolBar from "../ToolBar/ToolBar";
-import { Box, CircularProgress, Sheet } from "@mui/joy";
+import { CircularProgress, Sheet } from "@mui/joy";
 import useFetchWorkflows from "../../../hooks/useFetchData";
 import { TablePagination } from "@mui/material";
-import { durationMicro } from "../../../util/WorkflowsExplorer/date";
-import { formatDuration } from "../../../util/WorkflowsExplorer/format";
-import { useNavigate } from "react-router-dom";
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 const Workflows = () => {
