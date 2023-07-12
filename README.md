@@ -22,7 +22,8 @@ You will first need to build an index for your statefiles. This preprocessing st
 ````
 ./build_index.sh <path-to-statefiles> <path-to-configfiles>
 ````
-> You can 
+
 
 #### Start the development server
 Just run `yarn start` to spin the local development server
+
