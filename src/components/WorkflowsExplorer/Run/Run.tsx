@@ -5,6 +5,7 @@ import { useLocation } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
 import { CircularProgress } from "@mui/joy";
 import { displayProps } from "../../ConfigExplorer/DataDisplayView";
+import NotFound from "../../../layouts/NotFound";
 
 /**
     The Run component displays information about a specific run of a workflow.
@@ -20,12 +21,29 @@ const Run = (props : {panelOpen?: boolean, configData: displayProps}) => {
 
     if (isLoading || isFetching) return <CircularProgress/>
     
-    const attempt = new Attempt(data);
+    const attempt = data.detail ? undefined : new Attempt(data);
+    if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
+
     return (
         <>
-            <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId} />
-            {/* <RunDetails attempt={attempt}/> */}
-            <TabNav attempt={attempt} panelOpen={props.panelOpen} configData={props.configData}/>
+			{data ? (
+				(!data.detail && attempt) ? (
+                <>
+                    <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId} />
+                    {/* <RunDetails attempt={attempt}/> */}
+                    <TabNav attempt={attempt} panelOpen={props.panelOpen} configData={props.configData}/>
+                </>
+                ):(
+                    <>
+                        <NotFound errorType={500}/>
+                    </>
+                )
+            ):(
+                <>
+                    <NotFound/>
+                </>
+            )
+        }
         </>
     );
 }

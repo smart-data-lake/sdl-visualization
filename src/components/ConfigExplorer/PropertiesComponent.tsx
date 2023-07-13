@@ -34,7 +34,7 @@ export default function PropertiesComponent(props: {entries: {key: string, value
     else if (Array.isArray(value) && React.isValidElement(value[0])) {} // no operation
     // map every array element to react element
     else if (Array.isArray(value)) {
-      value = value.map((e,idx) => createPropertiesComponent({obj: e, marginTop: (idx==0 ? "0px" : "8px")}));
+      value = value.map((e,idx) => createPropertiesComponent({obj: e, marginTop: (idx===0 ? "0px" : "8px")}));
     // create a key/value table for objects
     } else if (typeof value == 'object' && !Array.isArray(value)) {
       value = createPropertiesComponent({obj: value});

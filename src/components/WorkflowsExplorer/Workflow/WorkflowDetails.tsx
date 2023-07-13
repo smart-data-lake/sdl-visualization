@@ -1,4 +1,4 @@
-import { List, ListItem, Sheet, Stack, Typography } from "@mui/joy";
+import { List, ListItem, Sheet, Typography } from "@mui/joy";
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
 import { getISOString } from "../../../util/WorkflowsExplorer/date";

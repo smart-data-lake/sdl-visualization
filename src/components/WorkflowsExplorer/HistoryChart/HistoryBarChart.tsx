@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -6,17 +5,8 @@ import { CustomTooltip } from './ChartControl';
 
 const HistoryBarChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[]}) => {
     const { data } = props;
-	  const [width, setWidth] = useState(data.length * 30);
     const curr = useLocation();
 	  const navigate = useNavigate();
-
-    useEffect(() => {
-      if (data.length < 5) {
-        setWidth(100);
-      } else {
-        setWidth(data.length * 30);
-      }
-    }, [data]);
 
     const handleClick = (data, index) => {
         const target = `${curr.pathname}/${data.runId}/${data.attemptId}/timeline`

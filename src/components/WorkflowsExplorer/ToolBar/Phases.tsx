@@ -1,4 +1,4 @@
-import { Button, Checkbox, Menu, Sheet, Switch, Typography } from "@mui/joy";
+import { Button, Checkbox, Menu, Sheet, Typography } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { getButtonColor } from "../../../util/WorkflowsExplorer/StatusInfo";
 
@@ -6,7 +6,6 @@ const Phases = (props: {updatePhases: (phases: {name: string, checked: boolean}[
     const { updatePhases } = props;
     const [phases, setPhases] = useState([{name: 'Execution', checked: true}, {name: 'Prepared', checked: false}, {name: 'Initialized', checked: false}]);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const [selectedIndex, setSelectedIndex] = useState<number>(1);
 
     const open = Boolean(anchorEl);
     
@@ -29,13 +28,6 @@ const Phases = (props: {updatePhases: (phases: {name: string, checked: boolean}[
         updatePhases(phases);
     }, [phases])
 
-    const createHandleClose = (index: number) => () => {
-        setAnchorEl(null);
-        if (typeof index === 'number') {
-            setSelectedIndex(index);
-        }
-    };
-
     return ( 
         <Button size="sm" variant="outlined" onClick={handleClick} sx={{gap: '1rem'}}>
             Phases
@@ -43,7 +35,6 @@ const Phases = (props: {updatePhases: (phases: {name: string, checked: boolean}[
                 id="selected-demo-menu"
                 anchorEl={anchorEl}
                 open={open}
-                onClose={createHandleClose(-1)}
                 aria-labelledby="selected-demo-button"
             >
                 {phases.map((phase, index) => (

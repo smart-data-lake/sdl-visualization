@@ -1,4 +1,4 @@
-import { Node, Edge, DAGraph, computeNodePositions, PartialDataObjectsAndActions } from '../ConfigExplorer/Graphs'
+import { Node, Edge, DAGraph, PartialDataObjectsAndActions } from '../ConfigExplorer/Graphs'
 
 export class Lineage {
     lineageData: any;

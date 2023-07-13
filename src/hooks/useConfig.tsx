@@ -1,7 +1,5 @@
-import React, { useState } from "react";
-import { useLocation } from "react-router-dom";
-import { getUrlContent, listConfigFiles, readConfigIndexFile, readManifestFile, parseTextStrict, standardizeKeys } from "../util/ConfigExplorer/HoconParser";
-import { Manifest, useManifest } from "./useManifest";
+import { getUrlContent, listConfigFiles, readConfigIndexFile, parseTextStrict } from "../util/ConfigExplorer/HoconParser";
+import { Manifest } from "./useManifest";
 import { useQuery } from "react-query";
 
 function getConfig(manifest:Manifest) {

@@ -1,6 +1,6 @@
 import { Box, Divider, Input, Typography } from "@mui/joy";
-import React, { useEffect, useState } from "react";
-import { Row, SortType } from "../../../types";
+import { useEffect, useState } from "react";
+import { SortType } from "../../../types";
 import { sortRows } from "../../../util/WorkflowsExplorer/row";
 import FilterMenu from "./FilterMenu";
 import SelectSort from "./SelectSort";
@@ -44,7 +44,7 @@ const ToolBar = (
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
     const [sort, setSort] = useState<SortType>('start time asc');
-	const style = props.style ? props.style : 'vertical';
+	const style = props.style ? props.style : 'horizontal';
 
 	const updateList = (list: boolean[]) => {
 		setList(list);
@@ -111,7 +111,7 @@ const ToolBar = (
                                     Status
                                 </Typography>
                                 <Divider/>
-                                <FilterMenu filters={filters} updateList={updateList} style={'vertical'}/>
+                                <FilterMenu filters={filters} updateList={updateList} mode={'vertical'}/>
                             </Box>
                         </>
                     )

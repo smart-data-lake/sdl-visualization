@@ -1,9 +1,7 @@
 import './App.css';
 import ElementList from './ElementList';
-import { useEffect } from 'react';
-import {Box, Toolbar } from '@mui/material';
-import { Routes, Route, Outlet } from "react-router-dom";
-import { CircularProgress, Sheet } from '@mui/joy';
+import { Outlet } from "react-router-dom";
+import { Sheet } from '@mui/joy';
 import PageHeader from '../../layouts/PageHeader';
 
 
