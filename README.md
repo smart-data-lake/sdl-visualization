@@ -12,26 +12,18 @@ You need to have installed the following in your environment before begining:
 - Yarn ([see](https://classic.yarnpkg.com/lang/en/docs/install/#windows-stable))
 - Python3
 
-### Installation
+### How to use?
 #### Intro
-For testing the app in a development mode (i.e. locally) you will first have to **install the prerequisits**. We will then use the script `setup.sh` to take care the the installation of dependencies and the generation of index and summaries used by the app to navigate your config and statefiles.
+For testing the app in a development mode (i.e. locally) you will first have to **install the prerequisits**. There are different ways to provide the data for the UI to visualize. Currently the ready-to-use solution that helps you to quickly get started with the UI is using a local setup. The following will provide a description on how to get started with it. 
+> Note: you can implement your own connector to the UI! For this have a look at `src/api` and the different interfaces we use to feed the data to the UI
 
-#### Files
-Place all your config and state files (no matter your file structure) into the directory `public/config` and `public/state`
+#### Prepare your files
+You will first need to build an index for your statefiles. This preprocessing step makes the finding and fetching of your statefiles by the UI efficient. You will have to run the script `build_index.sh` and provide the location of your statefile collection and config file collection as arguments. The script will skip building the index if you are not providing the paths. For the local development server to be able to access your files you should place your configuration files in `public/config` and your statefiles in `public/state` (note that you do not need internal directory structure for the script to work). Once you're setup with your files, you can run: 
+````
+./build_index.sh <path-to-statefiles> <path-to-configfiles>
+````
 
-#### Auto-setup
-Make the script `setup.sh` executable by running the following in the project's directory:
-````
-$ chmod u+x setup.sh
-````
-Then run the following to finnish setting up:
-````
-$ ./setup.sh
-````
-The setup will install everything and start a local development server on `localhost:3000`
 
-### Use the local development setup
-#### New files
-Whenever you add new files (in `public/config` or in `public/state`) you will have to run the setup script again in order to aggregate the latest data.
-#### Day to day use
+#### Start the development server
 Just run `yarn start` to spin the local development server
+
