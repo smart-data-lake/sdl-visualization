@@ -12,5 +12,5 @@
     "display": "standalone",
     "theme_color": "#000000",
     "background_color": "#ffffff",
-    "backendConfig": "rest;http://localhost:8000/api/v1"
+    "backendConfig": "rest;https://wiqb4bv4k3g2pyegx3riqtyo6q0augot.lambda-url.eu-central-1.on.aws/api/v1"
 }

@@ -104,7 +104,7 @@ const WorkflowHistory = () => {
 			});
 			return res;
 		}
-		
+
 		useEffect(() => {
 			if (!isLoading && !data.detail) {
 				updateRows(data.runs);
@@ -113,13 +113,13 @@ const WorkflowHistory = () => {
 			} else if (!isLoading && data.detail) {
 				setRows([]);
 			}
-		}, [data, isLoading, rows.length])
-		
+		}, [data])
+	
 		useEffect(() => {
 			setToDisplay(rows.slice(0, rowsPerPage));
 			setCount(rows.length)
 			setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices?.rangeLeft, rangeRight: indices?.rangeRight})
-		}, [rows, indices?.rangeLeft, indices?.rangeRight, rowsPerPage, page])
+		}, [rows])
 	
 		useEffect(() => {
 			setBarChartData(generateChartData(toDisplay))
