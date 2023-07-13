@@ -1,6 +1,6 @@
 import { Box, IconButton } from '@mui/material';
 import { useState, useCallback, useEffect, useRef} from 'react';
-import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, useReactFlow } from 'react-flow-renderer';
+import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge } from 'react-flow-renderer';
 import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions } from '../../util/ConfigExplorer/Graphs';
 import { useNavigate } from "react-router-dom";
 import './ComponentsStyles.css';
@@ -9,9 +9,6 @@ import { useParams } from 'react-router-dom';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import DownloadButton from './DownloadLineageButton';
-import { Lineage } from '../../util/WorkflowsExplorer/Lineage';
-import Run from '../WorkflowsExplorer/Run/Run';
-import RunLineageEdge from '../WorkflowsExplorer/Run/RunLineageEdge';
 
 
 
@@ -38,7 +35,7 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph){
  * of each node in order to layyer them. The method is replaced by the dagre library
  * for the layout functions.
  */
-function createReactFlowNodes_Old(dataObjectsAndActions: DAGraph){
+/**function createReactFlowNodes_Old(dataObjectsAndActions: DAGraph){
   var result: any[] = [];
   var nodeType = 'default';
   for (let currentLevel = 0; currentLevel<dataObjectsAndActions.levels.length; currentLevel++){
@@ -65,7 +62,7 @@ function createReactFlowNodes_Old(dataObjectsAndActions: DAGraph){
     }
   }
   return result;
-}
+}**/
 
 
 function createReactFlowEdges(dataObjectsAndActions: DAGraph){
@@ -105,9 +102,9 @@ type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of 
 
 type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 
-const edgeTypes = {
+/**const edgeTypes = {
   runLineage: RunLineageEdge,
-}
+}**/
 
 
 function LineageTab(props: flowProps) {
@@ -189,7 +186,7 @@ function LineageTab(props: flowProps) {
   }, [hidden, onlyDirectNeighbours]); //edges must be hidden at each render (that is, also when we expand/compress the graph)
 
   //DEPRECATED
-  function renderPartialGraph(nodeId: string){
+  /**function renderPartialGraph(nodeId: string){
 
     const partialGraphPair = doa.returnPartialGraphInputs(nodeId);
     const partialNodes = partialGraphPair[0];
@@ -201,7 +198,7 @@ function LineageTab(props: flowProps) {
 
     setNodes(newNodes);
     setEdges(newEdges);
-  }
+  }**/
 
   //Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
   const onNodesChange = useCallback(
@@ -232,25 +229,25 @@ function LineageTab(props: flowProps) {
 
   // container holding SVG needs manual height resizing to fill 100%
   const chartBox = useRef<HTMLDivElement>();
-  const [contentHeight, setContentHeight] = useState(100);
+  /**const [contentHeight, setContentHeight] = useState(100);**/
 
-  const reactFlow = useReactFlow();
+  /**const reactFlow = useReactFlow();**/
 
-  function handleResize() {
+  /**function handleResize() {
     if (chartBox.current) {
       const height = window.innerHeight - chartBox.current.offsetTop - 25; // 25px bottom margin...
       setContentHeight(height);
     }
-  }
+  }**/
 
 //Asynchronously changes the centering of the lineage
-  function init() {
+  /**function init() {
     handleResize();
     setTimeout(() => {
       reactFlow.setCenter(0, 0, {zoom: 0.8});
     }, 1);
     window.addEventListener('resize', () => handleResize());
-  }
+  }**/
 
   return (
     <Box 
@@ -263,7 +260,7 @@ function LineageTab(props: flowProps) {
       <ReactFlow 
         nodes={nodes}
         edges={edges}
-        onInit={init}
+        /*onInit={init}*/
         defaultPosition={[0,0]} 
         onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
         onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}

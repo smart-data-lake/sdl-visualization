@@ -12,5 +12,5 @@
     "display": "standalone",
     "theme_color": "#000000",
     "background_color": "#ffffff",
-    "backendConfig": "local;"
+    "backendConfig": "rest;http://localhost:8000/api/v1"
 }

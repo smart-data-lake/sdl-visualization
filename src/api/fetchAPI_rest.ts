@@ -10,7 +10,7 @@ export class fetchAPI_rest implements fetchAPI {
     getWorkflows = () => {
         return fetch(`${this.url}/workflows`, {mode:'cors'})
         .then(res => res.json())
-        .catch(err => console.log(err))
+        .catch(err => console.log("Unexpected Server error: ", err))
     };
     
     

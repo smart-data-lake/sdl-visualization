@@ -1,19 +1,18 @@
 import { useLocation } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
-import RunsHistoryTable from "./WorkflowHistoryTable";
 import { CircularProgress, Sheet } from "@mui/joy";
 import ToolBar from "../ToolBar/ToolBar";
 import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import { useEffect, useState } from "react";
 import { TablePagination } from "@mui/material";
 import ChartControl from "../HistoryChart/ChartControl";
-import { durationMicro, getISOString } from "../../../util/WorkflowsExplorer/date";
-import WorkflowDetails from "./WorkflowDetails";
+import { durationMicro } from "../../../util/WorkflowsExplorer/date";
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import IconButton from '@mui/joy/IconButton';
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import WorkflowHistoryTable from "./WorkflowHistoryTable";
+import NotFound from "../../../layouts/NotFound";
 
 
 export type Indices = {
@@ -41,28 +40,7 @@ const WorkflowHistory = () => {
 	const [lineChartData, setLineChartData] = useState<any[]>([])
 	const [indices, setIndices] = useState<Indices>({toDisplayLeft: 0, toDisplayRight: rowsPerPage})
 	const [open, setOpen] = useState<Boolean>(false)
-	const [startDate, setStartDate] = useState<Date>(new Date(0))
-	const [endDate, setEndDate] = useState<Date>(new Date())
-	const [pieChartData, setPieChartData] = useState<any[]>([])
 	
-	useEffect(() => {
-		if (!isLoading) {
-			updateRows(data.runs);
-			setCount(rows.length)
-			setLineChartData(generateChartData(data.runs))
-			setPieChartData(lineChartData)
-		}
-	}, [data])
-	
-	useEffect(() => {
-		setToDisplay(rows.slice(0, rowsPerPage));
-		setCount(rows.length)
-		setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices?.rangeLeft, rangeRight: indices?.rangeRight})
-	}, [rows])
-
-	useEffect(() => {
-		setBarChartData(generateChartData(toDisplay))
-	}, [toDisplay])
 	
 	const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		setRowsPerPage(parseInt(event.target.value, 10));
@@ -81,14 +59,12 @@ const WorkflowHistory = () => {
 		const targetRows = rows ? rows : data.runs;
 		setRows(targetRows.sort(cmpAlgorithm));
 	}
-
+	
 	const defaultCmp = (a: any, b: any) => {
 		return new Date(b.attemptStartTime).getTime() - new Date(a.attemptStartTime).getTime();
 	}
-
+	
 	const handleDateRangeChange = (start: Date, end: Date) => {
-		setStartDate(start)
-		setEndDate(end)
 		const filteredRows = data.runs.filter((row) => {
 			const date = new Date(row.attemptStartTime)
 			return date >= start && date <= end
@@ -104,7 +80,7 @@ const WorkflowHistory = () => {
 		}
 		setIndices({toDisplayLeft: indices.toDisplayLeft, toDisplayRight: indices.toDisplayRight, rangeLeft: data.runs.length - (rangeRight + filteredRows.length), rangeRight: data.runs.length - 1 - rangeRight})
 	}
-
+	
 	const generateChartData = (data: any) => {
 		const res : {
 			value: number,
@@ -113,7 +89,7 @@ const WorkflowHistory = () => {
 			runId: number,
 			attemptId: number
 		}[] = [];
-	
+		
 		
 		data.forEach((run) => {
 			res.push(
@@ -124,110 +100,134 @@ const WorkflowHistory = () => {
 					runId: run.runId,
 					attemptId: run.attemptId    
 				}
-			)
-		});
-		return res;
-	}
+				)
+			});
+			return res;
+		}
+		
+		useEffect(() => {
+			if (!isLoading && !data.detail) {
+				updateRows(data.runs);
+				setCount(rows.length)
+				setLineChartData(generateChartData(data.runs))
+			} else if (!isLoading && data.detail) {
+				setRows([]);
+			}
+		}, [data, isLoading, rows.length])
+		
+		useEffect(() => {
+			setToDisplay(rows.slice(0, rowsPerPage));
+			setCount(rows.length)
+			setIndices({toDisplayLeft: page*rowsPerPage, toDisplayRight: (page+1)*rowsPerPage, rangeLeft: indices?.rangeLeft, rangeRight: indices?.rangeRight})
+		}, [rows, indices?.rangeLeft, indices?.rangeRight, rowsPerPage, page])
+	
+		useEffect(() => {
+			setBarChartData(generateChartData(toDisplay))
+		}, [toDisplay])
 
-	if (isLoading || isFetching) return (<CircularProgress/>)
+		if (isLoading || isFetching) return (<CircularProgress/>)
+		if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
 
-	return (
-		<>
-			<PageHeader title={workflowName} />             
-			<Sheet
-				sx={{
-					display: 'flex',
-					height: '100%',
-				}}
-			>
-				<Sheet
-					sx={{
-						height: '100%',
-						px: '1rem',
-						flex: 3,
-					}}
-				>                   
-					<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
-					<ToolBar 
-						style={'horizontal'} 
-						controlledRows={data.runs} 
-						sortEnabled={false}
-						updateRows={updateRows}
-						searchColumn={'runId'}
-						searchMode={'equals'}
-						searchPlaceholder={'Search by Run ID'}
-						filters={checkFiltersAvailability(data.runs, defaultFilters())}
-						datetimePicker={handleDateRangeChange}
-						/>
-					<Sheet sx={{
-						mt: '1rem',
-						width: '100%',
-						height: '53vh',
-						display: 'flex',
-						}}
-					>
-						<WorkflowHistoryTable data={toDisplay} updateRows={updateRows}/>
-					</Sheet>
-					<Sheet
-						sx={{
-							position: 'sticky',
-							bottom: 0,
-						}}
-					>
-						<TablePagination
-							rowsPerPageOptions={[10, 25, 50, 100]}
-							rowsPerPage={rowsPerPage}
-							page={page}
-							SelectProps={{
-							inputProps: {
-								'aria-label': 'rows per page',
-							},
-							native: true,
-							}}
-							onPageChange={handleChangePage}
-							onRowsPerPageChange={handleChangeRowsPerPage}
-							component="div"
-							count={count}
-						/> 
-					</Sheet>
-				</Sheet>
-				{open && (
+		return (
+			<>
+			{data ? (
+				(!data.detail) ? (
 					<>
-						<Sheet>
-							<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' disabled onClick={() => setOpen(!open)}>
-								<ChevronRightIcon />
-							</IconButton>
-						</Sheet>
+						<PageHeader title={workflowName} />             
 						<Sheet
 							sx={{
-								flex: 1,
-								pt: '2rem',
-								pl: '1rem',
-								borderLeft: '1px solid lightgray',
-								position: 'absolute',
-								top: 0,
-								height: '86vh',
-								left: '70%',
 								display: 'flex',
-								flexDirection: 'column',
-								boxShadow: '-10px 30px 20px lightgray',
-								p: '1rem'
 							}}
 						>
-							<WorkflowDetails data={data} pieChartData={pieChartData}/> 
+							<Sheet
+								sx={{
+									px: '1rem',
+									flex: 3,
+								}}
+							>                   
+								<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
+								<ToolBar 
+									controlledRows={data.runs} 
+									sortEnabled={false}
+									updateRows={updateRows}
+									searchColumn={'runId'}
+									searchMode={'equals'}
+									searchPlaceholder={'Search by Run ID'}
+									filters={checkFiltersAvailability(data.runs, defaultFilters())}
+									datetimePicker={handleDateRangeChange}
+									/>
+								<Sheet sx={{
+									mt: '1rem',
+									width: '100%',
+									display: 'flex',
+									}}
+								>
+									<WorkflowHistoryTable data={toDisplay} updateRows={updateRows}/>
+								</Sheet>
+								<Sheet
+									sx={{
+										position: 'sticky',
+										bottom: 0,
+									}}
+								>
+									<TablePagination
+										rowsPerPageOptions={[10, 25, 50, 100]}
+										rowsPerPage={rowsPerPage}
+										page={page}
+										SelectProps={{
+										inputProps: {
+											'aria-label': 'rows per page',
+										},
+										native: true,
+										}}
+										onPageChange={handleChangePage}
+										onRowsPerPageChange={handleChangeRowsPerPage}
+										component="div"
+										count={count}
+									/> 
+								</Sheet>
+							</Sheet>
+							{open && (
+								<>
+								<Sheet>
+								<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+									<ChevronRightIcon />
+								</IconButton>
+								</Sheet>
+								<Sheet
+									sx={{
+										flex: 1,
+										pt: '2rem',
+										pl: '1rem',
+										borderLeft: '1px solid lightgray',
+									}}
+								>
+									{/* <WorkflowDetails data={data} pieChartData={pieChartData}/> */}
+								</Sheet>
+									</>
+							)}
+							{!open && (
+								<Sheet>
+									<IconButton disabled sx={{mt: '1rem'}} variant='plain' color='neutral' onClick={() => setOpen(!open)}>
+										<ChevronLeftIcon />
+									</IconButton>
+								</Sheet>	
+							)}
 						</Sheet>
+									
+					</>   
+					):(
+						<>
+							<NotFound errorType={500}/>
+						</>
+					)
+				):(
+					<>
+						<NotFound/>
 					</>
-				)}
-				{!open && (
-					<Sheet>
-						<IconButton sx={{mt: '1rem'}} variant='plain' color='neutral' disabled onClick={() => setOpen(!open)}>
-							<ChevronLeftIcon />
-						</IconButton>
-					</Sheet>	
-				)}
-			</Sheet>
-						
-		</>   
+				)
+			}
+		</>
 	);
 }
  

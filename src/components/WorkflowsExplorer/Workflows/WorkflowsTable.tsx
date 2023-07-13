@@ -1,5 +1,4 @@
-import { Box, CircularProgress, Table } from "@mui/joy";
-import useFetchWorkflows from "../../../hooks/useFetchData";
+import { Box, Table } from "@mui/joy";
 import WorkflowRow from "./WorkflowRow";
 
 const WorkflowsTable = (props : {data : any[]}) => {

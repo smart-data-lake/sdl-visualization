@@ -6,6 +6,7 @@ import { CircularProgress, Sheet } from "@mui/joy";
 import useFetchWorkflows from "../../../hooks/useFetchData";
 import { TablePagination } from "@mui/material";
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
+import NotFound from "../../../layouts/NotFound";
 
 const Workflows = () => {
     const { data, isLoading } = useFetchWorkflows();
@@ -16,15 +17,17 @@ const Workflows = () => {
     const [count, setCount] = useState(0);
 
     useEffect(() => {
-        if (!isLoading) {
+        if (!isLoading && !data.detail) {
             setRows(data);
+        } else if (!isLoading && data.detail) {
+            setRows([]);
         }
     }, [data, isLoading])
 
     useEffect(() => {
         setToDisplay(rows.slice(0, rowsPerPage));
         setCount(rows.length)
-    }, [rows])
+    }, [rows, rowsPerPage])
 
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
@@ -42,52 +45,62 @@ const Workflows = () => {
     }
 
     if (isLoading) return <CircularProgress/>;
+    if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
+    
     return (      
         <>
-            <PageHeader title={'Workflows'} noBack={true} />
-            
-            <Sheet
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-evenly',
-                    alignItems: 'left',
-                    
-                    p: '1rem',
-                    gap: '1rem'
-                }}
-                >
-                <ToolBar 
-                    style={'horizontal'} 
-                    controlledRows={data} 
-                    updateRows={updateRows} 
-                    filters={checkFiltersAvailability(data, defaultFilters('lastStatus'))}
-                    searchColumn={"name"}
-                    sortEnabled={false}
-                    searchPlaceholder="Search by name"
-                    searchMode="contains"
-                />
-                <Sheet
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column'
-                    }}
-                    >
-                    {data && (
-                        <>
-                            <WorkflowsTable data={toDisplay}/>
-                            <TablePagination
-                                component="div"
-                                count={count}
-                                page={page}
-                                onPageChange={handleChangePage}
-                                rowsPerPage={rowsPerPage}
-                                onRowsPerPageChange={handleChangeRowsPerPage}
-                                />
-                        </>
-                    )}
-                </Sheet>
-            </Sheet>
+            {data ? (
+                (!data.detail) ? (
+                    <>
+                        <PageHeader title={'Workflows'} noBack={true} />
+                        <Sheet
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-evenly',
+                                alignItems: 'left',
+                                
+                                p: '1rem',
+                                gap: '1rem'
+                            }}
+                        >
+                            <ToolBar 
+                                controlledRows={data} 
+                                updateRows={updateRows} 
+                                filters={checkFiltersAvailability(data, defaultFilters('lastStatus'))}
+                                searchColumn={"name"}
+                                sortEnabled={false}
+                                searchPlaceholder="Search by name"
+                                searchMode="contains"
+                            />
+                            <Sheet
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column'
+                                }}
+                            >
+                                <WorkflowsTable data={toDisplay}/>
+                                <TablePagination
+                                    component="div"
+                                    count={count}
+                                    page={page}
+                                    onPageChange={handleChangePage}
+                                    rowsPerPage={rowsPerPage}
+                                    onRowsPerPageChange={handleChangeRowsPerPage}
+                                    />
+                            </Sheet>
+                        </Sheet>
+                    </>
+                ):(
+                    <>
+                        <NotFound errorType={500}/>
+                    </>
+                )
+            ):(
+                <>
+                    <NotFound/>
+                </>
+            )}
         </>
     );
 }

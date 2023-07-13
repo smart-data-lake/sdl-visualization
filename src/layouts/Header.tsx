@@ -1,5 +1,3 @@
-import React from 'react'
-
 import { List, ListItem, Sheet } from '@mui/joy'
 import BasicBreadcrumbs from './BasicBreadCrumbs';
 
@@ -34,7 +32,7 @@ const Header = () => {
                     gap: 2
                 }}>
                     <ListItem>
-                        <img src="/images/sdl_logo_old_plain_white.svg" height={20} />
+                        <img alt="SDLB UI logo" src="/images/sdl_logo_old_plain_white.svg" height={20} />
                     </ListItem>
                     <ListItem>
                         <BasicBreadcrumbs />

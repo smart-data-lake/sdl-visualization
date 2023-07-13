@@ -3,7 +3,6 @@ import parseCustomMarkdown from '../../util/ConfigExplorer/MarkdownParser';
 import 'github-markdown-css/github-markdown.css';
 import MarkdownComponent from './MarkdownComponent';
 import { getUrlContent } from '../../util/ConfigExplorer/HoconParser';
-import { Sheet } from '@mui/joy';
 
 // cache for already loaded descriptions
 var descriptionCache: any = {};

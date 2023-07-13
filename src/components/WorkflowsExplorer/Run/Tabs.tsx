@@ -20,12 +20,12 @@ import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArro
 import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import { displayProps } from "../../ConfigExplorer/DataDisplayView";
 import LineageTab from "../../ConfigExplorer/LineageTab";
-import  { ReactFlowProvider } from "react-flow-renderer";
+import { ReactFlowProvider } from "react-flow-renderer";
+
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
 import { DAGraph } from "../../../util/ConfigExplorer/Graphs";
 
 export const defaultDrawerWidth = 600;
-
 
 /**
  * This is a TypeScript function that returns a set of three React components which are rendered inside a parent component. 
@@ -95,7 +95,6 @@ const TabsPanels = (props : {attempt: Attempt, configData: object, open?: boolea
                         sortEnabled={true}
                         searchColumn={"step_name"}
                         searchPlaceholder="Search by action name"
-                        style="horizontal"
                         searchMode="contains"
                         updateChecked={attempt.runInfo.runStateFormatVersion && attempt.runInfo.runStateFormatVersion > 1 ? updateChecked : undefined}
                         />
