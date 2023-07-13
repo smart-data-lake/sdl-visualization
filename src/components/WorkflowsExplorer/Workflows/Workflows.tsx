@@ -9,7 +9,7 @@ import { checkFiltersAvailability, defaultFilters } from "../../../util/Workflow
 import NotFound from "../../../layouts/NotFound";
 
 const Workflows = () => {
-    const { data, isLoading } = useFetchWorkflows();
+    const { data, isLoading, isFetching } = useFetchWorkflows();
     const [rows, setRows] = useState<any[]>([]);
     const [toDisplay, setToDisplay] = useState<any[]>(rows);
     const [page, setPage] = useState(0);
@@ -44,7 +44,8 @@ const Workflows = () => {
         setRows(rows);
     }
 
-    if (isLoading) return <CircularProgress/>;
+    console.log(isLoading, isFetching)
+    if (isLoading || isFetching) return <CircularProgress/>;
     if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
     
     return (      
