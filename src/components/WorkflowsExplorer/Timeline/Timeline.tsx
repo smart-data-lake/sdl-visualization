@@ -191,7 +191,7 @@ function createRowRenderer({
 
 const ListContainer = styled.div<{ customMinHeight: number }>`
     width: 100%;  
-    height: 650px;
+    height: 100%;
 `;
 
 export default Timeline;
