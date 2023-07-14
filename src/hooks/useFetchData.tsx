@@ -10,6 +10,8 @@ function fetcher() {
     return _fetcher;
 }
 
+// The following are the React Query wrapings of the fetcher methods
+
 export const useFetchWorkflows = () => {
     return useQuery('workflows', () => fetcher().getWorkflows());
 }

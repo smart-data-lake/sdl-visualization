@@ -11,7 +11,7 @@ Prerequisites
 
 To run the app in a local developer server, it suffices to clone the project, install the prerequisites and run the "yarn start" command. You can then see your changes updated live as any React dev project.
 
-> Note that if you have not setup your backend before, you will not be able to visualize statefiles. Please read the chapter "Backend" to learn about the different setup options.
+> **IMPORTANT**: if you have not setup your backend, you will not be able to visualize statefiles. Please read the chapter "Backend" to learn about the different setup options.
 
 ## Build and deployement
 
@@ -20,11 +20,11 @@ The deployment and release of the project has been automated in github using a b
 Alternatively, the createRelease.sh script can be used to manually build the project and then create a `.tar` file with the necessary elements. Since this script uses the yarn build command, one should install yarn (for example with sudo apt-get install yarn) and run `yarn install` before executing the script.
 
 
-## Backend
+# Backend
 
 We defined the data format and how the data are fetched in frontend in the chapter "_Frontend > Internal logic > Workflows explorer > API and connectors_". We now explain in greater detail different way of setting up a source that can be used by the frontend.
 
-### Local setup
+## Local setup
 
 Prerequisites:
 - Python3 installed
@@ -45,7 +45,7 @@ Finally you have to make sure you are using the default connector for local stat
 
 You should now be able to browse to `localhost:3000/` and should be greeted by the home page.
 
-### REST API
+## REST API
 
 Perequisites:
 - A REST service with 3 endpoint for each format of data defined in the chapter "_Frontend > Internal logic > Workflow explorer_"
