@@ -20,13 +20,14 @@ const WorkflowHistoryTable = (props : {data: any[], updateRows: (rows?: any[], c
         <Box
             sx={{
                 overflowY: 'scroll',
+                height: 'calc(100vh - 28rem)',
             }}
         >
             <Table 
                 size='sm' 
                 hoverRow 
                 color='neutral'
-                
+                stickyHeader
              >
                 <thead>
                     <tr>

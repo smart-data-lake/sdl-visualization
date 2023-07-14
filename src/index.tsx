@@ -26,10 +26,7 @@ const queryClient = new QueryClient({
 root.render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-
       <App />
-      <ReactQueryDevtools initialIsOpen={false} />
-
     </QueryClientProvider>
   </StrictMode>
 );
