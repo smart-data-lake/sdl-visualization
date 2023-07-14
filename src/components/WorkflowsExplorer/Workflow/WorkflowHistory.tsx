@@ -113,7 +113,7 @@ const WorkflowHistory = () => {
 			} else if (!isLoading && data.detail) {
 				setRows([]);
 			}
-		}, [data])
+		}, [data, isLoading, rows.length])
 		
 		useEffect(() => {
 			setToDisplay(rows.slice(0, rowsPerPage));
