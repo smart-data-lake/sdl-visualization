@@ -7,12 +7,12 @@ export interface Manifest {
 }
 
 /**
- * Provide the webapp configuration (Manifest) to nested code, 
+ * Provide the app configuration (Manifest) to nested code, 
  * avoiding lots of useManifest hooks and passing the manifest to the corresponding place where it's needed.
  */
 var _persistedManifest: Manifest;
 export function getPersistedManifest() {
-    if (!_persistedManifest) throw Error("Oop, manifest is not yet read. Please take care that useManifest is executed before this code! Hint: useQuery(..., enabled=!manifestIsLoading)...");
+    if (!_persistedManifest) throw Error("Oops, manifest is not yet read. Please take care that useManifest is executed before this code! Hint: useQuery(..., enabled=!manifestIsLoading)...");
     return _persistedManifest;
 }
 

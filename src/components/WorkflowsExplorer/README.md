@@ -1,0 +1,2 @@
+## About this folder
+The React components used for the workflow explorer are all located in this folder. The name of each directory reflects the particular functionality of the parent component of that directory. Further detailed information is available as md files in each folder.
