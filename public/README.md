@@ -1,4 +1,4 @@
-# Serving on Linux
+# Lighttpd
 
 Install small Webserver "lighttpd"
 `sudo apt install lighttpd`
