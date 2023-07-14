@@ -1,0 +1,69 @@
+import { lighten } from 'polished';
+import { DefaultTheme } from 'styled-components';
+import { Step, Row } from '../../../../types';
+import { StepRowData } from '../useTaskData';
+import { LabelPosition } from './LineElement';
+
+/**
+ * Finds place for duration label in timeline. Default right, if not space left, if no space then none.
+ * @param fromLeft % value from left of timeline
+ * @param width Width of given element
+ * @returns Position where label should be positioned
+ */
+export function getLengthLabelPosition(fromLeft: number | undefined, width: number | undefined): LabelPosition {
+  if (!(fromLeft && width)) return 'none';
+  if (fromLeft + width < 90) {
+    return 'right';
+  } else if (fromLeft + width > 90 && fromLeft > 10) {
+    return 'left';
+  }
+
+  return 'none';
+}
+
+export function getStepDuration(step: Step, status: string, calculatedDuration: number): number {
+  if (status === 'running') {
+    return Date.now() - step.ts_epoch;
+  }
+
+  return step.duration && step.duration > calculatedDuration ? step.duration : calculatedDuration;
+}
+
+export function getRowStatus(
+  row: { type: 'step'; data: Step; rowObject: StepRowData } | { type: 'task'; data: Row },
+): string {
+  if (row.type === 'step') {
+    return row.rowObject.status;
+  } else {
+    if (row.data.status) {
+      return row.data.status;
+    } else {
+      return row.data.finished_at ? 'SUCCEEDED' : 'RUNNING';
+    }
+  }
+}
+
+export function lineColor(theme: DefaultTheme, grayed: boolean, state: string, isFirst: boolean): string {
+  if (grayed) {
+    return '#c7c7c7';
+  } else {
+    switch (state) {
+      case 'SUCCEEDED':
+        return !isFirst ? lighten(0.3, theme.color.bg.red) : theme.color.bg.green;
+      case 'RUNNING':
+        return theme.color.bg.greenLight;
+      case 'PENDING':
+        return theme.color.bg.yellow;
+      case 'FAILED':
+        return !isFirst ? lighten(0.3, theme.color.bg.red) : theme.color.bg.red;
+      case 'SKIPPED':
+        return !isFirst ? lighten(0.3, theme.color.bg.dark) : theme.color.bg.dark;
+      case 'INITIALIZED':
+        return !isFirst ? lighten(0.3, theme.color.bg.blue) : theme.color.bg.blue;
+      case 'PREPARED':
+        return !isFirst ? lighten(0.3, theme.color.bg.violet) : theme.color.bg.violet;
+      default:
+        return lighten(0.5, theme.color.bg.dark);
+    }
+  }
+}

@@ -1,0 +1,2 @@
+## About this folder
+Here are the different layout elements used accross the UI. These element display the exact same content and are placed here to avoid redundency. The RootLayout is the main component inside of which all the rest of the children components can be passed for display. Dynamic content is passed as "Outlet" in the RootLayout.
