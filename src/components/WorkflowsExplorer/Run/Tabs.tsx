@@ -24,8 +24,7 @@ import { ReactFlowProvider } from "react-flow-renderer";
 
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
 import { DAGraph } from "../../../util/ConfigExplorer/Graphs";
-
-export const defaultDrawerWidth = 600;
+import DraggableDivider from "../../../layouts/DraggableDivider";
 
 /**
  * This is a TypeScript function that returns a set of three React components which are rendered inside a parent component. 
@@ -240,6 +239,8 @@ const TabNav = (props : {attempt: Attempt, configData: displayProps, panelOpen?:
     const { stepName, tab } = useParams();
     const [value, setValue] = React.useState(tab === 'timeline' ? 0: 1);
     const [openLineage, setOpenLineage] = useState<boolean>(false);
+    const [lineageWidth, setLineageWidth] = React.useState(500);
+    const lineageRef = React.useRef<HTMLDivElement>(null);    
     const { attempt, panelOpen, configData } = props;
     const navigate =  useNavigate();
 
@@ -305,8 +306,8 @@ const TabNav = (props : {attempt: Attempt, configData: displayProps, panelOpen?:
             </Sheet>
             {openLineage && (
                 <>
-                    <Sheet sx={{borderLeft: '1px solid lightgray', mx: '1rem'}}/>
-                    <Sheet sx={{width: '40%', flex: 1}}>
+    				<DraggableDivider setWidth={setLineageWidth} cmpRef={lineageRef} isRightCmp={true} />
+                    <Sheet sx={{width: lineageWidth}} ref={lineageRef}>
                         <ReactFlowProvider>
                             <LineageTab graph={graph} elementName="" elementType=""/>
                         </ReactFlowProvider>

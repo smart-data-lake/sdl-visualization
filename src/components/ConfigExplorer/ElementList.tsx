@@ -21,6 +21,8 @@ import { Box } from '@mui/material';
 
 interface ElementListProps{
   data: any;
+  width: number;
+  mainRef: React.Ref<HTMLDivElement>;
 }
 
 //props.data should be the JsonObject (already parsed from HOCON)
@@ -76,7 +78,7 @@ export default function ElementList(props: ElementListProps) {
 
   const dataObjectsCompleteList = currentDataObjects.map((dataObject,i) => (
     <Link to={`/config/dataObjects/${dataObject}`} key={"d"+i}>
-      <ListItemButton sx={{ pl: '1rem' }}>
+      <ListItemButton sx={{ pl: '1rem', paddingRight: '0px' }}>
         <ListItemIcon>
           <TableViewTwoTone />
         </ListItemIcon>
@@ -92,7 +94,7 @@ export default function ElementList(props: ElementListProps) {
 
   const actionsCompleteList = currentActions.map((action,i) => (
     <Link to={`/config/actions/${action}`} key={"a"+i}>
-      <ListItemButton sx={{ pl: '1rem' }}>
+      <ListItemButton sx={{ pl: '1rem', paddingRight: '0px' }}>
         <ListItemIcon>
           <RocketLaunchOutlined />
         </ListItemIcon>
@@ -108,7 +110,7 @@ export default function ElementList(props: ElementListProps) {
 
   const connectionsCompleteList = currentConnections.map((connection,i) => (
     <Link to={`/config/connections/${connection}`} key={"c"+i}>
-      <ListItemButton sx={{ pl: '1rem' }}>
+      <ListItemButton sx={{ pl: '1rem', paddingRight: '0px' }}>
         <ListItemIcon>
           <LanOutlinedIcon />
         </ListItemIcon>
@@ -122,9 +124,8 @@ export default function ElementList(props: ElementListProps) {
     </Link>
   ));
 
-
   return (
-    <Box sx={{width: '17rem', height: '100%', pt:'1rem', borderRight: '1px solid lightgray'}}>
+    <Box sx={{width: props.width, minWidth: '100px', maxWidth: '500px', height: '100%', pt:'1rem'}} ref={props.mainRef}>
       <TextField
         className="search_field"
         variant="outlined"
@@ -132,7 +133,7 @@ export default function ElementList(props: ElementListProps) {
         label="Search element"
         value={currentSearch}
         onChange={(e) => handleTextField(e.target.value)} //e is the event Object triggered by the onChange
-        sx={{width: "100%", "paddingRight": "25px"}}
+        sx={{width: "100%", "paddingRight": "10px"}}
       />
 
       <List
@@ -145,7 +146,7 @@ export default function ElementList(props: ElementListProps) {
           </ListSubheader>
         }*/
       >
-        <ListItemButton onClick={handleClickDataObjectsList}>
+        <ListItemButton onClick={handleClickDataObjectsList} sx={{ paddingRight: '0px' }}>
           <ListItemIcon>
             <TableView />
           </ListItemIcon>
@@ -157,7 +158,7 @@ export default function ElementList(props: ElementListProps) {
             {dataObjectsCompleteList}
           </List>
         </Collapse>
-        <ListItemButton onClick={handleClickActionsList}>
+        <ListItemButton onClick={handleClickActionsList} sx={{ paddingRight: '0px' }}>
           <ListItemIcon>
             <RocketLaunch />
           </ListItemIcon>
@@ -169,7 +170,7 @@ export default function ElementList(props: ElementListProps) {
             {actionsCompleteList}
           </List>
         </Collapse>
-        <ListItemButton onClick={handleClickConnectionsList}>
+        <ListItemButton onClick={handleClickConnectionsList} sx={{ paddingRight: '0px' }}>
           <ListItemIcon>
             <LanIcon />
           </ListItemIcon>

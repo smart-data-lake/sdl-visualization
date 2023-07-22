@@ -11,6 +11,7 @@ import { ReactFlowProvider } from "react-flow-renderer";
 import { Button, Sheet } from "@mui/joy";
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
+import DraggableDivider from "../../layouts/DraggableDivider";
 
 export interface displayProps {
   data: any; // complete configuration
@@ -24,6 +25,8 @@ export default function DataDisplayView(props: displayProps) {
   const [connectionConfigObj, setConnectionConfigObj] = React.useState();
   const [selectedTyp, setSelectedTab] = React.useState('description');
   const [openLineage, setOpenLineage] = React.useState(false);
+  const [lineageWidth, setLineageWidth] = React.useState(500);
+  const lineageRef = React.useRef<HTMLDivElement>(null);  
 
   React.useEffect(() => {
     if (elementType && elementName) {
@@ -39,8 +42,8 @@ export default function DataDisplayView(props: displayProps) {
   };
 
   return (
-	<Sheet sx={{display: 'flex', height: '100%', flex: 1,}}>
-		<Sheet sx={{display: 'flex', flexDirection: 'column', flex: 2, overflowY: 'scroll', scrollbarWidth: 'none',  p: '1rem'}}>
+	<>
+		<Sheet sx={{ flex: 1, minWidth: '500px', display: 'flex', flexDirection: 'column',  p: '1rem'}}>
 
 			<TabContext value={selectedTyp}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
@@ -49,7 +52,7 @@ export default function DataDisplayView(props: displayProps) {
 						<Tab label="Configuration" value="configuration" />
 					{/*  {(elementType==="actions" || elementType==="dataObjects") && <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />} */}
 					</Tabs>
-					<Sheet sx={{display: 'flex', alignItems: 'center'}}>
+					<Sheet>
 						{!openLineage ?
 							(
 								<Button size="sm" onClick={() => setOpenLineage(!openLineage)}>
@@ -64,32 +67,25 @@ export default function DataDisplayView(props: displayProps) {
 						)}
 					</Sheet>
 				</Sheet>
-				<TabPanel value="description" className="content-panel">
-					<Sheet sx={{maxWidth: '90rem', flex: 1}}>
-						<DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
-					</Sheet>
+				<TabPanel value="description" className="content-panel" sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
+					<DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
 				</TabPanel>
-				<TabPanel value="configuration" className="content-panel">
-					<Sheet sx={{width: 'auto', flex: 1}}>
+				<TabPanel value="configuration" className="content-panel"  sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
 					<ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} connection={connectionConfigObj} />
-					</Sheet>
 				</TabPanel>
 			</TabContext> 
 		</Sheet>
-		<Sheet sx={{borderRight: openLineage ? '1px solid lightgrey' : undefined}}>
-			
-		</Sheet>
+
 		{openLineage &&
-		<Sheet
-		sx={{
-			flex: 3,
-			height: '100%',
-		}}
-		>
-			<ReactFlowProvider>
-				<LineageTab data={props.data} elementName={elementName as string} elementType={elementType as string} />
-			</ReactFlowProvider>
-		</Sheet>}
-	</Sheet>
+			<>
+				<DraggableDivider setWidth={setLineageWidth} cmpRef={lineageRef} isRightCmp={true} />
+				<Sheet sx={{width: lineageWidth, height: '100%'}} ref={lineageRef}>
+					<ReactFlowProvider>
+						<LineageTab data={props.data} elementName={elementName as string} elementType={elementType as string} />
+					</ReactFlowProvider>
+				</Sheet>
+			</>
+		}		
+	</>
   );
 } 
