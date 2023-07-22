@@ -21,25 +21,21 @@ export default function App() {
   
   const {data: manifest} = useManifest();
   const {data: configData, isLoading} = useConfig(manifest);
-  
+  console.log('isLoading', isLoading);
+
   const root = () => (
     <Routes>
-      <Route path='/*' element={<RootLayout isLoading={isLoading}/>}>
+      <Route element={<RootLayout isLoading={isLoading}/>}>
         <Route index element={<Home/>}/>
-        <Route path='workflows/' element={<Workflows/>}/>
-        <Route path='workflows/:flowId' element={<WorkflowHistory/>}/>
-        <Route path='workflows/:flowId/:runNumber/:taskId/:tab' element={<Run configData={configData}/>}/>
-        <Route path='workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run configData={configData} panelOpen={true}/>}/>
-        <Route path='workflows/*' element={<NotFound/>}/>
-        <Route path='config/*' element={<ConfigExplorer data={configData}/>}>
-          <Route path='search/:ownSearchString' //the ownSearchString is our definition of a 
-          //search because of problems with routing Search Parameters
-          element={<SearchResults data={configData}/>} />
-          <Route path=":elementType/:elementName" 
-          element={<DataDisplayView data={configData} />} />
-          <Route path="globalOptions" 
-          element={<GlobalConfigView data={configData?.global}/>} />
-        </Route>
+        {configData && <>
+          <Route path='workflows/' element={<Workflows/>}/>
+          <Route path='workflows/:flowId' element={<WorkflowHistory/>}/>
+          <Route path='workflows/:flowId/:runNumber/:taskId/:tab' element={<Run configData={configData}/>}/>
+          <Route path='workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run configData={configData} panelOpen={true}/>}/>
+          <Route path='workflows/*' element={<NotFound/>}/>
+          <Route path='config/*' element={<ConfigExplorer data={configData}/>}/>
+          </>
+        }
       </Route>
     </Routes>
   )
