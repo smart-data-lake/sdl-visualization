@@ -36,6 +36,7 @@ function DraggableDivider(props: { setWidth: (number) => void, cmpRef: MutableRe
 	}
 
 	function onMouseDown(ev: React.MouseEvent<HTMLElement>) {
+		ev.preventDefault();
 		startDrag(ev.clientX);
 	}
 	
