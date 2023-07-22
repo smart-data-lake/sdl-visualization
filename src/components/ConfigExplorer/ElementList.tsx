@@ -20,27 +20,21 @@ import { Box } from '@mui/material';
 
 
 interface ElementListProps{
-  data: any;
+  dataObjects: string[];
+  actions: string[];
+  connections: string[];
   width: number;
   mainRef: React.Ref<HTMLDivElement>;
+  filter?: string;
+  setFilter: (string) => void;
 }
 
 //props.data should be the JsonObject (already parsed from HOCON)
 export default function ElementList(props: ElementListProps) {
 
-  const allDataObjects = Object.keys(props.data.dataObjects).sort();
-  const allActions = Object.keys(props.data.actions).sort();
-  let allConnections : string[] = [];
-  if (Object.keys(props.data).includes('connections')){
-    allConnections = Object.keys(props.data.connections);
-  }
   const [openDataObjectsList, setOpenDataObjectsList] = React.useState(false);
   const [openActionsList, setOpenActionsList] = React.useState(false);
   const [openConnectionsList, setOpenConnectionsList] = React.useState(false);
-  const [currentDataObjects, setCurrentDataObjects] = React.useState(allDataObjects);
-  const [currentActions, setCurrentActions] = React.useState(allActions);
-  const [currentConnections, setCurrentConnections] = React.useState(allConnections);
-  const [currentSearch, setCurrentSearch] = React.useState('');
   const urlParams = useMatch('/:elementType/:elementName');
 
   const handleClickDataObjectsList = () => {
@@ -61,14 +55,7 @@ export default function ElementList(props: ElementListProps) {
       setOpenDataObjectsList(true);
       setOpenConnectionsList(true);
     }
-    setCurrentSearch(text);
-    const searchText = text.toLowerCase()
-    const cdo = allDataObjects.filter(a => a.toLowerCase().includes(searchText));
-    const ca = allActions.filter(a => a.toLowerCase().includes(searchText));
-    const cc = allConnections.filter(a => a.toLowerCase().includes(searchText));
-    setCurrentDataObjects(cdo);
-    setCurrentActions(ca);
-    setCurrentConnections(cc);
+    props.setFilter(text);
   }
 
   function returnBoldString(elementType:string, elementName: string){
@@ -76,7 +63,7 @@ export default function ElementList(props: ElementListProps) {
     else return 'normal';
   }
 
-  const dataObjectsCompleteList = currentDataObjects.map((dataObject,i) => (
+  const dataObjectsCompleteList = props.dataObjects.map((dataObject,i) => (
     <Link to={`/config/dataObjects/${dataObject}`} key={"d"+i}>
       <ListItemButton sx={{ pl: '1rem', paddingRight: '0px' }}>
         <ListItemIcon>
@@ -92,7 +79,7 @@ export default function ElementList(props: ElementListProps) {
     </Link>
   ));
 
-  const actionsCompleteList = currentActions.map((action,i) => (
+  const actionsCompleteList = props.actions.map((action,i) => (
     <Link to={`/config/actions/${action}`} key={"a"+i}>
       <ListItemButton sx={{ pl: '1rem', paddingRight: '0px' }}>
         <ListItemIcon>
@@ -108,7 +95,7 @@ export default function ElementList(props: ElementListProps) {
     </Link>
   ));
 
-  const connectionsCompleteList = currentConnections.map((connection,i) => (
+  const connectionsCompleteList = props.connections.map((connection,i) => (
     <Link to={`/config/connections/${connection}`} key={"c"+i}>
       <ListItemButton sx={{ pl: '1rem', paddingRight: '0px' }}>
         <ListItemIcon>
@@ -131,7 +118,7 @@ export default function ElementList(props: ElementListProps) {
         variant="outlined"
         size="small"
         label="Search element"
-        value={currentSearch}
+        value={props.filter}
         onChange={(e) => handleTextField(e.target.value)} //e is the event Object triggered by the onChange
         sx={{width: "100%", "paddingRight": "10px"}}
       />

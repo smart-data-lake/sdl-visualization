@@ -21,8 +21,7 @@ export default function App() {
   
   const {data: manifest} = useManifest();
   const {data: configData, isLoading} = useConfig(manifest);
-  console.log('isLoading', isLoading);
-
+  
   const root = () => (
     <Routes>
       <Route element={<RootLayout isLoading={isLoading}/>}>
