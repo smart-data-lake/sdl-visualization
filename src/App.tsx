@@ -1,5 +1,5 @@
 import CssBaseline from '@mui/joy/CssBaseline';
-import { createHashRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router-dom';
+import { createHashRouter, createRoutesFromElements, Route, RouterProvider, Routes } from 'react-router-dom';
 import ConfigExplorer from './components/ConfigExplorer/ConfigExplorer';
 import DataDisplayView from './components/ConfigExplorer/DataDisplayView';
 import GlobalConfigView from './components/ConfigExplorer/GlobalConfigView';
@@ -22,48 +22,36 @@ export default function App() {
   const {data: manifest} = useManifest();
   const {data: configData, isLoading} = useConfig(manifest);
   
-  /**
-   * `router` sets up the router for the application using `createHashRouter` and `createRoutesFromElements`.
-   * It returns a router object.
-   * @returns The router object.
-   */
-  const router = () => createHashRouter(
-    createRoutesFromElements(
-      <Route path='/' element={<RootLayout isLoading={isLoading}/>}>
-        <Route path='/' element={<Home/>}/>
-        <Route path='/workflows/' element={<Workflows/>}/>
-        <Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
-        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run configData={configData}/>}/>
-        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run configData={configData} panelOpen={true}/>}/>
-        <Route path='*' element={<NotFound/>}/>
-        <Route path='/config' element={<ConfigExplorer data={configData}/>}>
-          <Route
-              path='/config/search/:ownSearchString' //the ownSearchString is our definition of a 
-              //search because of problems with routing Search Parameters
-              element={
-                <SearchResults data={configData}/>
-              } />
-          <Route
-            path="/config/:elementType/:elementName"
-            element={
-              <DataDisplayView data={configData} />
-            } />
-          <Route
-            path="/config/globalOptions"
-            element={
-              <GlobalConfigView data={configData?.global}/>
-            } />
-        </Route> 
+  const root = () => (
+    <Routes>
+      <Route path='/*' element={<RootLayout isLoading={isLoading}/>}>
+        <Route index element={<Home/>}/>
+        <Route path='workflows/' element={<Workflows/>}/>
+        <Route path='workflows/:flowId' element={<WorkflowHistory/>}/>
+        <Route path='workflows/:flowId/:runNumber/:taskId/:tab' element={<Run configData={configData}/>}/>
+        <Route path='workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run configData={configData} panelOpen={true}/>}/>
+        <Route path='workflows/*' element={<NotFound/>}/>
+        <Route path='config/*' element={<ConfigExplorer data={configData}/>}>
+          <Route path='search/:ownSearchString' //the ownSearchString is our definition of a 
+          //search because of problems with routing Search Parameters
+          element={<SearchResults data={configData}/>} />
+          <Route path=":elementType/:elementName" 
+          element={<DataDisplayView data={configData} />} />
+          <Route path="globalOptions" 
+          element={<GlobalConfigView data={configData?.global}/>} />
+        </Route>
       </Route>
-    )
+    </Routes>
   )
+
+  const router = () => createHashRouter([
+    { path: "*", Component: root },    
+  ])
 
   return (
     <>
       <CssBaseline />
-      
-        {/* Provide the router object to the rest of the application with `RouterProvider` */}
-        <RouterProvider router={router()}/>
+      <RouterProvider router={router()}/>
     </>
   );
 }

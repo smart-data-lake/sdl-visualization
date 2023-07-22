@@ -1,7 +1,7 @@
 import { useFetchRun } from "../../../hooks/useFetchData";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TabNav from "./Tabs";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import PageHeader from "../../../layouts/PageHeader";
 import { CircularProgress } from "@mui/joy";
 import { displayProps } from "../../ConfigExplorer/DataDisplayView";
@@ -16,8 +16,8 @@ import NotFound from "../../../layouts/NotFound";
     @returns {JSX.Element} - The Run component UI.
 */
 const Run = (props : {panelOpen?: boolean, configData: displayProps}) => {
-    const links = [...useLocation().pathname.split('/')].splice(1);
-    const { data, isLoading, isFetching } = useFetchRun(links[1], parseInt(links[2]), parseInt(links[3]));
+    const {flowId, runNumber, taskId, tab} = useParams();
+    const { data, isLoading, isFetching } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
 
     if (isLoading || isFetching) return <CircularProgress/>
     

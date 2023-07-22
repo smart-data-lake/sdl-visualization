@@ -1,8 +1,3 @@
-import { createHashRouter, createRoutesFromElements, Route } from 'react-router-dom';
-import WorkflowHistory from '../../components/WorkflowsExplorer/Workflow/WorkflowHistory';
-import Workflows from '../../components/WorkflowsExplorer/Workflows/Workflows';
-import NotFound from '../../layouts/NotFound';
-import RootLayout from '../../layouts/RootLayout';
 import { Row } from '../../types';
 
 type PathValue = string | number;
@@ -28,16 +23,3 @@ export const getPathFor = {
   attempt: (item: Row): string =>
   `/workflows/${item.flow_id}/${item.run_number}/${item.task_id}/timeline/${item.step_name}`,
 };
-
-export const router = createHashRouter(
-    createRoutesFromElements(
-      <Route path='/' element={<RootLayout isLoading={false}/>}>{/* 
-        <Route path='/configviewer' element={<ConfigViewer/>}/> */}
-        <Route path='/workflows/' element={<Workflows/>}/>
-        <Route path='/workflows/:workflow' element={<WorkflowHistory/>}/>
-        {/* <Route path='/workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
-        <Route path='/workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true} lineageData={[]}/>}/> */}
-        <Route path='*' element={<NotFound/>}/>
-      </Route>
-    )
-)
