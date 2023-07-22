@@ -1,18 +1,18 @@
-import { useLocation } from "react-router-dom";
-import PageHeader from "../../../layouts/PageHeader";
-import { CircularProgress, Sheet } from "@mui/joy";
-import ToolBar from "../ToolBar/ToolBar";
-import { useFetchWorkflow } from "../../../hooks/useFetchData";
-import { useEffect, useState } from "react";
-import { TablePagination } from "@mui/material";
-import ChartControl from "../HistoryChart/ChartControl";
-import { durationMicro } from "../../../util/WorkflowsExplorer/date";
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { CircularProgress, Sheet } from "@mui/joy";
 import IconButton from '@mui/joy/IconButton';
-import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
-import WorkflowHistoryTable from "./WorkflowHistoryTable";
+import { TablePagination } from "@mui/material";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { useFetchWorkflow } from "../../../hooks/useFetchData";
 import NotFound from "../../../layouts/NotFound";
+import PageHeader from "../../../layouts/PageHeader";
+import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { durationMicro } from "../../../util/WorkflowsExplorer/date";
+import ChartControl from "../HistoryChart/ChartControl";
+import ToolBar from "../ToolBar/ToolBar";
+import WorkflowHistoryTable from "./WorkflowHistoryTable";
 
 
 export type Indices = {
@@ -28,9 +28,8 @@ export type Indices = {
  * @returns JSX.Element
 */
 const WorkflowHistory = () => {
-	const links = [...useLocation().pathname.split('/')].splice(1);
-	const workflowName :  string= links[links.length - 1];
-	const { data, isLoading, isFetching } = useFetchWorkflow(workflowName);
+	const {flowId} = useParams();
+	const { data, isLoading, isFetching } = useFetchWorkflow(flowId!);
 	const [rows, setRows] = useState<any[]>([]);
 	const [toDisplay, setToDisplay] = useState<any[]>(rows);
 	const [page, setPage] = useState(0);
@@ -135,7 +134,7 @@ const WorkflowHistory = () => {
 			{data ? (
 				(!data.detail) ? (
 					<>
-						<PageHeader title={workflowName} />             
+						<PageHeader title={flowId!} />             
 						<Sheet
 							sx={{
 								display: 'flex',
