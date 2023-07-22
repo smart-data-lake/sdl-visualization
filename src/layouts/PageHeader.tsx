@@ -24,32 +24,26 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
 
     return ( 
             <Sheet sx={{
-                display: 'flex',
-                justifyContent: 'flex-start',
                 alignItems: 'center',
                 position: 'sticky',
                 top: 0,
                 width: '100%',
                 borderBottom: '1px solid lightgray',
-                px : '1rem',
-                pt : '4rem',
-                pb : '1rem',
-                pl: noBack ? '3.5rem' : '1rem',
-                gap: '0.5rem',
-
+                pl : '1.2rem',
+                pr : '0.2rem',
+                pt : '3.2rem',
+                pb : '0.2rem',
             }}>
-                {!noBack && <IconButton  onClick={handleClick} variant="plain" color="neutral" size="sm">
-                    <ArrowBackIosIcon sx={{scale: '80%', pl: '0.3rem'}}/>
-                </IconButton>}
                 <Box sx={{
                     display: 'flex',
-                    flexDirection: 'column',
                     verticalAlign: 'middle',
                     pb: '0.5rem',
-
                 }}>
-                    <Typography level="h3">{title}</Typography>
-                    {subtitle && <Typography level="h4" sx={{pt: '1rem'}}>{subtitle}</Typography>}
+                    {!noBack && <IconButton  onClick={handleClick} variant="plain" color="neutral" size="sm">
+                        <ArrowBackIosIcon sx={{scale: '80%', pl: '0.3rem'}}/>
+                    </IconButton>}
+                    <Typography level="h4">{title}</Typography>
+                    {subtitle && <Typography level="h5" sx={{pt: '1rem'}}>{subtitle}</Typography>}
                     {description && <Typography level="body2" sx={{py: '1rem'}}>{description}</Typography>}
                 </Box>
             </Sheet>
