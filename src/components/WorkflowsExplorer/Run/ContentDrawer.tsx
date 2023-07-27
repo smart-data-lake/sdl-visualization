@@ -3,6 +3,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useParams } from "react-router-dom";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import { Row } from "../../../types"
+import { useManifest } from "../../../hooks/useManifest";
+import { useConfig } from "../../../hooks/useConfig";
 
 const getRow = (attempt: Attempt, taskName: string) => {
     if (taskName === 'err') throw(new Error('was not able to fetch task name'));
@@ -161,18 +163,15 @@ const ContentSheet = (props: {action: Row}) => {
  * @param props attempt: Attempt
  * @returns 
  */
-const ContentDrawer = (props: {attempt: Attempt, configData: any}) => {
-    const { attempt, configData } = props;
+const ContentDrawer = (props: {attempt: Attempt}) => {
+    const { attempt } = props;
     const { flowId, runNumber, taskId, tab, stepName } = useParams();
+    const {data: manifest} = useManifest();
+    const {data: configData} = useConfig(manifest);
     const navigate = useNavigate();
     const action : Row = getRow(attempt, stepName || 'err');
     
-    const isActionInConfig = () => {
-        const allActions = Object.keys(configData.actions).sort();
-        const isIn = allActions.includes(action.step_name);
-        console.log(isIn);
-        return isIn;
-    }
+    const isActionInConfig = () => (configData && configData.actions[action.step_name])
 
     const handleClick = () => {
         navigate(`/config/actions/${action.step_name}`);

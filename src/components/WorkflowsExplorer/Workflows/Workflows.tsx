@@ -44,7 +44,6 @@ const Workflows = () => {
         setRows(rows);
     }
 
-    console.log(isLoading, isFetching)
     if (isLoading || isFetching) return <CircularProgress/>;
     if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
     

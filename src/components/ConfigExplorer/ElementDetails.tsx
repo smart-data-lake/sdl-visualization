@@ -12,14 +12,12 @@ import { Button, Sheet } from "@mui/joy";
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import DraggableDivider from "../../layouts/DraggableDivider";
-
-export interface displayProps {
-  data: any; // complete configuration
-}
+import { ConfigData } from "../../util/ConfigExplorer/ConfigData";
 
 
-export default function DataDisplayView(props: displayProps) {
+export default function ElementDetails(props: {configData?: ConfigData}) {
 
+  const {configData} = props;
   const {elementName, elementType} = useParams();
   const [configObj, setConfigObj] = React.useState();
   const [connectionConfigObj, setConnectionConfigObj] = React.useState();
@@ -29,12 +27,12 @@ export default function DataDisplayView(props: displayProps) {
   const lineageRef = React.useRef<HTMLDivElement>(null);  
 
   React.useEffect(() => {
-    if (elementType && elementName) {
-      let obj = props.data[elementType][elementName];
-      if (obj && obj['connectionId']) setConnectionConfigObj(props.data['connections'][obj['connectionId']]);
+    if (configData && elementType && elementName) {
+      let obj = configData[elementType][elementName];
+      if (obj && obj['connectionId']) setConnectionConfigObj(configData['connections'][obj['connectionId']]);
       setConfigObj(obj);
     }
-  }, [elementName, elementType, props.data]);
+  }, [elementName, elementType, configData]);
 
   // change selected tab
   const handleChange = (_: React.SyntheticEvent, newValue: string) => {
@@ -81,7 +79,7 @@ export default function DataDisplayView(props: displayProps) {
 				<DraggableDivider setWidth={setLineageWidth} cmpRef={lineageRef} isRightCmp={true} />
 				<Sheet sx={{width: lineageWidth, height: '100%'}} ref={lineageRef}>
 					<ReactFlowProvider>
-						<LineageTab data={props.data} elementName={elementName as string} elementType={elementType as string} />
+						<LineageTab configData={configData} elementName={elementName as string} elementType={elementType as string} />
 					</ReactFlowProvider>
 				</Sheet>
 			</>

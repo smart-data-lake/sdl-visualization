@@ -1,11 +1,10 @@
+import { CircularProgress } from "@mui/joy";
+import { useParams } from "react-router-dom";
 import { useFetchRun } from "../../../hooks/useFetchData";
+import NotFound from "../../../layouts/NotFound";
+import PageHeader from "../../../layouts/PageHeader";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import TabNav from "./Tabs";
-import { useLocation, useParams } from "react-router-dom";
-import PageHeader from "../../../layouts/PageHeader";
-import { CircularProgress } from "@mui/joy";
-import { displayProps } from "../../ConfigExplorer/DataDisplayView";
-import NotFound from "../../../layouts/NotFound";
 
 /**
     The Run component displays information about a specific run of a workflow.
@@ -15,7 +14,7 @@ import NotFound from "../../../layouts/NotFound";
     @param {boolean} props.panelOpen - Indicates whether the details panel is open or not.
     @returns {JSX.Element} - The Run component UI.
 */
-const Run = (props : {panelOpen?: boolean, configData: displayProps}) => {
+const Run = (props : {panelOpen?: boolean}) => {
     const {flowId, runNumber, taskId, tab} = useParams();
     const { data, isLoading, isFetching } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
 
@@ -31,7 +30,7 @@ const Run = (props : {panelOpen?: boolean, configData: displayProps}) => {
                 <>
                     <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId} />
                     {/* <RunDetails attempt={attempt}/> */}
-                    <TabNav attempt={attempt} panelOpen={props.panelOpen} configData={props.configData}/>
+                    <TabNav attempt={attempt} panelOpen={props.panelOpen}/>
                 </>
                 ):(
                     <>
