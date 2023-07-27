@@ -1,8 +1,9 @@
+import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { getUrlContent, listConfigFiles, readConfigIndexFile, parseTextStrict } from "../util/ConfigExplorer/HoconParser";
 import { Manifest } from "./useManifest";
 import { useQuery } from "react-query";
 
-function getConfig(manifest:Manifest) {
+function getConfig(manifest:Manifest): () => Promise<ConfigData> {
   return () => {
 
     console.log("getConfig Manifest", manifest);
@@ -48,6 +49,7 @@ function getConfig(manifest:Manifest) {
         return parseTextStrict(includeText);
       })
     })
+    .then(parsedConfig => new ConfigData(parsedConfig))
   }
 }
 

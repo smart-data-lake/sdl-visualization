@@ -1,7 +1,7 @@
 import CssBaseline from '@mui/joy/CssBaseline';
 import { createHashRouter, createRoutesFromElements, Route, RouterProvider, Routes } from 'react-router-dom';
 import ConfigExplorer from './components/ConfigExplorer/ConfigExplorer';
-import DataDisplayView from './components/ConfigExplorer/DataDisplayView';
+import ElementDetails from './components/ConfigExplorer/ElementDetails';
 import GlobalConfigView from './components/ConfigExplorer/GlobalConfigView';
 import SearchResults from './components/ConfigExplorer/SearchResults';
 import Home from './components/HomeMenu/Home';
@@ -26,15 +26,12 @@ export default function App() {
     <Routes>
       <Route element={<RootLayout isLoading={isLoading}/>}>
         <Route index element={<Home/>}/>
-        {configData && <>
-          <Route path='workflows/' element={<Workflows/>}/>
-          <Route path='workflows/:flowId' element={<WorkflowHistory/>}/>
-          <Route path='workflows/:flowId/:runNumber/:taskId/:tab' element={<Run configData={configData}/>}/>
-          <Route path='workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run configData={configData} panelOpen={true}/>}/>
-          <Route path='workflows/*' element={<NotFound/>}/>
-          <Route path='config/*' element={<ConfigExplorer data={configData}/>}/>
-          </>
-        }
+        <Route path='workflows/' element={<Workflows/>}/>
+        <Route path='workflows/:flowId' element={<WorkflowHistory/>}/>
+        <Route path='workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
+        <Route path='workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true}/>}/>
+        <Route path='workflows/*' element={<NotFound/>}/>
+        <Route path='config/*' element={<ConfigExplorer configData={configData}/>}/>
       </Route>
     </Routes>
   )

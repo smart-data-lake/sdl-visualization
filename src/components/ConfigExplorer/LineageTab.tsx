@@ -9,6 +9,7 @@ import { useParams } from 'react-router-dom';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import DownloadButton from './DownloadLineageButton';
+import { ConfigData } from '../../util/ConfigExplorer/ConfigData';
 
 
 
@@ -91,11 +92,11 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
 
 
 interface flowProps {
-  elementName: string,
-  elementType: string,
-  data?: object,
-  graph?: PartialDataObjectsAndActions, 
-  runContext?: boolean,
+  elementName: string;
+  elementType: string;
+  configData?: ConfigData;
+  graph?: PartialDataObjectsAndActions;
+  runContext?: boolean;
 }
 
 type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of ReactFlow with an (optional) String attribute. 
@@ -110,7 +111,7 @@ type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 function LineageTab(props: flowProps) {
   const url = useParams();
 
-  const doa = props.graph ? props.graph : new DataObjectsAndActions(props.data);
+  const doa = props.graph ? props.graph : new DataObjectsAndActions(props.configData);
   let nodes_init: any[] = [];
   let edges_init: any[] = [];
   const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']);
@@ -215,12 +216,12 @@ function LineageTab(props: flowProps) {
   const navigate = useNavigate();   
   function clickOnNode(node: flowNodeWithString){
     //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
-    if (props.data) {
+    if (props.configData) {
       navigate(`/config/dataObjects/${node.id}`); //Link programmatically
     }
   } 
   function clickOnEdge(edge: flowEdgeWithString){
-    if (props.data) { 
+    if (props.configData) { 
       navigate(`/config/actions/${edge.old_id}`); //Link programmatically
     } else {
       navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${edge.old_id}`);
@@ -282,7 +283,7 @@ function LineageTab(props: flowProps) {
           </IconButton>
         </div>
 
-        {props.data && <div title={onlyDirectNeighbours[1] as string} style={{  zIndex: 4, cursor: 'pointer' }}>
+        {props.configData && <div title={onlyDirectNeighbours[1] as string} style={{  zIndex: 4, cursor: 'pointer' }}>
           <IconButton 
             color='inherit'
             onClick={expandGraph}>

@@ -3,8 +3,9 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import { Box, Divider, List, ListItem /* , ListItemContent */, ListItemButton, Sheet, Tooltip } from '@mui/joy';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useMatch, useNavigate, useResolvedPath } from 'react-router-dom';
 import { useManifest } from '../hooks/useManifest';
+import { ListItemIcon } from '@mui/material';
 
 /**
  * The SideBar is a navigation bar that is fixed on the left side of the screen. It contains buttons that allow the user to navigate to different pages, such as the Home page, Workflows Explorer page, and Config Viewer page.
@@ -13,7 +14,19 @@ import { useManifest } from '../hooks/useManifest';
 const SideBar = () => {
     const manifest = useManifest();
     const navigate = useNavigate();
-    
+    const location = useLocation();
+
+    function getModulePath() {
+        const secondSlashPos = location.pathname.indexOf('/',1);
+        if (secondSlashPos>0) {
+            return location.pathname.substring(0, secondSlashPos);
+        } else {
+            return location.pathname;
+        }
+    }
+
+    console.log(location.pathname, getModulePath());
+
     if (manifest.isLoading) return <></>
     
     const buttons = [
@@ -37,7 +50,6 @@ const SideBar = () => {
             description: 'Config Viewer'
         }
     ]
-
 
     return ( 
         <Sheet
@@ -68,15 +80,10 @@ const SideBar = () => {
                                 <Tooltip title={component.disabled ? `No data was found for the menu "${component.description.toLowerCase()}". Please check that the ${component.filetype} files are at the expected location according to the manifest.` : component.description} placement='right'>
                                     <div>
                                     <ListItemButton 
-                                        sx={{
-                                            borderRadius: 4, 
-                                            scale: '90%',
-                                            justifyContent: 'center',
-                                        }}
+                                        sx={{ scale: '90%', justifyContent: 'center' }}
                                         onClick={() => navigate(component.link)}
-                                        disabled={component.disabled}
-                                        >   
-                                        {component.icon}
+                                        disabled={component.disabled}>
+                                        <ListItemIcon sx={{minWidth: '25px', color: (getModulePath()===component.link ? 'primary.main' : '')}}>{component.icon}</ListItemIcon>                                        
                                     </ListItemButton>
                                     </div>
                                 </Tooltip>

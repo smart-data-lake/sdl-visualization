@@ -1,52 +1,54 @@
-import * as React from 'react';
-import List from '@mui/material/List';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import LanIcon from '@mui/icons-material/Lan';
+import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
+import Public from '@mui/icons-material/Public';
 import RocketLaunch from '@mui/icons-material/RocketLaunch';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import TableView from '@mui/icons-material/TableView';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
-import Public from '@mui/icons-material/Public';
-import LanIcon from '@mui/icons-material/Lan';
-import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
-import TextField from '@mui/material/TextField';
-import './ComponentsStyles.css';
-import { Link, useMatch } from "react-router-dom";
 import { Box } from '@mui/material';
+import Collapse from '@mui/material/Collapse';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import TextField from '@mui/material/TextField';
+import * as React from 'react';
+import { Link, useMatch, useNavigate } from "react-router-dom";
+import { ConfigData, ConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
+import { transformOrDefault } from '../../util/helpers';
+import './ComponentsStyles.css';
 
 
 interface ElementListProps{
-  dataObjects: string[];
-  actions: string[];
-  connections: string[];
+  configData?: ConfigData;
+  configDataLists: ConfigDataLists;
   width: number;
   mainRef: React.Ref<HTMLDivElement>;
-  filter?: string;
   setFilter: (string) => void;
 }
 
 //props.data should be the JsonObject (already parsed from HOCON)
 export default function ElementList(props: ElementListProps) {
 
-  const [openDataObjectsList, setOpenDataObjectsList] = React.useState(false);
-  const [openActionsList, setOpenActionsList] = React.useState(false);
-  const [openConnectionsList, setOpenConnectionsList] = React.useState(false);
-  const urlParams = useMatch('/:elementType/:elementName');
+  const {configDataLists} = props;
 
-  const handleClickDataObjectsList = () => {
-    setOpenDataObjectsList(!openDataObjectsList);
-  };
+  const urlParamsType = useMatch('/config/:elementType');
+  const urlParamsElement = useMatch('/config/:elementType/:elementName');
+  const elementType = urlParamsElement?.params.elementType || urlParamsType?.params.elementType;
+  const elementName = urlParamsElement?.params.elementName;
 
-  const handleClickActionsList = () => {
-    setOpenActionsList(!openActionsList);
-  };
+  const [openDataObjectsList, setOpenDataObjectsList] = React.useState(isSelected("dataObjects"));
+  const [openActionsList, setOpenActionsList] = React.useState(isSelected("actions"));
+  const [openConnectionsList, setOpenConnectionsList] = React.useState(isSelected("connections"));
+  const navigate = useNavigate();
 
-  const handleClickConnectionsList = () => {
-    setOpenConnectionsList(!openConnectionsList);
+  function handleClickNavigate(to: string) {
+    return (ev: React.MouseEvent<HTMLDivElement>) => {
+      ev.stopPropagation();
+      navigate(to);
+    }
   };
 
   const handleTextField = (text: string) => {
@@ -58,58 +60,64 @@ export default function ElementList(props: ElementListProps) {
     props.setFilter(text);
   }
 
-  function returnBoldString(elementType:string, elementName: string){
-    if (urlParams?.params.elementType===elementType && urlParams?.params.elementName===elementName) return 'bolder';
-    else return 'normal';
+  function isSelected(type: string, name?: string) {
+    return (type===elementType && name===elementName)
   }
 
-  const dataObjectsCompleteList = props.dataObjects.map((dataObject,i) => (
-    <Link to={`/config/dataObjects/${dataObject}`} key={"d"+i}>
-      <ListItemButton sx={{ pl: '1rem', paddingRight: '0px' }}>
-        <ListItemIcon>
+  function primaryColorIfSelected(type: string, name?: string) {
+    return (isSelected(type, name) ? 'primary.main': '')
+  }
+
+  const dataObjectsCompleteList = transformOrDefault(configDataLists, d => d.dataObjects
+  .map(obj => obj.id)
+  .map((obj,i) => (
+    <Link to={`/config/dataObjects/${obj}`} key={"d"+i}>
+      <ListItemButton sx={{ pl: '1rem', paddingRight: '0px', color: primaryColorIfSelected('dataObjects', obj)}}>
+        <ListItemIcon sx={{ minWidth: '40px', color: primaryColorIfSelected('dataObjects', obj)}}>
           <TableViewTwoTone />
         </ListItemIcon>
-        <ListItemText primary={dataObject}
+        <ListItemText primary={obj}
           primaryTypographyProps={{
             lineHeight: '16px',
             noWrap: true,
-            fontWeight: returnBoldString("dataObjects", dataObject),
           }} />
       </ListItemButton>
     </Link>
-  ));
+  )), []);
 
-  const actionsCompleteList = props.actions.map((action,i) => (
-    <Link to={`/config/actions/${action}`} key={"a"+i}>
-      <ListItemButton sx={{ pl: '1rem', paddingRight: '0px' }}>
-        <ListItemIcon>
+  const actionsCompleteList = transformOrDefault(configDataLists, d => d.actions
+  .map(obj => obj.id)
+  .map((obj,i) => (
+    <Link to={`/config/actions/${obj}`} key={"a"+i}>
+      <ListItemButton sx={{ pl: '1rem', paddingRight: '0px', color: primaryColorIfSelected('actions', obj)}}>
+        <ListItemIcon sx={{ minWidth: '40px', color: primaryColorIfSelected('actions', obj)}}>
           <RocketLaunchOutlined />
         </ListItemIcon>
-        <ListItemText primary={action}
+        <ListItemText primary={obj}
           primaryTypographyProps={{
             lineHeight: '16px',
             noWrap: true,
-            fontWeight: returnBoldString("actions", action),
           }} />
       </ListItemButton>
     </Link>
-  ));
+  )), []);
 
-  const connectionsCompleteList = props.connections.map((connection,i) => (
-    <Link to={`/config/connections/${connection}`} key={"c"+i}>
-      <ListItemButton sx={{ pl: '1rem', paddingRight: '0px' }}>
-        <ListItemIcon>
+  const connectionsCompleteList = transformOrDefault(configDataLists, d => d.connections
+  .map(obj => obj.id)
+  .map((obj,i) => (
+    <Link to={`/config/connections/${obj}`} key={'c'+i}>
+      <ListItemButton sx={{ pl: '1rem', paddingRight: '0px', color: primaryColorIfSelected('connections', obj)}}>
+        <ListItemIcon sx={{ minWidth: '40px', color: primaryColorIfSelected('connections', obj)}}>
           <LanOutlinedIcon />
         </ListItemIcon>
-        <ListItemText primary={connection}
+        <ListItemText primary={obj}
           primaryTypographyProps={{
             lineHeight: '16px',
             noWrap: true,
-            fontWeight: returnBoldString("connections", connection),
           }} />
       </ListItemButton>
     </Link>
-  ));
+  )), []);
 
   return (
     <Box sx={{width: props.width, minWidth: '100px', maxWidth: '500px', height: '100%', pt:'1rem'}} ref={props.mainRef}>
@@ -118,23 +126,17 @@ export default function ElementList(props: ElementListProps) {
         variant="outlined"
         size="small"
         label="Search element"
-        value={props.filter}
         onChange={(e) => handleTextField(e.target.value)} //e is the event Object triggered by the onChange
-        sx={{width: "100%", "paddingRight": "10px"}}
+        sx={{width: "100%", paddingRight: "10px"}}
       />
 
       <List
         sx={{ width: '100%', bgcolor: 'background.paper' }}
         component="nav"
         aria-labelledby="nested-list-subheader"
-        /*subheader={
-          <ListSubheader component="div" id="nested-list-subheader">
-            Configuration File
-          </ListSubheader>
-        }*/
       >
-        <ListItemButton onClick={handleClickDataObjectsList} sx={{ paddingRight: '0px' }}>
-          <ListItemIcon>
+        <ListItemButton onClick={() => setOpenDataObjectsList(!openDataObjectsList)} sx={{ paddingRight: '0px', color: primaryColorIfSelected('dataObjects') }} disabled={configDataLists.dataObjects.length===0}>
+          <ListItemIcon onClick={handleClickNavigate(`/config/dataObjects`)} sx={{ minWidth: '40px', color: primaryColorIfSelected('dataObjects')}}>
             <TableView />
           </ListItemIcon>
           <ListItemText primary="Data Objects" primaryTypographyProps={{noWrap: true}}/>
@@ -145,8 +147,8 @@ export default function ElementList(props: ElementListProps) {
             {dataObjectsCompleteList}
           </List>
         </Collapse>
-        <ListItemButton onClick={handleClickActionsList} sx={{ paddingRight: '0px' }}>
-          <ListItemIcon>
+        <ListItemButton onClick={() => setOpenActionsList(!openActionsList)} sx={{ paddingRight: '0px', color: primaryColorIfSelected('actions') }} disabled={configDataLists.actions.length===0}>
+          <ListItemIcon onClick={handleClickNavigate(`/config/actions`)} sx={{ minWidth: '40px', color: primaryColorIfSelected('actions')}}>
             <RocketLaunch />
           </ListItemIcon>
           <ListItemText primary="Actions" primaryTypographyProps={{noWrap: true}}/>
@@ -157,8 +159,8 @@ export default function ElementList(props: ElementListProps) {
             {actionsCompleteList}
           </List>
         </Collapse>
-        <ListItemButton onClick={handleClickConnectionsList} sx={{ paddingRight: '0px' }}>
-          <ListItemIcon>
+        <ListItemButton onClick={() => setOpenConnectionsList(!openConnectionsList)} sx={{ paddingRight: '0px', color: primaryColorIfSelected('connections') }} disabled={configDataLists.connections.length===0}>
+          <ListItemIcon onClick={handleClickNavigate(`/config/connections`)} sx={{ minWidth: '40px', color: primaryColorIfSelected('connections')}}>
             <LanIcon />
           </ListItemIcon>
           <ListItemText primary="Connections" primaryTypographyProps={{noWrap: true}}/>
@@ -170,8 +172,8 @@ export default function ElementList(props: ElementListProps) {
           </List>
         </Collapse>
         <Link to='/config/globalOptions'>
-          <ListItemButton>
-            <ListItemIcon>
+          <ListItemButton disabled={!props.configData?.global} sx={{color: primaryColorIfSelected('globalOptions')}}>
+            <ListItemIcon sx={{ minWidth: '40px', color: primaryColorIfSelected('globalOptions')}}>
               <Public />
             </ListItemIcon>
             <ListItemText primary="Global Options" primaryTypographyProps={{ noWrap: true}}/>

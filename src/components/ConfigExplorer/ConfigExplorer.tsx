@@ -1,65 +1,50 @@
 import { Sheet } from '@mui/joy';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Route, Routes } from "react-router-dom";
 import PageHeader from '../../layouts/PageHeader';
 import './App.css';
 import ElementList from './ElementList';
 import DraggableDivider from '../../layouts/DraggableDivider';
 import SearchResults from './SearchResults';
-import DataDisplayView from './DataDisplayView';
+import ElementDetails from './ElementDetails';
 import GlobalConfigView from './GlobalConfigView';
+import { ConfigData, ConfigDataLists, InitialConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
+import ElementTable from './ElementTable';
+import { useMemoWithDefault } from '../../hooks/useMemoWithDefault';
 
 
-function ConfigExplorer(props: { data: any }) {
-	const { data } = props;
+function ConfigExplorer(props: { configData?: ConfigData }) {
+	const { configData } = props;
 	const [listWidth, setListWidth] = useState(250); // initial width of left element
 	const listRef = useRef<HTMLDivElement>(null);
 	const [filter, setFilter] = useState<string>();
-	const [allDataObjects, setAllDataObjects] = useState<string[]>([]);
-	const [allActions, setAllActions] = useState<string[]>([]);
-	const [allConnections, setAllConnections] = useState<string[]>([]);	
-	const [currentDataObjects, setCurrentDataObjects] = useState(allDataObjects);
-	const [currentActions, setCurrentActions] = useState<string[]>(allActions);
-	const [currentConnections, setCurrentConnections] = useState<string[]>(allConnections);
 
-	useEffect(() => {
-		if (data) {
-			if (data.dataObjects) {
-				setAllDataObjects(Object.keys(data.dataObjects).sort());
-			}
-			if (data.actions) {
-				setAllActions(Object.keys(data.actions).sort());
-			}
-			if (data.connections) {
-				setAllConnections(Object.keys(data.connections).sort());
-			}
-		}
-	}, [data]);
-
-	useEffect(() => {
-		if (filter && filter.length>0) {
-			const searchText = filter.toLowerCase()
-			setCurrentDataObjects(allDataObjects.filter(a => a.toLowerCase().includes(searchText)));
-			setCurrentActions(allActions.filter(a => a.toLowerCase().includes(searchText)));
-			setCurrentConnections(allConnections.filter(a => a.toLowerCase().includes(searchText)));
+	const configDataLists = useMemoWithDefault(() => {
+		if (configData) {
+			return new InitialConfigDataLists(configData);
 		} else {
-			setCurrentDataObjects(allDataObjects);
-			setCurrentActions(allActions);
-			setCurrentConnections(allConnections);
+			return new InitialConfigDataLists();
 		}
-	}, [filter, allDataObjects, allActions, allConnections]);
+	}, [configData], new InitialConfigDataLists());
 
+	const filteredConfigDataLists: ConfigDataLists = useMemoWithDefault(() => {
+		if (filter && filter.length>0) {
+			return configDataLists.applySimpleFilter(filter);
+		}
+		return configDataLists;
+	}, [filter, configData], configDataLists);
 
 	return (
 		<Sheet sx={{ display: 'flex', height: "100%", flexDirection: 'column' }}>
 			<PageHeader title={'Configuration'} noBack={true} />
 			<Sheet sx={{ display: 'flex', height: "calc(100% - 6.6rem)"}}>
-				<ElementList dataObjects={currentDataObjects} actions={currentActions} connections={currentConnections} width={listWidth} mainRef={listRef} filter={filter} setFilter={setFilter} />
+				<ElementList configData={configData} configDataLists={filteredConfigDataLists!} width={listWidth} mainRef={listRef} setFilter={setFilter} />
 				<DraggableDivider setWidth={setListWidth} cmpRef={listRef} isRightCmp={false} />
 				<Routes>
-					<Route path='search/:ownSearchString' element={<SearchResults data={data}/>} /> //the ownSearchString is our definition of a search because of problems with routing Search Parameters
-					<Route path=":elementType/:elementName" element={<DataDisplayView data={data} />} />
-					<Route path="globalOptions" element={<GlobalConfigView data={data?.global}/>} />
+					<Route path='search/:ownSearchString' element={<SearchResults data={configData}/>} /> //the ownSearchString is our definition of a search because of problems with routing Search Parameters
+					<Route path=":elementType" element={<ElementTable dataLists={filteredConfigDataLists!} />} />
+					<Route path=":elementType/:elementName" element={<ElementDetails configData={configData} />} />
+					<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} />
 		  		</Routes>
 			</Sheet>
 		</Sheet>
