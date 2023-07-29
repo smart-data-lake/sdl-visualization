@@ -41,8 +41,10 @@ export default function PropertiesComponent(props: {entries: {key: string, value
     } else if (key === "code") {
     // format code
       const type = props.entries.find(e => e.key === "type");
-      const language = (type && type.value.split(/(?=[A-Z])/)[0].toLowerCase()) || "default";
-      console.log(language);
+      var language = "default"
+      if (type && type.value.startsWith("SQL")) language = 'sql';
+      if (type && type.value.startsWith("Scala")) language = 'scala';
+      if (type && type.value.startsWith("Python")) language = 'python';
       value = <CodeViewComponent code={removeBlockOfTrailingSpaces(value)} language={language} />
     } else {
     // stringify the rest  
