@@ -11,6 +11,7 @@ import { Box, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHea
 import { getAttributeGeneral } from '../../util/ConfigExplorer/ConfigSearchOperation';
 import { createPropertiesComponent } from './PropertiesComponent';
 import CodeViewComponent from './CodeViewComponent';
+import { hoconify } from '../../util/helpers';
 
 function getTransformers(action: any): any[] {
   //returns a list of transformer objects
@@ -155,14 +156,21 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
   function rawHoconAccordion(){
     var rawData = props.data;
-    // remove origin from data if it exists
+    var title = 'Raw Config'
+    // remove origin from data if it exists, add it to title
     if (rawData.origin) {
-      var rawData = {...rawData}; // deep clone to avoid mutation of the original data
-      rawData.origin = undefined; // remove origin definition
+      title = title + ` - ${rawData.origin.path}:${rawData.origin.lineNumber}`;
+      rawData = {...rawData}; // deep clone to avoid mutation of the original data
+      delete rawData['origin'];
     }
-    accordionSections.set('rawJson', ['Raw Code', <CodeViewComponent code={JSON.stringify(rawData, null, 2)} language="json" />]);
+    // remove id from data
+    if (rawData.id) {
+      rawData = {...rawData}; // deep clone to avoid mutation of the original data
+      delete rawData['id'];
+    }    
+    const hoconConfig = hoconify(rawData);
+    accordionSections.set('rawJson', [title, <CodeViewComponent code={hoconConfig} language="" />]);
   }
-
 
   function getAccordionSections(): [string, string, JSX.Element][]{
     foreignKeysAccordion();
