@@ -1,21 +1,8 @@
-import PageHeader from "../../layouts/PageHeader";
-import { styled } from '@mui/joy/styles';
-import Sheet from '@mui/joy/Sheet';
+import { Divider, Typography } from "@mui/joy";
 import Grid from '@mui/joy/Grid';
-import Card from '@mui/joy/Card';
+import Sheet from '@mui/joy/Sheet';
+import PageHeader from "../../layouts/PageHeader";
 import WelcomeCard from "./WelcomeCard";
-import { Box, Divider, Typography } from "@mui/joy";
-
-
-const Item = styled(Sheet)(({ theme }) => ({
-    backgroundColor:
-      theme.palette.mode === 'dark' ? theme.palette.background.level1 : 'salmon',
-    ...theme.typography.body2,
-    padding: theme.spacing(1),
-    textAlign: 'center',
-    borderRadius: 4,
-    color: theme.vars.palette.text.secondary,
-  }));
 
 const info = [
     {title: 'Explore Configuration', subtitle: 'Learn about SDLB', image: 'images/config.png', link: 'internal;/config'},

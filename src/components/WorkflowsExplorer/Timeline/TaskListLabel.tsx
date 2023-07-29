@@ -17,7 +17,7 @@ const TaskListLabel = (props: {item: Row, displayPhases: {name: string; checked:
   const getTotalDuration = () => {
     let duration = 0;
 
-    displayPhases.map((phase) => {
+    displayPhases.forEach((phase) => {
       if (phase.checked) {
         switch (phase.name) {
           case 'Execution':

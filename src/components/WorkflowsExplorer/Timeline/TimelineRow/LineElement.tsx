@@ -1,13 +1,12 @@
-import React from 'react';
-import styled, { DefaultTheme, keyframes, css } from 'styled-components';
-import { Row } from '../../../../types';
-import { lineColor, getRowStatus, getLengthLabelPosition } from './utils';
-import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
 import { lighten } from 'polished';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import styled, { DefaultTheme, css, keyframes } from 'styled-components';
+import { Row } from '../../../../types';
+import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
 import { getPathFor } from '../../../../util/WorkflowsExplorer/routing';
 import { TasksSortBy } from '../useTaskListSettings';
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { getLengthLabelPosition, getRowStatus, lineColor } from './utils';
 
 //
 // Typedef
@@ -55,7 +54,6 @@ const LineElement: React.FC<LineElementProps> = ({
   
   //paramsString,
 }) => {
-	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const status = getRowStatus(row);
 	// Extend visible area little bit to prevent lines seem like going out of bounds. Happens
@@ -115,7 +113,7 @@ const LineElement: React.FC<LineElementProps> = ({
 					}}
 					data-testid="boxgraphic"
 					dragging={dragging}
-					title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (${t('task.unable-to-find-status')})` : ''}`}
+					title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (unknown status)` : ''}`}
 					onClick={(e) => {
 					if (row.type === 'task') {
 						e.stopPropagation();

@@ -15,7 +15,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, mode?: 'verti
     const { filters, updateList } = props;
     const [list, setList] = useState<boolean[]>(Array(props.filters?.length).fill(true));
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-    const [selectedIndex, setSelectedIndex] = React.useState<number>(1);
+    const [, setSelectedIndex] = React.useState<number>(1);
 
     const open = Boolean(anchorEl);
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {

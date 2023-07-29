@@ -6,6 +6,7 @@ import FilterMenu from "./FilterMenu";
 import SelectSort from "./SelectSort";
 import DatetimePicker from "../DatetimePicker/DatetimePicker";
 import Phases from "./Phases";
+import { Filter } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 
 /**
@@ -22,7 +23,7 @@ const ToolBar = (
         updateRows: (rows: any[]) => void, 
         searchColumn: string,
         style?: 'horizontal' | 'vertical', 
-        filters?: {name: string, fun: (rows: any[]) => any}[],
+        filters: Filter[],
         sortEnabled?: boolean,
         datetimePicker?: (start: Date, end: Date) => void,
         searchMode?: 'equals' | 'contains',
@@ -65,11 +66,8 @@ const ToolBar = (
         }
 		
 		function applyFilters() {
-			const filteredRows: any[] = []
-			list.map((item, index) => {
-				if (item && filters) filteredRows.push(...filters[index].fun(controlledRows));
-			});
-			return filteredRows;
+            const enabledFilters = filters.filter((_,idx) => list[idx]);
+            return controlledRows.filter(row => enabledFilters.some(filter => filter.predicate(row)));
 		}
 		
 		const a = value === '' ? controlledRows : handleInput();

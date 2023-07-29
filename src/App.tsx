@@ -1,9 +1,6 @@
 import CssBaseline from '@mui/joy/CssBaseline';
-import { createHashRouter, createRoutesFromElements, Route, RouterProvider, Routes } from 'react-router-dom';
+import { createHashRouter, Route, RouterProvider, Routes } from 'react-router-dom';
 import ConfigExplorer from './components/ConfigExplorer/ConfigExplorer';
-import ElementDetails from './components/ConfigExplorer/ElementDetails';
-import GlobalConfigView from './components/ConfigExplorer/GlobalConfigView';
-import SearchResults from './components/ConfigExplorer/SearchResults';
 import Home from './components/HomeMenu/Home';
 import Run from './components/WorkflowsExplorer/Run/Run';
 import WorkflowHistory from './components/WorkflowsExplorer/Workflow/WorkflowHistory';

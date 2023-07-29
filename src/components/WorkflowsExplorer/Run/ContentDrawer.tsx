@@ -1,10 +1,10 @@
-import { Box, Button, IconButton, Sheet, Table, Tooltip, Typography } from "@mui/joy";
 import CloseIcon from '@mui/icons-material/Close';
+import { Button, IconButton, Sheet, Table, Tooltip, Typography } from "@mui/joy";
 import { useNavigate, useParams } from "react-router-dom";
-import Attempt from "../../../util/WorkflowsExplorer/Attempt";
-import { Row } from "../../../types"
-import { useManifest } from "../../../hooks/useManifest";
 import { useConfig } from "../../../hooks/useConfig";
+import { useManifest } from "../../../hooks/useManifest";
+import { Row } from "../../../types";
+import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 
 const getRow = (attempt: Attempt, taskName: string) => {
     if (taskName === 'err') throw(new Error('was not able to fetch task name'));

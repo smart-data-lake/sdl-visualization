@@ -1,13 +1,11 @@
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { AutoSizer, List } from 'react-virtualized';
 import styled from 'styled-components';
-import TimelineRow from './TimelineRow';
-import { useTranslation } from 'react-i18next';
-import TimelineFooter from './Footer';
-import { TFunction } from 'i18next';
-import { toRelativeSize } from '../../../util/WorkflowsExplorer/style';
-import { TasksSortBy } from './useTaskListSettings';
 import { AsyncStatus, Row } from '../../../types';
+import { toRelativeSize } from '../../../util/WorkflowsExplorer/style';
+import TimelineFooter from './Footer';
+import TimelineRow from './TimelineRow';
+import { TasksSortBy } from './useTaskListSettings';
 
 const listStyle = { transition: 'height 0.25s' };
 
@@ -54,7 +52,6 @@ const Timeline: React.FC<TimelineProps> = ({
   onMove = () => null,
   displayPhases,
 }) => {
-  const { t } = useTranslation();
 
   // Name of sticky header (if should be visible)
   const [dragging, setDragging] = useState(false);
@@ -69,11 +66,10 @@ const Timeline: React.FC<TimelineProps> = ({
         timeline,
         searchStatus,
         paramsString,
-        t: t,
         dragging: dragging,
         displayPhases: displayPhases,
       }),
-    [dragging, paramsString, rows, searchStatus, t, timeline, displayPhases],
+    [dragging, paramsString, rows, searchStatus, timeline, displayPhases],
   );
 
 
@@ -126,7 +122,6 @@ const Timeline: React.FC<TimelineProps> = ({
       onMove,
       rowRenderer,
       rows,
-      t,
       timeline,
     ],
   );
@@ -147,7 +142,6 @@ type RowRendererProps = {
   timeline: TimelineMetrics;
   searchStatus?: AsyncStatus;
   paramsString: string;
-  t: TFunction;
   dragging: boolean;
   displayPhases: { name: string; checked: boolean }[];
 };
@@ -162,7 +156,6 @@ function createRowRenderer({
   timeline,
   searchStatus,
   paramsString = '',
-  t,
   dragging,
   displayPhases,
 }: RowRendererProps) {
@@ -176,7 +169,6 @@ function createRowRenderer({
           searchStatus={searchStatus}
           onOpen={() => null}
           paramsString={paramsString}
-          t={t}
           dragging={dragging}
           displayPhases={displayPhases}
         />

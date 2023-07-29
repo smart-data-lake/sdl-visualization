@@ -1,12 +1,11 @@
 import React from 'react';
-import styled, { css } from 'styled-components';
 import { Link } from 'react-router-dom';
-import { getPathFor } from '../../../../util/WorkflowsExplorer/routing';
-import { TFunction } from 'i18next';
-import TaskListLabel from '../TaskListLabel';
-import LineElement, { BoxGraphicValue } from './LineElement';
-import { TimelineMetrics } from '../Timeline';
+import styled, { css } from 'styled-components';
 import { AsyncStatus, Row } from '../../../../types';
+import { getPathFor } from '../../../../util/WorkflowsExplorer/routing';
+import TaskListLabel from '../TaskListLabel';
+import { TimelineMetrics } from '../Timeline';
+import LineElement, { BoxGraphicValue } from './LineElement';
 
 type TimelineRowProps = {
 	// Row type and data
@@ -19,7 +18,6 @@ type TimelineRowProps = {
 	// Flag row as sticky for some absolute stylings
 	sticky?: boolean;
 	paramsString?: string;
-	t: TFunction;
 	// Flag if we are dragging footer section. Need to remove animation in that case so rows don't seem clunky
 	dragging: boolean;
 	displayPhases: { name: string; checked: boolean }[];

@@ -1,10 +1,9 @@
-import * as React from 'react';
+import { Link } from '@mui/joy';
 import AspectRatio from '@mui/joy/AspectRatio';
 import Card from '@mui/joy/Card';
 import CardContent from '@mui/joy/CardContent';
 import CardOverflow from '@mui/joy/CardOverflow';
 import Typography from '@mui/joy/Typography';
-import { Box, Button, Link } from '@mui/joy';
 import { useNavigate } from 'react-router-dom';
 
 export default function OverflowCard(props: {title: string, subtitle: string, image?: string, link?: string} ) {

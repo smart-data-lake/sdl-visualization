@@ -3,9 +3,9 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import { Box, Divider, List, ListItem /* , ListItemContent */, ListItemButton, Sheet, Tooltip } from '@mui/joy';
-import { useLocation, useMatch, useNavigate, useResolvedPath } from 'react-router-dom';
-import { useManifest } from '../hooks/useManifest';
 import { ListItemIcon } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useManifest } from '../hooks/useManifest';
 
 /**
  * The SideBar is a navigation bar that is fixed on the left side of the screen. It contains buttons that allow the user to navigate to different pages, such as the Home page, Workflows Explorer page, and Config Viewer page.
@@ -24,8 +24,6 @@ const SideBar = () => {
             return location.pathname;
         }
     }
-
-    console.log(location.pathname, getModulePath());
 
     if (manifest.isLoading) return <></>
     

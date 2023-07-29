@@ -15,7 +15,7 @@ import TabNav from "./Tabs";
     @returns {JSX.Element} - The Run component UI.
 */
 const Run = (props : {panelOpen?: boolean}) => {
-    const {flowId, runNumber, taskId, tab} = useParams();
+    const {flowId, runNumber, taskId} = useParams();
     const { data, isLoading, isFetching } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
 
     if (isLoading || isFetching) return <CircularProgress/>
