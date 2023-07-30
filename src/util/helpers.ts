@@ -1,3 +1,4 @@
+import { AnyRecord } from "dns";
 
 /**
  * Function to transform a value by a function if it is defined, and otherwise returns a default value.
@@ -36,4 +37,15 @@ function getIndent(level: number) { return ' '.repeat(level*2); }
 function hoconifyObjectEntries(obj: object, level: number) {
   const indent = getIndent(level);
   return Object.entries(obj).map(e => indent + e[0] + ": " + hoconify(e[1], level, false)).join('\n');
+}
+
+/**
+ * Access property by path, e.g "a.b.c", also supports array indexes, e.g. "a[0].b.c"
+ * see also https://stackoverflow.com/questions/6491463/accessing-nested-javascript-objects-and-arrays-by-string-path
+ */
+export function getPropertyByPath(object: any, path: string, defaultValue: any) {
+  return path
+   .split(/[\.\[\]\'\"]/)
+   .filter(p => p)
+   .reduce((o, p) => o ? o[p] : defaultValue, object);
 }

@@ -75,7 +75,7 @@ const SideBar = () => {
                     {buttons.map((component) => (
                         <>  
                             <ListItem>
-                                <Tooltip title={component.disabled ? `No data was found for the menu "${component.description.toLowerCase()}". Please check that the ${component.filetype} files are at the expected location according to the manifest.` : component.description} placement='right'>
+                                <Tooltip arrow title={component.disabled ? `No data was found for the menu "${component.description.toLowerCase()}". Please check that the ${component.filetype} files are at the expected location according to the manifest.` : component.description} placement='right' enterDelay={500} enterNextDelay={500}>
                                     <div>
                                     <ListItemButton 
                                         sx={{ scale: '90%', justifyContent: 'center' }}

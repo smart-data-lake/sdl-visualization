@@ -1,3 +1,4 @@
+import { SchemaOutlined, SearchOutlined } from '@mui/icons-material';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import LanIcon from '@mui/icons-material/Lan';
@@ -7,19 +8,22 @@ import RocketLaunch from '@mui/icons-material/RocketLaunch';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import TableView from '@mui/icons-material/TableView';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
+import Divider from '@mui/joy/Divider';
+import Input from '@mui/joy/Input';
+import Option from '@mui/joy/Option';
+import Select from '@mui/joy/Select';
+import Tooltip from '@mui/joy/Tooltip';
 import { Box } from '@mui/material';
 import Collapse from '@mui/material/Collapse';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import TextField from '@mui/material/TextField';
 import * as React from 'react';
-import { Link, useMatch, useNavigate } from "react-router-dom";
+import { Link, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import { ConfigData, ConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
 import { transformOrDefault } from '../../util/helpers';
 import './ComponentsStyles.css';
-
 
 interface ElementListProps{
   configData?: ConfigData;
@@ -38,27 +42,42 @@ export default function ElementList(props: ElementListProps) {
   const urlParamsElement = useMatch('/config/:elementType/:elementName');
   const elementType = urlParamsElement?.params.elementType || urlParamsType?.params.elementType;
   const elementName = urlParamsElement?.params.elementName;
+  const [urlSearchParams] = useSearchParams();
+  const elementSearchTextParam = urlSearchParams.get('elementSearch') || '';
+  const elementSearchTypeParam = urlSearchParams.get('elementSearchType') || '';
 
   const [openDataObjectsList, setOpenDataObjectsList] = React.useState(isSelected("dataObjects"));
   const [openActionsList, setOpenActionsList] = React.useState(isSelected("actions"));
   const [openConnectionsList, setOpenConnectionsList] = React.useState(isSelected("connections"));
+  const [elementSearchText, setElementSearchText] = React.useState<string>(elementSearchTextParam);
+  const [elementSearchType, setElementSearchType] = React.useState<string>("id");
   const navigate = useNavigate();
+
+  if (elementSearchTextParam && elementSearchText !== elementSearchTextParam) {
+    setElementSearchText(elementSearchTextParam);
+  }
+  if (elementSearchTypeParam && elementSearchType !== elementSearchTypeParam) {
+    setElementSearchType(elementSearchTypeParam);
+  }
+  console.log("elementsearch", elementSearchType, elementSearchText);
 
   function handleClickNavigate(to: string) {
     return (ev: React.MouseEvent<HTMLDivElement>) => {
       ev.stopPropagation();
       navigate(to);
     }
-  };
+  }
 
-  const handleTextField = (text: string) => {
+  //function handleElementSearchTextChange(text: string|null) {
+  React.useEffect(() => {  
     if (!openActionsList && !openDataObjectsList && !openConnectionsList) {
       setOpenActionsList(true);
       setOpenDataObjectsList(true);
       setOpenConnectionsList(true);
     }
-    props.setFilter(text);
-  }
+    setElementSearchText(elementSearchText);
+    props.setFilter(elementSearchText);
+  }, [elementSearchText]);
 
   function isSelected(type: string, name?: string) {
     return (type===elementType && name===elementName)
@@ -120,14 +139,40 @@ export default function ElementList(props: ElementListProps) {
   )), []);
 
   return (
-    <Box sx={{width: props.width, minWidth: '100px', maxWidth: '500px', height: '100%', pt:'1rem'}} ref={props.mainRef}>
-      <TextField
-        className="search_field"
-        variant="outlined"
-        size="small"
-        label="Search element"
-        onChange={(e) => handleTextField(e.target.value)} //e is the event Object triggered by the onChange
-        sx={{width: "100%", paddingRight: "10px"}}
+    <Box sx={{width: props.width, minWidth: '100px', maxWidth: '500px', height: '100%', pt:'1rem', overflowY: 'auto'}} ref={props.mainRef}>
+      <Input
+        placeholder="Search element"
+        sx={{width: "100% - 10px", marginLeft: "10px"}}
+        value={elementSearchText}
+        onChange={(e) => setElementSearchText(e.target.value)}
+        endDecorator={
+          <>
+            <Divider orientation="vertical" />
+            <Select size="sm" variant="plain"
+              value={elementSearchType}
+              onChange={(e, value) => {if (value) setElementSearchType(value)}}
+              sx={{ mr: -1.5, '&:hover': { bgcolor: 'transparent' }, '& .MuiSelect-indicator': {marginLeft: '0px'} }}
+            >
+              <Option value="id">
+                <Tooltip arrow title='Search elements where id contain search text.' enterDelay={500} enterNextDelay={500} placement='right'>
+                  <SearchOutlined/>
+                </Tooltip>
+              </Option>
+              <Option value="property">
+                <Tooltip arrow title='Search elements where given property contains search text. Use convention "propertyName:searchText".' enterDelay={500} enterNextDelay={500} placement='right'>
+                  <SchemaOutlined/>
+                </Tooltip>
+              </Option>
+              {/*
+              <Option value="feedSel">
+                <Tooltip arrow title='Search Actions and dependent objects with semantics of command line "feedSel" parameter.' enterDelay={500} enterNextDelay={500} placement='right'>
+                  <AltRouteIcon />
+                </Tooltip>
+              </Option>
+              */}
+            </Select>
+          </>
+        }        
       />
 
       <List
