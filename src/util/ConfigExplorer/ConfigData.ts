@@ -67,7 +67,12 @@ export class InitialConfigDataLists implements ConfigDataLists {
     public applyRegexFilter(prop: string, regex: string) {
         if (prop) {
             const propClean = prop.trim();
-            const regexObj = (regex ? new RegExp(regex.trim()) : /.*/);
+            let regexObj = /.*/;
+            try {
+                regexObj = new RegExp(regex.trim());
+            } catch {
+                if (regex) console.log(`regular expression "${regex}" not valid`);
+            }
             const filterDef = (obj:any) => {
                 const v = getPropertyByPath(obj,propClean);
                 return (v && typeof v !== 'object' && v.toString().match(regexObj));
