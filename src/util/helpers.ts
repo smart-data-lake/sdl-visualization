@@ -45,7 +45,7 @@ function hoconifyObjectEntries(obj: object, level: number) {
  */
 export function getPropertyByPath(object: any, path: string) {
   return path
-   .split(/[\.\[\]\'\"]/)
+   .split(/[.[\]'"]/)
    .filter(p => p)
    .reduce((o, p) => o ? o[p] : undefined, object);
 }
