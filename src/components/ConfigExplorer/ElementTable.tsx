@@ -16,7 +16,7 @@ export default function ElementTable(props: {dataLists: ConfigDataLists}) {
     };    
 
     return (
-		<Sheet sx={{ flex: 1, minWidth: '500px', display: 'flex', flexDirection: 'column',  p: '1rem'}}>
+		<Sheet sx={{ flex: 1, minWidth: '500px', width: '500px', height: '100%', display: 'flex', flexDirection: 'column',  padding: '1rem 0 0 1rem'}}>
 
 			<TabContext value={elementType || "dataObjects"}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
@@ -27,7 +27,7 @@ export default function ElementTable(props: {dataLists: ConfigDataLists}) {
 					</Tabs>
 				</Sheet>
 				<TabPanel value="dataObjects" className="content-panel" sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
-                    <DataTable data={dataLists.dataObjects} columns={["id", "type", "path", "table", "connectionId"]} navigatePrefix={`/config/dataObjects/`} navigateAttr="id"/>
+                    <DataTable data={dataLists.dataObjects} columns={["id", "type", "path", "table.db", "table.name", "connectionId"]} navigatePrefix={`/config/dataObjects/`} navigateAttr="id"/>
 				</TabPanel>
 				<TabPanel value="actions" className="content-panel"  sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
                     <DataTable data={dataLists.actions} columns={["id", "type", "inputIds", "outputIds"]} navigatePrefix={`/config/actions/`} navigateAttr="id"/>

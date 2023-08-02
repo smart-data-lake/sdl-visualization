@@ -155,7 +155,7 @@ export default function ElementList(props: ElementListProps) {
             <Select size="sm" variant="plain"
               value={elementSearchType}
               onChange={(e, value) => {if (value) setElementSearchType(value)}}
-              sx={{ mr: -1.5, '&:hover': { bgcolor: 'transparent' }, '& .MuiSelect-indicator': {marginLeft: '0px'} }}
+              sx={{ mr: -1.5, '& .MuiSelect-indicator': {marginLeft: '0px'} }}
             >
               <Option value="id">
                 <Tooltip arrow title='Search elements where id contains search text (case insensitive).' enterDelay={500} enterNextDelay={500} placement='right'>
