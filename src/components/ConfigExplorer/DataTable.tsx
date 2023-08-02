@@ -73,7 +73,7 @@ export default function DataTable(props: {data: any[], columns: string[], naviga
                         })
                     }
                 }}
-                noData={{ text: "No data found", hideHeader: true }}                                
+                noData={{ text: "No data found", hideHeader: true }}                                         
             />
         </Box>
     )
