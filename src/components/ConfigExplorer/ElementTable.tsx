@@ -21,9 +21,9 @@ export default function ElementTable(props: {dataLists: ConfigDataLists}) {
 			<TabContext value={elementType || "dataObjects"}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
 					<Tabs value={elementType} onChange={handleChange} aria-label="element tabs">
-						<Tab label="Data Objects" value="dataObjects" />
-						<Tab label="Actions" value="actions" />
-						<Tab label="Connections" value="connections" />
+						<Tab label="Data Objects" value="dataObjects" disabled={dataLists.dataObjects.length==0} />
+						<Tab label="Actions" value="actions" disabled={dataLists.actions.length==0} />
+						<Tab label="Connections" value="connections" disabled={dataLists.connections.length==0} />
 					</Tabs>
 				</Sheet>
 				<TabPanel value="dataObjects" className="content-panel" sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
