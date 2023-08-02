@@ -8,10 +8,9 @@ import './ComponentsStyles.css';
 import 'github-markdown-css/github-markdown.css';
 import 'github-markdown-css/github-markdown.css';
 import { Box, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
-import { getAttributeGeneral } from '../../util/ConfigExplorer/ConfigSearchOperation';
 import { createPropertiesComponent } from './PropertiesComponent';
 import CodeViewComponent from './CodeViewComponent';
-import { hoconify } from '../../util/helpers';
+import { getPropertyByPath, hoconify } from '../../util/helpers';
 
 function getTransformers(action: any): any[] {
   //returns a list of transformer objects
@@ -28,7 +27,7 @@ interface AccordionCreatorProps {
 
 export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
-  const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, attributeName.split('.'));
+  const getAttribute = (attributeName: string) => getPropertyByPath(props.data, attributeName);
   var accordionSections = new Map<string,[string,JSX.Element]>();
   const [openAccordion, setOpenAccordion] = React.useState('none'); //none of the accordions are open at the beginning
 

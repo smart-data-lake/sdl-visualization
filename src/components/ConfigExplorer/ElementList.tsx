@@ -30,7 +30,7 @@ interface ElementListProps{
   configDataLists: ConfigDataLists;
   width: number;
   mainRef: React.Ref<HTMLDivElement>;
-  setFilter: (string) => void;
+  setFilter: (SearchFilterDef) => void;
 }
 
 //props.data should be the JsonObject (already parsed from HOCON)
@@ -49,17 +49,22 @@ export default function ElementList(props: ElementListProps) {
   const [openDataObjectsList, setOpenDataObjectsList] = React.useState(isSelected("dataObjects"));
   const [openActionsList, setOpenActionsList] = React.useState(isSelected("actions"));
   const [openConnectionsList, setOpenConnectionsList] = React.useState(isSelected("connections"));
-  const [elementSearchText, setElementSearchText] = React.useState<string>(elementSearchTextParam);
+  const [elementSearchText, setElementSearchText] = React.useState<string>('');
   const [elementSearchType, setElementSearchType] = React.useState<string>("id");
   const navigate = useNavigate();
 
-  if (elementSearchTextParam && elementSearchText !== elementSearchTextParam) {
-    setElementSearchText(elementSearchTextParam);
-  }
-  if (elementSearchTypeParam && elementSearchType !== elementSearchTypeParam) {
-    setElementSearchType(elementSearchTypeParam);
-  }
-  console.log("elementsearch", elementSearchType, elementSearchText);
+  React.useEffect(() => {  
+    if (elementSearchTextParam) {
+      setElementSearchText(elementSearchTextParam);
+      console.log("setElementSearchText param", elementSearchText, elementSearchTextParam);
+    }
+  }, [elementSearchTextParam]);
+
+  React.useEffect(() => {  
+    if (elementSearchTypeParam && elementSearchType !== elementSearchTypeParam) {
+      setElementSearchType(elementSearchTypeParam);
+    }
+  }, [elementSearchTypeParam]);
 
   function handleClickNavigate(to: string) {
     return (ev: React.MouseEvent<HTMLDivElement>) => {
@@ -75,9 +80,8 @@ export default function ElementList(props: ElementListProps) {
       setOpenDataObjectsList(true);
       setOpenConnectionsList(true);
     }
-    setElementSearchText(elementSearchText);
-    props.setFilter(elementSearchText);
-  }, [elementSearchText]);
+    props.setFilter({text: elementSearchText, type: elementSearchType});
+  }, [elementSearchType, elementSearchText]);
 
   function isSelected(type: string, name?: string) {
     return (type===elementType && name===elementName)
@@ -154,12 +158,12 @@ export default function ElementList(props: ElementListProps) {
               sx={{ mr: -1.5, '&:hover': { bgcolor: 'transparent' }, '& .MuiSelect-indicator': {marginLeft: '0px'} }}
             >
               <Option value="id">
-                <Tooltip arrow title='Search elements where id contain search text.' enterDelay={500} enterNextDelay={500} placement='right'>
+                <Tooltip arrow title='Search elements where id contains search text (case insensitive).' enterDelay={500} enterNextDelay={500} placement='right'>
                   <SearchOutlined/>
                 </Tooltip>
               </Option>
               <Option value="property">
-                <Tooltip arrow title='Search elements where given property contains search text. Use convention "propertyName:searchText".' enterDelay={500} enterNextDelay={500} placement='right'>
+                <Tooltip arrow title='Search elements where given property is matched by regular expression. Use convention "propertyName:regex".' enterDelay={500} enterNextDelay={500} placement='right'>
                   <SchemaOutlined/>
                 </Tooltip>
               </Option>

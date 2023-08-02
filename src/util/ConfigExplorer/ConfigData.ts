@@ -1,3 +1,4 @@
+import { getPropertyByPath } from "../helpers";
 
 export class ConfigData {
     public dataObjects = {};
@@ -49,26 +50,33 @@ export class InitialConfigDataLists implements ConfigDataLists {
         else return 1;
     }
 
-    public applySimpleFilter(str: string) {
-        const filterDef = (obj:any) => obj.id.toLowerCase().includes(str.toLowerCase());
-        return this.applyFilterFunc(filterDef);
+    public applyContainsFilter(prop: string, str: string) {
+        if (str) {
+            const propClean = prop.trim();
+            const strLower = str.trim().toLowerCase();
+            const filterDef = (obj:any) => {
+                const v = getPropertyByPath(obj,propClean);
+                return (v && v.toLowerCase().includes(strLower));
+            }
+            return this.applyFilterFunc(filterDef);
+        }
+        // default return all
+        return this;
     }
 
-    public applyRegexFilter(regex: string) {
-        const regexObj = new RegExp(regex);
-        const filterDef = (obj:any) => obj.id.match(regexObj);
-        return this.applyFilterFunc(filterDef);
+    public applyRegexFilter(prop: string, regex: string) {
+        if (prop) {
+            const propClean = prop.trim();
+            const regexObj = (regex ? new RegExp(regex.trim()) : /.*/);
+            const filterDef = (obj:any) => {
+                const v = getPropertyByPath(obj,propClean);
+                return (v && typeof v !== 'object' && v.toString().match(regexObj));
+            }
+            return this.applyFilterFunc(filterDef);
+        }
+        // default return all
+        return this;
     }
-
-    public applyTagFilter(tag: string) {
-        const filterDef = (obj:any) => obj.metadata?.tags?.includes(tag);
-        return this.applyFilterFunc(filterDef);
-    }
-
-    public applyTypeFilter(type: string) {
-        const filterDef = (obj:any) => obj.type === type;
-        return this.applyFilterFunc(filterDef);
-    }   
     
     private applyFilterFunc(filterFunc: (any) => boolean): ConfigDataLists {
         return {

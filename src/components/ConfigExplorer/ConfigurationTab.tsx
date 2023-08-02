@@ -1,21 +1,18 @@
-import './ComponentsStyles.css';
-import 'github-markdown-css/github-markdown.css';
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import { Box } from "@mui/material";
-import Chip from '@mui/material/Chip';
-import Stack from '@mui/material/Stack';
+import { ExploreOutlined, LayersOutlined, TableViewTwoTone } from '@mui/icons-material';
+import AltRouteIcon from '@mui/icons-material/AltRoute';
+import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import SellIcon from '@mui/icons-material/Sell';
 import StyleIcon from '@mui/icons-material/Style';
-import ConfigurationAccordions from './ConfigurationAccordions';
-import AltRouteIcon from '@mui/icons-material/AltRoute';
+import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
-import { getAttributeGeneral } from '../../util/ConfigExplorer/ConfigSearchOperation';
+import Stack from '@mui/material/Stack';
+import 'github-markdown-css/github-markdown.css';
 import { Link } from "react-router-dom";
-import { ExploreOutlined, LayersOutlined, TableViewTwoTone } from '@mui/icons-material';
-import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
+import { getPropertyByPath } from '../../util/helpers';
+import './ComponentsStyles.css';
+import ConfigurationAccordions from './ConfigurationAccordions';
 import { createPropertiesComponent } from './PropertiesComponent';
-
-
 
 interface ElementProps {
   data: any; // config of object to display
@@ -23,7 +20,6 @@ interface ElementProps {
   elementName: string;
   elementType: string;
 }
-
 
 function getInputOutputIds(action: any): [string[], string[]]{
   let inputs: string[] = action['inputIds'] ? action['inputIds'] : [];
@@ -58,9 +54,9 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
   );
 }
 
-function createSearchChip(attr: string, value: string, icon: JSX.Element, color: "primary" | "default" | "success" | "secondary" | "error" | "info" | "warning" | undefined = "primary") {
+function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: "primary" | "default" | "success" | "secondary" | "error" | "info" | "warning" | undefined = "primary") {
   if (value){
-    const path = `/config/search/${attr}=${value}`;
+    const path = `/config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`;
     return(
       <Link to={path}>
         <Chip label={value} sx={{mr: 1}}
@@ -103,7 +99,7 @@ export function createSimpleChip(name: string) {
 
 export default function ConfigurationTab(props: ElementProps) {
 
-  const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, attributeName.split('.'));
+  const getAttribute = (attributeName: string) => getPropertyByPath(props.data, attributeName);
 
   //attributes to be displayed at the top of the page
   let topAttributes: {key: string, func: (x:any) => any}[] = [
@@ -128,19 +124,19 @@ export default function ConfigurationTab(props: ElementProps) {
 
   function layerChip(){
     let x = getAttribute('metadata.layer');
-    return createSearchChip("layer", x, <LayersOutlined/>, "secondary");
+    return createSearchChip("metadata.layer", x, props.elementType, <LayersOutlined/>, "secondary");
   }
   function subjectAreaChip(){
     let x = getAttribute('metadata.subjectArea');
-    return createSearchChip("subjectArea", x, <ExploreOutlined/>, "secondary");
+    return createSearchChip("metadata.subjectArea", x, props.elementType, <ExploreOutlined/>, "secondary");
   }  
   function feedChip(){
     let feed = getAttribute('metadata.feed');
-    return createSearchChip("feed", feed, <AltRouteIcon />, "success");
+    return createSearchChip("metadata.feed", feed, props.elementType, <AltRouteIcon />, "success");
   }
   function typeChip(){
     let type = getAttribute('type');
-    return createSearchChip("type", type, <StyleIcon />, "success");
+    return createSearchChip("type", type, props.elementType, <StyleIcon />, "success");
   }
   function mainContent(){
     let propsToIgnore = topAttributes.map(x => x.key).concat(['metadata', 'type', 'inputId', 'inputIds', 'outputId', 'outputIds']);
@@ -162,7 +158,7 @@ export default function ConfigurationTab(props: ElementProps) {
           {feedChip()}
           {layerChip()}
           {subjectAreaChip()}
-          {tags.map(tag => createSearchChip("tags", tag, <SellIcon />, "secondary"))}
+          {tags.map(tag => createSearchChip("tags", tag, props.elementType, <SellIcon />, "secondary"))}
           </Box>
         {topAttributesCmp && <Grid item xs={12} xl={6}>{topAttributesCmp}</Grid>}
         {inputs.length > 0 && <Grid item xs={12} xl={6}>{formatInputsOutputs(inputs,outputs)}</Grid>}

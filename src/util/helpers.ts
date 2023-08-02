@@ -43,9 +43,9 @@ function hoconifyObjectEntries(obj: object, level: number) {
  * Access property by path, e.g "a.b.c", also supports array indexes, e.g. "a[0].b.c"
  * see also https://stackoverflow.com/questions/6491463/accessing-nested-javascript-objects-and-arrays-by-string-path
  */
-export function getPropertyByPath(object: any, path: string, defaultValue: any) {
+export function getPropertyByPath(object: any, path: string) {
   return path
    .split(/[\.\[\]\'\"]/)
    .filter(p => p)
-   .reduce((o, p) => o ? o[p] : defaultValue, object);
+   .reduce((o, p) => o ? o[p] : undefined, object);
 }
