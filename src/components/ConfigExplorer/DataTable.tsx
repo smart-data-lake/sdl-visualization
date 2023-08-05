@@ -1,10 +1,9 @@
 import { Box } from "@mui/joy";
-import { TablePagination } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { DataType, Table } from 'ka-table';
-import { PagingPosition, SortingMode } from 'ka-table/enums';
+import { SortingMode } from 'ka-table/enums';
 import { Column } from 'ka-table/models';
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 
 import "ka-table/style.css";
 import { getPropertyByPath } from "../../util/helpers";

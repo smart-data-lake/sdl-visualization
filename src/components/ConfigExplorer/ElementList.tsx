@@ -1,4 +1,5 @@
 import { SchemaOutlined, SearchOutlined } from '@mui/icons-material';
+import AltRouteIcon from '@mui/icons-material/AltRoute';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import LanIcon from '@mui/icons-material/Lan';
@@ -21,9 +22,10 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import * as React from 'react';
 import { Link, useMatch, useNavigate, useSearchParams } from "react-router-dom";
-import { ConfigData, ConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
+import { ConfigData, ConfigDataLists, emptyConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
 import { transformOrDefault } from '../../util/helpers';
 import './ComponentsStyles.css';
+import { applyFilter } from './ConfigExplorer';
 
 interface ElementListProps{
   configData?: ConfigData;
@@ -51,12 +53,12 @@ export default function ElementList(props: ElementListProps) {
   const [openConnectionsList, setOpenConnectionsList] = React.useState(isSelected("connections"));
   const [elementSearchText, setElementSearchText] = React.useState<string>('');
   const [elementSearchType, setElementSearchType] = React.useState<string>("id");
+  const [elementSearchTextErr, setElementSearchTextErr] = React.useState<string|null>(null);
   const navigate = useNavigate();
 
   React.useEffect(() => {  
     if (elementSearchTextParam) {
-      setElementSearchText(elementSearchTextParam);
-      console.log("setElementSearchText param", elementSearchText, elementSearchTextParam);
+      setElementSearchText(elementSearchTextParam);      
     }
   }, [elementSearchTextParam]);
 
@@ -64,6 +66,7 @@ export default function ElementList(props: ElementListProps) {
     if (elementSearchTypeParam && elementSearchType !== elementSearchTypeParam) {
       setElementSearchType(elementSearchTypeParam);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elementSearchTypeParam]);
 
   function handleClickNavigate(to: string) {
@@ -73,14 +76,22 @@ export default function ElementList(props: ElementListProps) {
     }
   }
 
-  //function handleElementSearchTextChange(text: string|null) {
-  React.useEffect(() => {  
-    if (!openActionsList && !openDataObjectsList && !openConnectionsList) {
-      setOpenActionsList(true);
-      setOpenDataObjectsList(true);
-      setOpenConnectionsList(true);
+  React.useEffect(() => {
+    const filter = {text: elementSearchText, type: elementSearchType};
+    try {
+      // validate
+      applyFilter(emptyConfigDataLists, filter);
+      if (!openActionsList && !openDataObjectsList && !openConnectionsList) {
+        setOpenActionsList(true);
+        setOpenDataObjectsList(true);
+        setOpenConnectionsList(true);
+      }
+      setElementSearchTextErr(null);
+      props.setFilter(filter);
+    } catch (err: any) {
+      setElementSearchTextErr(err.message);
     }
-    props.setFilter({text: elementSearchText, type: elementSearchType});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elementSearchType, elementSearchText]);
 
   function isSelected(type: string, name?: string) {
@@ -144,11 +155,13 @@ export default function ElementList(props: ElementListProps) {
 
   return (
     <Box sx={{width: props.width, minWidth: '100px', maxWidth: '500px', height: '100%', pt:'1rem', overflowY: 'auto'}} ref={props.mainRef}>
+      <Tooltip arrow title={`Search text for type=${elementSearchType} not valid: ${elementSearchTextErr}`} placement='bottom'  color="danger" open={(elementSearchTextErr ? true : false)} variant="soft">
       <Input
         placeholder="Search element"
         sx={{width: "100% - 10px", marginLeft: "10px"}}
         value={elementSearchText}
         onChange={(e) => setElementSearchText(e.target.value)}
+        error={(elementSearchTextErr ? true : false)}
         endDecorator={
           <>
             <Divider orientation="vertical" />
@@ -167,17 +180,18 @@ export default function ElementList(props: ElementListProps) {
                   <SchemaOutlined/>
                 </Tooltip>
               </Option>
-              {/*
+              {
               <Option value="feedSel">
                 <Tooltip arrow title='Search Actions and dependent objects with semantics of command line "feedSel" parameter.' enterDelay={500} enterNextDelay={500} placement='right'>
                   <AltRouteIcon />
                 </Tooltip>
               </Option>
-              */}
+              }
             </Select>
           </>
         }        
       />
+      </Tooltip>
 
       <List
         sx={{ width: '100%', bgcolor: 'background.paper' }}

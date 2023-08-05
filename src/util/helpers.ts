@@ -1,4 +1,3 @@
-import { AnyRecord } from "dns";
 
 /**
  * Function to transform a value by a function if it is defined, and otherwise returns a default value.
@@ -48,4 +47,12 @@ export function getPropertyByPath(object: any, path: string) {
    .split(/[.[\]'"]/)
    .filter(p => p)
    .reduce((o, p) => o ? o[p] : undefined, object);
+}
+
+/**
+ * Filter function to make array unique
+ * usage: arr.filter(onlyUnique);
+ */
+export function onlyUnique(value, index, array) {
+  return array.indexOf(value) === index;
 }

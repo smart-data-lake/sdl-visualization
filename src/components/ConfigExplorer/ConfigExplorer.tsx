@@ -1,19 +1,35 @@
 import { Sheet } from '@mui/joy';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Route, Routes } from "react-router-dom";
-import { useMemoWithDefault } from '../../hooks/useMemoWithDefault';
 import DraggableDivider from '../../layouts/DraggableDivider';
 import PageHeader from '../../layouts/PageHeader';
-import { ConfigData, ConfigDataLists, InitialConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
+import { ConfigData, ConfigDataLists, InitialConfigDataLists, emptyConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
 import './App.css';
 import ElementDetails from './ElementDetails';
 import ElementList from './ElementList';
 import ElementTable from './ElementTable';
 import GlobalConfigView from './GlobalConfigView';
 
+
 interface SearchFilterDef {
 	text: string;
 	type: string;
+}
+
+export function applyFilter(configDataLists: InitialConfigDataLists, filter: SearchFilterDef): ConfigDataLists {
+    switch(filter.type) {
+        case 'id': {
+            return configDataLists.applyContainsFilter('id', filter.text);
+        }
+        case 'property': {
+            const [prop,text] = filter.text.split(/[:=]/);
+            return configDataLists.applyRegexFilter(prop, text);
+        }
+        case 'feedSel': {
+            return configDataLists.applyFeedFilter(filter.text);
+        }		
+		default: throw Error(`Unknown search type ${filter.type}`);
+    }	
 }
 
 function ConfigExplorer(props: { configData?: ConfigData }) {
@@ -22,29 +38,21 @@ function ConfigExplorer(props: { configData?: ConfigData }) {
 	const listRef = useRef<HTMLDivElement>(null);
 	const [filter, setFilter] = useState<SearchFilterDef>();
 
-	const configDataLists = useMemoWithDefault(() => {
+	const configDataLists = useMemo(() => {
 		if (configData) {
 			return new InitialConfigDataLists(configData);
 		} else {
-			return new InitialConfigDataLists();
+			return emptyConfigDataLists;
 		}
-	}, [configData], new InitialConfigDataLists());
+	}, [configData]);
 
-	const filteredConfigDataLists: ConfigDataLists = useMemoWithDefault(() => {
+	const filteredConfigDataLists: ConfigDataLists = useMemo(() => {
 		if (filter && filter.text && filter.text.length>0) {
-			switch(filter.type) {
-				case 'id': {
-					return configDataLists.applyContainsFilter('id', filter.text);
-				}
-				case 'property': {
-					const [prop,text] = filter.text.split(/[:=]/);
-					return configDataLists.applyRegexFilter(prop, text);
-				}
-			}
+			return applyFilter(configDataLists, filter);
 		}
 		// default is to return unfiltered lists
 		return configDataLists;
-	}, [filter, configData], configDataLists);
+	}, [filter, configDataLists]);
 
 	return (
 		<Sheet sx={{ display: 'flex', height: "100%", flexDirection: 'column' }}>
