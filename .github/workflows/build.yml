@@ -43,6 +43,7 @@ jobs:
         path: |
           build/**/*.js
           build/**/*.css
+          build/images/*
           build/index.html
           build/manifest.json
           build/sdl_logo192.png
