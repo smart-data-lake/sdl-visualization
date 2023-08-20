@@ -1,4 +1,4 @@
-import { Sheet } from '@mui/joy';
+import { Box, Sheet } from '@mui/joy';
 import { useMemo, useRef, useState } from 'react';
 import { Route, Routes } from "react-router-dom";
 import DraggableDivider from '../../layouts/DraggableDivider';
@@ -34,8 +34,8 @@ export function applyFilter(configDataLists: InitialConfigDataLists, filter: Sea
 
 function ConfigExplorer(props: { configData?: ConfigData }) {
 	const { configData } = props;
-	const [listWidth, setListWidth] = useState(250); // initial width of left element
 	const listRef = useRef<HTMLDivElement>(null);
+	const parentRef = useRef<HTMLDivElement>(null);  
 	const [filter, setFilter] = useState<SearchFilterDef>();
 
 	const configDataLists = useMemo(() => {
@@ -55,16 +55,16 @@ function ConfigExplorer(props: { configData?: ConfigData }) {
 	}, [filter, configDataLists]);
 
 	return (
-		<Sheet sx={{ display: 'flex', height: "100%", flexDirection: 'column' }}>
+		<Sheet sx={{ display: 'flex', height: '100%', flexDirection: 'column' }}>
 			<PageHeader title={'Configuration'} noBack={true} />
-			<Sheet sx={{ display: 'flex', height: "calc(100% - 6.6rem)"}}>
-				<ElementList configData={configData} configDataLists={filteredConfigDataLists!} width={listWidth} mainRef={listRef} setFilter={setFilter} />
-				<DraggableDivider setWidth={setListWidth} cmpRef={listRef} isRightCmp={false} />
+			<Sheet sx={{ display: 'flex', width: '100%', flex: 1, minHeight: 0 }} ref={parentRef}>
+				<ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
+				<DraggableDivider cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
 				<Routes>
 					<Route path=":elementType" element={<ElementTable dataLists={filteredConfigDataLists!} />} />
-					<Route path=":elementType/:elementName" element={<ElementDetails configData={configData} />} />
+					<Route path=":elementType/:elementName" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} />
 					<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} />
-		  		</Routes>
+				</Routes>
 			</Sheet>
 		</Sheet>
 	);

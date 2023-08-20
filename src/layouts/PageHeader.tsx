@@ -34,11 +34,7 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                 pt : '3.2rem',
                 pb : '0.2rem',
             }}>
-                <Box sx={{
-                    display: 'flex',
-                    verticalAlign: 'middle',
-                    pb: '0.5rem',
-                }}>
+                <Box sx={{ display: 'flex', verticalAlign: 'middle', pb: '0.5rem' }}>
                     {!noBack && <IconButton  onClick={handleClick} variant="plain" color="neutral" size="sm">
                         <ArrowBackIosIcon sx={{scale: '80%', pl: '0.3rem'}}/>
                     </IconButton>}

@@ -230,7 +230,7 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
                         gap: '1rem',
                         height: '65vh',
                         justifyContent: 'space-between',
-                        overflowY: 'scroll',
+                        overflowY: 'auto',
                     }}
                     >
                         <ContentSheet action={action}/>

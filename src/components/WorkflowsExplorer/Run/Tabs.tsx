@@ -14,16 +14,19 @@ import GlobalStyle from "../../../GlobalStyle";
 import theme from "../../../theme";
 import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
-import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { checkFiltersAvailability, defaultFilters, getIcon } from "../../../util/WorkflowsExplorer/StatusInfo";
 import LineageTab from "../../ConfigExplorer/LineageTab";
 import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
 import ToolBar from "../ToolBar/ToolBar";
-import TableOfActions from "./ActionsTable";
 import ContentDrawer from './ContentDrawer';
 
+import { SortDirection } from 'ka-table';
 import DraggableDivider from "../../../layouts/DraggableDivider";
 import { DAGraph } from "../../../util/ConfigExplorer/Graphs";
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
+import { formatTimestamp } from '../../../util/WorkflowsExplorer/date';
+import { formatDuration } from '../../../util/WorkflowsExplorer/format';
+import DataTable from '../../ConfigExplorer/DataTable';
 
 /**
  * This is a TypeScript function that returns a set of three React components which are rendered inside a parent component. 
@@ -45,8 +48,8 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean }) => {
         { name: 'Prepared', checked: false }
     ]);
     const navigate = useNavigate();
-    const location = useLocation().pathname;
-
+    const currURL = useLocation().pathname;
+    
     /**
    * Updates the rows displayed in the table of actions.
    *
@@ -61,16 +64,46 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean }) => {
         setChecked(checked);
     }
 
+    const columns = [{
+		title: 'Name',
+		property: 'step_name',
+	}, {
+		title: 'Status',
+		property: 'status',
+		renderer: getIcon,
+		width: '100px'
+	}, {
+		title: 'Start',
+		property: 'started_at',
+		renderer: (x) => formatTimestamp(x),
+		width: '175px',
+        sortDirection: SortDirection.Ascend,
+	}, {
+		title: 'Finish',
+		property: 'finished_at',
+		renderer: (x) => formatTimestamp(x),
+		width: '175px',
+	}, {
+		title: 'Attempt',
+		property: 'task_id',
+		renderer: (x) => formatDuration(x),
+		width: '150px'
+	}, {
+		title: 'Duration',
+		property: 'duration',
+		renderer: (x) => formatDuration(x),
+		width: '150px'
+	}]
+
     return (
         <Sheet sx={{ display: 'flex', height: '100%' }}>
-            <Sheet sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Sheet sx={{ flex: 1, minWidth: 0,  display: 'flex', flexDirection: 'column', height: '100%' }}>
                 {/* Renders the ToolBar component, which contains a set of buttons that allow the user to filter the rows displayed in the actions table */}
                 <Sheet sx={{ py: '1rem', my: '1.2rem', position: 'sticky', top: '0', borderRadius: '0.5rem' }}>
                     <ToolBar
                         controlledRows={defaultRows}
                         updateRows={updateRows}
                         filters={checkFiltersAvailability(defaultRows, defaultFilters())}
-                        sortEnabled={true}
                         searchColumn={"step_name"}
                         searchPlaceholder="Search by action name"
                         searchMode="contains"
@@ -80,62 +113,24 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean }) => {
                 </Sheet>
                 {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
                 {rows.length === 0 ? (
-                    <Sheet
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            mt: '1rem',
-                            p: '10rem',
-                            gap: '5rem',
-                            border: '1px solid lightgray',
-                            borderRadius: '0.5rem',
-                            height: '100%',
-                        }}
-                    >
-                        <InboxIcon
-                            color="disabled"
-                            sx={{
-                                scale: '5',
-                            }}
-                        />
-                        <Typography>
-                            No actions found
-                        </Typography>
+                    <Sheet sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', mt: '1rem', p: '10rem', gap: '5rem', border: '1px solid lightgray', borderRadius: '0.5rem', height: '100%', }}>
+                        <InboxIcon color="disabled" sx={{ scale: '5', }}/>
+                        <Typography>No actions found</Typography>
                     </Sheet>
                 ) : (
-                    <Sheet>
+                    <Sheet sx={{flex: 1, minHeight: 0}}>
                         <TabPanel className='timeline-panel' value={0} sx={{ py: '1rem' }}>
-                            <Sheet sx={{ display: 'flex', gap: '0.5rem', height: '100%', position: 'relative',}} >
+                            <Sheet sx={{ display: 'flex', gap: '0.5rem', width: '100%', height: '100%', position: 'relative',}} >
                                 <ThemeProvider theme={theme}>
                                     <GlobalStyle />
                                     <Sheet
                                         onClick={() => {
                                             if (open) {
-                                                navigate(`${location.split('timeline')[0]}timeline`);
+                                                navigate(`${currURL.split('timeline')[0]}timeline`);
                                             }
                                         }}
-                                        sx={{
-                                            flex: '1',
-                                            width: '99%',
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            backgroundColor: open ? 'primary.main' : 'none',
-                                            opacity: open ? [0.4, 0.4, 0.4] : [],
-                                            transition: 'opacity 0.2s ease-in-out',
-                                            cursor: 'context-menu'
-                                        }}
-                                    >
-                                        <Sheet
-                                            sx={{
-                                                gap: '0.5rem',
-                                                height: '69vh',
-                                                display: 'flex',
-                                            }}
-                                        >
-
+                                        sx={{ flex: '1', width: '99%', position: 'absolute', top: 0, left: 0, backgroundColor: open ? 'primary.main' : 'none', opacity: open ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
+                                        <Sheet sx={{ gap: '0.5rem', height: '69vh', display: 'flex', }} >
                                             <VirtualizedTimeline run={attempt.run} rows={rows} displayPhases={checked} />
                                         </Sheet>
                                     </Sheet>
@@ -143,37 +138,17 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean }) => {
                             </Sheet>
                         </TabPanel>
                         <TabPanel className='actions-table-panel' value={1} sx={{ py: '1rem' }}>
-                            <Sheet
-                                sx={{
-                                    gap: '0.5rem',
-                                    height: '69vh',
-                                    display: 'flex',
-                                    overflowY: 'scroll'
-                                }}
-                            >
-
+                            <Sheet sx={{ gap: '0.5rem', width: '100%', height: '100%' }} >
                                 <Sheet
                                     onClick={() => {
                                         if (open) {
-                                            navigate(`${location.split('table')[0]}table`);
+                                            navigate(`${currURL.split('table')[0]}table`);
                                         }
                                     }}
-                                    sx={{
-                                        height: '100%',
-                                        top: 0,
-                                        left: 0,
-                                        backgroundColor: open ? 'primary.main' : 'none',
-                                        opacity: open ? [0.4, 0.4, 0.4] : [],
-                                        transition: 'opacity 0.2s ease-in-out',
-                                        cursor: 'context-menu'
-                                    }}
-                                >
-                                    <TableOfActions rows={rows} />
+                                    sx={{ height: '100%', top: 0, left: 0, backgroundColor: open ? 'primary.main' : 'none', opacity: open ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
+                    				<DataTable data={rows} columns={columns} navigator={(row) => `${currURL}/${row.step_name}`} keyAttr='step_name'/>
                                 </Sheet>
                             </Sheet>
-                        </TabPanel>
-                        <TabPanel value={2} sx={{ py: '1rem' }}>
-                            <b>Lineage</b> tab panel
                         </TabPanel>
                     </Sheet>
                 )}
@@ -181,18 +156,7 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean }) => {
             {open && (
                 <>
                     {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
-                    <Sheet
-                        sx={{
-                            position: 'absolute',
-                            top: 0,
-                            height: '80vh',
-                            left: '50%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            boxShadow: '-10px 30px 20px lightgray',
-                            p: '1rem'
-                        }}
-                    >
+                    <Sheet sx={{ position: 'absolute', top: 0, height: '80vh', left: '50%', display: 'flex', flexDirection: 'column', boxShadow: '-10px 30px 20px lightgray', p: '1rem' }}>
                         <ContentDrawer attempt={attempt} />
                     </Sheet>
                 </>
@@ -210,7 +174,6 @@ const TabNav = (props: { attempt: Attempt, panelOpen?: boolean }) => {
     const { stepName, tab } = useParams();
     const [value, setValue] = React.useState(tab === 'timeline' ? 0 : 1);
     const [openLineage, setOpenLineage] = useState<boolean>(false);
-    const [lineageWidth, setLineageWidth] = React.useState(500);
     const lineageRef = React.useRef<HTMLDivElement>(null);
     const { attempt, panelOpen } = props;
     const navigate = useNavigate();
@@ -239,21 +202,9 @@ const TabNav = (props: { attempt: Attempt, panelOpen?: boolean }) => {
 
     return (
         <Sheet sx={{ display: 'flex', height: '100%', px: '1rem' }}>
-            <Sheet
-                sx={{
-                    flex: 1,
-                    height: '100%',
-                }}
-            >
+            <Sheet sx={{ flex: 1, minWidth: 0, height: '100%', }}>
                 <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)} >
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flex: 1,
-                            mt: '1rem',
-                            justifyContent: 'space-between'
-                        }}
-                    >
+                    <Box sx={{ display: 'flex', flex: 1, mt: '1rem', justifyContent: 'space-between' }}>
                         <TabList variant="plain" sx={style}>
                             <Tab>Timeline</Tab>
                             <Tab>Actions table</Tab>
@@ -277,8 +228,8 @@ const TabNav = (props: { attempt: Attempt, panelOpen?: boolean }) => {
             </Sheet>
             {openLineage && (
                 <>
-                    <DraggableDivider setWidth={setLineageWidth} cmpRef={lineageRef} isRightCmp={true} />
-                    <Sheet sx={{ width: lineageWidth }} ref={lineageRef}>
+                    <DraggableDivider cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} />
+                    <Sheet ref={lineageRef}>
                         <ReactFlowProvider>
                             <LineageTab graph={graph} elementName="" elementType="" />
                         </ReactFlowProvider>

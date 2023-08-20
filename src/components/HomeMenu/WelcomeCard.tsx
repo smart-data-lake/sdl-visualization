@@ -24,7 +24,7 @@ export default function OverflowCard(props: {title: string, subtitle: string, im
     <Card 
       variant="outlined" 
       sx={{ 
-        bgcolor: 'background.body','&:hover, &:focus-within': {bgcolor: 'background.level2',}, 
+        bgcolor: 'background.body','&:hover, &:focus-within': {bgcolor: 'background.level2',}, height: '175px', width: '175px'
       }}>
       <CardOverflow>
         <AspectRatio ratio="2">

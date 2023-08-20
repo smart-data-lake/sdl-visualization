@@ -3,7 +3,7 @@ import React from "react";
 import ListItem/* , { listItemClasses }  */from '@mui/joy/ListItem';
 import ListItemButton/* , { listItemButtonClasses } */ from '@mui/joy/ListItemButton';
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
-import { getISOString } from "../../../util/WorkflowsExplorer/date";
+import { formatTimestamp } from "../../../util/WorkflowsExplorer/date";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 
 const RunDetails = (props: { attempt: Attempt; }) => {
@@ -50,17 +50,17 @@ const RunDetails = (props: { attempt: Attempt; }) => {
                     <List>
                         <ListItem>
                             <Typography level='body2' sx={{px: '2rem'}}>
-                                <b>Run start:</b> {getISOString(started_at)}
+                                <b>Run start:</b> {formatTimestamp(started_at)}
                             </Typography>
                         </ListItem>
                         <ListItem sx={{mx: '2rem'}}>
                             <Typography level='body3' sx={{px: '1rem', mx: '1rem', borderLeft: '1px solid', borderColor: 'lightgray'}}>
-                                <b>First task start:</b> {getISOString(first_task_at)}
+                                <b>First task start:</b> {formatTimestamp(first_task_at)}
                             </Typography>
                         </ListItem>
                         <ListItem>
                             <Typography level='body2' sx={{px: '2rem'}}>
-                                <b>Run finished at:</b> {getISOString(finished_at)}
+                                <b>Run finished at:</b> {formatTimestamp(finished_at)}
                             </Typography>
                         </ListItem>
                         <ListItem>

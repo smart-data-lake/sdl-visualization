@@ -9,10 +9,8 @@ export class fetchAPI_json_server implements fetchAPI {
 
     getWorkflows = () => {
         return fetch(`${this.url}/workflows`)
-        .then(res => {
-                res.json()
-            }
-        );
+        .then(res => res.json())
+        .then(json => json as []);
     };
     
     

@@ -1,7 +1,7 @@
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, Line, LineChart, ReferenceArea, CartesianGrid } from 'recharts';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
 import { CustomTooltip } from './ChartControl';
-import { Indices } from '../Workflow/WorkflowHistory';
+import { Indices } from '../WorkflowHistory';
 
 
 const HistoryLineChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[], indices: Indices}) => {

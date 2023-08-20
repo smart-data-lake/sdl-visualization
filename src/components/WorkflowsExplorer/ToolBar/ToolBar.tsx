@@ -1,12 +1,9 @@
 import { Box, Divider, Input, Typography } from "@mui/joy";
 import { useEffect, useState } from "react";
-import { SortType } from "../../../types";
-import { sortRows } from "../../../util/WorkflowsExplorer/row";
-import FilterMenu from "./FilterMenu";
-import SelectSort from "./SelectSort";
-import DatetimePicker from "../DatetimePicker/DatetimePicker";
-import Phases from "./Phases";
 import { Filter } from "../../../util/WorkflowsExplorer/StatusInfo";
+import DatetimePicker from "../DatetimePicker/DatetimePicker";
+import FilterMenu from "./FilterMenu";
+import Phases from "./Phases";
 
 
 /**
@@ -24,35 +21,19 @@ const ToolBar = (
         searchColumn: string,
         style?: 'horizontal' | 'vertical', 
         filters: Filter[],
-        sortEnabled?: boolean,
         datetimePicker?: (start: Date, end: Date) => void,
         searchMode?: 'equals' | 'contains',
         searchPlaceholder?: string,
         updateChecked?: (phases: {name: string, checked: boolean}[]) => void
         phases?: boolean
     }) => {
-    const { 
-        controlledRows, 
-        updateRows, 
-        searchColumn, 
-        filters, 
-        sortEnabled, 
-        datetimePicker,
-        searchMode,
-        searchPlaceholder,
-        updateChecked,
-    } = props;
+    const { controlledRows, updateRows, searchColumn, filters, datetimePicker, searchMode, searchPlaceholder, updateChecked } = props;
 	const [value, setValue] = useState<string>('');
 	const [list, setList] = useState<boolean[]>(Array(filters?.length).fill(true));
-    const [sort, setSort] = useState<SortType>('start time asc');
 	const style = props.style ? props.style : 'horizontal';
 
 	const updateList = (list: boolean[]) => {
 		setList(list);
-	}
-
-	const updateSort = (sort: SortType) => {
-		setSort(sort);
 	}
 
     const updatePhases = (checked: { name: string; checked: boolean; }[]) => {
@@ -60,27 +41,22 @@ const ToolBar = (
     }
 
 	useEffect(() => {
-		function handleInput() {
-            if (searchMode === 'equals') return controlledRows.filter((row) => row[searchColumn].toString().toLowerCase() === (value.toLowerCase()));
-            return controlledRows.filter((row) => row[searchColumn].toString().toLowerCase().includes(value.toLowerCase()));
+		function handleInput(data: any[]) {
+            if (value.trim().length === 0) return data;
+            else if (searchMode === 'equals') return data.filter((row) => row[searchColumn].toString().toLowerCase() === value.toLowerCase());
+            else return data.filter((row) => row[searchColumn].toString().toLowerCase().includes(value.toLowerCase()));
         }
 		
-		function applyFilters() {
+		function applyFilters(data: any[]) {
             const enabledFilters = filters.filter((_,idx) => list[idx]);
-            return controlledRows.filter(row => enabledFilters.some(filter => filter.predicate(row)));
+            if (filters.length === 0) return data;
+            else return data.filter(row => enabledFilters.some(filter => filter.predicate(row)));
 		}
 		
-		const a = value === '' ? controlledRows : handleInput();
-        let b : any;
-        if (filters && filters.length > 0) {
-            b = applyFilters(); 
-        } else {
-            b = controlledRows;
-        }
-		const c = a.filter((row) => b.includes(row));
-		updateRows(sortRows(c, sort));
-	}, [value, list, sort]);
-	
+        const filteredRows = applyFilters(handleInput(controlledRows));
+		updateRows(filteredRows);
+	}, [value, list]);
+
     if (style === 'vertical') return (
         <Box
             sx={{
@@ -145,7 +121,6 @@ const ToolBar = (
                         setValue(value)
                     }}
                 />
-                {sortEnabled && <SelectSort updateSort={updateSort}/>}
                 {filters && <FilterMenu filters={filters} updateList={updateList}/>}
                 {updateChecked && <Phases updatePhases={updatePhases}/>}
                 {datetimePicker && <DatetimePicker datetimePicker={datetimePicker}/>}

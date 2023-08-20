@@ -26,9 +26,11 @@ function RootLayout(props: {isLoading: boolean}) {
                 sx={{
                     display: 'flex',
                     height: '100vh',
+                    width: '100vh',
                     justifyContent: 'flex-start',
                     alignItems: 'stretch',
                     flex: 1,
+                    minHeight: 0
                 }}
                 >
                 <SideBar/>
@@ -37,6 +39,7 @@ function RootLayout(props: {isLoading: boolean}) {
                         display: 'flex',
                         flexDirection: 'column',
                         flex: 1,
+                        minWidth: 0
                     }}
                 >
                     {props.isLoading && <CircularProgress />}

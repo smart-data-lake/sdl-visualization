@@ -30,7 +30,6 @@ import { applyFilter } from './ConfigExplorer';
 interface ElementListProps{
   configData?: ConfigData;
   configDataLists: ConfigDataLists;
-  width: number;
   mainRef: React.Ref<HTMLDivElement>;
   setFilter: (SearchFilterDef) => void;
 }
@@ -154,7 +153,7 @@ export default function ElementList(props: ElementListProps) {
   )), []);
 
   return (
-    <Box sx={{width: props.width, minWidth: '100px', maxWidth: '500px', height: '100%', pt:'1rem', overflowY: 'auto'}} ref={props.mainRef}>
+    <Box sx={{minWidth: '100px', maxWidth: '500px', height: '100%', pt:'1rem', overflowY: 'auto'}} ref={props.mainRef}>
       <Tooltip arrow title={`Search text for type=${elementSearchType} not valid: ${elementSearchTextErr}`} placement='bottom'  color="danger" open={(elementSearchTextErr ? true : false)} variant="soft">
       <Input
         placeholder="Search element"

@@ -56,3 +56,15 @@ export function getPropertyByPath(object: any, path: string) {
 export function onlyUnique(value, index, array) {
   return array.indexOf(value) === index;
 }
+
+/**
+ * Create function to compare attribute of two objects.
+ * This can be used for sorting arrays.
+ * usage: arr.sort(compareFunc("x"))
+ */
+export function compareFunc(attr: string) {
+  return (a, b) => {
+    if (a[attr] === b[attr]) return 0;
+    else return a[attr] > b[attr] ? 1 : -1;
+  }
+}

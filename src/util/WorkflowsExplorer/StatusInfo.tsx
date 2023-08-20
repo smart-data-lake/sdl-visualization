@@ -1,7 +1,7 @@
+import { DoNotDisturbAltOutlined, PendingOutlined } from '@mui/icons-material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 
 export const getButtonColor = (name: string) => {
     switch (name.toUpperCase()) {
@@ -15,6 +15,8 @@ export const getButtonColor = (name: string) => {
             return 'primary';
         case 'PREPARED':
             return 'info';
+        case 'SKIPPED':
+            return 'info';
         default:
             return 'neutral'
     }
@@ -26,13 +28,15 @@ export const getIcon = (status: string) => {
 
     switch (status) {
         case 'SUCCEEDED':
-            return <CheckCircleOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
+            return <CheckCircleOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem', zIndex: 0 }} />
         case 'FAILED':
             return <HighlightOffIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
         case 'INITIALIZED':
-            return <ErrorOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} /> 
+            return <PendingOutlined color={color} sx={{ scale: '80%', ml: '0.5rem' }} /> 
         case 'PREPARED':
-            return <ErrorOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
+            return <PendingOutlined color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
+        case 'SKIPPED':
+            return <DoNotDisturbAltOutlined color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
         default:
             return <HelpOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
     }

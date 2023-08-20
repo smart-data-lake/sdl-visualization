@@ -1,18 +1,21 @@
-import { Box } from "@mui/joy";
+import { Box, CircularProgress } from "@mui/joy";
 import { DataType, Table } from 'ka-table';
 import { SortingMode } from 'ka-table/enums';
 import { Column } from 'ka-table/models';
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "ka-table/style.css";
 import { getPropertyByPath } from "../../util/helpers";
 
 
-export default function DataTable(props: {data: any[], columns: string[], navigatePrefix: string, navigateAttr: string}) {
+export default function DataTable(props: {data: any[], columns: any[], keyAttr: string, navigator?: (any) => string}) {
 
-    const {data, columns, navigatePrefix, navigateAttr} = props;
+    const {data, columns, keyAttr, navigator} = props;
+    const [loading, setLoading] = useState(true)
     const navigate = useNavigate();
+
+    if (data && data.length>0 && loading) setLoading(false);
 
     function inferDataType(prop: string) {
         const obj = data.find(d => getPropertyByPath(d, prop))
@@ -28,49 +31,70 @@ export default function DataTable(props: {data: any[], columns: string[], naviga
             default: return DataType.String;
         }
     }
-    const tableColumns: Column[] = useMemo(() => columns.map(
-        (c, index) => ({
-            key: c,
-            colGroup: { style: { minWidth: 50 }},
-            //width: 200,
-            title: c,
-            type: inferDataType(c),
-        }),
-    ), [columns]);
+    const tableColumns: Column[] = useMemo(() => (loading ? [] : columns.map(c => {
+            var col: Column;
+            if (typeof c === 'object') {
+                col = {
+                    key: c.property,
+                    title: c.title,
+                    dataType: inferDataType(c.property),                    
+                }
+                if (c.width) col.width = c.width;
+                if (c.sortDirection) col.sortDirection = c.sortDirection;
+            } else {
+                col = {
+                    key: c,
+                    title: c,
+                    dataType: inferDataType(c),
+                }
+            }
+            col.colGroup = { style: { minWidth: 50 }}
+            return col;
+        }
+    )), [columns,loading]);
+
+    const tableColumnsRenderer = useMemo(() => {
+        const renderers = {}
+        columns.filter(c => typeof c === 'object' && c.renderer)
+            .forEach(c => renderers[c.property] = c.renderer);
+        return renderers;
+    }, [columns]);
+
+    if (loading) return (<CircularProgress/>);
 
     return (
-        <Box sx={{ height: '100%', 
+        <Box sx={{ flex: 1, minHeight: 0, width: '100%', height: '100%',
         fontFamily: 'Roboto,Helvetica,Arial,sans-serif', fontWeight: '400', fontSize: '0.875rem', // defaults from MuiTypography-root
-        '& ka-table-wrapper': {overflowY: 'auto'},
+        '& ka-table-wrapper': {overflow: 'auto'},
         '& .ka-thead-cell-content, .ka-cell-text': {whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'},
         '& .ka-row': { cursor: 'pointer', '&:hover': { backgroundColor: '#f0f0ef' }},
         '& .ka-thead-background': { backgroundColor: 'white' },
-        '& .ka-thead-cell': { color: 'primary', fontWeight: '600' },
-        '& .ka-cell, .ka-thead-cell': {height: '1em', paddingLeft: '7px', paddingRight: '7px', paddingTop: '7px', paddingBottom: '7px'},
-        '& .ka-thead-cell-resize': {left: '5px'},
-        '& .ka': {height: '100%'}
+        '& .ka-thead-cell': { color: 'primary', zIndex: '99', fontWeight: '600', height: '25px', paddingTop: '7px', paddingBottom: '7px'},
+        '& .ka-cell, .ka-thead-cell': {paddingLeft: '7px', paddingRight: '7px'},
+        '& .ka-cell': {paddingTop: '5px', paddingBottom: '5px'},
+        '& .ka-cell-text': {height: '23px'},
+        '& .ka-thead-cell-resize': {left: '3px'},
+        '& .ka': {height: '100%', width: '100%'}
         }}>
             <Table
-                rowKeyField={'id'}
+                rowKeyField={keyAttr}
                 data={data}
                 columns={tableColumns}
                 columnResizing={true}
                 sortingMode={SortingMode.Single}
-                //paging= {{
-                //    enabled: true,
-                //    pageIndex: 0,
-                //    pageSize: 25,
-                //    pageSizes: [10, 25, 50, 100],
-                //    position: PagingPosition.Bottom
-                //}}
                 childComponents={{
                     dataRow: {
                         elementAttributes: () => ({
-                            onClick: (e,data) => {
-                                navigate(navigatePrefix+data.childProps.rowKeyValue);
+                            onClick: (e,data) => { 
+                                if (navigator) navigate(navigator(data.childProps.rowData));
                             }
                         })
-                    }
+                    },
+                    cellText: {                        
+                        content: (props) => {
+                          if (tableColumnsRenderer && tableColumnsRenderer[props.column.key]) return tableColumnsRenderer[props.column.key](props.value);
+                        }
+                    }                    
                 }}
                 noData={{ text: "No data found", hideHeader: true }}                                         
             />

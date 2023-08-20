@@ -1,21 +1,21 @@
-import LineageTab from "./LineageTab";
-import React from 'react';
-import './ComponentsStyles.css';
-import { Tab, Tabs } from "@mui/material";
-import TabPanel from '@mui/lab/TabPanel';
-import TabContext from '@mui/lab/TabContext';
-import ConfigurationTab from "./ConfigurationTab";
-import DescriptionTab from "./DescriptionTab";
-import { useParams } from "react-router-dom";
-import { ReactFlowProvider } from "react-flow-renderer";
-import { Button, Sheet } from "@mui/joy";
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
+import { Button, Sheet } from "@mui/joy";
+import TabContext from '@mui/lab/TabContext';
+import TabPanel from '@mui/lab/TabPanel';
+import { Tab, Tabs } from "@mui/material";
+import React from 'react';
+import { ReactFlowProvider } from "react-flow-renderer";
+import { useParams } from "react-router-dom";
 import DraggableDivider from "../../layouts/DraggableDivider";
 import { ConfigData } from "../../util/ConfigExplorer/ConfigData";
+import './ComponentsStyles.css';
+import ConfigurationTab from "./ConfigurationTab";
+import DescriptionTab from "./DescriptionTab";
+import LineageTab from "./LineageTab";
 
 
-export default function ElementDetails(props: {configData?: ConfigData}) {
+export default function ElementDetails(props: {configData?: ConfigData, parentCmpRef: React.RefObject<HTMLDivElement>}) {
 
   const {configData} = props;
   const {elementName, elementType} = useParams();
@@ -23,7 +23,7 @@ export default function ElementDetails(props: {configData?: ConfigData}) {
   const [connectionConfigObj, setConnectionConfigObj] = React.useState();
   const [selectedTyp, setSelectedTab] = React.useState('description');
   const [openLineage, setOpenLineage] = React.useState(false);
-  const [lineageWidth, setLineageWidth] = React.useState(500);
+  const mainRef = React.useRef<HTMLDivElement>(null);  
   const lineageRef = React.useRef<HTMLDivElement>(null);  
 
   React.useEffect(() => {
@@ -41,7 +41,7 @@ export default function ElementDetails(props: {configData?: ConfigData}) {
 
   return (
 	<>
-		<Sheet sx={{ flex: 1, minWidth: '500px', display: 'flex', flexDirection: 'column',  p: '1rem'}}>
+		<Sheet sx={{ flex: 1, minWidth: '500px', display: 'flex', flexDirection: 'column',  p: '1rem'}} ref={mainRef}>
 
 			<TabContext value={selectedTyp}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
@@ -76,8 +76,8 @@ export default function ElementDetails(props: {configData?: ConfigData}) {
 
 		{openLineage &&
 			<>
-				<DraggableDivider setWidth={setLineageWidth} cmpRef={lineageRef} isRightCmp={true} />
-				<Sheet sx={{width: lineageWidth, height: '100%'}} ref={lineageRef}>
+				<DraggableDivider cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} parentCmpRef={props.parentCmpRef} />
+				<Sheet sx={{height: '100%', minWidth: '100px'}} ref={lineageRef}>
 					<ReactFlowProvider>
 						<LineageTab configData={configData} elementName={elementName as string} elementType={elementType as string} />
 					</ReactFlowProvider>
