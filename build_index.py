@@ -1,6 +1,4 @@
 from datetime import datetime, timedelta
-import time
-from wonderwords import RandomWord
 import isodate
 import json
 import math
@@ -8,7 +6,6 @@ import os
 import uuid
 import sys
 from functools import reduce
-import operator
 
 def find(element, json):
     return reduce(lambda x,y: x.get(y) if x else None, element.split('.'), json)
