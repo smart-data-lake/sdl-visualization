@@ -81,7 +81,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         return this.getIndex()
         .then(data => data.filter(run => (run.name === args.name && run.runId === args.runId && run.attemptId === args.attemptId))[0])
         .then(val => { 
-            return fetch("/state/"+val.path)
+            return fetch(this.statePath + '/' + val.path)
                     .then(res => res.json())
         })        
     };    
