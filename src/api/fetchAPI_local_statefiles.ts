@@ -15,8 +15,11 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         if (!this._index) {
             const indexPath = this.statePath + "/index.json";
             this._index = fetch(indexPath)
-            .then(res => res.json())
-            .then(json => json as any[])
+            // note that index.json is not a valid json file, but a concatenation of json objects separated by a line containing '---'.
+            .then(res => res.text())
+            .then(res => res.split(/^\-\-\-$/m)
+                            .filter(obj => obj.trim().length > 0)
+                            .map(obj => JSON.parse(obj)))
             .then(runs => runs.map(run => {
                 // convert date strings to date
                 run.runStartTime = new Date(run.runStartTime);

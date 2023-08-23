@@ -117,7 +117,11 @@ def buildStateIndex(path):
         runs = getRuns(files)
         indexFile = "index.json"
         with open(indexFile, "w") as outfile:
-            json.dump(runs, outfile, ensure_ascii=False, indent=4)
+            # this appends every run to the outfile
+            # not that this is not valid json, but it's easily appendable for new runs, thats what we need.
+            for run in runs:                
+                json.dump(run, outfile, ensure_ascii=False, indent=4)
+                print("\n---", file=outfile) # add new line after every run object
         print(f"Summaries written to {path}/{indexFile}\n \n")
         os.chdir(cwd)
 
