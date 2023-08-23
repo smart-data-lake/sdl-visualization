@@ -16,7 +16,7 @@ import TabNav from "./Tabs";
 */
 const Run = (props : {panelOpen?: boolean}) => {
     const {flowId, runNumber, taskId} = useParams();
-    const { data, isLoading, isFetching } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
+    const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
 
     if (isLoading || isFetching) return <CircularProgress/>
     
@@ -28,20 +28,12 @@ const Run = (props : {panelOpen?: boolean}) => {
 			{data ? (
 				(!data.detail && attempt) ? (
                 <>
-                    <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId} />
+                    <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId} refresh={refetch} />
                     {/* <RunDetails attempt={attempt}/> */}
                     <TabNav attempt={attempt} panelOpen={props.panelOpen}/>
                 </>
-                ):(
-                    <>
-                        <NotFound errorType={500}/>
-                    </>
-                )
-            ):(
-                <>
-                    <NotFound/>
-                </>
-            )
+                ): <NotFound errorType={500}/>
+            ): <NotFound/>
         }
         </>
     );

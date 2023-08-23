@@ -11,7 +11,7 @@ import ToolBar from "./ToolBar/ToolBar";
 import { SortDirection } from "ka-table";
 
 export default function Workflows() {
-    const { data, isLoading, isFetching } = useFetchWorkflows();
+    const { data, isLoading, isFetching, refetch } = useFetchWorkflows();
     const [selData, setSelData] = useState<any[]>([]);
 
     useEffect(() => {
@@ -57,7 +57,7 @@ export default function Workflows() {
         <>
             {data ? (
                 <Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>
-                    <PageHeader title={'Workflows'} noBack={true} />
+                    <PageHeader title={'Workflows'} noBack={true} refresh={refetch}/>
                     <ToolBar 
                         controlledRows={data} 
                         updateRows={setSelData} 

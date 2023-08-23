@@ -1,3 +1,4 @@
+import { getRenderableIndexes } from "@mui/x-data-grid/internals";
 import { durationMicro } from "../util/WorkflowsExplorer/date";
 import { compareFunc, onlyUnique } from "../util/helpers";
 import { fetchAPI } from "./fetchAPI";
@@ -10,29 +11,34 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         if (path) this.statePath = path;
     }
 
+    // cache index for reuse in getRun
     _index: Promise<any[]> | undefined;
     getIndex() {
-        if (!this._index) {
-            const indexPath = this.statePath + "/index.json";
-            this._index = fetch(indexPath)
-            // note that index.json is not a valid json file, but a concatenation of json objects separated by a line containing '---'.
-            .then(res => res.text())
-            .then(res => res.split(/^\-\-\-$/m)
-                            .filter(obj => obj.trim().length > 0)
-                            .map(obj => JSON.parse(obj)))
-            .then(runs => runs.map(run => {
-                // convert date strings to date
-                run.runStartTime = new Date(run.runStartTime);
-                run.attemptStartTime = new Date(run.attemptStartTime);
-                run.duration = durationMicro(run.duration);
-                return run;
-            }))
-            .catch(err => {
-                console.error(`Could not load index file ${indexPath}`, err);
-                throw err;
-            });
-        }
+        const indexPath = this.statePath + "/index.json";
+        this._index = fetch(indexPath)
+        // note that index.json is not a valid json file, but a concatenation of json objects separated by a line containing '---'.
+        .then(res => res.text())
+        .then(res => res.split(/^\-\-\-$/m)
+                        .filter(obj => obj.trim().length > 0)
+                        .map(obj => JSON.parse(obj)))
+        .then(runs => runs.map(run => {
+            // convert date strings to date
+            run.runStartTime = new Date(run.runStartTime);
+            run.attemptStartTime = new Date(run.attemptStartTime);
+            run.duration = durationMicro(run.duration);
+            return run;
+        }))
+        .then(runs => {console.log("got runs", runs); return runs})
+        .catch(err => {
+            console.error(`Could not load index file ${indexPath}`, err);
+            throw err;
+        });
         return this._index;
+    }
+    
+    reuseIndex() {
+        if (this._index) return this._index;
+        else return this.getIndex()
     }
 
     groupByWorkflowName(data: any[]) {
@@ -81,9 +87,10 @@ export class fetchAPI_local_statefiles implements fetchAPI {
 
     
     getRun = async (args: {name: string, runId: number, attemptId: number}) => {            
-        return this.getIndex()
+        return this.reuseIndex()
         .then(data => data.filter(run => (run.name === args.name && run.runId === args.runId && run.attemptId === args.attemptId))[0])
         .then(val => { 
+            if (!val) console.log("getRun not found", args.name, args.runId, args.attemptId);
             return fetch(this.statePath + '/' + val.path)
                     .then(res => res.json())
         })        

@@ -10,5 +10,5 @@
 export interface fetchAPI {
     getWorkflows: () => Promise<any[]>;
     getWorkflow: (name: string) => Promise<any>;
-    getRun: (args: {name: string, runId: number, attemptId: number}) => Promise<any>;
+    getRun: (args: { name: string, runId: number, attemptId: number}) => Promise<any>;
 }

@@ -28,7 +28,7 @@ export type Indices = {
 */
 export default function WorkflowHistory() {
 	const {flowId} = useParams();
-	const { data, isLoading, isFetching } = useFetchWorkflow(flowId!);
+	const { data, isLoading, isFetching, refetch } = useFetchWorkflow(flowId!);
 	const [selData, setSelData] = useState<any[]>([]);
 	const [barChartData, setBarChartData] = useState<any[]>([])
 	const [lineChartData, setLineChartData] = useState<any[]>([])
@@ -86,10 +86,8 @@ export default function WorkflowHistory() {
 	}
 	
 	if (isLoading || isFetching) {
-		console.log("fetching");
 		return (<CircularProgress/>);
 	}
-	console.log(data);
 
 	const columns = [{
 		title: 'Run ID',
@@ -135,7 +133,7 @@ export default function WorkflowHistory() {
 		{!data || isLoading || isFetching ? <CircularProgress/> : null}
 		{data ? (
 			<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '5px 15px', gap: '15px', width: '100%', height: '100%' }}>
-				<PageHeader title={flowId!} />             
+				<PageHeader title={flowId!} refresh={refetch} />             
 				<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
 				<ToolBar 
 					controlledRows={data.runs} 
@@ -146,7 +144,7 @@ export default function WorkflowHistory() {
 					filters={checkFiltersAvailability(data.runs, defaultFilters())}
 					datetimePicker={handleDateRangeChange}
 					/>
-				<DataTable data={selData} columns={columns} navigator={(row) => `${currURL}/${row.runId}/${row.attemptId}/timeline`} keyAttr='id'/>
+				<DataTable data={selData} columns={columns} navigator={(row) => `${currURL}/${row.runId}/${row.attemptId}/timeline`} keyAttr='path'/>
 			</Sheet>   
 		):(<NotFound errorType={500}/>)
 	}

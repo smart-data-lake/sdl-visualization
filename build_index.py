@@ -22,7 +22,6 @@ def list_files(path, extension):
 # Function that create array of runs
 def getRuns(files):
     statefiles = []
-    id = uuid.uuid4()
     runs = []
 
     for file in files:
@@ -44,7 +43,6 @@ def getRuns(files):
 
             runs.append(
                 {
-                    "id": str(id),
                     "runId": data["runId"],
                     "attemptId": data["attemptId"],
                     "name": appConfig["applicationName"],

@@ -13,15 +13,15 @@ function fetcher() {
 // The following are the React Query wrapings of the fetcher methods
 
 export const useFetchWorkflows = () => {
-    return useQuery('workflows', () => fetcher().getWorkflows());
+    return useQuery({queryKey: 'workflows', queryFn: () => fetcher().getWorkflows(), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
 }
 
 export const useFetchWorkflow = (workflow: string) => {
-    return useQuery('workflow', () => fetcher().getWorkflow(workflow))
+    return useQuery({queryKey: ['workflow',workflow], queryFn: () => fetcher().getWorkflow(workflow), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
 }
 
 export const useFetchRun = (name: string, runId: number, attemptId: number) => {
-    return useQuery('run', () => fetcher().getRun({name, runId, attemptId}))
+    return useQuery({queryKey: ['run',name,runId,attemptId], queryFn: () => fetcher().getRun({name, runId, attemptId}), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
 }
 
 export default useFetchWorkflows;

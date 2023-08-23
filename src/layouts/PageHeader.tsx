@@ -1,13 +1,14 @@
 import { Box, IconButton, Sheet, Typography } from "@mui/joy";
 import { useLocation, useNavigate } from "react-router-dom";
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
+import { RefreshOutlined } from "@mui/icons-material";
 /**
  * The PageHeader component is the header of each page. It contains the title, subtitle, and description of the page. It is used in pages such as Workflows, Workflow and Run.
  * @param props title - The title of the page, subtitle - The subtitle of the page, description - The description of the page
  * @returns JSX element that represents the PageHeader component
  */
-const PageHeader = (props: {title : string, subtitle?: string, description?: string, noBack?: boolean}) => {
-    const { title, subtitle, description, noBack } = props;
+const PageHeader = (props: {title : string, subtitle?: string, description?: string, noBack?: boolean, refresh?: () => void}) => {
+    const { title, subtitle, description, noBack, refresh } = props;
     const currURL = useLocation().pathname;
     const navigate = useNavigate();
 
@@ -41,6 +42,10 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                     <Typography level="h4">{title}</Typography>
                     {subtitle && <Typography level="h5" sx={{pt: '1rem'}}>{subtitle}</Typography>}
                     {description && <Typography level="body2" sx={{py: '1rem'}}>{description}</Typography>}
+                    <Box sx={{ flex: 1 }}/>
+                    {refresh && <IconButton  onClick={refresh} variant="plain" color="neutral" size="sm">
+                        <RefreshOutlined/>
+                    </IconButton>}
                 </Box>
             </Sheet>
      );
