@@ -2,9 +2,9 @@ import spacetime from 'spacetime';
 
 export const formatTimestamp = (date: Date, timezone?: string): string => {
   if (timezone) {
-    return spacetime(date, 'GMT+0').goto(`${timezone}`).unixFmt('MM-dd-yyyy HH:mm:ss');
+    return spacetime(date, 'GMT+0').goto(`${timezone}`).unixFmt('MM.dd.yyyy HH:mm:ss');
   }
-  return spacetime(date, 'GMT+0').unixFmt('MM-dd-yyyy HH:mm:ss');
+  return spacetime(date, 'GMT+0').unixFmt('MM.dd.yyyy HH:mm:ss');
 };
 
 export const getTimestampString = (date: Date, timezone?: string): string => {
@@ -36,7 +36,7 @@ export const getTimeFromPastByDays = (days: number, timezone?: string): number =
   return spacetime(Date.now() - 1000 * 60 * 60 * 24 * days).startOf('day').epoch;
 };
 
-export const durationMicro = (duration: string) => {
+export const durationMillis = (duration: string) => {
   const moment = require("moment");
   const d = moment.duration(duration);
   

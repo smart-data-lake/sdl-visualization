@@ -1,16 +1,12 @@
 import * as React from 'react';
-import Accordion from '@mui/material/Accordion';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import Typography from '@mui/material/Typography';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import './ComponentsStyles.css';
 import 'github-markdown-css/github-markdown.css';
 import 'github-markdown-css/github-markdown.css';
-import { Box, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
 import { createPropertiesComponent } from './PropertiesComponent';
 import CodeViewComponent from './CodeViewComponent';
 import { getPropertyByPath, hoconify } from '../../util/helpers';
+import { Accordion, AccordionDetails, AccordionGroup, AccordionSummary, Chip, Stack } from '@mui/joy';
 
 function getTransformers(action: any): any[] {
   //returns a list of transformer objects
@@ -48,7 +44,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
         <TableRow>
           <TableCell>{foreignKey.name}</TableCell>
           <TableCell>{(foreignKey.db || props.connectionDb || "<db?>") + "." + foreignKey.name}</TableCell>
-          <TableCell><Stack spacing={0.5} direction="row">{Object.entries(foreignKey.columns).map(([k,v]) => <Chip label={k+" -> "+v} size="small"/>)}</Stack></TableCell>
+          <TableCell><Stack spacing={0.5} direction="row">{Object.entries(foreignKey.columns).map(([k,v]) => <Chip size="sm">{k+" -> "+v}</Chip>)}</Stack></TableCell>
         </TableRow>
       )
       let tbl = <TableContainer >
@@ -185,12 +181,8 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
   function createAccordion(key: string, accordionName: string, jsxElement: JSX.Element){
     return(
-      <Accordion key={key} className='accordion' elevation={0} disableGutters={true} variant='outlined'
-                  expanded={openAccordion === accordionName} 
-                  onChange={handleChange(accordionName)}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="body1">{accordionName}</Typography>
-        </AccordionSummary>
+      <Accordion>
+        <AccordionSummary sx={{fontWeight: 'normal'}}>{accordionName}</AccordionSummary>
         <AccordionDetails>{jsxElement}</AccordionDetails>
       </Accordion>
     )
@@ -199,8 +191,8 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   const accordions = getAccordionSections().map(([key, name, jsxElement], _) => createAccordion(key, name, jsxElement));
 
   return (
-    <Box>
+    <AccordionGroup size='md'>
       {accordions}
-    </Box>
+    </AccordionGroup>
   )
 }

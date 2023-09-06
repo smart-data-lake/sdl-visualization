@@ -11,19 +11,18 @@ export const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <Sheet sx={{ px: '2rem', py: '1rem', zIndex: 10000, borderRadius: '0.5rem', border: '1px solid lightgray', gap: '0.5rem', display: 'flex', flexDirection: 'column' }}>
-          <Typography level='body1' sx={{display: 'flex', alignItems: 'center'}}>Run {payload[0].payload.runId} attempt {payload[0].payload.attemptId} {getIcon(payload[0].payload.status)}</Typography>
-          <Typography level='body2'>Date: {new Date(payload[0].payload.name).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})}</Typography>
-          <Typography level='body2'>Time: {formatTimestamp(new Date(payload[0].payload.name)).split(' ')[1]}</Typography>
-          <Typography level='body2'>Duration: {formatDuration(payload[0].payload.value)}</Typography>
+          <Typography level='title-md' sx={{display: 'flex', alignItems: 'center'}}>Run {payload[0].payload.runId} attempt {payload[0].payload.attemptId} {getIcon(payload[0].payload.status)}</Typography>
+          <Typography level='body-md'>Date: {new Date(payload[0].payload.attemptStartTime).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})}</Typography>
+          <Typography level='body-md'>Time: {formatTimestamp(new Date(payload[0].payload.attemptStartTime)).split(' ')[1]}</Typography>
+          <Typography level='body-md'>Duration: {formatDuration(payload[0].payload.duration)}</Typography>
         </Sheet>
       );
     }
     return null;
 }
 
-const ChartControl = (props: {rows: any, data: any, indices: Indices }) => {
-    const {rows, data, indices } = props;
-    const selected = indices?.rangeLeft ? (indices?.rangeRight ? indices.rangeRight - indices.rangeLeft + 1: data.length) : data.length;
+const ChartControl = (props: {runs: any}) => {
+    const {runs} = props;
 
     return ( 
         <Sheet
@@ -35,31 +34,15 @@ const ChartControl = (props: {rows: any, data: any, indices: Indices }) => {
                 width: '100%'
             }}
         >
-            <Sheet
-                sx={{
-                    flex: 4,
-                }}
-            >
-                <Sheet
-                    sx={{display: 'flex', flexDirection: 'row', gap: '1rem', alignItems: 'flex-end', pb: '1rem'}}
-                >
-                <Typography level='h5'>Runs</Typography>
+            <Sheet sx={{flex: 4 }}>
+                <Sheet sx={{display: 'flex', flexDirection: 'row', gap: '1rem', alignItems: 'flex-end', pb: '1rem'}}>
+                <Typography level='title-md'>Runs</Typography>
                 <Tooltip variant="solid" placement="bottom-start" title="This chart displays the runs in the current page. You can jump to a detailed run view by clicking on the corresponding bar">
                     <HelpOutlineIcon sx={{scale: '70%'}}/>
                 </Tooltip>
-                <Typography level='body2' sx={{color: 'gray'}}>{rows.length} runs displayed</Typography>
+                <Typography level='body-sm' sx={{color: 'gray'}}>{runs.length} runs displayed</Typography>
                 </Sheet>
-                <HistoryBarChart data={rows}/>
-            </Sheet>
-            <Sheet sx={{ flex: 2}}>
-                <Sheet sx={{display: 'flex', gap: '0.5rem', alignItems: 'flex-end', pb: '1rem'}}>
-                    <Typography level='h5'>Overview</Typography>
-                    <Tooltip variant="solid" placement='bottom-end' title="This charts displays a history of all runs of this workflow. You can zoom on specific part of it using the brush at its bottom">
-                        <HelpOutlineIcon sx={{scale: '70%'}}/>
-                    </Tooltip>
-                    <Typography level='body2' sx={{color: 'gray'}}>{selected} runs selected</Typography>
-                </Sheet>
-                <HistoryLineChart data={data} indices={indices}/>
+                <HistoryBarChart runs={runs}/>
             </Sheet>
         </Sheet>
      );

@@ -1,3 +1,4 @@
+import { Theme } from "@mui/joy";
 
 /**
  * Function to transform a value by a function if it is defined, and otherwise returns a default value.
@@ -67,4 +68,10 @@ export function compareFunc(attr: string) {
     if (a[attr] === b[attr]) return 0;
     else return a[attr] > b[attr] ? 1 : -1;
   }
+}
+
+export function colorNameToCss(name: string, theme: Theme) {
+  const color = theme.variants.outlined[name]?.color || theme.palette[name]?.outlinedColor;
+  if (color) return color;
+  else return name;
 }

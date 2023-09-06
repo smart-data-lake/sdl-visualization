@@ -35,15 +35,15 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                 pt : '3.2rem',
                 pb : '0.2rem',
             }}>
-                <Box sx={{ display: 'flex', verticalAlign: 'middle', pb: '0.5rem' }}>
+                <Box sx={{ display: 'flex', verticalAlign: 'middle', pb: '0.5rem', height: '38px' }}>
                     {!noBack && <IconButton  onClick={handleClick} variant="plain" color="neutral" size="sm">
                         <ArrowBackIosIcon sx={{scale: '80%', pl: '0.3rem'}}/>
                     </IconButton>}
                     <Typography level="h4">{title}</Typography>
-                    {subtitle && <Typography level="h5" sx={{pt: '1rem'}}>{subtitle}</Typography>}
-                    {description && <Typography level="body2" sx={{py: '1rem'}}>{description}</Typography>}
+                    {subtitle && <Typography level="title-md" sx={{pt: '1rem'}}>{subtitle}</Typography>}
+                    {description && <Typography level="body-sm" sx={{py: '1rem'}}>{description}</Typography>}
                     <Box sx={{ flex: 1 }}/>
-                    {refresh && <IconButton  onClick={refresh} variant="plain" color="neutral" size="sm">
+                    {refresh && <IconButton onClick={refresh} variant="plain" color="neutral" size="sm">
                         <RefreshOutlined/>
                     </IconButton>}
                 </Box>

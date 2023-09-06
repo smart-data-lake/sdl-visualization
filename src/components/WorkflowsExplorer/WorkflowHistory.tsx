@@ -1,19 +1,15 @@
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { CircularProgress, Sheet } from "@mui/joy";
-import IconButton from '@mui/joy/IconButton';
+import { SortDirection } from 'ka-table';
 import { useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { useFetchWorkflow } from "../../hooks/useFetchData";
+import { useFetchWorkflowRuns } from "../../hooks/useFetchData";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
-import { checkFiltersAvailability, defaultFilters, getIcon } from "../../util/WorkflowsExplorer/StatusInfo";
-import { durationMicro, formatTimestamp } from "../../util/WorkflowsExplorer/date";
-import { formatDuration } from '../../util/WorkflowsExplorer/format';
-import DataTable from '../ConfigExplorer/DataTable';
+import { checkFiltersAvailability, defaultFilters } from "../../util/WorkflowsExplorer/StatusInfo";
+import { durationMillis } from "../../util/WorkflowsExplorer/date";
+import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
 import ChartControl from "./HistoryChart/ChartControl";
 import ToolBar from "./ToolBar/ToolBar";
-import { SortDirection } from 'ka-table';
 
 
 export type Indices = {
@@ -28,7 +24,7 @@ export type Indices = {
 */
 export default function WorkflowHistory() {
 	const {flowId} = useParams();
-	const { data, isLoading, isFetching, refetch } = useFetchWorkflow(flowId!);
+	const { data, isLoading, isFetching, refetch } = useFetchWorkflowRuns(flowId!);
 	const [selData, setSelData] = useState<any[]>([]);
 	const [barChartData, setBarChartData] = useState<any[]>([])
 	const [lineChartData, setLineChartData] = useState<any[]>([])
@@ -37,8 +33,8 @@ export default function WorkflowHistory() {
     const currURL = useLocation().pathname;
 		
     useEffect(() => {
-        if (data && data.runs && data.runs.length>0 && selData.length===0) {
-			setSelData(data.runs);
+        if (data && data.length>0 && selData.length===0) {
+			setSelData(data);
 		}
     }, [data, selData])
 
@@ -48,20 +44,20 @@ export default function WorkflowHistory() {
 	}, [selData])
 	
 	const handleDateRangeChange = (start: Date, end: Date) => {
-		const filteredRows = data.runs.filter((row) => {
+		const filteredRows = data.filter((row) => {
 			const date = new Date(row.attemptStartTime)
 			return date >= start && date <= end
 		})
 		setSelData(filteredRows)
 
 		let rangeRight = 0;		
-		for (let i = 0; i < data.runs.length; i++) {
-			if (filteredRows[0].attemptStartTime === data.runs[i].attemptStartTime) {
+		for (let i = 0; i < data.length; i++) {
+			if (filteredRows[0].attemptStartTime === data[i].attemptStartTime) {
 				rangeRight = i;
 				break;
 			}
 		}
-		setIndices({rangeLeft: data.runs.length - (rangeRight + filteredRows.length), rangeRight: data.runs.length - 1 - rangeRight})
+		setIndices({rangeLeft: data.length - (rangeRight + filteredRows.length), rangeRight: data.length - 1 - rangeRight})
 	}
 	
 	const generateChartData = (data: any) => {
@@ -75,7 +71,7 @@ export default function WorkflowHistory() {
 				
 		data.forEach((run) => {
 			res.push({
-					value: durationMicro(run.duration),
+					value: durationMillis(run.duration),
 					status: run.status,
 					name: run.attemptStartTime,
 					runId: run.runId,
@@ -89,42 +85,69 @@ export default function WorkflowHistory() {
 		return (<CircularProgress/>);
 	}
 
+	console.log(data)
+
 	const columns = [{
 		title: 'Run ID',
 		property: 'runId',
-		width: '150px'
+		width: '100px'
 	}, {
 		title: 'Attempt ID',
 		property: 'attemptId',
-		width: '150px'
+		width: '100px'
 	}, {
 		title: 'Run Start',
 		property: 'runStartTime',
-		renderer: (x) => formatTimestamp(x),
+		renderer: dateRenderer,
 		width: '175px'
 	}, {
 		title: 'Attempt Start',
 		property: 'attemptStartTime',
-		renderer: (x) => formatTimestamp(x),
+		renderer: dateRenderer,
 		width: '175px',
         sortDirection: SortDirection.Descend,
 	}, {
 		title: 'Duration',
 		property: 'duration',
-		renderer: (x) => formatDuration(x),
-		width: '150px'
+		renderer: durationRenderer,
+		width: '100px'
 	}, {
 		title: 'Status',
 		property: 'status',
-		renderer: getIcon,
-		width: '100px'
+		renderer: cellIconRenderer,
+		width: '75px'
 	}, {
 		title: 'Feed Selector',
 		property: 'feedSel',
 		width: '150px'
 	}, {
-		title: 'Build Version',
+		title: 'SUCCEEDED',
+		property: 'actionsStatus.SUCCEEDED',
+		headRenderer: titleIconRenderer,
+		renderer: nestedPropertyRenderer('0', '7px'),
+		style: { textAlign: 'right' },
+		width: '51px' // min width for sorting
+	}, {
+		title: 'SKIPPED',
+		property: 'actionsStatus.SKIPPED',
+		headRenderer: titleIconRenderer,
+		renderer: nestedPropertyRenderer('0', '7px'),
+		style: { textAlign: 'right' },
+		width: '51px' // min width for sorting
+	}, {
+		title: 'FAILED',
+		property: 'actionsStatus.FAILED',
+		headRenderer: titleIconRenderer,
+		renderer: nestedPropertyRenderer('0', '7px'),
+		style: { textAlign: 'right' },
+		width: '51px' // min width for sorting
+	}, {				
+		title: 'SDLB Version',
 		property: 'buildVersion',
+		//width: '150px'
+	}, {
+		title: 'App Version',
+		property: 'appVersion',
 		//width: '150px'
 	}]
 
@@ -134,14 +157,14 @@ export default function WorkflowHistory() {
 		{data ? (
 			<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '5px 15px', gap: '15px', width: '100%', height: '100%' }}>
 				<PageHeader title={flowId!} refresh={refetch} />             
-				<ChartControl rows={[...barChartData].reverse()} data={[...lineChartData].reverse()} indices={indices}/>
+				<ChartControl runs={data}/>
 				<ToolBar 
-					controlledRows={data.runs} 
+					controlledRows={data} 
 					updateRows={setSelData}
 					searchColumn={'runId'}
 					searchMode={'equals'}
 					searchPlaceholder={'Search by Run ID'}
-					filters={checkFiltersAvailability(data.runs, defaultFilters())}
+					filters={checkFiltersAvailability(data, defaultFilters())}
 					datetimePicker={handleDateRangeChange}
 					/>
 				<DataTable data={selData} columns={columns} navigator={(row) => `${currURL}/${row.runId}/${row.attemptId}/timeline`} keyAttr='path'/>

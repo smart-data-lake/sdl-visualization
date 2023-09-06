@@ -1,44 +1,50 @@
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
-import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Brush } from 'recharts';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CustomTooltip } from './ChartControl';
+import { scaleLog } from 'd3-scale';
+import { getStatusColor } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { useTheme } from "@mui/joy/styles";
+import { colorNameToCss } from "../../../util/helpers";
 
-const HistoryBarChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[]}) => {
-    const { data } = props;
+const HistoryBarChart = (props: {runs: any[]}) => {
+    const { runs } = props;
     const curr = useLocation();
 	  const navigate = useNavigate();
+    const theme = useTheme();
+    console.log(theme);
 
     const handleClick = (data, index) => {
         const target = `${curr.pathname}/${data.runId}/${data.attemptId}/timeline`
 		navigate(target);
     };
 
-    return (
-     
+    const scale = scaleLog().base(Math.E);
 
+    return (
         <ResponsiveContainer height={140}>
-          <BarChart data={data}>
+          <BarChart data={runs.sort()}>
             <Tooltip 
                 position={{ y: -75 }}
                 animationDuration={100}
                 content={<CustomTooltip active={undefined} payload={undefined} label={undefined}/>}
               />
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            <YAxis width={77} tickFormatter={(value) => formatDuration(value)}/>
-            <XAxis dataKey="name" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} padding={'gap'} minTickGap={30}/>
+            <YAxis width={77} tickFormatter={(value) => formatDuration(value)} scale="linear"/>
+            <XAxis dataKey="attemptStartTime" tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'})} padding={'gap'} minTickGap={30}/>
             <Bar 
-                dataKey="value" 
+                dataKey="duration" 
                 stackId="a" 
                 fill="#20af2e"
                 animationDuration={45}
                 onClick={handleClick}
-                barSize={data.length < 26 ? 15 : undefined}
+                barSize={runs.length < 26 ? 15 : undefined}
                 radius={[2, 2, 0, 0]}
                 >
                     {
-                      data.map((entry, index) => {
+                      runs.map((entry, index) => {
                         return (
-                          <Cell key={`cell-${index}`} fill={entry.status === 'SUCCEEDED' ? '#20af2e':'#eb3428'} style={{cursor: 'pointer'}} />
+                          <Cell key={`cell-${index}`} fill={colorNameToCss(getStatusColor(entry.status), theme)} style={{cursor: 'pointer'}} />
                           )
                         }
                         )

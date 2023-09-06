@@ -1,45 +1,49 @@
-import { DoNotDisturbAltOutlined, PendingOutlined } from '@mui/icons-material';
+import { BlockOutlined, DoNotDisturbAltOutlined, PendingOutlined } from '@mui/icons-material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
+import { Tooltip } from '@mui/joy';
+import React from 'react';
 
-export const getButtonColor = (name: string) => {
+export const getStatusColor = (name: string) => {
+
     switch (name.toUpperCase()) {
         case 'SUCCEEDED':
             return 'success';
         case 'FAILED':
-            return 'danger';
+            return 'danger'; // danger?
         case 'RUNNING':
             return 'warning';
         case 'INITIALIZED':
             return 'primary';
         case 'PREPARED':
-            return 'info';
+            return 'neutral';
         case 'SKIPPED':
-            return 'info';
+            return 'neutral';
+        case 'CANCELLED':
+            return 'warning'
         default:
-            return 'neutral'
+            return 'neutral' // neural?
     }
 }
 
-export const getIcon = (status: string) => {
-    const tmp = getButtonColor(status);
-    const color = tmp === 'neutral' ? 'disabled' : (tmp === 'danger' ? 'error' : tmp);
-
-    switch (status) {
-        case 'SUCCEEDED':
-            return <CheckCircleOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem', zIndex: 0 }} />
-        case 'FAILED':
-            return <HighlightOffIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
-        case 'INITIALIZED':
-            return <PendingOutlined color={color} sx={{ scale: '80%', ml: '0.5rem' }} /> 
-        case 'PREPARED':
-            return <PendingOutlined color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
-        case 'SKIPPED':
-            return <DoNotDisturbAltOutlined color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
-        default:
-            return <HelpOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
-    }
+export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
+    const color = getStatusColor(status);
+    const statusIconMap = {
+        'SUCCEEDED': CheckCircleOutlineIcon,
+        'FAILED': HighlightOffIcon,
+        'INITIALIZED': PendingOutlined,
+        'PREPARED': PendingOutlined,
+        'SKIPPED': DoNotDisturbAltOutlined,
+        'CANCELLED': BlockOutlined
+    };
+    const iconName = statusIconMap[status] || HelpOutlineIcon;
+    const iconComponent = React.createElement(iconName, {color: color, sx: { scale: '80%', ml: marginLeft, zIndex: 0 }});
+    return (
+        <Tooltip arrow title={status} enterDelay={500} enterNextDelay={500}>
+            {iconComponent}
+        </Tooltip>
+    )
 }
 
 export class Filter {

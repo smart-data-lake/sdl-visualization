@@ -28,7 +28,7 @@ const WorkflowDetails = (props : {data: any, pieChartData: any}) => {
                 {list.map((item) => {
                     return (<>
                             <ListItem>
-                                <Typography level="body1">{item.name}</Typography>
+                                <Typography level="body-md">{item.name}</Typography>
                             </ListItem>
                         </>)})}
                 </List>
@@ -36,7 +36,7 @@ const WorkflowDetails = (props : {data: any, pieChartData: any}) => {
                 {list.map((item) => {
                     return (<>
                             <ListItem>
-                                <Typography level="body2">{item.value}</Typography>
+                                <Typography level="body-sm">{item.value}</Typography>
                             </ListItem>
                         </>)})}
                 </List>

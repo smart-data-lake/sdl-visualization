@@ -1,10 +1,8 @@
-from datetime import datetime, timedelta
 import isodate
 import json
-import math
 import os
-import uuid
 import sys
+import collections
 from functools import reduce
 
 def find(element, json):
@@ -38,20 +36,22 @@ def getRuns(files):
             actionsState = data["actionsState"]
             buildVersion = find("buildVersionInfo.version", data) # ignore if not found
             status = getStatus(actionsState)
-            duration = "PT0.0S"
-            if(status != "CANCELLED"): duration = getDuration(data)
+            runEndTime = getRunEndTime(data)
+            actionCounts = collections.Counter(map(lambda a: a["state"], actionsState.values()))
 
             runs.append(
                 {
+                    "name": appConfig["applicationName"],
                     "runId": data["runId"],
                     "attemptId": data["attemptId"],
-                    "name": appConfig["applicationName"],
                     "feedSel": appConfig["feedSel"],
                     "runStartTime": data["runStartTime"],
                     "attemptStartTime": data["attemptStartTime"],
+                    "runEndTime": runEndTime,
                     "status": status,
-                    "duration": duration,
+                    "actionsStatus": actionCounts,
                     "buildVersion": buildVersion,
+                    "appVersion": data["appVersion"],
                     "path": statefile["path"].lstrip("./"),
                 }
             )
@@ -73,32 +73,17 @@ def getStatus(actionsState):
             
     return curr
 
-def getDuration(stateFile):
-    """Get the duration of a state file."""
-    runStartTime =  isodate.parse_datetime(stateFile["runStartTime"])
-    currentLongest = runStartTime
+def getRunEndTime(stateFile):
+    """Get the end time of a state file."""
+    maxEndTime = isodate.parse_datetime(stateFile["attemptStartTime"])
     for action in stateFile["actionsState"].values():
-        if "startTstmp" in action.keys() and "duration" in action.keys():
+        actionEndTime = maxEndTime
+        if "endTstmp" in action.keys():
+            actionEndTime = isodate.parse_datetime(action["endTstmp"])
+        elif "startTstmp" in action.keys() and "duration" in action.keys():
             actionEndTime = isodate.parse_datetime(action["startTstmp"]) + isodate.parse_duration(action["duration"])
-        else:
-            actionEndTime = runStartTime
-        if (currentLongest < actionEndTime): currentLongest = actionEndTime
-
-    diff = timedelta.total_seconds(currentLongest - runStartTime)
-    tmp = formatDuration(diff)
-    return tmp
-
-def formatDuration(seconds):
-    """Format the duration in seconds to a string."""
-    ms = math.floor(seconds * 1000)
-    if ms < 1000:
-        return f"PT0.{ms}S"
-    elif ms < 60*1000:
-        return f"PT{ms/1000}S"
-    elif ms < 60*60*1000:
-        return f"PT{ms//(1000*60)}M{(ms%(1000*60))/1000}S"
-    else:
-        return f"PT{ms//(1000*60*60)}H{(ms%(1000*60*60))//(1000*60)}M{(ms%(1000*60))/1000}S"
+        if (actionEndTime and maxEndTime < actionEndTime): maxEndTime = actionEndTime
+    return maxEndTime.isoformat()
 
 def buildStateIndex(path):
     if (not os.path.isdir(path)):
@@ -118,7 +103,7 @@ def buildStateIndex(path):
             # this appends every run to the outfile
             # not that this is not valid json, but it's easily appendable for new runs, thats what we need.
             for run in runs:                
-                json.dump(run, outfile, ensure_ascii=False, indent=4)
+                json.dump(run, outfile, ensure_ascii=False, indent=4, default=str)
                 print("\n---", file=outfile) # add new line after every run object
         print(f"Summaries written to {path}/{indexFile}\n \n")
         os.chdir(cwd)

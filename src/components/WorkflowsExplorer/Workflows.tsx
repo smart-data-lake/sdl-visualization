@@ -1,14 +1,12 @@
 import { CircularProgress, Sheet } from "@mui/joy";
+import { SortDirection } from "ka-table";
 import { useEffect, useState } from "react";
 import useFetchWorkflows from "../../hooks/useFetchData";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
-import { checkFiltersAvailability, defaultFilters, getIcon } from "../../util/WorkflowsExplorer/StatusInfo";
-import { formatTimestamp } from "../../util/WorkflowsExplorer/date";
-import { formatDuration } from "../../util/WorkflowsExplorer/format";
-import DataTable from "../ConfigExplorer/DataTable";
+import { checkFiltersAvailability, defaultFilters } from "../../util/WorkflowsExplorer/StatusInfo";
+import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../ConfigExplorer/DataTable';
 import ToolBar from "./ToolBar/ToolBar";
-import { SortDirection } from "ka-table";
 
 export default function Workflows() {
     const { data, isLoading, isFetching, refetch } = useFetchWorkflows();
@@ -30,18 +28,18 @@ export default function Workflows() {
     }, {
         title: 'Last status',
         property: 'lastStatus',
-        renderer: getIcon,
+        renderer: cellIconRenderer,
         width: '100px'
     }, {
         title: 'Last duration',
         property: 'lastDuration',
-        renderer: (x) => formatDuration(x),
+        renderer: durationRenderer,
         width: '150px'
     }
     , {
 		title: 'Last attempt',
 		property: 'lastAttemptStartTime',
-		renderer: (x) => formatTimestamp(x),
+		renderer: dateRenderer,
 		width: '175px'
 	}, {
         title: '# runs',
@@ -50,6 +48,10 @@ export default function Workflows() {
     }, {
         title: '# attempts',
         property: 'numAttempts',
+        width: '100px'
+    }, {
+        title: '# actions',
+        property: 'lastNumActions',
         width: '100px'
     }]
 

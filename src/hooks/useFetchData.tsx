@@ -16,8 +16,8 @@ export const useFetchWorkflows = () => {
     return useQuery({queryKey: 'workflows', queryFn: () => fetcher().getWorkflows(), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
 }
 
-export const useFetchWorkflow = (workflow: string) => {
-    return useQuery({queryKey: ['workflow',workflow], queryFn: () => fetcher().getWorkflow(workflow), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
+export const useFetchWorkflowRuns = (workflow: string) => {
+    return useQuery({queryKey: ['workflow',workflow], queryFn: () => fetcher().getWorkflowRuns(workflow), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
 }
 
 export const useFetchRun = (name: string, runId: number, attemptId: number) => {

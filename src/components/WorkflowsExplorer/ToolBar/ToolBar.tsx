@@ -81,7 +81,7 @@ const ToolBar = (
                                     flexDirection: 'column',
                                 }}
                             >
-                                <Typography level="body1">
+                                <Typography level="body-md">
                                     Status
                                 </Typography>
                                 <Divider/>

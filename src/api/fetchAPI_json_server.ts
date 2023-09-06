@@ -14,7 +14,7 @@ export class fetchAPI_json_server implements fetchAPI {
     };
     
     
-    getWorkflow = (name: string) => {
+    getWorkflowRuns = (name: string) => {
         return fetch(`${this.url}/workflow?name=${name}`)
         .then(res => res.json())
         .then(data => data[0])

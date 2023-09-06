@@ -3,16 +3,13 @@ import AltRouteIcon from '@mui/icons-material/AltRoute';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import SellIcon from '@mui/icons-material/Sell';
 import StyleIcon from '@mui/icons-material/Style';
-import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import Chip from '@mui/material/Chip';
-import Grid from '@mui/material/Grid';
-import Stack from '@mui/material/Stack';
 import 'github-markdown-css/github-markdown.css';
 import { Link } from "react-router-dom";
 import { getPropertyByPath } from '../../util/helpers';
 import './ComponentsStyles.css';
 import ConfigurationAccordions from './ConfigurationAccordions';
 import { createPropertiesComponent } from './PropertiesComponent';
+import { Box, Chip, Grid, Stack, Table } from '@mui/joy';
 
 interface ElementProps {
   data: any; // config of object to display
@@ -31,39 +28,31 @@ function getInputOutputIds(action: any): [string[], string[]]{
 
 function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
   return ( 
-  <TableContainer component={Paper} elevation={0}>
-  <Table size="small">
-    <TableHead>
-      <TableRow>
-        <TableCell>Inputs</TableCell>
-        <TableCell align="right">Outputs</TableCell>
-      </TableRow>
-    </TableHead>
-    <TableBody>
-      <TableRow key="1">
-        <TableCell component="th" scope="row">       
-          <Stack spacing={1}>{inputs.map(name => createDataObjectChip(name))}</Stack>
-        </TableCell>
-        <TableCell align="right">
-          <Stack spacing={1}>{outputs.map(name => createDataObjectChip(name))}</Stack>
-        </TableCell>
-      </TableRow>
-    </TableBody>
-  </Table>        
-  </TableContainer>
+  <Box sx={{display: 'flex', flexDirection: 'column'}}>
+    <Box sx={{display: 'flex', pb: '3px'}}>
+      <Box sx={{flex: 1}}>Inputs</Box>
+      <Box sx={{flex: 1, textAlign: 'right'}}>Outputs</Box>
+    </Box>  
+    <Box sx={{display: 'flex'}}>    
+      <Stack sx={{flex: 1, height: '100%', alignSelf: 'center', marginRight: '15px'}} spacing={1}>{inputs.map(name => createDataObjectChip(name))}</Stack>
+      <Stack sx={{flex: 1, height: '100%', alignItems: 'end', alignSelf: 'center', marginLeft: '15px'}} spacing={1}>
+        {outputs.map(name => createDataObjectChip(name))}
+      </Stack>
+    </Box>
+  </Box>
   );
 }
 
-function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: "primary" | "default" | "success" | "secondary" | "error" | "info" | "warning" | undefined = "primary") {
+function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: "primary" | "neutral" | "success" | "danger" | "warning" | undefined = "primary") {
   if (value){
     const path = `/config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`;
     return(
       <Link to={path}>
-        <Chip label={value} sx={{mr: 1}}
+        <Chip sx={{mr: 1}}
           color={color}
-          icon={icon}
+          startDecorator={icon}
           variant="outlined" 
-          className='chips'/>
+          className='chips'>{value}</Chip>
       </Link>
     )
   }
@@ -72,11 +61,11 @@ function createSearchChip(attr: string, value: string, route: string, icon: JSX.
 function createDataObjectChip(name: string){
   return(
     <Link to={"/config/dataObjects/"+name}>
-      <Chip label={name}
+      <Chip
         color="primary"
-        icon={<TableViewTwoTone />}
+        startDecorator={<TableViewTwoTone />}
         variant="outlined" 
-        className='chips'/>
+        className='chips'>{name}</Chip>
     </Link>
   )
 }
@@ -84,17 +73,17 @@ function createDataObjectChip(name: string){
 function createConnectionChip(name: string){
   return(
     <Link to={"/config/connections/"+name}>
-      <Chip label={name}
+      <Chip
         color="primary"
-        icon={<LanOutlinedIcon />}
+        startDecorator={<LanOutlinedIcon />}
         variant="outlined" 
-        className='chips'/>
+        className='chips'>{name}</Chip>
     </Link>
   )
 }
 
 export function createSimpleChip(name: string) {
-  return <Chip label={name} size="small"/>
+  return <Chip size="sm">{name}</Chip>
 }
 
 export default function ConfigurationTab(props: ElementProps) {
@@ -124,11 +113,11 @@ export default function ConfigurationTab(props: ElementProps) {
 
   function layerChip(){
     let x = getAttribute('metadata.layer');
-    return createSearchChip("metadata.layer", x, props.elementType, <LayersOutlined/>, "secondary");
+    return createSearchChip("metadata.layer", x, props.elementType, <LayersOutlined/>, "warning");
   }
   function subjectAreaChip(){
     let x = getAttribute('metadata.subjectArea');
-    return createSearchChip("metadata.subjectArea", x, props.elementType, <ExploreOutlined/>, "secondary");
+    return createSearchChip("metadata.subjectArea", x, props.elementType, <ExploreOutlined/>, "warning");
   }  
   function feedChip(){
     let feed = getAttribute('metadata.feed');
@@ -139,8 +128,9 @@ export default function ConfigurationTab(props: ElementProps) {
     return createSearchChip("type", type, props.elementType, <StyleIcon />, "success");
   }
   function mainContent(){
-    let propsToIgnore = topAttributes.map(x => x.key).concat(['metadata', 'type', 'inputId', 'inputIds', 'outputId', 'outputIds']);
+    let propsToIgnore = topAttributes.map(x => x.key).concat(['metadata', 'type', 'inputId', 'inputIds', 'outputId', 'outputIds', 'id']);
     if (props.elementType === 'actions' || props.elementType === 'dataObjects' || props.elementType === 'connections'){
+      //return <div>Test</div>
       return(<ConfigurationAccordions data={props.data} elementType={props.elementType} propsToIgnore={propsToIgnore} connectionDb={(props.connection && props.connection.db) as string} />)
     } else { 
       throw new Error(`Unknown element Type ${props.elementType}`);
@@ -149,20 +139,22 @@ export default function ConfigurationTab(props: ElementProps) {
 
   let tags = getAttribute('metadata.tags') as string[] || [];
   let [inputs, outputs] = getInputOutputIds(props.data)
-  let topAttributesCmp = createPropertiesComponent({properties: topAttributesPrep, width: "100%", rowHeight: "45px"})
+  let topAttributesCmp = createPropertiesComponent({properties: topAttributesPrep})
 
   return (
     <Box sx={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-          <Box>
+      <Box sx={{display: 'flex', flexWrap: 'wrap', gap: '1rem'}}>
+        <Box flex={1}>
           {typeChip()}
           {feedChip()}
           {layerChip()}
           {subjectAreaChip()}
-          {tags.map(tag => createSearchChip("tags", tag, props.elementType, <SellIcon />, "secondary"))}
-          </Box>
-        {topAttributesCmp && <Grid item xs={12} xl={6}>{topAttributesCmp}</Grid>}
-        {inputs.length > 0 && <Grid item xs={12} xl={6}>{formatInputsOutputs(inputs,outputs)}</Grid>}
-        {mainContent()}
+          {tags.map(tag => createSearchChip("tags", tag, props.elementType, <SellIcon />, "warning"))}
+        </Box>
+        {inputs.length > 0 && <Grid xs={12} xl={6}>{formatInputsOutputs(inputs,outputs)}</Grid>}
+      </Box>
+      {topAttributesCmp && <Grid>{topAttributesCmp}</Grid>}
+      {mainContent()}
     </Box>
   )
 }

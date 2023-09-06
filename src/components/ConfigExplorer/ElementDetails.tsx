@@ -1,9 +1,10 @@
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import { Button, Sheet } from "@mui/joy";
-import TabContext from '@mui/lab/TabContext';
-import TabPanel from '@mui/lab/TabPanel';
-import { Tab, Tabs } from "@mui/material";
+import Tab, { tabClasses } from '@mui/joy/Tab';
+import TabList from '@mui/joy/TabList';
+import TabPanel from '@mui/joy/TabPanel';
+import Tabs from '@mui/joy/Tabs';
 import React from 'react';
 import { ReactFlowProvider } from "react-flow-renderer";
 import { useParams } from "react-router-dom";
@@ -34,22 +35,15 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
     }
   }, [elementName, elementType, configData]);
 
-  // change selected tab
-  const handleChange = (_: React.SyntheticEvent, newValue: string) => {
-    setSelectedTab(newValue);
-  };
-
   return (
 	<>
-		<Sheet sx={{ flex: 1, minWidth: '500px', display: 'flex', flexDirection: 'column',  p: '1rem'}} ref={mainRef}>
-
-			<TabContext value={selectedTyp}>
+		<Sheet sx={{ flex: 1, minWidth: '500px', display: 'flex', flexDirection: 'column',  p: '1rem 0rem 1rem 0.5rem'}} ref={mainRef}>
+			<Tabs size="md" value={selectedTyp} onChange={(e,v) => setSelectedTab(v as string)} aria-label="element tabs">
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
-					<Tabs value={selectedTyp} onChange={handleChange} aria-label="element tabs">
-						<Tab label="Description" value="description" />
-						<Tab label="Configuration" value="configuration" />
-					{/*  {(elementType==="actions" || elementType==="dataObjects") && <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />} */}
-					</Tabs>
+					<TabList>
+						<Tab value="description">Description</Tab>
+						<Tab value="configuration">Configuration</Tab>
+					</TabList>
 					<Sheet>
 						{!openLineage ?
 							(
@@ -68,10 +62,10 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 				<TabPanel value="description" className="content-panel" sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
 					<DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
 				</TabPanel>
-				<TabPanel value="configuration" className="content-panel"  sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
+				<TabPanel value="configuration" className="content-panel" sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
 					<ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} connection={connectionConfigObj} />
 				</TabPanel>
-			</TabContext> 
+			</Tabs>
 		</Sheet>
 
 		{openLineage &&

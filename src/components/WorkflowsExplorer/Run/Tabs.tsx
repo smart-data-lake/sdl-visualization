@@ -14,7 +14,7 @@ import GlobalStyle from "../../../GlobalStyle";
 import theme from "../../../theme";
 import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
-import { checkFiltersAvailability, defaultFilters, getIcon } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { checkFiltersAvailability, defaultFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import LineageTab from "../../ConfigExplorer/LineageTab";
 import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
 import ToolBar from "../ToolBar/ToolBar";
@@ -24,9 +24,7 @@ import { SortDirection } from 'ka-table';
 import DraggableDivider from "../../../layouts/DraggableDivider";
 import { DAGraph } from "../../../util/ConfigExplorer/Graphs";
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
-import { formatTimestamp } from '../../../util/WorkflowsExplorer/date';
-import { formatDuration } from '../../../util/WorkflowsExplorer/format';
-import DataTable from '../../ConfigExplorer/DataTable';
+import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../../ConfigExplorer/DataTable';
 
 /**
  * This is a TypeScript function that returns a set of three React components which are rendered inside a parent component. 
@@ -70,28 +68,28 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean }) => {
 	}, {
 		title: 'Status',
 		property: 'status',
-		renderer: getIcon,
+		renderer: cellIconRenderer,
 		width: '100px'
 	}, {
 		title: 'Start',
 		property: 'started_at',
-		renderer: (x) => formatTimestamp(x),
+		renderer: (x) => dateRenderer(x),
 		width: '175px',
         sortDirection: SortDirection.Ascend,
 	}, {
 		title: 'Finish',
 		property: 'finished_at',
-		renderer: (x) => formatTimestamp(x),
+		renderer: (x) => dateRenderer(x),
 		width: '175px',
 	}, {
 		title: 'Attempt',
 		property: 'task_id',
-		renderer: (x) => formatDuration(x),
+		renderer: (x) => dateRenderer(x),
 		width: '150px'
 	}, {
 		title: 'Duration',
 		property: 'duration',
-		renderer: (x) => formatDuration(x),
+		renderer: (x) => durationRenderer(x),
 		width: '150px'
 	}]
 
@@ -205,7 +203,7 @@ const TabNav = (props: { attempt: Attempt, panelOpen?: boolean }) => {
             <Sheet sx={{ flex: 1, minWidth: 0, height: '100%', }}>
                 <Tabs aria-label="Basic tabs" defaultValue={value} onChange={(e, v) => handleChange(e, v)} >
                     <Box sx={{ display: 'flex', flex: 1, mt: '1rem', justifyContent: 'space-between' }}>
-                        <TabList variant="plain" sx={style}>
+                        <TabList variant="plain" color="neutral">
                             <Tab>Timeline</Tab>
                             <Tab>Actions table</Tab>
                         </TabList>

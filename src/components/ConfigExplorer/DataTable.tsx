@@ -6,7 +6,33 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "ka-table/style.css";
+import { getIcon } from "../../util/WorkflowsExplorer/StatusInfo";
+import { formatTimestamp } from "../../util/WorkflowsExplorer/date";
+import { formatDuration } from "../../util/WorkflowsExplorer/format";
 import { getPropertyByPath } from "../../util/helpers";
+
+export function nestedPropertyRenderer(defaultValue: string, paddingRight: string = '0') {
+    return (prop: any) => {
+        const value = getPropertyByPath(prop.rowData, prop.column.key)
+        return <div style={{paddingRight: paddingRight}}>{value || defaultValue}</div>
+    }
+}
+
+export function cellIconRenderer(prop: any) {
+    return getIcon(prop.value, '0')
+}
+
+export function titleIconRenderer(prop: any) {
+    return <div style={{display: 'inline', verticalAlign: 'middle'}}>{getIcon(prop.column.title, '0')}</div>
+}
+
+export function dateRenderer(prop: any) {
+    return formatTimestamp(prop.value)
+}
+
+export function durationRenderer(prop: any) {
+    return formatDuration(prop.value)
+}
 
 
 export default function DataTable(props: {data: any[], columns: any[], keyAttr: string, navigator?: (any) => string}) {
@@ -41,6 +67,7 @@ export default function DataTable(props: {data: any[], columns: any[], keyAttr: 
                 }
                 if (c.width) col.width = c.width;
                 if (c.sortDirection) col.sortDirection = c.sortDirection;
+                if (c.style) col.style = c.style;
             } else {
                 col = {
                     key: c,
@@ -59,6 +86,13 @@ export default function DataTable(props: {data: any[], columns: any[], keyAttr: 
             .forEach(c => renderers[c.property] = c.renderer);
         return renderers;
     }, [columns]);
+
+    const tableHeadColumnsRenderer = useMemo(() => {
+        const renderers = {}
+        columns.filter(c => typeof c === 'object' && c.headRenderer)
+            .forEach(c => renderers[c.property] = c.headRenderer);
+        return renderers;
+    }, [columns]);    
 
     if (loading) return (<CircularProgress/>);
 
@@ -82,6 +116,9 @@ export default function DataTable(props: {data: any[], columns: any[], keyAttr: 
                 columns={tableColumns}
                 columnResizing={true}
                 sortingMode={SortingMode.Single}
+                virtualScrolling= {{
+                    enabled: true
+                }}                
                 childComponents={{
                     dataRow: {
                         elementAttributes: () => ({
@@ -91,8 +128,15 @@ export default function DataTable(props: {data: any[], columns: any[], keyAttr: 
                         })
                     },
                     cellText: {                        
-                        content: (props) => {
-                          if (tableColumnsRenderer && tableColumnsRenderer[props.column.key]) return tableColumnsRenderer[props.column.key](props.value);
+                        content: (prop) => {
+                          if (tableColumnsRenderer && tableColumnsRenderer[prop.column.key]) return tableColumnsRenderer[prop.column.key](prop);
+                        }
+                    },
+                    headCellContent: {                        
+                        content: (prop) => {
+                          if (tableHeadColumnsRenderer && tableHeadColumnsRenderer[prop.column.key]) {
+                            return tableHeadColumnsRenderer[prop.column.key](prop);
+                          }
                         }
                     }                    
                 }}

@@ -1,3 +1,4 @@
+import { CssVarsProvider } from '@mui/joy';
 import CssBaseline from '@mui/joy/CssBaseline';
 import { createHashRouter, Route, RouterProvider, Routes } from 'react-router-dom';
 import ConfigExplorer from './components/ConfigExplorer/ConfigExplorer';
@@ -39,8 +40,10 @@ export default function App() {
 
   return (
     <>
-      <CssBaseline />
-      <RouterProvider router={router()}/>
+      <CssVarsProvider>
+        <CssBaseline />
+        <RouterProvider router={router()}/>
+      </CssVarsProvider>
     </>
   );
 }

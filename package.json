@@ -6,8 +6,8 @@
     "@emotion/react": "^11.10.6",
     "@emotion/styled": "^11.10.6",
     "@mui/icons-material": "^5.8.4",
-    "@mui/joy": "^5.0.0-alpha.74",
-    "@mui/lab": "^5.0.0-alpha.93",
+    "@mui/joy": "^5.0.0-beta.4",
+    "@mui/lab": "^5.0.0-alpha.142",
     "@mui/material": "^5.12.2",
     "@mui/x-data-grid": "^6.2.1",
     "@mui/x-date-pickers": "^6.3.1",
@@ -78,7 +78,8 @@
     "//": "See https://github.com/facebook/create-react-app/issues/11773",
     "react-error-overlay": "6.0.9",
     "@types/react": "^18.0.2",
-    "@types/react-dom": "^18.0.2"
+    "@types/react-dom": "^18.0.2",
+    "@mui/material": "npm:@mui/joy@latest"
   },
   "scripts": {
     "start": "react-scripts start",

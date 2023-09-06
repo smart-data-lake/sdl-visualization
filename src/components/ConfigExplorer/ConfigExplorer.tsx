@@ -1,4 +1,4 @@
-import { Box, Sheet } from '@mui/joy';
+import { Sheet } from '@mui/joy';
 import { useMemo, useRef, useState } from 'react';
 import { Route, Routes } from "react-router-dom";
 import DraggableDivider from '../../layouts/DraggableDivider';
@@ -55,7 +55,7 @@ function ConfigExplorer(props: { configData?: ConfigData }) {
 	}, [filter, configDataLists]);
 
 	return (
-		<Sheet sx={{ display: 'flex', height: '100%', flexDirection: 'column' }}>
+		<Sheet sx={{ display: 'flex', width: '100%', height: '100%', p: '0.1rem 1rem', flexDirection: 'column' }}>
 			<PageHeader title={'Configuration'} noBack={true} />
 			<Sheet sx={{ display: 'flex', width: '100%', flex: 1, minHeight: 0 }} ref={parentRef}>
 				<ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />

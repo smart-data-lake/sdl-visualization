@@ -2,8 +2,7 @@ import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
-import { Box, Divider, List, ListItem /* , ListItemContent */, ListItemButton, Sheet, Tooltip } from '@mui/joy';
-import { ListItemIcon } from '@mui/material';
+import { Box, Divider, IconButton, Sheet, Stack, Tooltip } from '@mui/joy';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useManifest } from '../hooks/useManifest';
 
@@ -50,10 +49,7 @@ const SideBar = () => {
     ]
 
     return ( 
-        <Sheet
-            color='neutral'
-            invertedColors
-            variant='outlined'
+        <Sheet color='neutral' invertedColors variant='outlined'
             sx={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -65,47 +61,25 @@ const SideBar = () => {
             }}
         >
             <Box>
-                <List
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        p: '0.2rem',
-                    }}
-                >   
+                <Stack spacing={0}>   
                     {buttons.map((component) => (
-                        <>  
-                            <ListItem>
-                                <Tooltip arrow title={component.disabled ? `No data was found for the menu "${component.description.toLowerCase()}". Please check that the ${component.filetype} files are at the expected location according to the manifest.` : component.description} placement='right' enterDelay={500} enterNextDelay={500}>
-                                    <div>
-                                    <ListItemButton 
-                                        sx={{ scale: '90%', justifyContent: 'center' }}
-                                        onClick={() => navigate(component.link)}
-                                        disabled={component.disabled}>
-                                        <ListItemIcon sx={{minWidth: '25px', color: (getModulePath()===component.link ? 'primary.main' : '')}}>{component.icon}</ListItemIcon>                                        
-                                    </ListItemButton>
-                                    </div>
-                                </Tooltip>
-                            </ListItem>
-                        </>
+                        <Tooltip key={component.filetype} arrow title={component.disabled ? `No data was found for the menu "${component.description.toLowerCase()}". Please check that the ${component.filetype} files are at the expected location according to the manifest.` : component.description} placement='right' enterDelay={500} enterNextDelay={500}>
+                            <IconButton onClick={e => navigate(component.link)} color={getModulePath()===component.link ? 'primary' : 'neutral'} variant='plain'
+                                sx={{ borderRadius: 0 }}
+                                disabled={component.disabled}>
+                                    {component.icon}
+                            </IconButton>
+                        </Tooltip>
                     ))}
-                </List>
+                </Stack>
             </Box>
             <Box>
                 <Divider />
-                <List>
-                    <ListItem>
-                        <ListItemButton 
-                            disabled 
-                            sx={{
-                                borderRadius: 4, 
-                                scale: '90%',
-                                justifyContent: 'center'
-                            }}
-                        >
-                            <SettingsRoundedIcon />
-                        </ListItemButton>
-                    </ListItem>
-                </List>
+                <Stack>
+                    <IconButton variant='plain' sx={{ borderRadius: 0 }} disabled={true}>
+                        <SettingsRoundedIcon />
+                    </IconButton>                    
+                </Stack>
             </Box>
         </Sheet>
      );

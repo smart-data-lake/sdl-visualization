@@ -1,7 +1,7 @@
 import { Button, Checkbox, Menu, Sheet } from "@mui/joy";
 import React, { useEffect, useState } from "react";
 import { Row } from "../../../types";
-import { getButtonColor, getIcon } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { getStatusColor, getIcon } from "../../../util/WorkflowsExplorer/StatusInfo";
 /**
  * The FilterMenu component is a subcomponent of the ToolBar component that implements the filter functionality.
  * It updates the list of filters that are passed to it based on the user's input.
@@ -55,7 +55,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, mode?: 'verti
                 {filters && filters.map((filter, index) => (
                 <>
                     <Sheet
-                        color={getButtonColor(filter.name)}
+                        color={getStatusColor(filter.name)}
                         variant="plain"
                         sx={{
                             display: 'flex',
@@ -67,7 +67,7 @@ const FilterMenu = (props: {updateList: (list: boolean[]) => void, mode?: 'verti
                         }}
                     >
                             <Checkbox 
-                                color={getButtonColor(filter.name.toUpperCase())}
+                                color={getStatusColor(filter.name.toUpperCase())}
                                 size="sm"
                                 variant="outlined"
                                 checked={list[index]}

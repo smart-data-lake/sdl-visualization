@@ -94,7 +94,7 @@ const ContentSheet = (props: {action: Row}) => {
                         key='meta.mainMetrics'
                         sx={{mb: '1.5rem'}}
                         >
-                                <Typography noWrap level='h5'>
+                                <Typography noWrap level='title-md'>
                                     Main metrics
                                 </Typography>
                                 <ResultsTable metrics={meta.mainMetrics}/>
@@ -106,7 +106,7 @@ const ContentSheet = (props: {action: Row}) => {
                             <Sheet 
                             key='meta.subFeed'
                             >
-                                <Typography noWrap level='h5'>
+                                <Typography noWrap level='title-md'>
                                     Subfeed
                                 </Typography>
                                 <ResultsTable subFeed={meta.subFeed}/>
@@ -115,7 +115,7 @@ const ContentSheet = (props: {action: Row}) => {
                     } 
                     if (!meta.mainMetrics && !meta.subFeed) {
                         toDisplay.push(
-                            <Typography noWrap level='h5' key='noData'>
+                            <Typography noWrap level='title-md' key='noData'>
                                 Error: found no metadata to display
                             </Typography>
                         )
@@ -137,7 +137,7 @@ const ContentSheet = (props: {action: Row}) => {
                 })
             }
             {action.message && <Sheet 
-                color="info" 
+                color="neutral" 
                 variant="soft"
                 key='resultSheet'
                 invertedColors
@@ -146,7 +146,7 @@ const ContentSheet = (props: {action: Row}) => {
                     mt: '1rem',
                     borderRadius: '0.5rem',
                 }}>
-                <Typography color="info" level='body2'>
+                <Typography color="neutral" level='body-md'>
                     Info:
                 </Typography>
                 <code>

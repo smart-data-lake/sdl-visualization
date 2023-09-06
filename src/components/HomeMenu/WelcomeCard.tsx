@@ -32,13 +32,8 @@ export default function OverflowCard(props: {title: string, subtitle: string, im
         </AspectRatio>
       </CardOverflow>
       <CardContent sx={{ mt: 1}}>
-
-          <Typography level="h2" fontSize="md" >
-            {title}
-          </Typography>
-          <Typography level="body2" sx={{ mt: 0.5 }}>
-            {subtitle}
-          </Typography>
+          <Typography level="title-sm" >{title}</Typography>
+          <Typography level="body-sm" sx={{ mt: 0.5 }}>{subtitle}</Typography>
         <Link overlay onClick={handleClick} />
       </CardContent>
       

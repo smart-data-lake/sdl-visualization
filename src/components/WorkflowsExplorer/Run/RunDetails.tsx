@@ -1,10 +1,10 @@
-import { Box, List, ListItemDecorator, Typography } from "@mui/joy";
-import React from "react";
-import ListItem/* , { listItemClasses }  */from '@mui/joy/ListItem';
-import ListItemButton/* , { listItemButtonClasses } */ from '@mui/joy/ListItemButton';
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
-import { formatTimestamp } from "../../../util/WorkflowsExplorer/date";
+import { Box, List, ListItemDecorator, Typography } from "@mui/joy";
+import ListItem /* , { listItemClasses }  */ from '@mui/joy/ListItem';
+import ListItemButton /* , { listItemButtonClasses } */ from '@mui/joy/ListItemButton';
+import React from "react";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
+import { formatTimestamp } from "../../../util/WorkflowsExplorer/date";
 
 const RunDetails = (props: { attempt: Attempt; }) => {
     const attempt : Attempt = props.attempt;
@@ -49,27 +49,27 @@ const RunDetails = (props: { attempt: Attempt; }) => {
                 {open && (
                     <List>
                         <ListItem>
-                            <Typography level='body2' sx={{px: '2rem'}}>
+                            <Typography level='body-md' sx={{px: '2rem'}}>
                                 <b>Run start:</b> {formatTimestamp(started_at)}
                             </Typography>
                         </ListItem>
                         <ListItem sx={{mx: '2rem'}}>
-                            <Typography level='body3' sx={{px: '1rem', mx: '1rem', borderLeft: '1px solid', borderColor: 'lightgray'}}>
+                            <Typography level='body-sm' sx={{px: '1rem', mx: '1rem', borderLeft: '1px solid', borderColor: 'lightgray'}}>
                                 <b>First task start:</b> {formatTimestamp(first_task_at)}
                             </Typography>
                         </ListItem>
                         <ListItem>
-                            <Typography level='body2' sx={{px: '2rem'}}>
+                            <Typography level='body-sm' sx={{px: '2rem'}}>
                                 <b>Run finished at:</b> {formatTimestamp(finished_at)}
                             </Typography>
                         </ListItem>
                         <ListItem>
-                            <Typography level='body2' sx={{px: '2rem'}}>
+                            <Typography level='body-sm' sx={{px: '2rem'}}>
                                 <b>Total elapsed time:</b> 
                             </Typography>
                         </ListItem>
                         <ListItem>
-                            <Typography level='body2' sx={{px: '2rem'}}>
+                            <Typography level='body-sm' sx={{px: '2rem'}}>
                             <b>Number of actions:</b> {attempt.rows.length}
                             </Typography>
                         </ListItem>

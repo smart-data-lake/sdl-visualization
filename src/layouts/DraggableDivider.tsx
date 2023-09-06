@@ -1,6 +1,6 @@
 import { DragIndicator } from '@mui/icons-material';
 import { Divider } from '@mui/material';
-import { MutableRefObject, useEffect, useRef, useState } from 'react';
+import { MutableRefObject, useEffect, useRef } from 'react';
 
 // some state to keep component width across route changes
 const dividerState = new Map<string,number>();

@@ -1,6 +1,6 @@
 import { Button, Checkbox, Menu, Sheet, Typography } from "@mui/joy";
 import { useEffect, useState } from "react";
-import { getButtonColor } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { getStatusColor } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 const Phases = (props: {updatePhases: (phases: {name: string, checked: boolean}[]) => void}) => {
     const { updatePhases } = props;
@@ -39,7 +39,7 @@ const Phases = (props: {updatePhases: (phases: {name: string, checked: boolean}[
             >
                 {phases.map((phase, index) => (
                     <Sheet
-                        color={getButtonColor(phase.name)}
+                        color={getStatusColor(phase.name)}
                         variant="plain"
                         sx={{
                             display: 'flex',
@@ -52,7 +52,7 @@ const Phases = (props: {updatePhases: (phases: {name: string, checked: boolean}[
                     >
                         <Checkbox
                             disabled={countFalse() === phases.length - 1 && phase.checked}
-                            color={getButtonColor(phase.name.toUpperCase())}
+                            color={getStatusColor(phase.name.toUpperCase())}
                             size="sm"
                             variant="outlined"
                             checked={phase.checked}
@@ -62,7 +62,7 @@ const Phases = (props: {updatePhases: (phases: {name: string, checked: boolean}[
                                 setPhases(newPhases);
                             }}
                         />
-                        <Typography level="body2">{phase.name}</Typography>
+                        <Typography level="body-md">{phase.name}</Typography>
                     </Sheet>
                 ))}
             </Menu>
