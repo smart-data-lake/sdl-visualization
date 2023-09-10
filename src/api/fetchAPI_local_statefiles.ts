@@ -21,14 +21,17 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         .then(res => res.split(/^\s*\-\-\-\s*$/m)
                         .filter(obj => obj.trim().length > 0)
                         .map(obj => JSON.parse(obj)))
-        .then(runs => runs.map(run => {
-            // convert date strings to date
-            run.runStartTime = new Date(run.runStartTime);
-            run.attemptStartTime = new Date(run.attemptStartTime);
-            run.runEndTime = new Date(run.runEndTime);
-            run.duration = run.runEndTime.getTime() - run.attemptStartTime.getTime();
-            return run;
-        }))
+        .then(runs => runs
+            .map(run => {
+                // convert date strings to date
+                run.runStartTime = new Date(run.runStartTime);
+                run.attemptStartTime = new Date(run.attemptStartTime);
+                run.attemptStartTimeMillis = new Date(run.attemptStartTime).getTime(); // needed for HistorBarChart
+                run.runEndTime = new Date(run.runEndTime);
+                run.duration = run.runEndTime.getTime() - run.attemptStartTime.getTime();
+                return run;
+            })
+        )
         .then(runs => {console.log("got runs", runs); return runs})
         .catch(err => {
             console.error(`Could not load index file ${indexPath}`, err);
@@ -74,7 +77,9 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     getWorkflowRuns = async (name: string) => {
         return this.getIndex()
         .then(data => {
-            const runs = data.filter(run => run.name === name)
+            const runs = data
+            .filter(run => run.name === name)
+            .sort(compareFunc('attemptStartTime'));
             return runs
         })
     };

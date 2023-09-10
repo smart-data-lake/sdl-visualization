@@ -1,20 +1,32 @@
-import { CircularProgress, Sheet } from "@mui/joy";
+import { ZoomOutOutlined } from "@mui/icons-material";
+import { Box, CircularProgress, IconButton, Sheet, Tooltip, Typography } from "@mui/joy";
 import { SortDirection } from 'ka-table';
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useFetchWorkflowRuns } from "../../hooks/useFetchData";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
-import { checkFiltersAvailability, defaultFilters } from "../../util/WorkflowsExplorer/StatusInfo";
-import { durationMillis } from "../../util/WorkflowsExplorer/date";
+import { Filter, checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
-import ChartControl from "./HistoryChart/ChartControl";
+import HistoryBarChart from "./HistoryChart/HistoryBarChart";
 import ToolBar from "./ToolBar/ToolBar";
 
 
-export type Indices = {
-	rangeLeft?: number, 
-	rangeRight?: number,
+export type FilterParams = {
+	searchMode: 'equals' | 'contains' | 'startsWith'
+	searchColumn: string
+	searchText?: string
+	dateRange?: [Date,Date]
+	additionalFilters: Filter[]
+}
+
+export function filterSearchText(params: FilterParams, row: any): boolean {
+	if (params.searchText) {
+		if (params.searchMode === 'equals') return row[params.searchColumn].toString().toLowerCase() === params.searchText!.toLowerCase();
+		if (params.searchMode === 'contains') return row[params.searchColumn].toString().toLowerCase().includes(params.searchText!.toLowerCase());
+		if (params.searchMode === 'startsWith') return row[params.searchColumn].toString().toLowerCase().startsWith(params.searchText!.toLowerCase());
+	}
+	return true;
 }
 
 /**
@@ -25,76 +37,43 @@ export type Indices = {
 export default function WorkflowHistory() {
 	const {flowId} = useParams();
 	const { data, isLoading, isFetching, refetch } = useFetchWorkflowRuns(flowId!);
-	const [selData, setSelData] = useState<any[]>([]);
-	const [barChartData, setBarChartData] = useState<any[]>([])
-	const [lineChartData, setLineChartData] = useState<any[]>([])
-	const [indices, setIndices] = useState<Indices>({})
-	const [open, setOpen] = useState<Boolean>(false)
+	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'startsWith', searchColumn: 'runId', additionalFilters: []})
     const currURL = useLocation().pathname;
 		
-    useEffect(() => {
-        if (data && data.length>0 && selData.length===0) {
-			setSelData(data);
-		}
-    }, [data, selData])
-
-	useEffect(() => {
-		setBarChartData(generateChartData(selData))
-		setLineChartData(generateChartData(selData))	
-	}, [selData])
-	
-	const handleDateRangeChange = (start: Date, end: Date) => {
-		const filteredRows = data.filter((row) => {
-			const date = new Date(row.attemptStartTime)
-			return date >= start && date <= end
-		})
-		setSelData(filteredRows)
-
-		let rangeRight = 0;		
-		for (let i = 0; i < data.length; i++) {
-			if (filteredRows[0].attemptStartTime === data[i].attemptStartTime) {
-				rangeRight = i;
-				break;
+    const selData = useMemo(() => {
+        if (data && data.length>0) {
+			var selected = data;
+			if (filterParams.dateRange) {
+				selected = selected.filter((row) => row.attemptStartTime >= filterParams.dateRange![0] && row.attemptStartTime <= filterParams.dateRange![1])
 			}
+			if (filterParams.searchText) {
+				selected = selected.filter((row) => filterSearchText(filterParams, row));
+			}
+			if (filterParams.additionalFilters.length > 0) {
+				selected = selected.filter(row => filterParams.additionalFilters.some(filter => filter.predicate(row)));
+			}
+			return selected;
+		} else {
+			return [];
 		}
-		setIndices({rangeLeft: data.length - (rangeRight + filteredRows.length), rangeRight: data.length - 1 - rangeRight})
-	}
-	
-	const generateChartData = (data: any) => {
-		const res : {
-			value: number,
-			status: string,
-			name: string,
-			runId: number,
-			attemptId: number
-		}[] = [];
-				
-		data.forEach((run) => {
-			res.push({
-					value: durationMillis(run.duration),
-					status: run.status,
-					name: run.attemptStartTime,
-					runId: run.runId,
-					attemptId: run.attemptId    
-				})
-		});
-		return res;
+    }, [data, filterParams])
+
+	function updateFilterParams(partialFilter: Partial<FilterParams>) {
+		setFilterParams({...filterParams, ...partialFilter})
 	}
 	
 	if (isLoading || isFetching) {
 		return (<CircularProgress/>);
 	}
 
-	console.log(data)
-
 	const columns = [{
-		title: 'Run ID',
+		title: 'Run',
 		property: 'runId',
-		width: '100px'
+		width: '75px'
 	}, {
-		title: 'Attempt ID',
+		title: 'Attempt',
 		property: 'attemptId',
-		width: '100px'
+		width: '80px'
 	}, {
 		title: 'Run Start',
 		property: 'runStartTime',
@@ -156,17 +135,29 @@ export default function WorkflowHistory() {
 		{!data || isLoading || isFetching ? <CircularProgress/> : null}
 		{data ? (
 			<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '5px 15px', gap: '15px', width: '100%', height: '100%' }}>
-				<PageHeader title={flowId!} refresh={refetch} />             
-				<ChartControl runs={data}/>
+				<PageHeader title={flowId!} refresh={refetch} />    
+				<Sheet>
+					<Sheet sx={{display: 'flex', width: '100%', pb: '0.5rem', gap: '1rem'}}>
+						<Tooltip variant="solid" placement="right" title="This chart displays the runs in the current page. You can select a range or jump to a detailed run view by clicking on the corresponding bar.">
+							<Sheet sx={{display: 'flex', gap: '1rem'}}>
+								<Typography level='title-md'>Runs</Typography>
+								<Typography level='body-md' sx={{color: 'gray'}}>{selData.length} runs displayed</Typography>
+							</Sheet>
+						</Tooltip>
+						<Box sx={{flex: 1}}/>
+						<IconButton onClick={(e) => updateFilterParams({dateRange: undefined})} disabled={filterParams.dateRange == undefined} variant="plain" color="neutral" size="md"><ZoomOutOutlined/></IconButton>
+					</Sheet>
+					<Box onMouseDown={(e) => e.preventDefault()}>
+						<HistoryBarChart runs={selData} selectRange={(range) => updateFilterParams({dateRange: range})}/>
+					</Box>
+				</Sheet>				         
 				<ToolBar 
-					controlledRows={data} 
-					updateRows={setSelData}
-					searchColumn={'runId'}
-					searchMode={'equals'}
+					data={data}
+					updateFilterParams={updateFilterParams}
 					searchPlaceholder={'Search by Run ID'}
-					filters={checkFiltersAvailability(data, defaultFilters())}
-					datetimePicker={handleDateRangeChange}
-					/>
+					stateFilters={checkFiltersAvailability(data, stateFilters('status'))}
+					filterParams={filterParams}
+					datetimePicker={true}/>
 				<DataTable data={selData} columns={columns} navigator={(row) => `${currURL}/${row.runId}/${row.attemptId}/timeline`} keyAttr='path'/>
 			</Sheet>   
 		):(<NotFound errorType={500}/>)

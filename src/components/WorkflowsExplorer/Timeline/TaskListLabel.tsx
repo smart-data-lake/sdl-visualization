@@ -9,29 +9,25 @@ import { colorByStatus } from '../../../util/WorkflowsExplorer/style';
 // Component
 //
 
-const TaskListLabel = (props: {item: Row, displayPhases: {name: string; checked: boolean;}[]}) => {
+const TaskListLabel = (props: {item: Row, displayPhases: string[]}) => {
   const { item, displayPhases } = props
-
-  
 
   const getTotalDuration = () => {
     let duration = 0;
 
     displayPhases.forEach((phase) => {
-      if (phase.checked) {
-        switch (phase.name) {
-          case 'Execution':
-            duration += item.duration;
-            break;
-          case 'Initialized':
-            duration += item.endTstmpInit && item.startTstmpInit ? item.endTstmpInit - item.startTstmpInit : 0;
-            break;
-          case 'Prepared':
-            duration += item.endTstmpPrepare && item.startTstmpPrepare ? item.endTstmpPrepare - item.startTstmpPrepare : 0;
-            break;
-          default:
-            break;
-        }
+      switch (phase) {
+        case 'Execution':
+          duration += item.duration;
+          break;
+        case 'Initialized':
+          duration += item.endTstmpInit && item.startTstmpInit ? item.endTstmpInit - item.startTstmpInit : 0;
+          break;
+        case 'Prepared':
+          duration += item.endTstmpPrepare && item.startTstmpPrepare ? item.endTstmpPrepare - item.startTstmpPrepare : 0;
+          break;
+        default:
+          break;
       }
     });
     

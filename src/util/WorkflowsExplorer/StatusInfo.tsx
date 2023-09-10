@@ -47,10 +47,12 @@ export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
 }
 
 export class Filter {
+    group: string;
     name: string;
     predicate: (any) => boolean;
 
-    constructor(name: string, predicate: (any) => boolean) {
+    constructor(group: string, name: string, predicate: (any) => boolean) {
+        this.group = group;
         this.name = name;
         this.predicate = predicate;
     }
@@ -60,18 +62,23 @@ export class Filter {
     }
 }
 
-export const defaultFilters = (columnName?: string) => {    
-    const column = columnName ? columnName : 'status';
+export function stateFilters(column: string) {
     return [
-        new Filter('Succeeded', row => row[column] === 'SUCCEEDED'),
-        new Filter('Running', row => row[column] === 'RUNNING'),
-        new Filter('Cancelled', row => row[column] === 'CANCELLED'),
-        new Filter('Failed', row => row[column] === 'FAILED'),
-        new Filter('Prepared', row => row[column] === 'PREPARED'),
-        new Filter('Initialized', row => row[column] === 'INITIALIZED'),
-        new Filter('Skipped', row => row[column] === 'SKIPPED'),
+        new Filter('state', 'Succeeded', row => row[column] === 'SUCCEEDED'),
+        new Filter('state', 'Running', row => row[column] === 'RUNNING'),
+        new Filter('state', 'Cancelled', row => row[column] === 'CANCELLED'),
+        new Filter('state', 'Failed', row => row[column] === 'FAILED'),
+        new Filter('state', 'Prepared', row => row[column] === 'PREPARED'),
+        new Filter('state', 'Initialized', row => row[column] === 'INITIALIZED'),
+        new Filter('state', 'Skipped', row => row[column] === 'SKIPPED'),
     ]
 };
+
+export const phaseFilters = [
+    new Filter('phase', 'Prepared', row => row['phase'] === 'Prepared'),
+    new Filter('phase', 'Initialized', row => row['phase'] === 'Initialized'),
+    new Filter('phase', 'Execution', row => row['phase'] === 'Execution'),
+];
 
 export const checkFiltersAvailability = (rows: any, filters: Filter[]) => {
     return filters.filter(filter => filter.fun(rows).length > 0);

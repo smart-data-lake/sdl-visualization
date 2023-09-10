@@ -20,7 +20,7 @@ type TimelineRowProps = {
 	paramsString?: string;
 	// Flag if we are dragging footer section. Need to remove animation in that case so rows don't seem clunky
 	dragging: boolean;
-	displayPhases: { name: string; checked: boolean }[];
+	displayPhases: string[];
 };
 
 
