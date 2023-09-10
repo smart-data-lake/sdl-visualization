@@ -59,7 +59,7 @@ function ConfigExplorer(props: { configData?: ConfigData }) {
 			<PageHeader title={'Configuration'} noBack={true} />
 			<Sheet sx={{ display: 'flex', width: '100%', flex: 1, minHeight: 0 }} ref={parentRef}>
 				<ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
-				<DraggableDivider cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
+				<DraggableDivider id="config-elementlist" cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
 				<Routes>
 					<Route path=":elementType" element={<ElementTable dataLists={filteredConfigDataLists!} />} />
 					<Route path=":elementType/:elementName" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} />

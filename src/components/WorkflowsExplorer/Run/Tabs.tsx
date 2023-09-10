@@ -95,7 +95,7 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean, tab?: string }) =
 	}]
 
     return (
-        <Sheet sx={{ display: 'flex', height: '100%' }}>
+        <Sheet sx={{ display: 'flex', height: '100%', width: '100%' }}>
             <Sheet sx={{ flex: 1, display: 'flex', flexDirection: 'column', pt: '1rem', gap: '15px', width: '100%', height: '100%' }}>
                 {/* Renders the ToolBar component, which contains a set of buttons that allow the user to filter the rows displayed in the actions table */}
                 <ToolBar
@@ -135,7 +135,7 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean, tab?: string }) =
                         onClick={() => open && navigate(`${currURL.split('table')[0]}table`)}>
                         <Sheet
                             sx={{ height: '100%', backgroundColor: open ? 'primary.main' : 'none', opacity: open ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
-                            <DataTable data={selData} columns={columns} navigator={(row) => `${currURL}/${row.step_name}`} keyAttr='step_name'/>
+                            <DataTable data={selData} columns={columns} navigator={(row) => `${currURL.split('table')[0]}table/${row.step_name}`} keyAttr='step_name'/>
                         </Sheet>
                     </TabPanel>
                 </>)}
@@ -186,7 +186,7 @@ const TabNav = (props: { attempt: Attempt, panelOpen?: boolean }) => {
 
     return (
         <Sheet sx={{ display: 'flex', height: '100%', px: '1rem' }}>
-            <Sheet sx={{ flex: 1, minWidth: 0, height: '100%', }}>
+            <Sheet sx={{ flex: 1, minWidth: '500px', height: '100%', }}>
                 <Tabs defaultValue={tab} onChange={(e, v) => handleChange(e, v)} >
                     <Box sx={{ display: 'flex', flex: 1, mt: '1rem', justifyContent: 'space-between' }}>
                         <TabList variant="plain" color="neutral">
@@ -212,7 +212,7 @@ const TabNav = (props: { attempt: Attempt, panelOpen?: boolean }) => {
             </Sheet>
             {openLineage && (
                 <>
-                    <DraggableDivider cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} />
+                    <DraggableDivider id="workflow-lineage" cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} />
                     <Sheet ref={lineageRef}>
                         <ReactFlowProvider>
                             <LineageTab graph={graph} elementName="" elementType="" />

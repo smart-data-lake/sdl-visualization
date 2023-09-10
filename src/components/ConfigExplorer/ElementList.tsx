@@ -92,7 +92,6 @@ export default function ElementList(props: ElementListProps) {
   }
 
   function primaryColorIfSelected(type: string, name?: string) {
-    console.log(type,elementType, name, elementName);
     return (isSelected(type, name) ? 'primary': 'neutral')
   }
 

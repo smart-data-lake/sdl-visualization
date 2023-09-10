@@ -9,9 +9,9 @@ const dividerState = new Map<string,number>();
  * parentCmpRef is used optionally to keep width of parent stable, e.g. avoid resizing larger than parents width.
  * alternatively this can be configured by using maxWidth on cmp, but that doesnt always meet the requirements.
  */
-function DraggableDivider(props: { cmpRef: MutableRefObject<HTMLDivElement | null>, isRightCmp: boolean, defaultCmpWidth: number, parentCmpRef?: MutableRefObject<HTMLDivElement | null>}) {
+function DraggableDivider(props: { id: string, cmpRef: MutableRefObject<HTMLDivElement | null>, isRightCmp: boolean, defaultCmpWidth: number, parentCmpRef?: MutableRefObject<HTMLDivElement | null>}) {
 
-	const cmpWidth = useRef<number>(props.defaultCmpWidth);
+	const cmpWidth = useRef<number>(dividerState[props.id] || props.defaultCmpWidth);
 	const parentCmpWidth = useRef<number>();
 	const cmpMaxWidth = useRef<number>(); // detected cmp max width before parent begins to grow...
 	const dragPos = useRef<[number, number]>();
@@ -24,12 +24,12 @@ function DraggableDivider(props: { cmpRef: MutableRefObject<HTMLDivElement | nul
 			document.removeEventListener("mousemove", onMouseMove);
 			document.removeEventListener("mouseup", endDrag);
 		};
-	});
+	}, []);
 
     useEffect(() => {
 		// initialise cmp with default width
         if (dividerRef.current && props.cmpRef.current) {
-			props.cmpRef.current.style.width = (dividerState[dividerRef.current.nodeName] || cmpWidth)+'px';
+			props.cmpRef.current.style.width = (dividerState[props.id] || props.defaultCmpWidth)+'px';
 		}
     }, []);
 
@@ -69,7 +69,7 @@ function DraggableDivider(props: { cmpRef: MutableRefObject<HTMLDivElement | nul
 			// save new width
 			const newWidth = getCmpDraggedWidth();
 			cmpWidth.current = newWidth;
-            dividerState[dividerRef.current!.nodeName] = newWidth;
+            dividerState[props.id] = newWidth;
 			// reset
 			dragPos.current = undefined;
 			if (dividerRef.current) dividerRef.current.style.backgroundColor = 'white';
@@ -83,7 +83,7 @@ function DraggableDivider(props: { cmpRef: MutableRefObject<HTMLDivElement | nul
 	}
 
 	return (
-		<Divider orientation='vertical' ref={dividerRef} onMouseDown={onMouseDown} sx={{ width: 10, marginLeft: '5px', marginRight: '5px' }}>
+		<Divider id={props.id} orientation='vertical' ref={dividerRef} onMouseDown={onMouseDown} sx={{ width: 10, marginLeft: '5px', marginRight: '5px' }}>
 			<DragIndicator sx={{ fontSize: 15, marginLeft: '-12px' }} />
 		</Divider>
 	)
