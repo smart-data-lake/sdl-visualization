@@ -69,9 +69,3 @@ export function compareFunc(attr: string) {
     else return a[attr] > b[attr] ? 1 : -1;
   }
 }
-
-export function colorNameToCss(name: string, theme: Theme) {
-  const color = theme.variants.outlined[name]?.color || theme.palette[name]?.outlinedColor;
-  if (color) return color;
-  else return name;
-}

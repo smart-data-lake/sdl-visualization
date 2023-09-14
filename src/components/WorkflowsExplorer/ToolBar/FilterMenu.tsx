@@ -1,6 +1,6 @@
-import { Box, Button, Checkbox, Dropdown, ListDivider, Menu, MenuButton, MenuItem, Sheet } from "@mui/joy";
-import React, { useEffect, useState } from "react";
-import { Filter, getIcon, getStatusColor } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { Checkbox, Dropdown, Menu, MenuButton, MenuItem, Typography } from "@mui/joy";
+import { useEffect, useState } from "react";
+import { Filter, getIcon } from "../../../util/WorkflowsExplorer/StatusInfo";
 
 /**
  * The FilterMenu component is a subcomponent of the ToolBar component that implements the filter functionality.
@@ -11,8 +11,8 @@ import { Filter, getIcon, getStatusColor } from "../../../util/WorkflowsExplorer
  * @param props.filters - filters to be applied
  * @returns 
  */
-const FilterMenu = (props: {title: string, setFilters: (filters: Filter[]) => void, filters: Filter[]}) => {
-    const { filters, setFilters, title } = props;
+const FilterMenu = (props: {title: string, setFilters: (filters: Filter[]) => void, filters: Filter[], colorMap: (string) => string,  withIcon?: boolean}) => {
+    const { filters, setFilters, title, withIcon, colorMap } = props;
     const [list, setList] = useState<boolean[]>(Array(props.filters?.length).fill(true));
 
 	useEffect(() => {
@@ -24,17 +24,17 @@ const FilterMenu = (props: {title: string, setFilters: (filters: Filter[]) => vo
             <MenuButton size="sm" variant="outlined">{title}</MenuButton>               
             <Menu  size="sm">
                 {filters && filters.map((filter, index) => (
-                    <MenuItem color={getStatusColor(filter.name)}>
-                        <Checkbox 
-                            color={getStatusColor(filter.name.toUpperCase())}
+                    <MenuItem>
+                        <Checkbox
+                            color="neutral"                
                             size="sm"
                             variant="outlined"
                             checked={list[index]}
                             onChange={() => setList(list.map((item, i) => i === index ? !item : item))} 
                             sx={{ mr: '0.5rem' }}
-                        /> 
-                        {filter.name}
-                        {getIcon(filter.name.toUpperCase())}
+                        />
+                        <Typography sx={{color: colorMap(filter.name)}}>{filter.name}</Typography>                        
+                        {withIcon && getIcon(filter.name)}
                     </MenuItem>                
                 ))}
             </Menu>

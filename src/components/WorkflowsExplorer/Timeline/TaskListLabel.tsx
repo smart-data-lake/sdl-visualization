@@ -17,13 +17,13 @@ const TaskListLabel = (props: {item: Row, displayPhases: string[]}) => {
 
     displayPhases.forEach((phase) => {
       switch (phase) {
-        case 'Execution':
+        case 'Exec':
           duration += item.duration;
           break;
-        case 'Initialized':
+        case 'Init':
           duration += item.endTstmpInit && item.startTstmpInit ? item.endTstmpInit - item.startTstmpInit : 0;
           break;
-        case 'Prepared':
+        case 'Prepare':
           duration += item.endTstmpPrepare && item.startTstmpPrepare ? item.endTstmpPrepare - item.startTstmpPrepare : 0;
           break;
         default:

@@ -1,9 +1,9 @@
 import { Box, Input } from "@mui/joy";
 import { Filter, phaseFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import DatetimePicker from "../DatetimePicker/DatetimePicker";
+import { getPhasesColor, getStatusColor } from "../Timeline/TimelineRow/utils";
 import { FilterParams } from "../WorkflowHistory";
 import FilterMenu from "./FilterMenu";
-import Phases from "./Phases";
 
 
 /**
@@ -25,6 +25,7 @@ const ToolBar = (
         setPhases?: (phases: string[]) => void
     }) => {
     const { data, filterParams, updateFilterParams, stateFilters, datetimePicker, searchPlaceholder, setPhases } = props;
+
 
     function setSearchText(text: string) {
         const searchText = (text.trim().length > 0 ? text.trim() : undefined);    
@@ -49,8 +50,8 @@ const ToolBar = (
                 sx={{fontSize: 'var(--joy-fontSize-sm)', zIndex: 'auto',}}
                 onChange={(event) => setSearchText(event.target.value)}
             />
-            {stateFilters && <FilterMenu title='Filter Status' filters={stateFilters} setFilters={setStateFilters}/>}
-            {setPhases && <FilterMenu title='Select Phases' filters={phaseFilters} setFilters={filters => setPhases(filters.map(f => f.name))}/>}
+            {stateFilters && <FilterMenu title='Filter Status' filters={stateFilters} setFilters={setStateFilters} colorMap={getStatusColor} withIcon={true}/>}
+            {setPhases && <FilterMenu title='Select Phases' filters={phaseFilters} setFilters={filters => setPhases(filters.map(f => f.name))} colorMap={getPhasesColor}/>}
             {datetimePicker && <DatetimePicker range={filterParams.dateRange} setRange={setDateRange}/>}
         </Box>
     )

@@ -4,28 +4,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import { Tooltip } from '@mui/joy';
 import React from 'react';
-
-export const getStatusColor = (name: string) => {
-
-    switch (name.toUpperCase()) {
-        case 'SUCCEEDED':
-            return 'success';
-        case 'FAILED':
-            return 'danger'; // danger?
-        case 'RUNNING':
-            return 'warning';
-        case 'INITIALIZED':
-            return 'primary';
-        case 'PREPARED':
-            return 'neutral';
-        case 'SKIPPED':
-            return 'neutral';
-        case 'CANCELLED':
-            return 'warning'
-        default:
-            return 'neutral' // neural?
-    }
-}
+import { getStatusColor } from '../../components/WorkflowsExplorer/Timeline/TimelineRow/utils';
 
 export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
     const color = getStatusColor(status);
@@ -38,7 +17,7 @@ export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
         'CANCELLED': BlockOutlined
     };
     const iconName = statusIconMap[status] || HelpOutlineIcon;
-    const iconComponent = React.createElement(iconName, {color: color, sx: { scale: '80%', ml: marginLeft, zIndex: 0 }});
+    const iconComponent = React.createElement(iconName, {sx: { color: color, scale: '80%', ml: marginLeft, zIndex: 0 }});
     return (
         <Tooltip arrow title={status} enterDelay={500} enterNextDelay={500}>
             {iconComponent}
@@ -75,9 +54,9 @@ export function stateFilters(column: string) {
 };
 
 export const phaseFilters = [
-    new Filter('phase', 'Prepared', row => row['phase'] === 'Prepared'),
-    new Filter('phase', 'Initialized', row => row['phase'] === 'Initialized'),
-    new Filter('phase', 'Execution', row => row['phase'] === 'Execution'),
+    new Filter('phase', 'Prepare', row => row === 'Prepared'),
+    new Filter('phase', 'Init', row => row === 'Init'),
+    new Filter('phase', 'Exec', row => row === 'Exec'),
 ];
 
 export const checkFiltersAvailability = (rows: any, filters: Filter[]) => {

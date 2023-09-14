@@ -41,7 +41,7 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean, tab?: string }) =
     const { attempt, open, tab } = props;
     const data = attempt.rows;
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'step_name', additionalFilters: []})
-    const [timelinePhases, setTimelinePhases] = useState(['Execution', 'Initialized', 'Prepared']);
+    const [timelinePhases, setTimelinePhases] = useState(['Exec', 'Init', 'Prepare']);
     const navigate = useNavigate();
     const currURL = useLocation().pathname;
     

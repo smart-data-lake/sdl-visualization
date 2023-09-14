@@ -6,7 +6,7 @@ import { Row } from '../../../../types';
 import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
 import { getPathFor } from '../../../../util/WorkflowsExplorer/routing';
 import { TasksSortBy } from '../useTaskListSettings';
-import { getLengthLabelPosition, getRowStatus, lineColor } from './utils';
+import { getLengthLabelPosition, getRowStatus, statusColor } from './utils';
 
 //
 // Typedef
@@ -138,15 +138,15 @@ const LineElement: React.FC<LineElementProps> = ({
   const valueFromLeftExec = valueFromLeft(_boxStartTime('exec'));
   const widthExec = width(duration, valueFromLeftExec);
   const labelPositionExec = getLengthLabelPosition(valueFromLeftExec, widthExec);
-  const displayExec = displayPhases.includes('Execution');
+  const displayExec = displayPhases.includes('Exec');
 
   const valueFromLeftInit = valueFromLeft(_boxStartTime('init'));
   const widthInit = width(init_duration, valueFromLeftInit);
-  const displayInit = init_duration && displayPhases.includes('Initialized');
+  const displayInit = init_duration && displayPhases.includes('Init');
 
   const valueFromLeftPrepare = valueFromLeft(_boxStartTime('prepare'));
   const widthPrepare = width(prepare_duration, valueFromLeftPrepare);
-  const displayPrepare = prepare_duration && displayPhases.includes('Prepared');
+  const displayPrepare = prepare_duration && displayPhases.includes('Prepare');
 
   return (
     <>
@@ -254,7 +254,7 @@ const UnkownMoveAnimation = keyframes`
 
 const BoxGraphicLine = styled.div<{ grayed?: boolean; state: string; isLastAttempt: boolean }>`
   position: absolute;
-  background: ${(p) => lineColor(p.theme, p.grayed || false, p.state, p.isLastAttempt)};
+  background: ${(p) => statusColor(p.theme, p.grayed || false, p.state, p.isLastAttempt)};
   width: 100%;
   height: 0.375rem;
   top: 50%;
@@ -285,7 +285,7 @@ const BoxGraphicLine = styled.div<{ grayed?: boolean; state: string; isLastAttem
     `}
 
   &:hover {
-    background: ${(p) => lineColor(p.theme, p.grayed || false, p.state, p.isLastAttempt)};
+    background: ${(p) => statusColor(p.theme, p.grayed || false, p.state, p.isLastAttempt)};
   }
 `;
 

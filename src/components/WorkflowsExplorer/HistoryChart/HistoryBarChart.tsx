@@ -2,10 +2,9 @@ import { useTheme } from "@mui/joy/styles";
 import { useState } from "react";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { getStatusColor } from "../../../util/WorkflowsExplorer/StatusInfo";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
-import { colorNameToCss } from "../../../util/helpers";
 import { CustomTooltip } from "./CustomTooltip";
+import { getStatusColor } from "../Timeline/TimelineRow/utils";
 
 const HistoryBarChart = (props: {runs: any[], selectRange: (range: [Date,Date]) => void}) => {
     const { runs } = props;
@@ -60,7 +59,7 @@ const HistoryBarChart = (props: {runs: any[], selectRange: (range: [Date,Date]) 
                 minPointSize={5}
                 isAnimationActive={false}
                 >
-                  {runs.map((entry, index) => <Cell key={`cell-${index}`} fill={colorNameToCss(getStatusColor(entry.status), theme)} style={{cursor: 'pointer'}} />)}    
+                  {runs.map((entry, index) => <Cell key={`cell-${index}`} fill={getStatusColor(entry.status)} style={{cursor: 'pointer'}} />)}    
             </Bar>
             {refArea && refArea.length == 2 && <ReferenceArea yAxisId="0" ifOverflow="hidden" x1={refArea[0]} x2={refArea[1]} strokeOpacity={0.3}/>}            
           </BarChart>
