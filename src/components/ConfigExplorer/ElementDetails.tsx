@@ -37,8 +37,8 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 
   return (
 	<>
-		<Sheet sx={{ flex: 1, minWidth: '500px', display: 'flex', flexDirection: 'column',  p: '1rem 0rem 1rem 0.5rem'}} ref={mainRef}>
-			<Tabs size="md" value={selectedTyp} onChange={(e,v) => setSelectedTab(v as string)} aria-label="element tabs">
+		<Sheet sx={{ flex: 1, minWidth: '500px', height: '100%', display: 'flex', flexDirection: 'column',  p: '1rem 0rem 1rem 0.5rem'}} ref={mainRef}>
+			<Tabs size="md" value={selectedTyp} onChange={(e,v) => setSelectedTab(v as string)} aria-label="element tabs" sx={{height: '100%'}}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
 					<TabList>
 						<Tab value="description">Description</Tab>
@@ -59,10 +59,10 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 						)}
 					</Sheet>
 				</Sheet>
-				<TabPanel value="description" className="content-panel" sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
+				<TabPanel value="description" className="content-panel" sx={{height: '100%', width: '100%', overflow: 'auto'}}>
 					<DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
 				</TabPanel>
-				<TabPanel value="configuration" className="content-panel" sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
+				<TabPanel value="configuration" className="content-panel" sx={{height: '100%', width: '100%', overflow: 'auto'}}>
 					<ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} connection={connectionConfigObj} />
 				</TabPanel>
 			</Tabs>

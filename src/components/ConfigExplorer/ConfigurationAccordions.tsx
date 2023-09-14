@@ -123,7 +123,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     let tr = getTransformers(props.data);
     if (tr && tr.length>0){
       let cmps = tr.map((transformer,idx) => createPropertiesComponent({obj: transformer, colHeader: (idx+1).toString()}));
-      accordionSections.set('transformers', ['Transformers', <Stack spacing={1}>{cmps}</Stack>]);
+      accordionSections.set('transformers', ['Transformers', <Stack sx={{overflow: 'auto'}} spacing={1}>{cmps}</Stack>]);
     }
   }
 
