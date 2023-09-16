@@ -78,8 +78,7 @@
     "//": "See https://github.com/facebook/create-react-app/issues/11773",
     "react-error-overlay": "6.0.9",
     "@types/react": "^18.0.2",
-    "@types/react-dom": "^18.0.2",
-    "@mui/material": "npm:@mui/joy@latest"
+    "@types/react-dom": "^18.0.2"
   },
   "scripts": {
     "start": "react-scripts start",
