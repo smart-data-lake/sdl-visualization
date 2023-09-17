@@ -16,7 +16,7 @@ export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
         'SKIPPED': DoNotDisturbAltOutlined,
         'CANCELLED': BlockOutlined
     };
-    const iconName = statusIconMap[status] || HelpOutlineIcon;
+    const iconName = statusIconMap[status.toUpperCase()] || HelpOutlineIcon;
     const iconComponent = React.createElement(iconName, {sx: { color: color, scale: '80%', ml: marginLeft, zIndex: 0 }});
     return (
         <Tooltip arrow title={status} enterDelay={500} enterNextDelay={500}>
