@@ -93,7 +93,6 @@ export class Row implements MetaDataBaseObject {
       this.endTstmpInit = properties.action.endTstmpInit ? new Date(properties.action.endTstmpInit).getTime() : undefined;
       this.inputIds = properties.action.inputIds;
       this.outputIds = properties.action.outputIds;
-      console.log(this);
     }
 
     /**

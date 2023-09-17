@@ -1,4 +1,4 @@
-import { BlockOutlined, DoNotDisturbAltOutlined, PendingOutlined } from '@mui/icons-material';
+import { BlockOutlined, DoNotDisturbAltOutlined, PendingOutlined, RunCircleOutlined } from '@mui/icons-material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
@@ -10,6 +10,7 @@ export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
     const color = getStatusColor(status);
     const statusIconMap = {
         'SUCCEEDED': CheckCircleOutlineIcon,
+        'RUNNING': RunCircleOutlined,
         'FAILED': HighlightOffIcon,
         'INITIALIZED': PendingOutlined,
         'PREPARED': PendingOutlined,

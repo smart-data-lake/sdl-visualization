@@ -18,7 +18,7 @@ const Run = (props : {panelOpen?: boolean}) => {
     const {flowId, runNumber, taskId} = useParams();
     const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
 
-    if (isLoading || isFetching) return <CircularProgress/>
+    if (isLoading || isFetching || !data) return <CircularProgress/>
     
     const attempt = data.detail ? undefined : new Attempt(data);
     if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);

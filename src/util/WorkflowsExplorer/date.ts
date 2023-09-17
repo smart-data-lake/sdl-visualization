@@ -1,6 +1,7 @@
 import spacetime from 'spacetime';
 
 export const formatTimestamp = (date: Date, timezone?: string): string => {
+  if (!date) return date; 
   if (timezone) {
     return spacetime(date, 'GMT+0').goto(`${timezone}`).unixFmt('dd.MM.yyyy HH:mm:ss');
   }
