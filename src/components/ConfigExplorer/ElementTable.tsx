@@ -11,7 +11,7 @@ export default function ElementTable(props: {dataLists: ConfigDataLists}) {
 
     return (
 		<Sheet sx={{ flex: '1', minWidth: '500px', height: '100%', display: 'flex', flexDirection: 'column', p: '1rem 0rem 0.1rem 0.5rem'}}>
-			<Tabs size="md" value={elementType || "dataObjects"} onChange={(e,v) => navigate(`/config/${v}`)} aria-label="element tabs">
+			<Tabs size="md" value={elementType || "dataObjects"} onChange={(e,v) => navigate(`/config/${v}`)} aria-label="element tabs" sx={{height: '100%'}}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
 					<TabList size="md">
 						<Tab value="dataObjects" disabled={dataLists.dataObjects.length===0}>Data Objects</Tab>
