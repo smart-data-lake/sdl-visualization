@@ -60,7 +60,7 @@ export function statusColor(theme: DefaultTheme, grayed: boolean, state: string,
   if (grayed) {
     return '#c7c7c7';
   } else {
-    switch (state) {
+    switch (state.toUpperCase()) {
       case 'SUCCEEDED':
         return !isFirst ? lighten(0.3, defaultTheme.color.bg.green) : defaultTheme.color.bg.green;
       case 'RUNNING':
