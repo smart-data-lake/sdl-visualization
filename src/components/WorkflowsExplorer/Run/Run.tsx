@@ -28,7 +28,7 @@ const Run = (props : {panelOpen?: boolean}) => {
 			{data ? (
 				(!data.detail && attempt) ? (
                 <>
-                    <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId} refresh={refetch} />
+                    <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId + ' attempt ' + attempt.runInfo.attemptId} refresh={refetch} />
                     {/* <RunDetails attempt={attempt}/> */}
                     <TabNav attempt={attempt} panelOpen={props.panelOpen}/>
                 </>

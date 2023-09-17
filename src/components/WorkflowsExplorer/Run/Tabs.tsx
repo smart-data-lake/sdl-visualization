@@ -24,7 +24,7 @@ import { SortDirection } from 'ka-table';
 import DraggableDivider from "../../../layouts/DraggableDivider";
 import { DAGraph } from "../../../util/ConfigExplorer/Graphs";
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
-import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../../ConfigExplorer/DataTable';
+import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../../ConfigExplorer/DataTable';
 import { FilterParams, filterSearchText } from '../WorkflowHistory';
 
 /**
