@@ -16,7 +16,7 @@ const BasicBreadcrumbs = () => {
         if (elem === 'Home') {
             navigate('/');
         } else {
-            const targetURL = url.split(elem)[0] + elem
+            const targetURL = url.split(new RegExp('/'+elem+'(/|^)'))[0] + '/' + elem;
             navigate(targetURL)
         }
     }
