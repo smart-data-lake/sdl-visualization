@@ -1,6 +1,6 @@
 import { Box, CircularProgress } from "@mui/joy";
 import { DataType, Table } from 'ka-table';
-import { SortingMode } from 'ka-table/enums';
+import { SortingMode, SortDirection } from 'ka-table/enums';
 import { Column } from 'ka-table/models';
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -140,6 +140,17 @@ export default function DataTable(props: {data: any[], columns: any[], keyAttr: 
                         }
                     }                    
                 }}
+                sort={({column}) => {
+                    if (column.key.endsWith('_at')) {
+                        return (a, b) => {
+                            var result = a === b ? 0
+                                : !a ? 1 
+                                : !b ? -1
+                                : a < b ? -1 : 1;
+                            return result * (column.sortDirection === SortDirection.Ascend ? 1 : -1) as (0|1|-1)
+                        }
+                    }
+                }}                
                 noData={{ text: "No data found", hideHeader: true }}                                         
             />
         </Box>
