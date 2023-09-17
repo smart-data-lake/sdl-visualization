@@ -35,6 +35,7 @@ def getRuns(files):
             appConfig = data["appConfig"]
             actionsState = data["actionsState"]
             buildVersion = find("buildVersionInfo.version", data) # ignore if not found
+            appVersion = find("appVersion", data) # ignore if not found
             status = getStatus(actionsState)
             runEndTime = getRunEndTime(data)
             actionCounts = collections.Counter(map(lambda a: a["state"], actionsState.values()))
@@ -51,7 +52,7 @@ def getRuns(files):
                     "status": status,
                     "actionsStatus": actionCounts,
                     "buildVersion": buildVersion,
-                    "appVersion": data["appVersion"],
+                    "appVersion": appVersion,
                     "path": statefile["path"].lstrip("./"),
                 }
             )
