@@ -130,7 +130,7 @@ export default function ConfigurationTab(props: ElementProps) {
   function mainContent(){
     let propsToIgnore = topAttributes.map(x => x.key).concat(['metadata', 'type', 'inputId', 'inputIds', 'outputId', 'outputIds', 'id']);
     if (props.elementType === 'actions' || props.elementType === 'dataObjects' || props.elementType === 'connections'){
-      return(<ConfigurationAccordions data={props.data} elementType={props.elementType} propsToIgnore={propsToIgnore} connectionDb={(props.connection && props.connection.db) as string} />)
+      return(<ConfigurationAccordions data={props.data} elementType={props.elementType} propsToIgnore={propsToIgnore} connectionDb={(props.connection ? props.connection.db : undefined)} />)
     } else { 
       throw new Error(`Unknown element Type ${props.elementType}`);
     }

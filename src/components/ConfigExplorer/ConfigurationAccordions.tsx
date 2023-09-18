@@ -1,12 +1,14 @@
 import * as React from 'react';
 import './ComponentsStyles.css';
 import 'github-markdown-css/github-markdown.css';
-import { Table } from '@mui/joy';
+import { Button, Link, Table } from '@mui/joy';
 import { createPropertiesComponent } from './PropertiesComponent';
 import CodeViewComponent from './CodeViewComponent';
 import { getPropertyByPath, hoconify } from '../../util/helpers';
 import { Accordion, AccordionDetails, AccordionGroup, AccordionSummary, Chip, Stack } from '@mui/joy';
 import { createSimpleChip } from './ConfigurationTab';
+import { useManifest } from '../../hooks/useManifest';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 function getTransformers(action: any): any[] {
   //returns a list of transformer objects
@@ -18,24 +20,16 @@ interface AccordionCreatorProps {
   data: any; // config of object to display
   propsToIgnore: string[] // This shows which attributes should or should not be in the "additional attributes" accordion
   elementType: string;
-  connectionDb: String;
+  connectionDb?: String;
 }
 
 export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
   const getAttribute = (attributeName: string) => getPropertyByPath(props.data, attributeName);
-  var accordionSections = new Map<string,[string,JSX.Element]>();
-  const [openAccordion, setOpenAccordion] = React.useState('none'); //none of the accordions are open at the beginning
-
-  // reset accordion on element change -> disabled as it more intuitive if the same accordion section stays open
-  //React.useEffect(() => setOpenAccordion('none'), [props.data]);
-
-  //Only one accordion open at a time
-  const handleChange = (accordionName: string) => (_: React.SyntheticEvent, isExpanded: boolean) =>
-    setOpenAccordion(isExpanded ? accordionName : 'none')
+  var accordionSections = new Map<string,[string | JSX.Element,JSX.Element]>();
+  const {data: manifest} = useManifest();
+  const navigate = useNavigate();
   
-  //Formatting of Markdown Strings:
-  //FOREIGN KEYS --> FOR DATA OBJECTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
   function foreignKeysAccordion(){
     let foreignKeys = getAttribute('table.foreignKeys');
     if (foreignKeys && foreignKeys.length>0){
@@ -111,10 +105,13 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
   function rawHoconAccordion(){
     var rawData = props.data;
-    var title = 'Raw Config'
+    var title: string | JSX.Element = 'Raw Config';
     // remove origin from data if it exists, add it to title
-    if (rawData.origin) {
-      title = title + ` - ${rawData.origin.path}:${rawData.origin.lineNumber}`;
+    if (rawData.origin) {      
+      const relativePath = rawData.origin.path.split('config/').pop(); // pop = take last element
+      const sourceUrl = manifest?.configSourceUrl ? manifest.configSourceUrl.replace("{filename}", relativePath).replace('{lineNumber}', rawData.origin.lineNumber) : undefined;
+      const linkName = `${relativePath}:${rawData.origin.lineNumber}`
+      title = (sourceUrl ? (<><span>{title} - </span><Link href={sourceUrl} target="_blank" onClick={(e) => e.stopPropagation()}>{linkName}</Link><span style={{flex: 1}}/></>) : title + ' - ' + linkName);
       rawData = {...rawData}; // deep clone to avoid mutation of the original data
       delete rawData['origin'];
     }
@@ -127,7 +124,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     accordionSections.set('rawJson', [title, <CodeViewComponent code={hoconConfig} language="" />]);
   }
 
-  function getAccordionSections(): [string, string, JSX.Element][]{
+  function getAccordionSections(): [string, string | JSX.Element, JSX.Element][]{
     foreignKeysAccordion();
     constraintsAccordion();
     expectationsAccordion();
@@ -139,9 +136,9 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     return Array.from(accordionSections.entries()).map(([key,[name,element]]) => [key,name,element]); 
   }
 
-  function createAccordion(key: string, accordionName: string, jsxElement: JSX.Element){
+  function createAccordion(key: string, accordionName: string | JSX.Element, jsxElement: JSX.Element){
     return(
-      <Accordion>
+      <Accordion key={key}>
         <AccordionSummary sx={{fontWeight: 'normal'}}>{accordionName}</AccordionSummary>
         <AccordionDetails>{jsxElement}</AccordionDetails>
       </Accordion>
