@@ -63,7 +63,7 @@ export function onlyUnique(value, index, array) {
  * This can be used for sorting arrays.
  * usage: arr.sort(compareFunc("x"))
  */
-export function compareFunc(attr: string) {
+export function compareFunc(attr: any) {
   return (a, b) => {
     if (a[attr] === b[attr]) return 0;
     else return a[attr] > b[attr] ? 1 : -1;

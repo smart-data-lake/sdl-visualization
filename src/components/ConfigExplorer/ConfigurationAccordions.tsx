@@ -1,12 +1,12 @@
 import * as React from 'react';
 import './ComponentsStyles.css';
 import 'github-markdown-css/github-markdown.css';
-import 'github-markdown-css/github-markdown.css';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
+import { Table } from '@mui/joy';
 import { createPropertiesComponent } from './PropertiesComponent';
 import CodeViewComponent from './CodeViewComponent';
 import { getPropertyByPath, hoconify } from '../../util/helpers';
 import { Accordion, AccordionDetails, AccordionGroup, AccordionSummary, Chip, Stack } from '@mui/joy';
+import { createSimpleChip } from './ConfigurationTab';
 
 function getTransformers(action: any): any[] {
   //returns a list of transformer objects
@@ -41,88 +41,48 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     if (foreignKeys && foreignKeys.length>0){
       //db, table, columns: Map[String,String], name
       let rows = foreignKeys.map((foreignKey: any) => 
-        <TableRow>
-          <TableCell>{foreignKey.name}</TableCell>
-          <TableCell>{(foreignKey.db || props.connectionDb || "<db?>") + "." + foreignKey.name}</TableCell>
-          <TableCell><Stack spacing={0.5} direction="row">{Object.entries(foreignKey.columns).map(([k,v]) => <Chip size="sm">{k+" -> "+v}</Chip>)}</Stack></TableCell>
-        </TableRow>
+        <tr>
+          <td>{foreignKey.name}</td>
+          <td>{(foreignKey.db || props.connectionDb || "<db?>") + "." + foreignKey.name}</td>
+          <td><Stack spacing={0.5} direction="row">{Object.entries(foreignKey.columns).map(([k,v]) => createSimpleChip(k+" -> "+v))}</Stack></td>
+        </tr>
       )
-      let tbl = <TableContainer >
-        <Table size="small">
-          <TableHead>
-          <TableRow sx={{"& th": {backgroundColor: "rgba(0, 0, 0, 0.08)"}}}>
-              <TableCell width="10%">Name</TableCell>
-              <TableCell>Target table</TableCell>            
-              <TableCell>Column mapping</TableCell>            
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows}
-          </TableBody>
-        </Table>
-      </TableContainer>
+
+      let tbl = (<Table size='md'
+        sx={{tableLayout: 'auto', width: 'max-content', maxWidth: '100%', borderCollapse: 'collapse', border: '1px solid var(--TableCell-borderColor)', '& td': {padding: '0px', height: '32px', borderLeft: '1px solid var(--TableCell-borderColor)', borderRight: '1px solid var(--TableCell-borderColor)'}}}>
+          <thead>
+            <tr>
+              <td width="10%">Name</td>
+              <td>Target table</td>            
+              <td>Column mapping</td>            
+            </tr>
+          </thead>
+          <tbody>{rows}</tbody>
+      </Table>)
       accordionSections.set('table.foreignKeys', ['Foreign Keys', tbl]);
     }
   }
 
   function constraintsAccordion(){
-    let constraints = getAttribute('constraints');
-    if (constraints && constraints.length>0){
-      let rows = constraints.map((constraint: any) => 
-        <TableRow>
-          <TableCell>{constraint.name}</TableCell>
-          <TableCell>{createPropertiesComponent({obj: constraint, propsToIgnore: ["name"]})}</TableCell>
-        </TableRow>
-      )
-      let tbl = <TableContainer >
-        <Table size="small">
-          <TableHead>
-          <TableRow sx={{"& th": {backgroundColor: "rgba(0, 0, 0, 0.08)"}}}>
-              <TableCell width="10%">Name</TableCell>
-              <TableCell>Attributes</TableCell>            
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      accordionSections.set('constraints', ['Constraints', tbl]);
-    }
+    let elements = getAttribute('constraints');
+    if (elements && elements.length>0){
+      let cmps = elements.map((element,idx) => createPropertiesComponent({obj: element, orderProposal: ['name']}));
+      accordionSections.set('constraints', ['Constraints', <Stack sx={{overflow: 'auto'}} spacing={1}>{cmps}</Stack>]);
+    }      
   }
 
   function expectationsAccordion(){
-    let expectations = getAttribute('expectations');
-    if (expectations && expectations.length>0){
-      let rows = expectations.map((expectation: any) => 
-        <TableRow>
-          <TableCell>{expectation.type}</TableCell>
-          <TableCell>{expectation.name}</TableCell>
-          <TableCell>{createPropertiesComponent({obj: expectation, propsToIgnore: ["type","name"]})}</TableCell>
-        </TableRow>
-      )
-      let tbl = <TableContainer >
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{"& th": {backgroundColor: "rgba(0, 0, 0, 0.08)"}}}>
-              <TableCell width="10%">Type</TableCell>
-              <TableCell width="10%">Name</TableCell>
-              <TableCell>Attributes</TableCell>            
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      accordionSections.set('expectations', ['Expectations', tbl]);
-    }
+    let elements = getAttribute('expectations');
+    if (elements && elements.length>0){
+      let cmps = elements.map((element,idx) => createPropertiesComponent({obj: element, orderProposal: ['name','type','description']}));
+      accordionSections.set('expectations', ['Expectations', <Stack sx={{overflow: 'auto'}} spacing={1}>{cmps}</Stack>]);
+    }      
   }
 
   function transformerAccordion(){
-    let tr = getTransformers(props.data);
-    if (tr && tr.length>0){
-      let cmps = tr.map((transformer,idx) => createPropertiesComponent({obj: transformer, colHeader: (idx+1).toString()}));
+    let elements = getTransformers(props.data);
+    if (elements && elements.length>0){
+      let cmps = elements.map((element,idx) => createPropertiesComponent({obj: element, colHeader: (idx+1).toString()}));
       accordionSections.set('transformers', ['Transformers', <Stack sx={{overflow: 'auto'}} spacing={1}>{cmps}</Stack>]);
     }
   }

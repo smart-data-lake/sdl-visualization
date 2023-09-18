@@ -138,7 +138,7 @@ export default function ConfigurationTab(props: ElementProps) {
 
   let tags = getAttribute('metadata.tags') as string[] || [];
   let [inputs, outputs] = getInputOutputIds(props.data)
-  let topAttributesCmp = createPropertiesComponent({properties: topAttributesPrep})
+  let topAttributesCmp = createPropertiesComponent({properties: topAttributesPrep, orderProposal: ['table', 'path', 'partitions']})
 
   return (
     <Box sx={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>

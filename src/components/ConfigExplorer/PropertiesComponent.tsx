@@ -2,13 +2,17 @@ import * as React from 'react';
 import 'github-markdown-css/github-markdown.css';
 import CodeViewComponent from './CodeViewComponent';
 import { Table } from '@mui/joy';
+import { compareFunc } from '../../util/helpers';
 
-export function createPropertiesComponent(props: {obj?: any, properties?: {key: string, value: any}[], propsToIgnore?: string[], colHeader?: string, marginTop?: string, nested?: boolean}): JSX.Element | undefined {
+export function createPropertiesComponent(props: {obj?: any, properties?: {key: string, value: any}[], propsToIgnore?: string[], orderProposal?: string[], colHeader?: string, marginTop?: string, nested?: boolean}): JSX.Element | undefined {
   var rows = props.properties ?? [];
   if (props.obj && typeof props.obj == 'object') rows = rows.concat(Object.keys(props.obj).map(key => {return {key: key, value: props.obj[key]}}));
   const propsToIgnore = props.propsToIgnore || [];
-  const entries = rows.filter(row => !propsToIgnore.includes(row.key));
-  if (entries.length > 0) return <PropertiesComponent entries={entries} colHeader={props.colHeader} marginTop={props.marginTop} nested={props.nested} />;
+  if (props.propsToIgnore) rows = rows.filter(row => !propsToIgnore.includes(row.key));
+  if (props.orderProposal) rows = rows.map(e => [props.orderProposal!.indexOf(e.key), e] as [number, { key: string; value: any; }])
+    .map(e => (e[0] >= 0 ? e : [9999, e[1]]) as [number, { key: string; value: any; }])
+    .sort(compareFunc(0)).map(e => e[1])
+  if (rows.length > 0) return <PropertiesComponent entries={rows} colHeader={props.colHeader} marginTop={props.marginTop} nested={props.nested} />;
 }
 
 function removeBlockOfTrailingSpaces(code: string): string {

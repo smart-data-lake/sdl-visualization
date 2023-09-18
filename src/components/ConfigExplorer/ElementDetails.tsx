@@ -24,7 +24,6 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
   const [connectionConfigObj, setConnectionConfigObj] = React.useState();
   const [selectedTyp, setSelectedTab] = React.useState('description');
   const [openLineage, setOpenLineage] = React.useState(false);
-  const mainRef = React.useRef<HTMLDivElement>(null);  
   const lineageRef = React.useRef<HTMLDivElement>(null);  
 
   React.useEffect(() => {
@@ -37,7 +36,7 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 
   return (
 	<>
-		<Sheet sx={{ flex: 1, minWidth: '500px', height: '100%', display: 'flex', flexDirection: 'column',  p: '1rem 0rem 1rem 0.5rem'}} ref={mainRef}>
+		<Sheet sx={{ flex: 1, minWidth: '500px', height: '100%', display: 'flex', flexDirection: 'column',  p: '1rem 0rem 1rem 0.5rem'}}>
 			<Tabs size="md" value={selectedTyp} onChange={(e,v) => setSelectedTab(v as string)} aria-label="element tabs" sx={{height: '100%'}}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
 					<TabList>
