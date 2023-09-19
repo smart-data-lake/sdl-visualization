@@ -41,7 +41,7 @@ $ ./build_index.sh <path-to-statefiles> <path-to-configfiles>"
 
 This will generate an index for each of the file sources. The outputs are JSON files named `index.json` and stored in `public/state` and `public/config` respectively.
 
-Finally you have to make sure you are using the default connector for local statefiles. Change the field `backendConfig` to `local;` in `public/manifest.json` if it is not already the case.
+Finally you have to make sure you are using the default connector for local statefiles. Change the field `backendConfig` to `local` in `public/manifest.json` if it is not already the case.
 
 You should now be able to browse to `localhost:3000/` and should be greeted by the home page.
 
@@ -59,7 +59,15 @@ In order to use the provided connector, it is necessary that your REST endpoints
 
 Where `<BASE_URL>` can be any string.
 
-You should then change the field "backendConfig" to `rest:<BASE_URL>` in `public/manifest.jso`".
+You should then change the field `backendConfig` to `rest:<BASE_URL>` in `public/manifest.json`.
 
 You should now be able to browse to `localhost:3000/` and should be greeted by the home page.
 
+# Other settings
+
+In `public/manifest.json` you can set various configurations for the UI:
+
+- `backendConfig`: see chapter "Backend" above"
+- `baseUrl`: website base url if not "/"
+- `env`: when parsing hocon config files, `env` is used to get the environment configuration file from `envConfig/{env}.conf`
+- `configSourceUrl`: configure a url template to link to configuration source files similar to "https://github.com/smart-data-lake/getting-started/blob/master/config/{filename}#L{lineNumber}"
