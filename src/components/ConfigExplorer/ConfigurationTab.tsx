@@ -1,4 +1,4 @@
-import { ExploreOutlined, LayersOutlined, TableViewTwoTone } from '@mui/icons-material';
+import { ExploreOutlined, LayersOutlined, TableViewTwoTone, RocketLaunchOutlined } from '@mui/icons-material';
 import AltRouteIcon from '@mui/icons-material/AltRoute';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import SellIcon from '@mui/icons-material/Sell';
@@ -43,29 +43,29 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
   );
 }
 
-function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: "primary" | "neutral" | "success" | "danger" | "warning" | undefined = "primary") {
+export function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: "primary" | "neutral" | "success" | "danger" | "warning" | undefined = "primary", size: ('sm' | 'md' | 'lg') ="md", sx: object = {}) {
   if (value){
     const path = `/config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`;
     return(
       <Link to={path}>
-        <Chip sx={{mr: 1}}
-          color={color}
-          startDecorator={icon}
-          variant="outlined" 
-          className='chips'>{value}</Chip>
+        <Chip sx={{mr: 1, ...sx}} color={color} startDecorator={icon} variant="outlined" onClick={(e) => e.stopPropagation()} size={size}>{value}</Chip>
       </Link>
     )
   }
 }
 
-function createDataObjectChip(name: string){
+export function createDataObjectChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
   return(
     <Link to={"/config/dataObjects/"+name}>
-      <Chip
-        color="primary"
-        startDecorator={<TableViewTwoTone />}
-        variant="outlined" 
-        className='chips'>{name}</Chip>
+      <Chip color="primary" startDecorator={<TableViewTwoTone />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
+    </Link>
+  )
+}
+
+export function createActionsChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
+  return(
+    <Link to={"/config/actions/"+name}>
+      <Chip color="primary" startDecorator={<RocketLaunchOutlined />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
 }
@@ -73,13 +73,13 @@ function createDataObjectChip(name: string){
 function createConnectionChip(name: string){
   return(
     <Link to={"/config/connections/"+name}>
-      <Chip
-        color="primary"
-        startDecorator={<LanOutlinedIcon />}
-        variant="outlined" 
-        className='chips'>{name}</Chip>
+      <Chip color="primary" startDecorator={<LanOutlinedIcon />} variant="outlined" >{name}</Chip>
     </Link>
   )
+}
+
+export function createFeedChip(feed: string, elementType: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
+  return createSearchChip("metadata.feed", feed, elementType, <AltRouteIcon />, "success", size, sx);
 }
 
 export function createSimpleChip(name: string) {
@@ -120,8 +120,7 @@ export default function ConfigurationTab(props: ElementProps) {
     return createSearchChip("metadata.subjectArea", x, props.elementType, <ExploreOutlined/>, "warning");
   }  
   function feedChip(){
-    let feed = getAttribute('metadata.feed');
-    return createSearchChip("metadata.feed", feed, props.elementType, <AltRouteIcon />, "success");
+    return createFeedChip(getAttribute('metadata.feed'), props.elementType);
   }
   function typeChip(){
     let type = getAttribute('type');

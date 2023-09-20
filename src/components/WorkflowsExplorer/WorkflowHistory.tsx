@@ -7,6 +7,7 @@ import { useFetchWorkflowRuns } from "../../hooks/useFetchData";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
 import { Filter, checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
+import { createFeedChip } from "../ConfigExplorer/ConfigurationTab";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
 import HistoryBarChart from "./HistoryChart/HistoryBarChart";
 import ToolBar from "./ToolBar/ToolBar";
@@ -52,7 +53,7 @@ export default function WorkflowHistory() {
 			if (filterParams.additionalFilters.length > 0) {
 				selected = selected.filter(row => filterParams.additionalFilters.some(filter => filter.predicate(row)));
 			}
-			return selected;
+			return selected;			
 		} else {
 			return [];
 		}
@@ -61,7 +62,11 @@ export default function WorkflowHistory() {
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {
 		setFilterParams({...filterParams, ...partialFilter})
 	}
-	
+
+	function feedSelLinkRenderer(prop: any) {
+		return createFeedChip(prop.value, 'actions', 'sm', {mt: -1});
+	}
+
 	if (isLoading || isFetching) {
 		return (<CircularProgress/>);
 	}
@@ -98,6 +103,7 @@ export default function WorkflowHistory() {
 	}, {
 		title: 'Feed Selector',
 		property: 'feedSel',
+		renderer: feedSelLinkRenderer,
 		width: '150px'
 	}, {
 		title: 'SUCCEEDED',

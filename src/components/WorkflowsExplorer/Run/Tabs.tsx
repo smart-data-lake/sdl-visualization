@@ -26,6 +26,7 @@ import { DAGraph } from "../../../util/ConfigExplorer/Graphs";
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../../ConfigExplorer/DataTable';
 import { FilterParams, filterSearchText } from '../WorkflowHistory';
+import { createActionsChip } from '../../ConfigExplorer/ConfigurationTab';
 
 /**
  * This is a TypeScript function that returns a set of three React components which are rendered inside a parent component. 
@@ -62,11 +63,16 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean, tab?: string }) =
 
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {
 		setFilterParams({...filterParams, ...partialFilter})
-	}        
+	}      
+    
+	function actionsLinkRenderer(prop: any) {
+		return createActionsChip(prop.value, 'sm', {mt: -1});
+	}    
 
     const columns = [{
-		title: 'Name',
+		title: 'Action',
 		property: 'step_name',
+        renderer: actionsLinkRenderer        
 	}, {
 		title: 'Status',
 		property: 'status',

@@ -105,8 +105,8 @@ export default function DataTable(props: {data: any[], columns: any[], keyAttr: 
         '& .ka-thead-background': { backgroundColor: 'white' },
         '& .ka-thead-cell': { color: 'primary', zIndex: '99', fontWeight: '600', height: '25px', paddingTop: '7px', paddingBottom: '7px'},
         '& .ka-cell, .ka-thead-cell': {paddingLeft: '7px', paddingRight: '7px'},
-        '& .ka-cell': {paddingTop: '5px', paddingBottom: '5px'},
-        '& .ka-cell-text': {height: '23px'},
+        '& .ka-cell': {paddingTop: '4px', paddingBottom: '4px'},
+        '& .ka-cell-text': {height: '25px'},
         '& .ka-thead-cell-resize': {left: '3px'},
         '& .ka': {height: '100%', width: '100%'}
         }}>
