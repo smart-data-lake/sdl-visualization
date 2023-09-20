@@ -51,7 +51,7 @@ const ToolBar = (
                 onChange={(event) => setSearchText(event.target.value)}
             />
             {stateFilters && <FilterMenu title='Filter Status' filters={stateFilters} setFilters={setStateFilters} colorMap={getStatusColor} withIcon={true}/>}
-            {setPhases && <FilterMenu title='Select Phases' filters={phaseFilters} setFilters={filters => setPhases(filters.map(f => f.name))} colorMap={getPhasesColor}/>}
+            {setPhases && <FilterMenu title='Select Phases' filters={phaseFilters} setFilters={filters => setPhases(filters.map(f => f.name))} filterInit={[false,false,true]} colorMap={getPhasesColor}/>}
             {datetimePicker && <DatetimePicker range={filterParams.dateRange} setRange={setDateRange}/>}
         </Box>
     )

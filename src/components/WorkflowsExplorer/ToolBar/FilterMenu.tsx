@@ -11,9 +11,9 @@ import { Filter, getIcon } from "../../../util/WorkflowsExplorer/StatusInfo";
  * @param props.filters - filters to be applied
  * @returns 
  */
-const FilterMenu = (props: {title: string, setFilters: (filters: Filter[]) => void, filters: Filter[], colorMap: (string) => string,  withIcon?: boolean}) => {
-    const { filters, setFilters, title, withIcon, colorMap } = props;
-    const [list, setList] = useState<boolean[]>(Array(props.filters?.length).fill(true));
+const FilterMenu = (props: {title: string, setFilters: (filters: Filter[]) => void, filters: Filter[], colorMap: (string) => string,  withIcon?: boolean, filterInit?: boolean[]}) => {
+    const { filters, setFilters, title, withIcon, colorMap, filterInit } = props;
+    const [list, setList] = useState<boolean[]>(filterInit || Array(props.filters?.length).fill(true));
 
 	useEffect(() => {
 		setFilters(filters.filter((_,idx) => list[idx]));
