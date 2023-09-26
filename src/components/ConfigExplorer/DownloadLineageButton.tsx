@@ -1,5 +1,5 @@
-import { IconButton } from '@mui/material';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import { IconButton } from '@mui/joy';
 import { toPng } from 'html-to-image';
 
 function downloadImage(dataUrl: string) {
@@ -27,7 +27,7 @@ function DownloadButton() {
 
 
     <IconButton
-      color='inherit'
+      color='neutral'
       onClick={download}>
       <CloudDownloadIcon />
     </IconButton>

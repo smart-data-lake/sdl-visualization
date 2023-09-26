@@ -1,16 +1,14 @@
 import * as React from 'react';
-import Accordion from '@mui/material/Accordion';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import Typography from '@mui/material/Typography';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import './ComponentsStyles.css';
 import 'github-markdown-css/github-markdown.css';
-import 'github-markdown-css/github-markdown.css';
-import { Box, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
-import { getAttributeGeneral } from '../../util/ConfigExplorer/ConfigSearchOperation';
+import { Button, Link, Table } from '@mui/joy';
 import { createPropertiesComponent } from './PropertiesComponent';
 import CodeViewComponent from './CodeViewComponent';
+import { getPropertyByPath, hoconify } from '../../util/helpers';
+import { Accordion, AccordionDetails, AccordionGroup, AccordionSummary, Chip, Stack } from '@mui/joy';
+import { createSimpleChip } from './ConfigurationTab';
+import { useManifest } from '../../hooks/useManifest';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 function getTransformers(action: any): any[] {
   //returns a list of transformer objects
@@ -22,112 +20,64 @@ interface AccordionCreatorProps {
   data: any; // config of object to display
   propsToIgnore: string[] // This shows which attributes should or should not be in the "additional attributes" accordion
   elementType: string;
-  connectionDb: String;
+  connectionDb?: String;
 }
 
 export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
-  const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, attributeName.split('.'));
-  var accordionSections = new Map<string,[string,JSX.Element]>();
-  const [openAccordion, setOpenAccordion] = React.useState('none'); //none of the accordions are open at the beginning
-
-  // reset accordion on element change -> disabled as it more intuitive if the same accordion section stays open
-  //React.useEffect(() => setOpenAccordion('none'), [props.data]);
-
-  //Only one accordion open at a time
-  const handleChange = (accordionName: string) => (_: React.SyntheticEvent, isExpanded: boolean) =>
-    setOpenAccordion(isExpanded ? accordionName : 'none')
+  const getAttribute = (attributeName: string) => getPropertyByPath(props.data, attributeName);
+  var accordionSections = new Map<string,[string | JSX.Element,JSX.Element]>();
+  const {data: manifest} = useManifest();
+  const navigate = useNavigate();
   
-  //Formatting of Markdown Strings:
-  //FOREIGN KEYS --> FOR DATA OBJECTS. TODO: See if defined structure/syntax for foreign keys in .config file is correct
   function foreignKeysAccordion(){
     let foreignKeys = getAttribute('table.foreignKeys');
     if (foreignKeys && foreignKeys.length>0){
       //db, table, columns: Map[String,String], name
       let rows = foreignKeys.map((foreignKey: any) => 
-        <TableRow>
-          <TableCell>{foreignKey.name}</TableCell>
-          <TableCell>{(foreignKey.db || props.connectionDb || "<db?>") + "." + foreignKey.name}</TableCell>
-          <TableCell><Stack spacing={0.5} direction="row">{Object.entries(foreignKey.columns).map(([k,v]) => <Chip label={k+" -> "+v} size="small"/>)}</Stack></TableCell>
-        </TableRow>
+        <tr>
+          <td>{foreignKey.name}</td>
+          <td>{(foreignKey.db || props.connectionDb || "<db?>") + "." + foreignKey.name}</td>
+          <td><Stack spacing={0.5} direction="row">{Object.entries(foreignKey.columns).map(([k,v]) => createSimpleChip(k+" -> "+v))}</Stack></td>
+        </tr>
       )
-      let tbl = <TableContainer >
-        <Table size="small">
-          <TableHead>
-          <TableRow sx={{"& th": {backgroundColor: "rgba(0, 0, 0, 0.08)"}}}>
-              <TableCell width="10%">Name</TableCell>
-              <TableCell>Target table</TableCell>            
-              <TableCell>Column mapping</TableCell>            
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows}
-          </TableBody>
-        </Table>
-      </TableContainer>
+
+      let tbl = (<Table size='md'
+        sx={{tableLayout: 'auto', width: 'max-content', maxWidth: '100%', borderCollapse: 'collapse', border: '1px solid var(--TableCell-borderColor)', '& td': {padding: '0px', height: '32px', borderLeft: '1px solid var(--TableCell-borderColor)', borderRight: '1px solid var(--TableCell-borderColor)'}}}>
+          <thead>
+            <tr>
+              <td width="10%">Name</td>
+              <td>Target table</td>            
+              <td>Column mapping</td>            
+            </tr>
+          </thead>
+          <tbody>{rows}</tbody>
+      </Table>)
       accordionSections.set('table.foreignKeys', ['Foreign Keys', tbl]);
     }
   }
 
   function constraintsAccordion(){
-    let constraints = getAttribute('constraints');
-    if (constraints && constraints.length>0){
-      let rows = constraints.map((constraint: any) => 
-        <TableRow>
-          <TableCell>{constraint.name}</TableCell>
-          <TableCell>{createPropertiesComponent({obj: constraint, propsToIgnore: ["name"]})}</TableCell>
-        </TableRow>
-      )
-      let tbl = <TableContainer >
-        <Table size="small">
-          <TableHead>
-          <TableRow sx={{"& th": {backgroundColor: "rgba(0, 0, 0, 0.08)"}}}>
-              <TableCell width="10%">Name</TableCell>
-              <TableCell>Attributes</TableCell>            
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      accordionSections.set('constraints', ['Constraints', tbl]);
-    }
+    let elements = getAttribute('constraints');
+    if (elements && elements.length>0){
+      let cmps = elements.map((element,idx) => createPropertiesComponent({obj: element, orderProposal: ['name']}));
+      accordionSections.set('constraints', ['Constraints', <Stack sx={{overflow: 'auto'}} spacing={1}>{cmps}</Stack>]);
+    }      
   }
 
   function expectationsAccordion(){
-    let expectations = getAttribute('expectations');
-    if (expectations && expectations.length>0){
-      let rows = expectations.map((expectation: any) => 
-        <TableRow>
-          <TableCell>{expectation.type}</TableCell>
-          <TableCell>{expectation.name}</TableCell>
-          <TableCell>{createPropertiesComponent({obj: expectation, propsToIgnore: ["type","name"]})}</TableCell>
-        </TableRow>
-      )
-      let tbl = <TableContainer >
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{"& th": {backgroundColor: "rgba(0, 0, 0, 0.08)"}}}>
-              <TableCell width="10%">Type</TableCell>
-              <TableCell width="10%">Name</TableCell>
-              <TableCell>Attributes</TableCell>            
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      accordionSections.set('expectations', ['Expectations', tbl]);
-    }
+    let elements = getAttribute('expectations');
+    if (elements && elements.length>0){
+      let cmps = elements.map((element,idx) => createPropertiesComponent({obj: element, orderProposal: ['name','type','description']}));
+      accordionSections.set('expectations', ['Expectations', <Stack sx={{overflow: 'auto'}} spacing={1}>{cmps}</Stack>]);
+    }      
   }
 
   function transformerAccordion(){
-    let tr = getTransformers(props.data);
-    if (tr && tr.length>0){
-      let cmps = tr.map((transformer,idx) => createPropertiesComponent({obj: transformer, colHeader: (idx+1).toString()}));
-      accordionSections.set('transformers', ['Transformers', <Stack spacing={1}>{cmps}</Stack>]);
+    let elements = getTransformers(props.data);
+    if (elements && elements.length>0){
+      let cmps = elements.map((element,idx) => createPropertiesComponent({obj: element, colHeader: (idx+1).toString()}));
+      accordionSections.set('transformers', ['Transformers', <Stack sx={{overflow: 'auto'}} spacing={1}>{cmps}</Stack>]);
     }
   }
 
@@ -155,16 +105,26 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
   function rawHoconAccordion(){
     var rawData = props.data;
-    // remove origin from data if it exists
-    if (rawData.origin) {
-      var rawData = {...rawData}; // deep clone to avoid mutation of the original data
-      rawData.origin = undefined; // remove origin definition
+    var title: string | JSX.Element = 'Raw Config';
+    // remove origin from data if it exists, add it to title
+    if (rawData.origin) {      
+      const relativePath = rawData.origin.path.split('config/').pop(); // pop = take last element
+      const sourceUrl = manifest?.configSourceUrl ? manifest.configSourceUrl.replace("{filename}", relativePath).replace('{lineNumber}', rawData.origin.lineNumber) : undefined;
+      const linkName = `${relativePath}:${rawData.origin.lineNumber}`
+      title = (sourceUrl ? (<><span>{title} - </span><Link href={sourceUrl} target="_blank" onClick={(e) => e.stopPropagation()}>{linkName}</Link><span style={{flex: 1}}/></>) : title + ' - ' + linkName);
+      rawData = {...rawData}; // deep clone to avoid mutation of the original data
+      delete rawData['origin'];
     }
-    accordionSections.set('rawJson', ['Raw Code', <CodeViewComponent code={JSON.stringify(rawData, null, 2)} language="json" />]);
+    // remove id from data
+    if (rawData.id) {
+      rawData = {...rawData}; // deep clone to avoid mutation of the original data
+      delete rawData['id'];
+    }    
+    const hoconConfig = hoconify(rawData);
+    accordionSections.set('rawJson', [title, <CodeViewComponent code={hoconConfig} language="" />]);
   }
 
-
-  function getAccordionSections(): [string, string, JSX.Element][]{
+  function getAccordionSections(): [string, string | JSX.Element, JSX.Element][]{
     foreignKeysAccordion();
     constraintsAccordion();
     expectationsAccordion();
@@ -176,14 +136,10 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     return Array.from(accordionSections.entries()).map(([key,[name,element]]) => [key,name,element]); 
   }
 
-  function createAccordion(key: string, accordionName: string, jsxElement: JSX.Element){
+  function createAccordion(key: string, accordionName: string | JSX.Element, jsxElement: JSX.Element){
     return(
-      <Accordion key={key} className='accordion' elevation={0} disableGutters={true} variant='outlined'
-                  expanded={openAccordion === accordionName} 
-                  onChange={handleChange(accordionName)}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="body1">{accordionName}</Typography>
-        </AccordionSummary>
+      <Accordion key={key}>
+        <AccordionSummary sx={{fontWeight: 'normal'}}>{accordionName}</AccordionSummary>
         <AccordionDetails>{jsxElement}</AccordionDetails>
       </Accordion>
     )
@@ -192,8 +148,8 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   const accordions = getAccordionSections().map(([key, name, jsxElement], _) => createAccordion(key, name, jsxElement));
 
   return (
-    <Box>
+    <AccordionGroup size='md'>
       {accordions}
-    </Box>
+    </AccordionGroup>
   )
 }

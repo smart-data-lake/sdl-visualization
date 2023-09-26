@@ -15,10 +15,10 @@ import TabNav from "./Tabs";
     @returns {JSX.Element} - The Run component UI.
 */
 const Run = (props : {panelOpen?: boolean}) => {
-    const {flowId, runNumber, taskId, tab} = useParams();
-    const { data, isLoading, isFetching } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
+    const {flowId, runNumber, taskId} = useParams();
+    const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
 
-    if (isLoading || isFetching) return <CircularProgress/>
+    if (isLoading || isFetching || !data) return <CircularProgress/>
     
     const attempt = data.detail ? undefined : new Attempt(data);
     if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
@@ -28,20 +28,12 @@ const Run = (props : {panelOpen?: boolean}) => {
 			{data ? (
 				(!data.detail && attempt) ? (
                 <>
-                    <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId} />
+                    <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId + ' attempt ' + attempt.runInfo.attemptId} refresh={refetch} />
                     {/* <RunDetails attempt={attempt}/> */}
                     <TabNav attempt={attempt} panelOpen={props.panelOpen}/>
                 </>
-                ):(
-                    <>
-                        <NotFound errorType={500}/>
-                    </>
-                )
-            ):(
-                <>
-                    <NotFound/>
-                </>
-            )
+                ): <NotFound errorType={500}/>
+            ): <NotFound/>
         }
         </>
     );

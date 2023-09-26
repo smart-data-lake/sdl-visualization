@@ -1,5 +1,5 @@
 import { Run } from '../../types';
-import { getISOString } from './date';
+import { formatTimestamp } from './date';
 import { formatDuration } from './format';
 
 /**
@@ -27,7 +27,7 @@ export function getUsername(run: Run): string {
  * @param run - Run object
  */
 export function getRunStartTime(run: Run, timezone?: string): string {
-  return getISOString(new Date(run.ts_epoch), timezone);
+  return formatTimestamp(new Date(run.ts_epoch), timezone);
 }
 
 /**
@@ -35,7 +35,7 @@ export function getRunStartTime(run: Run, timezone?: string): string {
  * @param run - Run object
  */
 export function getRunEndTime(run: Run, timezone?: string): string | null {
-  return !!run.finished_at ? getISOString(new Date(run.finished_at), timezone) : null;
+  return !!run.finished_at ? formatTimestamp(new Date(run.finished_at), timezone) : null;
 }
 
 /**

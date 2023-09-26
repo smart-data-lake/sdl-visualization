@@ -14,7 +14,7 @@ export class fetchAPI_rest implements fetchAPI {
     };
     
     
-    getWorkflow = (name: string) => {
+    getWorkflowRuns = (name: string) => {
         return fetch(`${this.url}/workflow?name=${name}`, {mode:'cors'})
         .then(res => res.json())
     };

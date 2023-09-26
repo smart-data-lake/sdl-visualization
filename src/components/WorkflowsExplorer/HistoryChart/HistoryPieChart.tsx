@@ -1,6 +1,4 @@
-import React, { PureComponent } from 'react';
-import { PieChart, Pie, Sector, Cell, ResponsiveContainer } from 'recharts';
-import { formatDuration } from '../../../util/WorkflowsExplorer/format';
+import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 
 const HistoryPieChart = (props: {data : {value: number, status: string, name: string, runId: number, attemptId: number}[]}) => {
     const { data } = props;

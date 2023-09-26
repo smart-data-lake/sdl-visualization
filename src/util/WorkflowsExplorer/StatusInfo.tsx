@@ -1,62 +1,65 @@
+import { BlockOutlined, DoNotDisturbAltOutlined, PendingOutlined, RunCircleOutlined } from '@mui/icons-material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import HighlightOffIcon from '@mui/icons-material/HighlightOff';
+import { Tooltip } from '@mui/joy';
+import React from 'react';
+import { getStatusColor } from '../../components/WorkflowsExplorer/Timeline/TimelineRow/utils';
 
-export const getButtonColor = (name: string) => {
-    switch (name.toUpperCase()) {
-        case 'SUCCEEDED':
-            return 'success';
-        case 'FAILED':
-            return 'danger';
-        case 'RUNNING':
-            return 'warning';
-        case 'INITIALIZED':
-            return 'primary';
-        case 'PREPARED':
-            return 'info';
-        default:
-            return 'neutral'
+export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
+    const color = getStatusColor(status);
+    const statusIconMap = {
+        'SUCCEEDED': CheckCircleOutlineIcon,
+        'RUNNING': RunCircleOutlined,
+        'FAILED': HighlightOffIcon,
+        'INITIALIZED': PendingOutlined,
+        'PREPARED': PendingOutlined,
+        'SKIPPED': DoNotDisturbAltOutlined,
+        'CANCELLED': BlockOutlined
+    };
+    const iconName = statusIconMap[status.toUpperCase()] || HelpOutlineIcon;
+    const iconComponent = React.createElement(iconName, {sx: { color: color, scale: '80%', ml: marginLeft, zIndex: 0 }});
+    return (
+        <Tooltip arrow title={status} enterDelay={500} enterNextDelay={500}>
+            {iconComponent}
+        </Tooltip>
+    )
+}
+
+export class Filter {
+    group: string;
+    name: string;
+    predicate: (any) => boolean;
+
+    constructor(group: string, name: string, predicate: (any) => boolean) {
+        this.group = group;
+        this.name = name;
+        this.predicate = predicate;
+    }
+
+    fun(rows: any[]) {
+        return rows.filter(this.predicate);
     }
 }
 
-export const getIcon = (status: string) => {
-    const tmp = getButtonColor(status);
-    const color = tmp === 'neutral' ? 'disabled' : (tmp === 'danger' ? 'error' : tmp);
-
-    switch (status) {
-        case 'SUCCEEDED':
-            return <CheckCircleOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
-        case 'FAILED':
-            return <HighlightOffIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
-        case 'INITIALIZED':
-            return <ErrorOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} /> 
-        case 'PREPARED':
-            return <ErrorOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
-        default:
-            return <HelpOutlineIcon color={color} sx={{ scale: '80%', ml: '0.5rem' }} />
-    }
-}
-
-export const defaultFilters = (columnName?: string) => {    
-    const column = columnName ? columnName : 'status';
+export function stateFilters(column: string) {
     return [
-        {name: 'Succeeded', fun: (rows: any) => {return rows.filter(row => row[column] === 'SUCCEEDED')}},
-        {name: 'Running', fun: (rows: any) => {return rows.filter(row => row[column] === 'RUNNING')}},
-        {name: 'Cancelled', fun: (rows: any) => {return rows.filter(row => row[column] === 'CANCELLED')}},
-        {name: 'Failed', fun: (rows: any) => {return rows.filter(row => row[column] === 'FAILED')}},
-        {name: 'Prepared', fun: (rows: any) => {return rows.filter(row => row[column] === 'PREPARED')}},
-        {name: 'Initialized', fun: (rows: any) => {return rows.filter(row => row[column] === 'INITIALIZED')}},
-        {name: 'Skipped', fun: (rows: any) => {return rows.filter(row => row[column] === 'SKIPPED')}},
+        new Filter('state', 'Succeeded', row => row[column] === 'SUCCEEDED'),
+        new Filter('state', 'Running', row => row[column] === 'RUNNING'),
+        new Filter('state', 'Cancelled', row => row[column] === 'CANCELLED'),
+        new Filter('state', 'Failed', row => row[column] === 'FAILED'),
+        new Filter('state', 'Prepared', row => row[column] === 'PREPARED'),
+        new Filter('state', 'Initialized', row => row[column] === 'INITIALIZED'),
+        new Filter('state', 'Skipped', row => row[column] === 'SKIPPED'),
     ]
 };
 
-export const checkFiltersAvailability = (rows: any, filters: any[]) => {
-    let availableFilters : any = [];
-    filters.forEach(filter => {
-        if (filter.fun(rows).length > 0) {
-            availableFilters.push(filter);
-        }
-    });
-    return availableFilters;
+export const phaseFilters = [
+    new Filter('phase', 'Prepare', row => row === 'Prepared'),
+    new Filter('phase', 'Init', row => row === 'Init'),
+    new Filter('phase', 'Exec', row => row === 'Exec'),
+];
+
+export const checkFiltersAvailability = (rows: any, filters: Filter[]) => {
+    return filters.filter(filter => filter.fun(rows).length > 0);
 }

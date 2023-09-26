@@ -1,13 +1,11 @@
+import { CssVarsProvider } from '@mui/joy';
 import CssBaseline from '@mui/joy/CssBaseline';
-import { createHashRouter, createRoutesFromElements, Route, RouterProvider, Routes } from 'react-router-dom';
+import { createHashRouter, Route, RouterProvider, Routes } from 'react-router-dom';
 import ConfigExplorer from './components/ConfigExplorer/ConfigExplorer';
-import ElementDetails from './components/ConfigExplorer/ElementDetails';
-import GlobalConfigView from './components/ConfigExplorer/GlobalConfigView';
-import SearchResults from './components/ConfigExplorer/SearchResults';
 import Home from './components/HomeMenu/Home';
 import Run from './components/WorkflowsExplorer/Run/Run';
-import WorkflowHistory from './components/WorkflowsExplorer/Workflow/WorkflowHistory';
-import Workflows from './components/WorkflowsExplorer/Workflows/Workflows';
+import WorkflowHistory from './components/WorkflowsExplorer/WorkflowHistory';
+import Workflows from './components/WorkflowsExplorer/Workflows';
 import { useConfig } from './hooks/useConfig';
 import { useManifest } from './hooks/useManifest';
 import NotFound from './layouts/NotFound';
@@ -42,8 +40,10 @@ export default function App() {
 
   return (
     <>
-      <CssBaseline />
-      <RouterProvider router={router()}/>
+      <CssVarsProvider>
+        <CssBaseline />
+        <RouterProvider router={router()}/>
+      </CssVarsProvider>
     </>
   );
 }

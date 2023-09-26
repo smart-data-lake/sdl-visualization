@@ -1,4 +1,4 @@
-import { durationMicro } from "./util/WorkflowsExplorer/date";
+import { durationMillis } from "./util/WorkflowsExplorer/date";
 
 export type AttemptConfig = {
     name: string;
@@ -74,12 +74,12 @@ export class Row implements MetaDataBaseObject {
     constructor({ properties }: { properties: TaskProperty; }) {
       this.flow_id = properties.runInfo.workflowName;
       this.step_name = properties.actionName;
-      this.run_number = properties.runInfo.runId;
-      this.attempt_id = properties.runInfo.attemptId;
+      this.run_number = properties.action.executionId.runId;
+      this.attempt_id = properties.action.executionId.attemptId;
       this.ts_epoch = new Date(properties.action.startTstmp).getTime();
       this.status = properties.action.state as TaskStatus;
       this.started_at = this.ts_epoch;
-      this.duration = durationMicro(properties.action.duration === 'PT0S' ? 'PT0.001S' : properties.action.duration);
+      this.duration = durationMillis(properties.action.duration === 'PT0S' ? 'PT0.001S' : properties.action.duration);
       this.finished_at = this.started_at + (this.duration === 0 ? 1 : this.duration);
       this.metadata = properties.action.results;
       this.task_id = properties.runInfo.attemptId;
