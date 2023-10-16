@@ -7,6 +7,7 @@ import React from 'react';
 import { getStatusColor } from '../../components/WorkflowsExplorer/Timeline/TimelineRow/utils';
 
 export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
+    if (!status) return HelpOutlineIcon;
     const color = getStatusColor(status);
     const statusIconMap = {
         'SUCCEEDED': CheckCircleOutlineIcon,
