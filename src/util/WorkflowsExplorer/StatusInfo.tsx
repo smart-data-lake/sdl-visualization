@@ -7,7 +7,6 @@ import React from 'react';
 import { getStatusColor } from '../../components/WorkflowsExplorer/Timeline/TimelineRow/utils';
 
 export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
-    if (!status) return HelpOutlineIcon;
     const color = getStatusColor(status);
     const statusIconMap = {
         'SUCCEEDED': CheckCircleOutlineIcon,
@@ -18,7 +17,7 @@ export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
         'SKIPPED': DoNotDisturbAltOutlined,
         'CANCELLED': BlockOutlined
     };
-    const iconName = statusIconMap[status.toUpperCase()] || HelpOutlineIcon;
+    const iconName = (status ? statusIconMap[status.toUpperCase()] : HelpOutlineIcon) || HelpOutlineIcon;
     const iconComponent = React.createElement(iconName, {sx: { color: color, scale: '80%', ml: marginLeft, zIndex: 0 }});
     return (
         <Tooltip arrow title={status} enterDelay={500} enterNextDelay={500}>
