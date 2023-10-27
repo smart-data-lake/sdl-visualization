@@ -1,9 +1,15 @@
 import { useQuery } from "react-query";
 
 export interface Manifest {
-    backendConfig: string; // config string for connecting to workflow backend api
-    baseUrl?: string; // website base url if not "/"
-    env?: string; // environment
+    // config string for connecting to workflow backend api. Pattern is '<backendType>;<configString>'.
+    // Currently supported backend types are local and rest, see also fetchAPITypes.
+    backendConfig: string; 
+    // website base url if not "/"
+    baseUrl?: string; 
+    // environment
+    env?: string;
+    // config source file url template: {filename} and {lineNumber} will be replaced by corresponding config element origin in 'raw config' section of Configuration viewer.
+    configSourceUrl?: string;
 }
 
 /**
@@ -31,4 +37,3 @@ const getManifest = () => {
 export const useManifest = () => {
     return useQuery({ queryKey: 'manifest', queryFn: getManifest, retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
 }
-

@@ -8,9 +8,7 @@
  * A specific implementation must return the data that is needed by the UI. For an example, see the "fetchAPI_local_statefiles.ts" implementation 
  */
 export interface fetchAPI {
-    url?: string;
-
-    getWorkflows: () => Promise<any>;
-    getWorkflow: (name: string) => Promise<any>;
-    getRun: (args: {name: string, runId: number, attemptId: number}) => Promise<any>;
+    getWorkflows: () => Promise<any[]>;
+    getWorkflowRuns: (name: string) => Promise<any>;
+    getRun: (args: { name: string, runId: number, attemptId: number}) => Promise<any>;
 }

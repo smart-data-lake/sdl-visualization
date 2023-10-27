@@ -1,4 +1,3 @@
-import { Box, IconButton } from '@mui/material';
 import { useState, useCallback, useEffect, useRef} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge } from 'react-flow-renderer';
 import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions } from '../../util/ConfigExplorer/Graphs';
@@ -10,6 +9,7 @@ import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import DownloadButton from './DownloadLineageButton';
 import { ConfigData } from '../../util/ConfigExplorer/ConfigData';
+import { Box, IconButton } from '@mui/joy';
 
 
 
@@ -277,7 +277,7 @@ function LineageTab(props: flowProps) {
 
         <div title='Display / Hide action IDs' style={{ zIndex: 4, cursor: 'pointer' }}>
           <IconButton 
-            color={hidden ? 'inherit' : 'primary'}
+            color={hidden ? 'neutral' : 'primary'}
             onClick={() => setHidden(!hidden)}>
             <RocketLaunchOutlined />
           </IconButton>
@@ -285,7 +285,7 @@ function LineageTab(props: flowProps) {
 
         {props.configData && <div title={onlyDirectNeighbours[1] as string} style={{  zIndex: 4, cursor: 'pointer' }}>
           <IconButton 
-            color='inherit'
+            color='neutral'
             onClick={expandGraph}>
             {onlyDirectNeighbours[0] ? <OpenWithIcon/> : <CloseFullscreenIcon/>}
           </IconButton>

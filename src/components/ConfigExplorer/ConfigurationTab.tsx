@@ -1,21 +1,15 @@
-import './ComponentsStyles.css';
-import 'github-markdown-css/github-markdown.css';
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import { Box } from "@mui/material";
-import Chip from '@mui/material/Chip';
-import Stack from '@mui/material/Stack';
+import { ExploreOutlined, LayersOutlined, TableViewTwoTone, RocketLaunchOutlined } from '@mui/icons-material';
+import AltRouteIcon from '@mui/icons-material/AltRoute';
+import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import SellIcon from '@mui/icons-material/Sell';
 import StyleIcon from '@mui/icons-material/Style';
-import ConfigurationAccordions from './ConfigurationAccordions';
-import AltRouteIcon from '@mui/icons-material/AltRoute';
-import Grid from '@mui/material/Grid';
-import { getAttributeGeneral } from '../../util/ConfigExplorer/ConfigSearchOperation';
+import 'github-markdown-css/github-markdown.css';
 import { Link } from "react-router-dom";
-import { ExploreOutlined, LayersOutlined, TableViewTwoTone } from '@mui/icons-material';
-import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
+import { getPropertyByPath } from '../../util/helpers';
+import './ComponentsStyles.css';
+import ConfigurationAccordions from './ConfigurationAccordions';
 import { createPropertiesComponent } from './PropertiesComponent';
-
-
+import { Box, Chip, Grid, Stack, Table } from '@mui/joy';
 
 interface ElementProps {
   data: any; // config of object to display
@@ -23,7 +17,6 @@ interface ElementProps {
   elementName: string;
   elementType: string;
 }
-
 
 function getInputOutputIds(action: any): [string[], string[]]{
   let inputs: string[] = action['inputIds'] ? action['inputIds'] : [];
@@ -35,52 +28,44 @@ function getInputOutputIds(action: any): [string[], string[]]{
 
 function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
   return ( 
-  <TableContainer component={Paper} elevation={0}>
-  <Table size="small">
-    <TableHead>
-      <TableRow>
-        <TableCell>Inputs</TableCell>
-        <TableCell align="right">Outputs</TableCell>
-      </TableRow>
-    </TableHead>
-    <TableBody>
-      <TableRow key="1">
-        <TableCell component="th" scope="row">       
-          <Stack spacing={1}>{inputs.map(name => createDataObjectChip(name))}</Stack>
-        </TableCell>
-        <TableCell align="right">
-          <Stack spacing={1}>{outputs.map(name => createDataObjectChip(name))}</Stack>
-        </TableCell>
-      </TableRow>
-    </TableBody>
-  </Table>        
-  </TableContainer>
+  <Box sx={{display: 'flex', flexDirection: 'column'}}>
+    <Box sx={{display: 'flex', pb: '3px'}}>
+      <Box sx={{flex: 1}}>Inputs</Box>
+      <Box sx={{flex: 1, textAlign: 'right'}}>Outputs</Box>
+    </Box>  
+    <Box sx={{display: 'flex'}}>    
+      <Stack sx={{flex: 1, height: '100%', alignSelf: 'center', marginRight: '15px'}} spacing={1}>{inputs.map(name => createDataObjectChip(name))}</Stack>
+      <Stack sx={{flex: 1, height: '100%', alignItems: 'end', alignSelf: 'center', marginLeft: '15px'}} spacing={1}>
+        {outputs.map(name => createDataObjectChip(name))}
+      </Stack>
+    </Box>
+  </Box>
   );
 }
 
-function createSearchChip(attr: string, value: string, icon: JSX.Element, color: "primary" | "default" | "success" | "secondary" | "error" | "info" | "warning" | undefined = "primary") {
+export function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: "primary" | "neutral" | "success" | "danger" | "warning" | undefined = "primary", size: ('sm' | 'md' | 'lg') ="md", sx: object = {}) {
   if (value){
-    const path = `/config/search/${attr}=${value}`;
+    const path = `/config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`;
     return(
       <Link to={path}>
-        <Chip label={value} sx={{mr: 1}}
-          color={color}
-          icon={icon}
-          variant="outlined" 
-          className='chips'/>
+        <Chip sx={{mr: 1, ...sx}} color={color} startDecorator={icon} variant="outlined" onClick={(e) => e.stopPropagation()} size={size}>{value}</Chip>
       </Link>
     )
   }
 }
 
-function createDataObjectChip(name: string){
+export function createDataObjectChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
   return(
     <Link to={"/config/dataObjects/"+name}>
-      <Chip label={name}
-        color="primary"
-        icon={<TableViewTwoTone />}
-        variant="outlined" 
-        className='chips'/>
+      <Chip color="primary" startDecorator={<TableViewTwoTone />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
+    </Link>
+  )
+}
+
+export function createActionsChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
+  return(
+    <Link to={"/config/actions/"+name}>
+      <Chip color="primary" startDecorator={<RocketLaunchOutlined />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
 }
@@ -88,22 +73,22 @@ function createDataObjectChip(name: string){
 function createConnectionChip(name: string){
   return(
     <Link to={"/config/connections/"+name}>
-      <Chip label={name}
-        color="primary"
-        icon={<LanOutlinedIcon />}
-        variant="outlined" 
-        className='chips'/>
+      <Chip color="primary" startDecorator={<LanOutlinedIcon />} variant="outlined" >{name}</Chip>
     </Link>
   )
 }
 
+export function createFeedChip(feed: string, elementType: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
+  return createSearchChip("metadata.feed", feed, elementType, <AltRouteIcon />, "success", size, sx);
+}
+
 export function createSimpleChip(name: string) {
-  return <Chip label={name} size="small"/>
+  return <Chip size="sm">{name}</Chip>
 }
 
 export default function ConfigurationTab(props: ElementProps) {
 
-  const getAttribute = (attributeName: string) => getAttributeGeneral(props.data, attributeName.split('.'));
+  const getAttribute = (attributeName: string) => getPropertyByPath(props.data, attributeName);
 
   //attributes to be displayed at the top of the page
   let topAttributes: {key: string, func: (x:any) => any}[] = [
@@ -128,24 +113,23 @@ export default function ConfigurationTab(props: ElementProps) {
 
   function layerChip(){
     let x = getAttribute('metadata.layer');
-    return createSearchChip("layer", x, <LayersOutlined/>, "secondary");
+    return createSearchChip("metadata.layer", x, props.elementType, <LayersOutlined/>, "warning");
   }
   function subjectAreaChip(){
     let x = getAttribute('metadata.subjectArea');
-    return createSearchChip("subjectArea", x, <ExploreOutlined/>, "secondary");
+    return createSearchChip("metadata.subjectArea", x, props.elementType, <ExploreOutlined/>, "warning");
   }  
   function feedChip(){
-    let feed = getAttribute('metadata.feed');
-    return createSearchChip("feed", feed, <AltRouteIcon />, "success");
+    return createFeedChip(getAttribute('metadata.feed'), props.elementType);
   }
   function typeChip(){
     let type = getAttribute('type');
-    return createSearchChip("type", type, <StyleIcon />, "success");
+    return createSearchChip("type", type, props.elementType, <StyleIcon />, "success");
   }
   function mainContent(){
-    let propsToIgnore = topAttributes.map(x => x.key).concat(['metadata', 'type', 'inputId', 'inputIds', 'outputId', 'outputIds']);
+    let propsToIgnore = topAttributes.map(x => x.key).concat(['metadata', 'type', 'inputId', 'inputIds', 'outputId', 'outputIds', 'id']);
     if (props.elementType === 'actions' || props.elementType === 'dataObjects' || props.elementType === 'connections'){
-      return(<ConfigurationAccordions data={props.data} elementType={props.elementType} propsToIgnore={propsToIgnore} connectionDb={(props.connection && props.connection.db) as string} />)
+      return(<ConfigurationAccordions data={props.data} elementType={props.elementType} propsToIgnore={propsToIgnore} connectionDb={(props.connection ? props.connection.db : undefined)} />)
     } else { 
       throw new Error(`Unknown element Type ${props.elementType}`);
     }
@@ -153,20 +137,22 @@ export default function ConfigurationTab(props: ElementProps) {
 
   let tags = getAttribute('metadata.tags') as string[] || [];
   let [inputs, outputs] = getInputOutputIds(props.data)
-  let topAttributesCmp = createPropertiesComponent({properties: topAttributesPrep, width: "100%", rowHeight: "45px"})
+  let topAttributesCmp = createPropertiesComponent({properties: topAttributesPrep, orderProposal: ['table', 'path', 'partitions']})
 
   return (
     <Box sx={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-          <Box>
+      <Box sx={{display: 'flex', flexWrap: 'wrap', gap: '1rem'}}>
+        <Box flex={1}>
           {typeChip()}
           {feedChip()}
           {layerChip()}
           {subjectAreaChip()}
-          {tags.map(tag => createSearchChip("tags", tag, <SellIcon />, "secondary"))}
-          </Box>
-        {topAttributesCmp && <Grid item xs={12} xl={6}>{topAttributesCmp}</Grid>}
-        {inputs.length > 0 && <Grid item xs={12} xl={6}>{formatInputsOutputs(inputs,outputs)}</Grid>}
-        {mainContent()}
+          {tags.map(tag => createSearchChip("tags", tag, props.elementType, <SellIcon />, "warning"))}
+        </Box>
+        {inputs.length > 0 && <Grid xs={12} xl={6}>{formatInputsOutputs(inputs,outputs)}</Grid>}
+      </Box>
+      {topAttributesCmp && <Grid>{topAttributesCmp}</Grid>}
+      {mainContent()}
     </Box>
   )
 }

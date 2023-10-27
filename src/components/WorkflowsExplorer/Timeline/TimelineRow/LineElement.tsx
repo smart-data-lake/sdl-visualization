@@ -1,13 +1,12 @@
-import React from 'react';
-import styled, { DefaultTheme, keyframes, css } from 'styled-components';
-import { Row } from '../../../../types';
-import { lineColor, getRowStatus, getLengthLabelPosition } from './utils';
-import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
 import { lighten } from 'polished';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import styled, { DefaultTheme, css, keyframes } from 'styled-components';
+import { Row } from '../../../../types';
+import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
 import { getPathFor } from '../../../../util/WorkflowsExplorer/routing';
 import { TasksSortBy } from '../useTaskListSettings';
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { getLengthLabelPosition, getRowStatus, statusColor } from './utils';
 
 //
 // Typedef
@@ -25,7 +24,7 @@ type LineElementProps = {
   isLastAttempt: boolean;
   duration: number | null;
   dragging: boolean;
-  displayPhases: { name: string; checked: boolean }[];
+  displayPhases: string[];
   startTimeOfFirstAttempt?: number;
   paramsString?: string;
   init_duration?: number;
@@ -55,7 +54,6 @@ const LineElement: React.FC<LineElementProps> = ({
   
   //paramsString,
 }) => {
-	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const status = getRowStatus(row);
 	// Extend visible area little bit to prevent lines seem like going out of bounds. Happens
@@ -115,7 +113,7 @@ const LineElement: React.FC<LineElementProps> = ({
 					}}
 					data-testid="boxgraphic"
 					dragging={dragging}
-					title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (${t('task.unable-to-find-status')})` : ''}`}
+					title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (unknown status)` : ''}`}
 					onClick={(e) => {
 					if (row.type === 'task') {
 						e.stopPropagation();
@@ -140,15 +138,15 @@ const LineElement: React.FC<LineElementProps> = ({
   const valueFromLeftExec = valueFromLeft(_boxStartTime('exec'));
   const widthExec = width(duration, valueFromLeftExec);
   const labelPositionExec = getLengthLabelPosition(valueFromLeftExec, widthExec);
-  const displayExec = displayPhases.find((phase) => phase.name === 'Execution')?.checked;
+  const displayExec = displayPhases.includes('Exec');
 
   const valueFromLeftInit = valueFromLeft(_boxStartTime('init'));
   const widthInit = width(init_duration, valueFromLeftInit);
-  const displayInit = init_duration && displayPhases.find((phase) => phase.name === 'Initialized')?.checked;
+  const displayInit = init_duration && displayPhases.includes('Init');
 
   const valueFromLeftPrepare = valueFromLeft(_boxStartTime('prepare'));
   const widthPrepare = width(prepare_duration, valueFromLeftPrepare);
-  const displayPrepare = prepare_duration && displayPhases.find((phase) => phase.name === 'Prepared')?.checked;
+  const displayPrepare = prepare_duration && displayPhases.includes('Prepare');
 
   return (
     <>
@@ -256,7 +254,7 @@ const UnkownMoveAnimation = keyframes`
 
 const BoxGraphicLine = styled.div<{ grayed?: boolean; state: string; isLastAttempt: boolean }>`
   position: absolute;
-  background: ${(p) => lineColor(p.theme, p.grayed || false, p.state, p.isLastAttempt)};
+  background: ${(p) => statusColor(p.theme, p.grayed || false, p.state, p.isLastAttempt)};
   width: 100%;
   height: 0.375rem;
   top: 50%;
@@ -287,7 +285,7 @@ const BoxGraphicLine = styled.div<{ grayed?: boolean; state: string; isLastAttem
     `}
 
   &:hover {
-    background: ${(p) => lineColor(p.theme, p.grayed || false, p.state, p.isLastAttempt)};
+    background: ${(p) => statusColor(p.theme, p.grayed || false, p.state, p.isLastAttempt)};
   }
 `;
 

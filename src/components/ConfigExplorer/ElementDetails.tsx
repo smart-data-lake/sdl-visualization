@@ -1,21 +1,22 @@
-import LineageTab from "./LineageTab";
-import React from 'react';
-import './ComponentsStyles.css';
-import { Tab, Tabs } from "@mui/material";
-import TabPanel from '@mui/lab/TabPanel';
-import TabContext from '@mui/lab/TabContext';
-import ConfigurationTab from "./ConfigurationTab";
-import DescriptionTab from "./DescriptionTab";
-import { useParams } from "react-router-dom";
-import { ReactFlowProvider } from "react-flow-renderer";
-import { Button, Sheet } from "@mui/joy";
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
+import { Button, Sheet } from "@mui/joy";
+import Tab, { tabClasses } from '@mui/joy/Tab';
+import TabList from '@mui/joy/TabList';
+import TabPanel from '@mui/joy/TabPanel';
+import Tabs from '@mui/joy/Tabs';
+import React from 'react';
+import { ReactFlowProvider } from "react-flow-renderer";
+import { useParams } from "react-router-dom";
 import DraggableDivider from "../../layouts/DraggableDivider";
 import { ConfigData } from "../../util/ConfigExplorer/ConfigData";
+import './ComponentsStyles.css';
+import ConfigurationTab from "./ConfigurationTab";
+import DescriptionTab from "./DescriptionTab";
+import LineageTab from "./LineageTab";
 
 
-export default function ElementDetails(props: {configData?: ConfigData}) {
+export default function ElementDetails(props: {configData?: ConfigData, parentCmpRef: React.RefObject<HTMLDivElement>}) {
 
   const {configData} = props;
   const {elementName, elementType} = useParams();
@@ -23,7 +24,6 @@ export default function ElementDetails(props: {configData?: ConfigData}) {
   const [connectionConfigObj, setConnectionConfigObj] = React.useState();
   const [selectedTyp, setSelectedTab] = React.useState('description');
   const [openLineage, setOpenLineage] = React.useState(false);
-  const [lineageWidth, setLineageWidth] = React.useState(500);
   const lineageRef = React.useRef<HTMLDivElement>(null);  
 
   React.useEffect(() => {
@@ -34,22 +34,15 @@ export default function ElementDetails(props: {configData?: ConfigData}) {
     }
   }, [elementName, elementType, configData]);
 
-  // change selected tab
-  const handleChange = (_: React.SyntheticEvent, newValue: string) => {
-    setSelectedTab(newValue);
-  };
-
   return (
 	<>
-		<Sheet sx={{ flex: 1, minWidth: '500px', display: 'flex', flexDirection: 'column',  p: '1rem'}}>
-
-			<TabContext value={selectedTyp}>
+		<Sheet sx={{ flex: 1, minWidth: '500px', height: '100%', display: 'flex', flexDirection: 'column',  p: '1rem 0rem 1rem 0.5rem'}}>
+			<Tabs size="md" value={selectedTyp} onChange={(e,v) => setSelectedTab(v as string)} aria-label="element tabs" sx={{height: '100%'}}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
-					<Tabs value={selectedTyp} onChange={handleChange} aria-label="element tabs">
-						<Tab label="Description" value="description" />
-						<Tab label="Configuration" value="configuration" />
-					{/*  {(elementType==="actions" || elementType==="dataObjects") && <Tab label="Lineage" value="lineage" sx={{height: "15px"}} />} */}
-					</Tabs>
+					<TabList>
+						<Tab value="description">Description</Tab>
+						<Tab value="configuration">Configuration</Tab>
+					</TabList>
 					<Sheet>
 						{!openLineage ?
 							(
@@ -65,19 +58,19 @@ export default function ElementDetails(props: {configData?: ConfigData}) {
 						)}
 					</Sheet>
 				</Sheet>
-				<TabPanel value="description" className="content-panel" sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
+				<TabPanel value="description" className="content-panel" sx={{height: '100%', width: '100%', overflow: 'auto'}}>
 					<DescriptionTab elementName={elementName as string} data={configObj} elementType={elementType as string}/>
 				</TabPanel>
-				<TabPanel value="configuration" className="content-panel"  sx={{height: '100%', width: '100%', overflowY: 'auto'}}>
+				<TabPanel value="configuration" className="content-panel" sx={{height: '100%', width: '100%', overflow: 'auto'}}>
 					<ConfigurationTab data={configObj} elementName={elementName as string} elementType={elementType as string} connection={connectionConfigObj} />
 				</TabPanel>
-			</TabContext> 
+			</Tabs>
 		</Sheet>
 
 		{openLineage &&
 			<>
-				<DraggableDivider setWidth={setLineageWidth} cmpRef={lineageRef} isRightCmp={true} />
-				<Sheet sx={{width: lineageWidth, height: '100%'}} ref={lineageRef}>
+				<DraggableDivider id="config-lineage" cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} parentCmpRef={props.parentCmpRef} />
+				<Sheet sx={{height: '100%', minWidth: '100px'}} ref={lineageRef}>
 					<ReactFlowProvider>
 						<LineageTab configData={configData} elementName={elementName as string} elementType={elementType as string} />
 					</ReactFlowProvider>

@@ -1,9 +1,6 @@
 import './ComponentsStyles.css';
-import { Box, Tab, Tabs } from "@mui/material";
-import TabPanel from '@mui/lab/TabPanel';
-import TabContext from '@mui/lab/TabContext';
 import { createPropertiesComponent } from './PropertiesComponent';
-import { Sheet } from "@mui/joy";
+import { Box, Sheet, Tab, TabList, TabPanel, Tabs } from "@mui/joy";
 
 interface ViewProps {
   data: any; // global configuration
@@ -13,17 +10,17 @@ export default function GlobalConfigView(props: ViewProps) {
 
   if (props.data){
     return(
-      <Sheet sx={{ display: 'flex', flexDirection: 'column',  p: '1rem'}}>
-        <TabContext value={'configuration'}>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={'configuration'} aria-label="element tabs">
-              <Tab label="Configuration" value="configuration" sx={{height: "15px"}} />
-            </Tabs>
+      <Sheet sx={{ flex: 1, maxWidth: '500px', display: 'flex', flexDirection: 'column',  p: '1rem 0rem 1rem 0.5rem'}}>
+        <Tabs size="md" value={'configuration'}>
+          <Box>
+            <TabList size="md" sx={{width: 'fit-content'}}>
+              <Tab value="configuration" sx={{height: "15px"}}>Configuration</Tab>
+            </TabList>
           </Box>
           <TabPanel value="configuration" className="content-panel">
             {createPropertiesComponent({obj: props.data})}
           </TabPanel>
-        </TabContext>      
+        </Tabs>      
       </Sheet>
     );
   }
