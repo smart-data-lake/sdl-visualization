@@ -23,7 +23,7 @@ export function getPersistedManifest() {
 }
 
 const getManifest = () => {
-    return fetch('/manifest.json')
+    return fetch('manifest.json')
         .then(res => {
             if (!res.ok) throw new Error(res.statusText);
             return res.json();

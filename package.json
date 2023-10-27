@@ -1,7 +1,7 @@
 {
   "name": "sdlb_configuration_visualizer",
   "version": "0.9.4",
-  "private": true,
+  "main": "./src/index.tsx",
   "dependencies": {
     "@emotion/react": "^11.10.6",
     "@emotion/styled": "^11.10.6",
@@ -84,6 +84,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build  && cp build_index.* build && cp requirements.txt build",
     "test": "react-scripts test",
+    "lint": "npx eslint src --ext .js,.jsx,.ts,.tsx --max-warnings=0",
     "eject": "react-scripts eject",
     "scriptIlias": "cd src/components/util && node markdown_parser.js && npm run start"
   },
@@ -111,5 +112,6 @@
   "peerDependencies": {
     "react": "18.0.2",
     "react-dom": "18.0.2"
-  }
+  },
+  "homepage": "./"
 }

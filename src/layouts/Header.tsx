@@ -32,7 +32,7 @@ const Header = () => {
                     gap: 2
                 }}>
                     <ListItem>
-                        <img alt="SDLB UI logo" src="/images/sdl_logo_old_plain_white.svg" height={20} />
+                        <img alt="SDLB UI logo" src="images/sdl_logo_old_plain_white.svg" height={20} />
                     </ListItem>
                     <ListItem>
                         <BasicBreadcrumbs />
