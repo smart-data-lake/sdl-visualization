@@ -8,7 +8,7 @@ function getConfig(manifest:Manifest): () => Promise<ConfigData> {
 
     console.log("getConfig Manifest", manifest);
 
-    const baseUrl = window.location.origin + (manifest.baseUrl ?? "/");
+    const baseUrl = (manifest.baseUrl ?? "./");
     const exportedConfigUrl = baseUrl+"exportedConfig.json";
     const configSubdir = "config";  
     const envConfigSubdir = "envConfig";  

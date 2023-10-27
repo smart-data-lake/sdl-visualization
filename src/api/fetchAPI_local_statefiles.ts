@@ -5,7 +5,7 @@ import { fetchAPI } from "./fetchAPI";
 
 export class fetchAPI_local_statefiles implements fetchAPI {
     
-    statePath: string = "/state";
+    statePath: string = "./state";
 
     constructor(path: string) {
         if (path) this.statePath = path;
