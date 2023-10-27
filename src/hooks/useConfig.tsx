@@ -10,9 +10,8 @@ function getConfig(manifest:Manifest): () => Promise<ConfigData> {
 
     const baseUrl = (manifest.baseUrl ?? "./");
     const exportedConfigUrl = baseUrl+"exportedConfig.json";
-    const configSubdir = "config";  
-    const envConfigSubdir = "envConfig";  
-    const configUrl = baseUrl+configSubdir;
+    const configUrl = baseUrl+"config";
+    const envConfigUrl = baseUrl+"envConfig";
 
     // a) search for exported config in json format
     return getUrlContent(exportedConfigUrl)
@@ -30,10 +29,10 @@ function getConfig(manifest:Manifest): () => Promise<ConfigData> {
       })
       .then(files => {
         // prepend config directory to files to create relative Url
-        const filesRelUrl = files.map(f => configSubdir+"/"+f);
+        const filesRelUrl = files.map(f => configUrl+"/"+f);
         // add environment config file if existing
         if (manifest.env) {
-          const envConfigRelUrl = envConfigSubdir+"/"+manifest.env+".conf";
+          const envConfigRelUrl = envConfigUrl+"/"+manifest.env+".conf";
           // make sure envConfig Url exists
           return getUrlContent(envConfigRelUrl).then(_ => {
             filesRelUrl.push(envConfigRelUrl);
@@ -45,7 +44,7 @@ function getConfig(manifest:Manifest): () => Promise<ConfigData> {
       })
       .then(files => {
         console.log("config files to read", files);
-        const includeText = files.map(f => `include "${baseUrl}${f}"`).join("\n");
+        const includeText = files.map(f => `include "${window.location.origin}${window.location.pathname}/${f}"`).join("\n");
         return parseTextStrict(includeText);
       })
     })
