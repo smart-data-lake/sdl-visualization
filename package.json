@@ -112,5 +112,6 @@
   "peerDependencies": {
     "react": "18.0.2",
     "react-dom": "18.0.2"
-  }
+  },
+  "homepage": "./"
 }
