@@ -1,7 +1,7 @@
 {
   "name": "sdlb_configuration_visualizer",
   "version": "0.9.4",
-  "main": "./src/index.tsx",
+  "private": true,
   "dependencies": {
     "@emotion/react": "^11.10.6",
     "@emotion/styled": "^11.10.6",
