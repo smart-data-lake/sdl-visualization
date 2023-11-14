@@ -59,7 +59,7 @@ In order to use the provided connector, it is necessary that your REST endpoints
 
 Where `<BASE_URL>` can be any string.
 
-You should then change the field `backendConfig` to `rest:<BASE_URL>` in `public/manifest.json`.
+You should then change the field `backendConfig` to `rest;<BASE_URL>` in `public/manifest.json`.
 
 You should now be able to browse to `localhost:3000/` and should be greeted by the home page.
 
