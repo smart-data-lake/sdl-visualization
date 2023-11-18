@@ -1,0 +1,24 @@
+diff --git a/node_modules/@pushcorn/hocon-parser/lib/core/Context.js b/node_modules/@pushcorn/hocon-parser/lib/core/Context.js
+index c1c9f77..68f5cba 100644
+--- a/node_modules/@pushcorn/hocon-parser/lib/core/Context.js
++++ b/node_modules/@pushcorn/hocon-parser/lib/core/Context.js
+@@ -574,6 +574,10 @@ class Context
+     {
+         return (WINDOWS ? no_path.win32 : no_path).isAbsolute (path);
+     }
++
++    getRegistry() {
++        return REGISTRY;
++    }    
+ }
+ 
+ 
+@@ -1008,7 +1012,7 @@ function init ()
+     {
+         for (let f of COMPONENTS[d])
+         {
+-            let clazz = Object.values (require (`../${d}/${f}`))[0];
++            let clazz = Object.values (require (`../${d}/${f}.js`))[0];
+ 
+             Context.registerComponent (clazz);
+         }

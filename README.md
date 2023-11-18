@@ -30,7 +30,7 @@ Prerequisites:
 - Python3 installed
 
 
-The easiest way to quickly get started is to directly provide the config and sate files in the directory `public/config` and `public/state` respectively. Once that's done, we can generate an index that will aggregate the statefiles and provide pointers to them. The frontend will simply have to read the preprocessed information in order to display them in the "workflow, s" pages and help fetching the state file directly to display it in the "run" page.
+The easiest way to quickly get started is to directly provide the config and state files in the directory `public/config` and `public/state` respectively. Once that's done, we can generate an index that will aggregate the statefiles and provide pointers to them. The frontend will simply have to read the preprocessed information in order to display them in the "workflow's" pages and help fetching the state file directly to display it in the "run" page.
 
 Once your files are placed in the correct directory, run:
 ````

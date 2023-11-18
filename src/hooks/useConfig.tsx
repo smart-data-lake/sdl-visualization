@@ -17,11 +17,11 @@ function getConfig(manifest:Manifest): () => Promise<ConfigData> {
     return getUrlContent(exportedConfigUrl)
     .then(jsonStr => JSON.parse(jsonStr))
     .catch(err => {
-      console.log("Could not get exported config in json format "+configUrl+", will try listing hocon config files. ("+err+")");
+      console.log("Could not get exported config in json format "+exportedConfigUrl+", will try listing hocon config files. ("+err+")");
       // b) parse config from Hocon Files
       console.log("reading config from url "+configUrl);
       // b1) get config file list by listing config directory
-      return listConfigFiles(configUrl, "")
+      return listConfigFiles(configUrl, "/")
       .catch(err => {
         // b2) read config file list from static index.json
         console.log("Could not list files in URL "+configUrl+", will try reading index.json. ("+err+")");

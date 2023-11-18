@@ -1,4 +1,4 @@
-const {Context} = require ("@pushcorn/hocon-parser/lib/core/Context");
+import {Context} from "@pushcorn/hocon-parser/lib/core/Context";
 
 /**
  * Parse Hocon file from url
