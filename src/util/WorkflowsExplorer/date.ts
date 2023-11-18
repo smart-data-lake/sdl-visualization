@@ -1,4 +1,5 @@
 import spacetime from 'spacetime';
+import moment from 'moment';
 
 const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -25,7 +26,6 @@ export const getTimeFromPastByDays = (days: number, timezone?: string): number =
 };
 
 export const durationMillis = (duration: string) => {
-  const moment = require("moment");
   const d = moment.duration(duration);
   
   return Math.floor(d.asMilliseconds())
