@@ -44,7 +44,7 @@ function getConfig(manifest:Manifest): () => Promise<ConfigData> {
       })
       .then(files => {
         console.log("config files to read", files);
-        const includeText = files.map(f => `include "${window.location.origin}${window.location.pathname}/${f}"`).join("\n");
+        const includeText = files.map(f => `include "${window.location.origin}/${f}"`).join("\n");
         return parseTextStrict(includeText);
       })
     })
