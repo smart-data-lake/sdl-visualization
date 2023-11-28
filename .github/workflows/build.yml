@@ -25,7 +25,7 @@ jobs:
     - name: Setup node
       uses: actions/setup-node@v3
       with:
-        node-version: 16
+        node-version: 20
 
     - name: get-npm-version
       id: package-version
@@ -36,22 +36,28 @@ jobs:
       env:
         CI: '' # disable CI mode as it makes build fail on warnings
 
-    - name: Upload artifact
+    - name: Upload build to artifact
       uses: actions/upload-artifact@v3
       with:
         name: sdl-visualizer
         path: |
           build/**/*.js
-          build/**/*.css
+          build/assets/*.css
           build/images/*
           build/index.html
           build/manifest.json
           build/sdl_logo192.png
           build/lighttpd.conf
           build/README.md
-          build/build_index.sh
-          build/build_index.py
-          build/requirements.txt
+
+    - name: Upload additional files to artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: sdl-visualizer
+        path: |
+          build_index.sh
+          build_index.py
+          requirements.txt          
           
     - name: 'If build on master branch, bump version on develop'
       if: ${{ github.ref_name == 'master' }}
