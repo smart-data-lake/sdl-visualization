@@ -38,7 +38,12 @@ def getRuns(files):
             appVersion = find("appVersion", data) # ignore if not found
             status = getStatus(actionsState)
             runEndTime = getRunEndTime(data)
-            actionCounts = collections.Counter(map(lambda a: a["state"], actionsState.values()))
+            actions = { 
+                key: {
+                    "state": actionsState[key]["state"], 
+                    "dataObjects": [d.get("id") or d for d in actionsState[key].get("outputIds") or []] or [r["subFeed"]["dataObjectId"] for r in actionsState[key]["results"] or []]
+                } for key in actionsState
+            }
 
             runs.append(
                 {
@@ -50,7 +55,7 @@ def getRuns(files):
                     "attemptStartTime": data["attemptStartTime"],
                     "runEndTime": runEndTime,
                     "status": status,
-                    "actionsStatus": actionCounts,
+                    "actions": actions,
                     "buildVersion": buildVersion,
                     "appVersion": appVersion,
                     "path": statefile["path"].lstrip("./"),
@@ -101,11 +106,10 @@ def buildStateIndex(path):
         runs = getRuns(files)
         indexFile = "index.json"
         with open(indexFile, "w") as outfile:
-            # this appends every run to the outfile
-            # not that this is not valid json, but it's easily appendable for new runs, thats what we need.
+            # this appends every run as json line to the outfile
             for run in runs:                
-                json.dump(run, outfile, ensure_ascii=False, indent=4, default=str)
-                print("\n---", file=outfile) # add new line after every run object
+                json.dump(run, outfile, ensure_ascii=False, default=str)
+                print("", file=outfile) # add new line after every run object
         print(f"Summaries written to {path}/{indexFile}\n \n")
         os.chdir(cwd)
 

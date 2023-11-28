@@ -32,7 +32,17 @@ export class fetchAPI_rest implements fetchAPI {
     getWorkflowRuns = (name: string) => {
         return this.fetch(`${this.url}/workflow?name=${name}`);
     };
+    
+    getWorkflowRunsByAction = (name: string) => {
+        // TODO
+        return Promise.resolve([])
+    };    
 
+    getWorkflowRunsByDataObject = (name: string) => {
+        // TODO
+        return Promise.resolve([])
+    };        
+    
     getRun = (args: { name: string; runId: number; attemptId: number }) => {
         return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, { mode: "cors" })
         .then((res) => res.json());

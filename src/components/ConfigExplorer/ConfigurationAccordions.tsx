@@ -4,13 +4,14 @@ import 'github-markdown-css/github-markdown.css';
 import { Button, Link, Table } from '@mui/joy';
 import { createPropertiesComponent } from './PropertiesComponent';
 import CodeViewComponent from './CodeViewComponent';
-import { getPropertyByPath, hoconify } from '../../util/helpers';
+import { getPropertyByPath, hoconify, removeAttr } from '../../util/helpers';
 import { Accordion, AccordionDetails, AccordionGroup, AccordionSummary, Chip, Stack } from '@mui/joy';
 import { createSimpleChip } from './ConfigurationTab';
 import { useManifest } from '../../hooks/useManifest';
 import { Navigate, useNavigate } from 'react-router-dom';
 
-function getTransformers(action: any): any[] {
+function getTransformers(action: any | undefined): any[] {
+  if (!action) return [];
   //returns a list of transformer objects
   return (action['transformer'] ? [action['transformer']] : [])
   .concat(action['transformers'] ?? []);
@@ -98,28 +99,31 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   }
 
   function additionalPropertiesAccordion(){
-    const propsToIgnore = props.propsToIgnore.concat(["transformer","origin"]).concat(Array.from(accordionSections.keys()))
+    const propsToIgnore = props.propsToIgnore.concat(["transformer","_origin",'_columnDescriptions']).concat(Array.from(accordionSections.keys()))
     const cmp = createPropertiesComponent({obj: props.data, propsToIgnore: propsToIgnore})
     if (cmp) accordionSections.set('additionalAttrs', ['Additional configurations', cmp]);
   }
 
   function rawHoconAccordion(){
+    if (!props.data) return;
     var rawData = props.data;
     var title: string | JSX.Element = 'Raw Config';
     // remove origin from data if it exists, add it to title
-    if (rawData.origin) {      
-      const relativePath = rawData.origin.path.split('config/').pop(); // pop = take last element
+    if (rawData['_origin']) {      
+      const relativePath = rawData._origin.path.split('config/').pop(); // pop = take last element
       const sourceUrl = manifest?.configSourceUrl ? manifest.configSourceUrl.replace("{filename}", relativePath).replace('{lineNumber}', rawData.origin.lineNumber) : undefined;
-      const linkName = `${relativePath}:${rawData.origin.lineNumber}`
-      title = (sourceUrl ? (<><span>{title} - </span><Link href={sourceUrl} target="_blank" onClick={(e) => e.stopPropagation()}>{linkName}</Link><span style={{flex: 1}}/></>) : title + ' - ' + linkName);
-      rawData = {...rawData}; // deep clone to avoid mutation of the original data
-      delete rawData['origin'];
+      const linkName = `${relativePath}:${rawData._origin.lineNumber}`
+      title = (sourceUrl ? (<><span>{title} - </span><Link href={sourceUrl} target="_blank" onClick={(e) => e.stopPropagation()}>{linkName}</Link><span style={{flex: 1}}/></>) : title + ' - ' + linkName);      
+      rawData = removeAttr(rawData, '_origin');
     }
     // remove id from data
-    if (rawData.id) {
-      rawData = {...rawData}; // deep clone to avoid mutation of the original data
-      delete rawData['id'];
-    }    
+    if (rawData['id']) {
+      rawData = removeAttr(rawData, 'id');
+    }
+    // remove column description from data
+    if (rawData['_columnDescriptions']) {
+      rawData = removeAttr(rawData, '_columnDescriptions');
+    }
     const hoconConfig = hoconify(rawData);
     accordionSections.set('rawJson', [title, <CodeViewComponent code={hoconConfig} language="" />]);
   }

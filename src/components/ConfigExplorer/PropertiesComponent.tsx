@@ -1,18 +1,24 @@
 import * as React from 'react';
 import 'github-markdown-css/github-markdown.css';
 import CodeViewComponent from './CodeViewComponent';
-import { Table } from '@mui/joy';
-import { compareFunc } from '../../util/helpers';
+import { Table, Typography } from '@mui/joy';
+import { compareFunc, compareMultiFunc } from '../../util/helpers';
+import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
 
-export function createPropertiesComponent(props: {obj?: any, properties?: {key: string, value: any}[], propsToIgnore?: string[], orderProposal?: string[], colHeader?: string, marginTop?: string, nested?: boolean}): JSX.Element | undefined {
+export function createPropertiesComponent(props: {obj?: any, properties?: {key: string, value: any}[], propsToIgnore?: string[], orderProposal?: string[], colHeader?: string, marginTop?: string, nested?: boolean, sort?: boolean, title?: string}): JSX.Element | undefined {
   var rows = props.properties ?? [];
   if (props.obj && typeof props.obj == 'object') rows = rows.concat(Object.keys(props.obj).map(key => {return {key: key, value: props.obj[key]}}));
   const propsToIgnore = props.propsToIgnore || [];
   if (props.propsToIgnore) rows = rows.filter(row => !propsToIgnore.includes(row.key));
   if (props.orderProposal) rows = rows.map(e => [props.orderProposal!.indexOf(e.key), e] as [number, { key: string; value: any; }])
-    .map(e => (e[0] >= 0 ? e : [9999, e[1]]) as [number, { key: string; value: any; }])
-    .sort(compareFunc(0)).map(e => e[1])
-  if (rows.length > 0) return <PropertiesComponent entries={rows} colHeader={props.colHeader} marginTop={props.marginTop} nested={props.nested} />;
+    .map(e => (e[0] >= 0 ? e : [undefined, e[1]]) as [number, { key: string; value: any; }])
+    .sort(compareMultiFunc(['0','[1].key']))
+    .map(e => e[1])
+  if (rows.length > 0) return (<>
+      {props.title && <Typography level="title-sm" >{props.title}</Typography>}
+      <PropertiesComponent entries={rows} colHeader={props.colHeader} marginTop={props.marginTop} nested={props.nested} />
+    </>
+  );
 }
 
 function removeBlockOfTrailingSpaces(code: string): string {
@@ -40,6 +46,9 @@ export default function PropertiesComponent(props: {entries: {key: string, value
     else if (Array.isArray(value)) {
       value = value.map((e,idx) => createPropertiesComponent({obj: e, marginTop: (idx===0 ? "0px" : "8px"), nested: true}));
       //nestedChild = true;
+    // format dates
+    } else if (value instanceof Date) {
+      value = formatTimestamp(value);
     // create a key/value table for objects
     } else if (typeof value == 'object' && !Array.isArray(value)) {
       value = createPropertiesComponent({obj: value, nested: true});
@@ -58,7 +67,7 @@ export default function PropertiesComponent(props: {entries: {key: string, value
       value = value.replaceAll('"', '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
     }
     if (value) {
-      return (<tr>
+      return (<tr key={idx}>
         {idx===0 && props.colHeader && <td style={{padding: '2px 5px', borderBottomWidth: '0px'}} rowSpan={props.entries.length}>{props.colHeader}</td>}
         <td style={{padding: '2px 5px'}}>{key}</td>
         {/* if there is a nested child table: disable padding so there is no gap to internal boarders of nested table */}

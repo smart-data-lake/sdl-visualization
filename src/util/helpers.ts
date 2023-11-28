@@ -66,6 +66,42 @@ export function onlyUnique(value, index, array) {
 export function compareFunc(attr: any) {
   return (a, b) => {
     if (a[attr] === b[attr]) return 0;
-    else return a[attr] > b[attr] ? 1 : -1;
+    else return a[attr] > b[attr] || a[attr] === undefined ? 1 : -1;
   }
 }
+
+/**
+ * Create function to compare attributes of two objects.
+ * This can be used for sorting arrays with multiple sort attributes.
+ * usage: arr.sort(compareFunc(["x","y"]))
+ */
+export function compareMultiFunc(attrs: any[]) {
+  function compare(a: any,b: any, attrIdx: number) {
+    const aVal = getPropertyByPath(a, attrs[attrIdx]); 
+    const bVal = getPropertyByPath(b, attrs[attrIdx]); 
+    if (aVal === bVal) {
+      if (attrIdx === attrs.length-1) return 0; // final attr to compare?
+      else return compare(a,b,attrIdx + 1); // otherwise continue with next attr
+    } else return aVal > bVal || aVal === undefined ? 1 : -1;
+  }
+  return (a, b) => compare(a,b,0);
+}
+
+/**
+ * Dynamically remove an attribute from an object
+ * without changing the original object (deep clone)
+ */
+export function removeAttr(obj: object, attr: string): object {
+  let objClone = {...obj}; // deep clone to avoid mutation of the original data
+  delete objClone[attr];
+  return objClone;
+}
+
+/**
+ * Format number of bytes human friendly
+ */
+export function formatFileSize(size: number){
+  var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024));
+  return (size / Math.pow(1024, i)).toFixed(2) + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
+ }
+ 
