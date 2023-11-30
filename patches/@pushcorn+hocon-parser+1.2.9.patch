@@ -1,24 +1,73 @@
 diff --git a/node_modules/@pushcorn/hocon-parser/lib/core/Context.js b/node_modules/@pushcorn/hocon-parser/lib/core/Context.js
-index c1c9f77..68f5cba 100644
+index c1c9f77..8172615 100644
 --- a/node_modules/@pushcorn/hocon-parser/lib/core/Context.js
 +++ b/node_modules/@pushcorn/hocon-parser/lib/core/Context.js
-@@ -574,6 +574,10 @@ class Context
+@@ -574,6 +574,11 @@ class Context
      {
          return (WINDOWS ? no_path.win32 : no_path).isAbsolute (path);
      }
 +
++    // PATCH: access to registry needed to prepare environments for includes in webapp context.
 +    getRegistry() {
 +        return REGISTRY;
 +    }    
  }
  
  
-@@ -1008,7 +1012,7 @@ function init ()
+@@ -589,24 +594,22 @@ Context.defaultBuilderMap =
+     js:         "script"
+ };
+ 
+-
+-Context.registerComponent = function (...clazz)
++// PATCH: needs additional parameter with class name, as it class names get minimized/obfuscated in build
++Context.registerComponent = function (cls, name)
+ {
+-    for (let cls of clazz)
+-    {
+-        var ns      = _.deCamelCase (cls.name).split ("-");
+-        var type    = ns.pop ();
+-        var group   = type + "s";
+-        var adapter = ADAPTERS[group];
++    var ns      = _.deCamelCase (name).split ("-");
++    var type    = ns.pop ();
++    var group   = type + "s";
++    var adapter = ADAPTERS[group];
+ 
+-        assert (cls.prototype instanceof adapter, `The '${type}' must be an instance of ${adapter.name}.`);
++    // PATCH: this is not working with minimized builds...
++    //assert (cls.prototype instanceof adapter, `The '${type}' must be an instance of ${adapter.name}.`);
+ 
+-        REGISTRY[group][ns.join ("-")] = cls;
++    REGISTRY[group][ns.join ("-")] = cls;
+ 
+-        for (let alias of _.toArray (cls.aliases))
+-        {
+-            REGISTRY[group][alias] = cls;
+-        }
++    for (let alias of _.toArray (cls.aliases))
++    {
++        REGISTRY[group][alias] = cls;
+     }
+ };
+ 
+@@ -1004,15 +1007,16 @@ Context.parseComponentConfig = function (group, config, context)
+ 
+ function init ()
+ {
++
+     for (let d in COMPONENTS)
      {
          for (let f of COMPONENTS[d])
          {
 -            let clazz = Object.values (require (`../${d}/${f}`))[0];
+-
+-            Context.registerComponent (clazz);
 +            let clazz = Object.values (require (`../${d}/${f}.js`))[0];
- 
-             Context.registerComponent (clazz);
++            Context.registerComponent (clazz, f);
          }
+     }
++    
+ }
+ 
+ 
