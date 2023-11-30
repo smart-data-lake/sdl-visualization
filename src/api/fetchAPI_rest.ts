@@ -1,5 +1,4 @@
 import { fetchAPI } from "./fetchAPI";
-import { compareFunc, onlyUnique } from "../util/helpers";
 
 export class fetchAPI_rest implements fetchAPI {
     url: string;
@@ -35,28 +34,6 @@ export class fetchAPI_rest implements fetchAPI {
 
     getWorkflows = () => {
         return this.fetch(`${this.url}/workflows`)
-            .then((data) => {
-            const workflows = this.groupByWorkflowName(data);
-            const result = Object.entries(workflows).map(([name, runs]) => {
-                const lastRun = runs.sort(compareFunc("attemptStartTime"))[
-                runs.length - 1
-                ];
-                const lastNumActions = Object.values(lastRun.actionsStatus || {})
-                .map((x) => x as number)
-                .reduce((sum, x) => sum + x, 0);
-                return {
-                name: name,
-                numRuns: runs.map((run) => run.runId).filter(onlyUnique).length,
-                numAttempts: runs.length,
-                lastDuration: lastRun.duration,
-                lastAttemptStartTime: lastRun.attemptStartTime,
-                lastStatus: lastRun.status,
-                lastNumActions: lastNumActions,
-                };
-            });
-
-            return result as any;
-            })
             .catch((err) => console.log("Unexpected Server error: ", err));
     };
 
