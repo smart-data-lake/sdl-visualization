@@ -24,18 +24,10 @@ export class fetchAPI_rest implements fetchAPI {
             );
     }
 
-    groupByWorkflowName(data: any[]) {
-        return data.reduce((group: { [key: string]: any[] }, run) => {
-                if (!group[run.name]) group[run.name] = [];
-                group[run.name].push(run);
-                return group;
-        }, {});
-    }
-
     getWorkflows = () => {
         return this.fetch(`${this.url}/workflows`)
             .catch((err) => console.log("Unexpected Server error: ", err));
-    };
+    };  
 
     getWorkflowRuns = (name: string) => {
         return this.fetch(`${this.url}/workflow?name=${name}`);
