@@ -11,7 +11,7 @@ export default defineConfig(() => {
       publicDir: './public',
       commonjsOptions: {
         dynamicRequireTargets: [
-          "node_modules/@pushcorn/hocon-parser"
+          "node_modules/@pushcorn/hocon-parser/lib/**/*.js"
         ],
       },
       rollupOptions: {
