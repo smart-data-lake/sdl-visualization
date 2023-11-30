@@ -5,6 +5,10 @@ on:
     branches:
       - 'master'
       - 'develop'
+  pull_request:
+    branches:
+      - 'develop'
+    types: [opened, synchronize]      
 
   # allow for manual builds from feature branches
   workflow_dispatch:
