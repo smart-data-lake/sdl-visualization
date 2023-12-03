@@ -62,7 +62,7 @@ function ConfigExplorer(props: { configData?: ConfigData }) {
 				<DraggableDivider id="config-elementlist" cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
 				<Routes>
 					<Route path=":elementType" element={<ElementTable dataLists={filteredConfigDataLists!} />} />
-					<Route path=":elementType/:elementName" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} />
+					<Route path=":elementType/:elementName/:tab?" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} />
 					<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} />
 				</Routes>
 			</Sheet>

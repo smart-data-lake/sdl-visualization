@@ -26,8 +26,7 @@ export default function App() {
         <Route index element={<Home/>}/>
         <Route path='workflows/' element={<Workflows/>}/>
         <Route path='workflows/:flowId' element={<WorkflowHistory/>}/>
-        <Route path='workflows/:flowId/:runNumber/:taskId/:tab' element={<Run/>}/>
-        <Route path='workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true}/>}/>
+        <Route path='workflows/:flowId/:runNumber/:taskId/:tab?/:stepName?' element={<Run/>}/>
         <Route path='workflows/*' element={<NotFound/>}/>
         <Route path='config/*' element={<ConfigExplorer configData={configData}/>}/>
       </Route>

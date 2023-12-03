@@ -14,7 +14,7 @@ import TabNav from "./Tabs";
     @param {boolean} props.panelOpen - Indicates whether the details panel is open or not.
     @returns {JSX.Element} - The Run component UI.
 */
-const Run = (props : {panelOpen?: boolean}) => {
+const Run = () => {
     const {flowId, runNumber, taskId} = useParams();
     const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
 
@@ -30,7 +30,7 @@ const Run = (props : {panelOpen?: boolean}) => {
                 <>
                     <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId + ' attempt ' + attempt.runInfo.attemptId} refresh={refetch} />
                     {/* <RunDetails attempt={attempt}/> */}
-                    <TabNav attempt={attempt} panelOpen={props.panelOpen}/>
+                    <TabNav attempt={attempt}/>
                 </>
                 ): <NotFound errorType={500}/>
             ): <NotFound/>

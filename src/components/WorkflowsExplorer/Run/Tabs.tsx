@@ -38,9 +38,10 @@ import { createActionsChip } from '../../ConfigExplorer/ConfigurationTab';
  * @param {boolean} props.open - Determines whether or not the content drawer is open for the timeline and actions table components 
  * @returns A set of three React components (ToolBar, Tabs, TabPanel) rendered inside a parent component.
  */
-const TabsPanels = (props: { attempt: Attempt, open?: boolean, tab?: string }) => {
-    const { attempt, open, tab } = props;
+const TabsPanels = (props: { attempt: Attempt }) => {
+    const { attempt } = props;
     const data = attempt.rows;
+    const {tab, stepName} = useParams();
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'step_name', additionalFilters: []})
     const [timelinePhases, setTimelinePhases] = useState(['Exec', 'Init', 'Prepare']);
     const navigate = useNavigate();
@@ -125,11 +126,11 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean, tab?: string }) =
                                 <GlobalStyle />
                                 <Sheet
                                     onClick={() => {
-                                        if (open) {
+                                        if (stepName) {
                                             navigate(`${currURL.split('timeline')[0]}timeline`);
                                         }
                                     }}
-                                    sx={{ flex: '1', width: '99%', position: 'absolute', top: 0, left: 0, backgroundColor: open ? 'primary.main' : 'none', opacity: open ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
+                                    sx={{ flex: '1', width: '99%', position: 'absolute', top: 0, left: 0, backgroundColor: stepName ? 'primary.main' : 'none', opacity: stepName ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
                                     <Sheet sx={{ gap: '0.5rem', height: '69vh', display: 'flex', }} >
                                         <VirtualizedTimeline run={attempt.run} rows={selData} displayPhases={timelinePhases} />
                                     </Sheet>
@@ -138,15 +139,15 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean, tab?: string }) =
                         </Sheet>
                     </TabPanel>
                     <TabPanel className='actions-table-panel' value='table' sx={{p: '0px', width: '100%', height: '100%'}}
-                        onClick={() => open && navigate(`${currURL.split('table')[0]}table`)}>
+                        onClick={() => stepName && navigate(`${currURL.split('table')[0]}table`)}>
                         <Sheet
-                            sx={{ height: '100%', backgroundColor: open ? 'primary.main' : 'none', opacity: open ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
+                            sx={{ height: '100%', backgroundColor: stepName ? 'primary.main' : 'none', opacity: stepName ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
                             <DataTable data={selData} columns={columns} navigator={(row) => `${currURL.split('table')[0]}table/${row.step_name}`} keyAttr='step_name'/>
                         </Sheet>
                     </TabPanel>
                 </>)}
             </Sheet>
-            {open && (
+            {stepName && (
                 <>
                     {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
                     <Sheet sx={{ position: 'absolute', top: 0, height: '80vh', left: '50%', display: 'flex', flexDirection: 'column', boxShadow: '-10px 30px 20px lightgray', p: '1rem' }}>
@@ -163,17 +164,15 @@ const TabsPanels = (props: { attempt: Attempt, open?: boolean, tab?: string }) =
  * @param props {attempt: Attempt, panelOpen?: boolean}
  * @returns JSX.Element
  */
-const TabNav = (props: { attempt: Attempt, panelOpen?: boolean }) => {
-    const { stepName, tab } = useParams();
+const TabNav = (props: { attempt: Attempt }) => {
+    const { tab, stepName } = useParams();
     const [openLineage, setOpenLineage] = useState<boolean>(false);
     const lineageRef = React.useRef<HTMLDivElement>(null);
-    const { attempt, panelOpen } = props;
+    const { attempt } = props;
     const navigate = useNavigate();
+    const navigateRel = (subPath: string) => navigate(subPath, {relative: 'path'}); // this navigates Relative to path, not route
 
-    const handleChange = (_e: any, v: any) => {        
-        if (stepName) navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v}/${stepName}`)
-        else navigate(`/workflows/${attempt.runInfo.workflowName}/${attempt.runInfo.runId}/${attempt.runInfo.attemptId}/${v}`)
-    }
+    const setSelectedTab = (_e: any, v: any) => (tab && stepName ? navigateRel(`../../${v}`) : (tab ? navigateRel(`../${v}`) : navigateRel(`${v}`))); 
 
     const prepareGraph = (rows: Row[]) => {
         let data: { action: string, inputIds: { id: string }[], outputIds: { id: string }[] }[] = [];
@@ -193,7 +192,7 @@ const TabNav = (props: { attempt: Attempt, panelOpen?: boolean }) => {
     return (
         <Sheet sx={{ display: 'flex', height: '100%', px: '1rem' }}>
             <Sheet sx={{ flex: 1, minWidth: '500px', height: '100%', }}>
-                <Tabs defaultValue={tab} onChange={(e, v) => handleChange(e, v)} >
+                <Tabs value={tab || 'timeline'} onChange={(e, v) => setSelectedTab(e, v)} >
                     <Box sx={{ display: 'flex', flex: 1, mt: '1rem', justifyContent: 'space-between' }}>
                         <TabList variant="plain" color="neutral">
                             <Tab value="timeline">Timeline</Tab>
@@ -213,7 +212,7 @@ const TabNav = (props: { attempt: Attempt, panelOpen?: boolean }) => {
                             )
                         }
                     </Box>
-                    <TabsPanels tab={tab} attempt={attempt} open={panelOpen} />
+                    <TabsPanels attempt={attempt}/>
                 </Tabs>
             </Sheet>
             {openLineage && (

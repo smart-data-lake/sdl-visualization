@@ -7,7 +7,7 @@ import TabPanel from '@mui/joy/TabPanel';
 import Tabs from '@mui/joy/Tabs';
 import React from 'react';
 import { ReactFlowProvider } from "react-flow-renderer";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import DraggableDivider from "../../layouts/DraggableDivider";
 import { ConfigData } from "../../util/ConfigExplorer/ConfigData";
 import './ComponentsStyles.css';
@@ -16,6 +16,7 @@ import DescriptionTab from "./DescriptionTab";
 import LineageTab from "./LineageTab";
 import { useFetchDataObjectSchemaIndex, useFetchDataObjectStatsIndex, useFetchDescription } from '../../hooks/useFetchData';
 import SchemaTab from './SchemaTab';
+
 
 function getMissingDescriptionFileCmp(elementType: string, elementName: string) {
 	return <div>
@@ -38,10 +39,11 @@ function getMissingSchemaFileCmp(elementType: string, elementName: string) {
 export default function ElementDetails(props: {configData?: ConfigData, parentCmpRef: React.RefObject<HTMLDivElement>}) {
 
   const {configData} = props;
-  const {elementName, elementType} = useParams();
-  const [selectedTyp, setSelectedTab] = React.useState('configuration');
+  const {elementName, elementType, tab} = useParams();
   const [openLineage, setOpenLineage] = React.useState(false);
-  const lineageRef = React.useRef<HTMLDivElement>(null);  
+  const lineageRef = React.useRef<HTMLDivElement>(null);
+	const navigate = useNavigate();
+	const navigateRel = (subPath: string) => navigate(subPath, {relative: 'path'}); // this navigates Relative to path, not route
 
   const configObj = React.useMemo(() => {
     if (configData && elementType && elementName) {
@@ -55,6 +57,8 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 	} else return null;
   }, [configObj, configData]);
 
+  const setSelectedTab = (v: any) => (tab ? navigateRel(`../${v}`) : navigateRel(`${v}`));
+
   const { data: description, isLoading: descriptionIsLoading } = useFetchDescription(elementType, elementName);
   const { data: schemaIndex, isLoading: schemaIndexIsLoading } = useFetchDataObjectSchemaIndex(elementType, elementName);
   const { data: statsIndex } = useFetchDataObjectStatsIndex(elementType, elementName);
@@ -62,7 +66,7 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
   return (
 	<>
 		<Sheet sx={{ flex: 1, minWidth: '500px', height: '100%', display: 'flex', flexDirection: 'column',  p: '1rem 0rem 1rem 0.5rem'}}>
-			<Tabs size="md" value={selectedTyp} onChange={(e,v) => setSelectedTab(v as string)} aria-label="element tabs" sx={{height: '100%'}}>
+			<Tabs size="md" value={tab || 'configuration'} onChange={(e,v) => setSelectedTab(v as string)} aria-label="element tabs" sx={{height: '100%'}}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
 					<TabList>					
 						<Tab value="configuration">Configuration</Tab>

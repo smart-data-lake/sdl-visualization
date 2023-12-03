@@ -217,8 +217,8 @@ export default function ConfigurationTab(props: ElementProps) {
       </Box>
       <Box sx={{display: 'flex', flexWrap: 'wrap', gap: '1rem'}}>
         {topAttributesCmp && <><Box>{topAttributesCmp}</Box><Box flex={1}/></>}
-        {runs && runs.length>0 && <><Box>{createRunsCmp(runs)}</Box><Box flex={1}/></>}
-        {stats && <Box>{createStatsCmp(stats)}</Box>}
+        {runs && runs.length>0 && <><Box flex={1}/><Box>{createRunsCmp(runs)}</Box></>}
+        {stats && <><Box flex={1}/><Box>{createStatsCmp(stats)}</Box></>}
       </Box>
       {mainContent()}
     </Box>
