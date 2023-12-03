@@ -107,14 +107,13 @@ function listConfigFiles(url: string, path: string): Promise<string[]> {
 }
 
 /**
- * Read config files from index.json url
+ * Read config files from index file url.
+ * In the index file every line is a config file to read.
  */
 function readConfigIndexFile(baseUrl: string): Promise<string[]> {
-    const files = getUrlContent(baseUrl+"/index.json")
+    const files = getUrlContent(baseUrl+"/index")
     .then(text => {
-        const [files, dirs] = parseJsonList(text);
-        if (dirs.length > 0) console.log("Directories in index.json are ignored");
-        return files;
+        return text.split("\n").filter(x => x.length > 0);
     });
     return files;
 }

@@ -118,17 +118,17 @@ def buildConfigIndex(path):
         print("The path you provided as argument does not exist. Skipping config index building.")
 
     else:
-        print(f"The tool will compile all config files in \"{path}\" and its subdirectories into \"index.json\". If no config files are present, a default empty index is returned:")
+        print(f"The tool will compile all config files in \"{path}\" and its subdirectories into \"index\" file. If no config files are present, a default empty index is returned:")
         print(f"Retrieving configs \"{path}\"...")
         cwd = os.getcwd()
         os.chdir(path)
         files = list_files(".", ".conf")
         print(f"{len(files)} files found.")
         print("Creating index...")
-        db = list(map(lambda f: f.lstrip("./"), files))
-        indexFile = "index.json"
+        indexFile = "index"
         with open(indexFile, "w") as outfile:
-            json.dump(db, outfile, ensure_ascii=False, indent=4)
+            for file in files:
+                outfile.write(file.lstrip("./")+"\n")
         print(f"Index written to {path}/{indexFile}\n \n")
         os.chdir(cwd)
 
