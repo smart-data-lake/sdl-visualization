@@ -125,11 +125,6 @@ const TabsPanels = (props: { attempt: Attempt }) => {
                             <ThemeProvider theme={theme}>
                                 <GlobalStyle />
                                 <Sheet
-                                    onClick={() => {
-                                        if (stepName) {
-                                            navigate(`${currURL.split('timeline')[0]}timeline`);
-                                        }
-                                    }}
                                     sx={{ flex: '1', width: '99%', position: 'absolute', top: 0, left: 0, backgroundColor: stepName ? 'primary.main' : 'none', opacity: stepName ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
                                     <Sheet sx={{ gap: '0.5rem', height: '69vh', display: 'flex', }} >
                                         <VirtualizedTimeline run={attempt.run} rows={selData} displayPhases={timelinePhases} />
@@ -138,8 +133,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
                             </ThemeProvider>
                         </Sheet>
                     </TabPanel>
-                    <TabPanel className='actions-table-panel' value='table' sx={{p: '0px', width: '100%', height: '100%'}}
-                        onClick={() => stepName && navigate(`${currURL.split('table')[0]}table`)}>
+                    <TabPanel className='actions-table-panel' value='table' sx={{p: '0px', width: '100%', height: '100%'}}>
                         <Sheet
                             sx={{ height: '100%', backgroundColor: stepName ? 'primary.main' : 'none', opacity: stepName ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
                             <DataTable data={selData} columns={columns} navigator={(row) => `${currURL.split('table')[0]}table/${row.step_name}`} keyAttr='step_name'/>

@@ -29,7 +29,6 @@ const Run = () => {
 				(!data.detail && attempt) ? (
                 <>
                     <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId + ' attempt ' + attempt.runInfo.attemptId} refresh={refetch} />
-                    {/* <RunDetails attempt={attempt}/> */}
                     <TabNav attempt={attempt}/>
                 </>
                 ): <NotFound errorType={500}/>
