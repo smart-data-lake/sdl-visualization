@@ -40,11 +40,10 @@ import { createActionsChip } from '../../ConfigExplorer/ConfigurationTab';
  */
 const TabsPanels = (props: { attempt: Attempt }) => {
     const { attempt } = props;
-    const data = attempt.rows;
+    const data = attempt.timelineRows;
     const {tab, stepName} = useParams();
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'step_name', additionalFilters: []})
     const [timelinePhases, setTimelinePhases] = useState(['Exec', 'Init', 'Prepare']);
-    const navigate = useNavigate();
     const currURL = useLocation().pathname;
     
     const selData = useMemo(() => {
@@ -111,7 +110,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
                     updateFilterParams={updateFilterParams}
                     stateFilters={checkFiltersAvailability(data, stateFilters('status'))}
                     searchPlaceholder="Search by action name"
-                    setPhases={tab == 'timeline' && attempt.runInfo.runStateFormatVersion && attempt.runInfo.runStateFormatVersion > 1 ? setTimelinePhases : undefined}
+                    setPhases={tab == 'timeline' && attempt.details.runStateFormatVersion && attempt.details.runStateFormatVersion > 1 ? setTimelinePhases : undefined}
                 />
                 {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
                 {selData.length === 0 ? (
@@ -127,7 +126,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
                                 <Sheet
                                     sx={{ flex: '1', width: '99%', position: 'absolute', top: 0, left: 0, backgroundColor: stepName ? 'primary.main' : 'none', opacity: stepName ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
                                     <Sheet sx={{ gap: '0.5rem', height: '69vh', display: 'flex', }} >
-                                        <VirtualizedTimeline run={attempt.run} rows={selData} displayPhases={timelinePhases} />
+                                        <VirtualizedTimeline run={attempt.timelineRun} rows={selData} displayPhases={timelinePhases} />
                                     </Sheet>
                                 </Sheet>
                             </ThemeProvider>
@@ -144,7 +143,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
             {stepName && (
                 <>
                     {/* <Sheet sx={{borderLeft: '1px solid lightgray', ml: '2rem', mr: '1rem'}}/> */}
-                    <Sheet sx={{ position: 'absolute', top: 0, height: '80vh', left: '50%', display: 'flex', flexDirection: 'column', boxShadow: '-10px 30px 20px lightgray', p: '1rem' }}>
+                    <Sheet sx={{ position: 'absolute', top: 0, height: '80vh', left: '60%', width: '40%', display: 'flex', flexDirection: 'column', boxShadow: '-10px 30px 20px lightgray', p: '1rem' }}>
                         <ContentDrawer attempt={attempt} />
                     </Sheet>
                 </>
@@ -173,15 +172,15 @@ const TabNav = (props: { attempt: Attempt }) => {
         rows.forEach((row: Row) => {
             data.push({
                 action: row.step_name,
-                inputIds: row.inputIds ? row.inputIds : [],
-                outputIds: row.outputIds ? row.outputIds : []
+                inputIds: row.details.inputIds ? row.details.inputIds : [],
+                outputIds: row.details.outputIds ? row.details.outputIds : []
             })
         })
 
         return data;
     }
 
-    const graph: DAGraph = new Lineage(prepareGraph(attempt.rows)).graph;
+    const graph: DAGraph = new Lineage(prepareGraph(attempt.timelineRows)).graph;
 
     return (
         <Sheet sx={{ display: 'flex', height: '100%', px: '1rem' }}>
@@ -194,7 +193,7 @@ const TabNav = (props: { attempt: Attempt }) => {
                         </TabList>
                         {!openLineage ?
                             (
-                                <IconButton disabled={attempt.rows[0].inputIds ? false : true} color={'primary'} size="md" variant="solid" sx={{ ml: '1rem', px: '1rem', scale: '80%' }} onClick={() => setOpenLineage(!openLineage)}>
+                                <IconButton disabled={attempt.timelineRows[0].details.inputIds ? false : true} color={'primary'} size="md" variant="solid" sx={{ ml: '1rem', px: '1rem', scale: '80%' }} onClick={() => setOpenLineage(!openLineage)}>
                                     Open lineage
                                     <KeyboardDoubleArrowLeftIcon sx={{ ml: '0.5rem' }} />
                                 </IconButton>

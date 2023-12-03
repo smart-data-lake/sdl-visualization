@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useFetchRun } from "../../../hooks/useFetchData";
 import NotFound from "../../../layouts/NotFound";
 import PageHeader from "../../../layouts/PageHeader";
-import Attempt from "../../../util/WorkflowsExplorer/Attempt";
+import Attempt, { updateStateFile } from "../../../util/WorkflowsExplorer/Attempt";
 import TabNav from "./Tabs";
 
 /**
@@ -20,7 +20,7 @@ const Run = () => {
 
     if (isLoading || isFetching || !data) return <CircularProgress/>
     
-    const attempt = data.detail ? undefined : new Attempt(data);
+    const attempt = data.detail ? undefined : new Attempt(updateStateFile(data));
     if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
 
     return (
@@ -28,7 +28,7 @@ const Run = () => {
 			{data ? (
 				(!data.detail && attempt) ? (
                 <>
-                    <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId + ' attempt ' + attempt.runInfo.attemptId} refresh={refetch} />
+                    <PageHeader title= {attempt.appName + ': run ' + attempt.runId + ' attempt ' + attempt.attemptId} refresh={refetch} />
                     <TabNav attempt={attempt}/>
                 </>
                 ): <NotFound errorType={500}/>

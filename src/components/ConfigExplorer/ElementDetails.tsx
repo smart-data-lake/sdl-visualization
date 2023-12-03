@@ -42,8 +42,8 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
   const {elementName, elementType, tab} = useParams();
   const [openLineage, setOpenLineage] = React.useState(false);
   const lineageRef = React.useRef<HTMLDivElement>(null);
-	const navigate = useNavigate();
-	const navigateRel = (subPath: string) => navigate(subPath, {relative: 'path'}); // this navigates Relative to path, not route
+  const navigate = useNavigate();
+  const navigateRel = (subPath: string) => navigate(subPath, {relative: 'path'}); // this navigates Relative to path, not route
 
   const configObj = React.useMemo(() => {
     if (configData && elementType && elementName) {
