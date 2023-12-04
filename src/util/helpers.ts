@@ -15,13 +15,13 @@ export function withDefault<Type>(input: Type, defaultVal: Type) {
 /**
  * Format javascript object as Hocon configuration string
  */
-export function hoconify(obj: any, level: number = 0, addStartIndent: boolean = true): string {
+export function hoconify(obj: any, level: number = 0, addStartIndent: boolean = true, propertiesToIgnore: (string) => boolean = () => false): string {
   const startIndent = (addStartIndent ?  getIndent(level) : '');
   const endIndent = getIndent(level);
   if (typeof obj == 'object' && Array.isArray(obj)) {
     return startIndent + '[\n' + obj.map(e => hoconify(e, level+1)).join('\n') + '\n' + endIndent + ']';
   } else if (typeof obj == 'object') {
-    return startIndent + '{\n' + hoconifyObjectEntries(obj, level+1) + '\n' + endIndent + '}';
+    return startIndent + '{\n' + hoconifyObjectEntries(obj, level+1, propertiesToIgnore) + '\n' + endIndent + '}';
   } else if (typeof obj == 'string' && obj.match('^[a-zA-Z0-9-_]*$')) { // identifier need not quotes
     return startIndent + obj; 
   } else if (typeof obj == 'string' && obj.includes('\n')) { // reformat multiline string
@@ -34,9 +34,12 @@ export function hoconify(obj: any, level: number = 0, addStartIndent: boolean = 
   }
 }
 function getIndent(level: number) { return ' '.repeat(level*2); }
-function hoconifyObjectEntries(obj: object, level: number) {
+function hoconifyObjectEntries(obj: object, level: number, propertiesToIgnore: (string) => boolean = () => false) {
   const indent = getIndent(level);
-  return Object.entries(obj).map(e => indent + e[0] + ": " + hoconify(e[1], level, false)).join('\n');
+  return Object.entries(obj).map(e => {
+    if (!propertiesToIgnore(e[0])) return indent + e[0] + ": " + hoconify(e[1], level, false, propertiesToIgnore);
+    else return undefined;
+  }).filter(e => e).join('\n');
 }
 
 /**
@@ -91,9 +94,9 @@ export function compareMultiFunc(attrs: any[]) {
  * Dynamically remove an attribute from an object
  * without changing the original object (deep clone)
  */
-export function removeAttr(obj: object, attr: string): object {
+export function removeAttr(obj: object, attrs: string[]): object {
   let objClone = {...obj}; // deep clone to avoid mutation of the original data
-  delete objClone[attr];
+  attrs.forEach(a => delete objClone[a]);
   return objClone;
 }
 

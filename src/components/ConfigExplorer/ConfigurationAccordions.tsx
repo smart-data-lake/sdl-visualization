@@ -106,25 +106,17 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
 
   function rawHoconAccordion(){
     if (!props.data) return;
-    var rawData = props.data;
+    const rawData = props.data;
     var title: string | JSX.Element = 'Raw Config';
-    // remove origin from data if it exists, add it to title
+    // get origin from data if it exists, add it to title
     if (rawData['_origin']) {      
       const relativePath = rawData._origin.path.split('config/').pop(); // pop = take last element
       const sourceUrl = manifest?.configSourceUrl ? manifest.configSourceUrl.replace("{filename}", relativePath).replace('{lineNumber}', rawData.origin.lineNumber) : undefined;
       const linkName = `${relativePath}:${rawData._origin.lineNumber}`
       title = (sourceUrl ? (<><span>{title} - </span><Link href={sourceUrl} target="_blank" onClick={(e) => e.stopPropagation()}>{linkName}</Link><span style={{flex: 1}}/></>) : title + ' - ' + linkName);      
-      rawData = removeAttr(rawData, '_origin');
     }
-    // remove id from data
-    if (rawData['id']) {
-      rawData = removeAttr(rawData, 'id');
-    }
-    // remove column description from data
-    if (rawData['_columnDescriptions']) {
-      rawData = removeAttr(rawData, '_columnDescriptions');
-    }
-    const hoconConfig = hoconify(rawData);
+    // prepare output
+    const hoconConfig = hoconify(rawData, 0, false, (key) => key == 'id' || key.startsWith('_'));
     accordionSections.set('rawJson', [title, <CodeViewComponent code={hoconConfig} language="" />]);
   }
 
