@@ -1,34 +1,39 @@
-import { genActionStyle } from "antd/es/alert/style";
-import { ActionsState, Run as TimelineRun, RunInfo, StateFile, Row } from "../../types"
+import { ActionsState, Row, StateFile, Run as TimelineRun } from "../../types";
 import { compareFunc } from "../helpers";
 
-
+/**
+ * Update old state files to current format
+ */
 export function updateStateFile(data: any): StateFile {
     if (data.actionsState) {
         Object.entries(data.actionsState).forEach((entry) => {
             const name = entry[0];
             var action: any = entry[1];
             // move attributes from actionsState.<action>.results[].subFeed one level up
+            // rename actionsState.<action>.results[].mainMetrics -> metrics
+            // remove elements in actionsState.<action>.results[].partitionValues
             if (action.results && action.results.length > 0 && action.results[0].subFeed) {
                 const results = action.results.map(result => {
                     const resultNew = {...result, ...result.subFeed}
                     delete resultNew['subFeed'];
+                    resultNew['metrics'] = resultNew['mainMetrics'];
+                    delete resultNew['mainMetrics']
+                    resultNew['partitionValues'] = resultNew['partitionValues'].map( e => e.elements || e );
                     return resultNew;
                 })
                 action.results = results;
-            }
+            }        
             // remove id in actionsState[].inputIds & outputIds
             if (action.inputIds && action.inputIds.length > 0 && action.inputIds[0].id) {
                 action.inputIds = action.inputIds.map( e => e.id || e );
             }
             if (action.outputIds && action.outputIds.length > 0 && action.outputIds[0].id) {
-                action.outputIds = action.outputIds.map( e => e.id );
+                action.outputIds = action.outputIds.map( e => e.id || e );
             }
             // overwrite entry
             data.actionsState[name] = action;
         })
     }
-    console.log(data.actionsState);
     return data;
 }
 

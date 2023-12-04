@@ -1,11 +1,11 @@
 import CloseIcon from '@mui/icons-material/Close';
-import { Button, IconButton, Sheet, Table, Tooltip, Typography } from "@mui/joy";
+import { Box, IconButton, Sheet, Typography } from "@mui/joy";
 import { useNavigate, useParams } from "react-router-dom";
 import { useConfig } from "../../../hooks/useConfig";
 import { useManifest } from "../../../hooks/useManifest";
 import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
-import { formatFileSize } from '../../../util/helpers';
+import { createDataObjectChip } from '../../ConfigExplorer/ConfigurationTab';
 import { createPropertiesComponent } from '../../ConfigExplorer/PropertiesComponent';
 
 const getRow = (attempt: Attempt, taskName: string) => {
@@ -28,7 +28,7 @@ const ContentSheet = (props: {action: Row}) => {
         <Sheet sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: '1rem' }}>
             {action.message && 
                 <Sheet color="neutral" variant="soft" key='resultSheet' invertedColors
-                    sx={{ p: '1rem', mt: '1rem', borderRadius: '0.5rem',}}>
+                    sx={{ p: '1rem', mt: '1rem', mb: '1rem', borderRadius: '0.5rem',}}>
                     <Typography color="neutral" level='body-md'>
                         Info:
                     </Typography>
@@ -38,9 +38,15 @@ const ContentSheet = (props: {action: Row}) => {
                 </Sheet>
             }            
             {action.details.results.map((result) => {
-                const subFeedProps: any = result.mainMetrics;
+                const subFeedProps: any = result.metrics;
                 if (result.partitionValues && result.partitionValues.length > 0) subFeedProps!.partitionValues = result.partitionValues;
-                return createPropertiesComponent({obj: subFeedProps, orderProposal: [], propsToIgnore: ['stage'], title: 'Output '+result.dataObjectId})
+                return <Box key={result.dataObjectId}>
+                    <Box sx={{ mb: '0.5rem' }}>
+                        <Typography level="title-sm" sx={{ display: 'inline' }} >Output</Typography>
+                        {createDataObjectChip(result.dataObjectId, 'sm', { ml: '0.5rem' })}
+                    </Box>
+                    {createPropertiesComponent({obj: subFeedProps, orderProposal: [], propsToIgnore: ['stage']})}
+                </Box>
             })}
         </Sheet>
     )
@@ -54,7 +60,7 @@ const ContentSheet = (props: {action: Row}) => {
  */
 const ContentDrawer = (props: {attempt: Attempt}) => {
     const { attempt } = props;
-    const { flowId, runNumber, taskId, tab, stepName } = useParams();
+    const { stepName } = useParams();
     const {data: manifest} = useManifest();
     const {data: configData} = useConfig(manifest);
     const navigate = useNavigate();
@@ -64,19 +70,13 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
     
     const isActionInConfig = () => (configData && configData.actions[action.step_name])
 
-    const handleClick = () => {
-        navigate(`/config/actions/${action.step_name}`);
-    }
-
     return ( 
         <Sheet sx={{ gap: '1rem', height: '100%' }}>
             <Sheet sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Sheet sx={{display: 'flex', flexDirection: 'row', position: 'sticky'}}>
-                    <Tooltip title={action.step_name}>
-                        <Typography sx={{ flex: 1, cursor: 'default'}} noWrap level='h4'>
-                            {action.step_name}
-                        </Typography>
-                    </Tooltip>
+                    <Typography sx={{ flex: 1, cursor: 'default'}} noWrap level='h4'>
+                        Metrics for {action.step_name}
+                    </Typography>
                     <IconButton variant="plain" color="neutral" size="sm" onClick={() => navigateRel("..")}>
                         <CloseIcon />
                     </IconButton>
@@ -84,7 +84,6 @@ const ContentDrawer = (props: {attempt: Attempt}) => {
                 <Sheet sx={{ flex: 1, overflowY: 'auto', width: '100%' }}>
                         <ContentSheet action={action}/>
                 </Sheet>
-                <Button disabled={!isActionInConfig()} onClick={() => handleClick() } sx={{ width: "fit-content" }} size="sm" variant="solid">Open in Config Viewer</Button>
             </Sheet>
         </Sheet>
      );

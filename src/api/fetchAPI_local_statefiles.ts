@@ -42,7 +42,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
                 return run;
             })
         )
-        .then(runs => {console.log("got runs", runs); return runs})
+        .then(runs => {console.log(`got ${runs.length} runs`); return runs})
         .catch(err => {
             console.error(`Could not load index file ${indexPath}`, err);
             throw err;

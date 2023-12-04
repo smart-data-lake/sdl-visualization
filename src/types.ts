@@ -137,13 +137,13 @@ export class Row implements MetaDataBaseObject {
     outputIds?: {id: string}[],
   }
   export type Results = [{
-    type?: string,
-    dataObjectId?: string,
-    partitionValues?: any[],
+    type: string,
+    dataObjectId: string,
+    partitionValues: any[],
     isSkipped?: boolean,
     isDAGStart?: boolean,
     isDummy?: boolean,
-    mainMetrics?: {
+    metrics?: {
       stage?: string,
       count?: number, 
       num_tasks?: number,
