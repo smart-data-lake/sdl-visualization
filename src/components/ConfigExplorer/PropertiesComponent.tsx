@@ -2,7 +2,7 @@ import * as React from 'react';
 import 'github-markdown-css/github-markdown.css';
 import CodeViewComponent from './CodeViewComponent';
 import { Table, Typography } from '@mui/joy';
-import { compareFunc, compareMultiFunc } from '../../util/helpers';
+import { camelToTitleCase, compareFunc, compareMultiFunc } from '../../util/helpers';
 import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
 
 export function createPropertiesComponent(props: {obj?: any, properties?: {key: string, value: any}[], propsToIgnore?: string[], orderProposal?: string[], colHeader?: string, marginTop?: string, nested?: boolean, sort?: boolean, title?: string}): JSX.Element | undefined {
@@ -35,7 +35,7 @@ function removeBlockOfTrailingSpaces(code: string): string {
 export default function PropertiesComponent(props: {entries: {key: string, value: any}[], colHeader?: string, marginTop?: string, nested?: boolean}){
   const rows = props.entries
   .map((entry,idx) => {
-    const key = entry.key;
+    var key = entry.key;
     var value = entry.value;
     var nestedChild = false;
     // pass through react elements
@@ -62,16 +62,17 @@ export default function PropertiesComponent(props: {entries: {key: string, value
       if (type && type.value.startsWith("Python")) language = 'python';
       value = <CodeViewComponent code={removeBlockOfTrailingSpaces(value)} language={language} />
     } else {
-    // stringify the rest  
-      value = JSON.stringify(value).replaceAll('\\n', '').replaceAll('\\t', '').replaceAll('\\r', '');
-      value = value.replaceAll('"', '').replaceAll('\\', ''); //The second replace is needed as removing two double quotes results in a backslash
+    // stringify the rest
+      value = (typeof value === "string" ? value.trim() : JSON.stringify(value));
     }
     if (value) {
+      // handle framework properties starting with undersoce
+      if (key.startsWith('_')) key = camelToTitleCase(key.slice(1));
       return (<tr key={idx}>
         {idx===0 && props.colHeader && <td style={{padding: '2px 5px', borderBottomWidth: '0px'}} rowSpan={props.entries.length}>{props.colHeader}</td>}
         <td style={{padding: '2px 5px'}}>{key}</td>
-        {/* if there is a nested child table: disable padding so there is no gap to internal boarders of nested table */}
-        <td style={{padding: (nestedChild ? '0px' : '2px 5px'), width: (props.nested ? '100%' : 'auto')}}>{value}</td>
+        {/* if there is a nested child table: disable padding so there is no gap to internal borders of nested table */}
+        <td style={{padding: (nestedChild ? '0px' : '2px 5px'), width: (props.nested ? '100%' : 'auto'), whiteSpace: 'pre-line'}}>{value}</td>
       </tr>);
     }
     return undefined;

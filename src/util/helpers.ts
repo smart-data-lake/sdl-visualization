@@ -19,7 +19,7 @@ export function hoconify(obj: any, level: number = 0, addStartIndent: boolean = 
   const startIndent = (addStartIndent ?  getIndent(level) : '');
   const endIndent = getIndent(level);
   if (typeof obj == 'object' && Array.isArray(obj)) {
-    return startIndent + '[\n' + obj.map(e => hoconify(e, level+1)).join('\n') + '\n' + endIndent + ']';
+    return startIndent + '[\n' + obj.map(e => hoconify(e, level+1, true, propertiesToIgnore)).join('\n') + '\n' + endIndent + ']';
   } else if (typeof obj == 'object') {
     return startIndent + '{\n' + hoconifyObjectEntries(obj, level+1, propertiesToIgnore) + '\n' + endIndent + '}';
   } else if (typeof obj == 'string' && obj.match('^[a-zA-Z0-9-_]*$')) { // identifier need not quotes
@@ -108,3 +108,18 @@ export function formatFileSize(size: number){
   return (size / Math.pow(1024, i)).toFixed(2) + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
  }
  
+ /**
+  * Capitalize first letter of a string
+  */
+ export function capitalize(str: string){
+  return str.charAt(0).toUpperCase + str.slice(1);
+ }
+
+  /**
+  * Camel case to title case, e.g. helloWorld -> Hello World
+  */
+  export function camelToTitleCase(str: string){
+    if (str.length == 0) return str;
+    var str1 = str.replace(/([A-Z])/g, (match) => ` ${match}`);
+    return str1.charAt(0).toUpperCase() + str1.slice(1);
+  }
