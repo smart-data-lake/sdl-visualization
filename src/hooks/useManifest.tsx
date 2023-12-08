@@ -10,6 +10,8 @@ export interface Manifest {
     env?: string;
     // config source file url template: {filename} and {lineNumber} will be replaced by corresponding config element origin in 'raw config' section of Configuration viewer.
     configSourceUrl?: string;
+    
+    auth: any;
 }
 
 /**
