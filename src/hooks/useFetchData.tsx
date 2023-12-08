@@ -80,11 +80,15 @@ export interface SchemaStructType {
   dataType: 'struct';
   fields: SchemaColumn[];
 }
-function getSchema(schemaFile: string | undefined): Promise<SchemaColumn[] | undefined> {
+export interface SchemaData{
+  info?: string;
+  schema?: SchemaColumn[];
+}
+function getSchema(schemaFile: string | undefined): Promise<SchemaData | undefined> {
   if (!schemaFile) return Promise.resolve(undefined);
 	const filename = "/schema/"+ schemaFile; //file must be in public/schema folder
 	return getUrlContent(filename)
-  .then((str) => JSON.parse(str).schema as SchemaColumn[])
+  .then((str) => JSON.parse(str) as SchemaData)
 	.catch((error) => {console.log(error); return undefined})
 }
 export const useFetchDataObjectSchema = (schemaEntry: TsIndexEntry|undefined) => {

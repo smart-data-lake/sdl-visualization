@@ -1,4 +1,4 @@
-import { Box, CircularProgress, FormControl, FormLabel, Select, Sheet, Tooltip } from '@mui/joy';
+import { Box, CircularProgress, FormControl, FormLabel, Select, Sheet, Tooltip, Typography } from '@mui/joy';
 import { useEffect, useMemo, useState } from 'react';
 import { SchemaColumn, TsIndexEntry, useFetchDataObjectSchema, useFetchDataObjectStats } from '../../hooks/useFetchData';
 import DataTable, { nestedPropertyRenderer } from './DataTable';
@@ -138,7 +138,7 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     })
     return rows;
   } 
-  const schemaRows = useMemo(() => (schema ? numberSchemaTree(schema) : undefined), [props.elementName, schema, stats]);
+  const schemaRows = useMemo(() => (schema?.schema ? numberSchemaTree(schema.schema) : undefined), [props.elementName, schema, stats]);
 
   // define columns for table
   const baseColumns: any[] = [{
@@ -214,8 +214,9 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     .forEach(c => cols.push(c));
     return cols;
   }, [schemaRows]);
+  console.log(schemaRows, columns);
 
-  return schemaRows && columns ? (
+  return !schemaIsLoading ? (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem', gap: '1rem', width: '100%', height: '100%' }}>
       <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem'}}>
         <FormControl>
@@ -224,14 +225,18 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
             {props.schemaIndex?.map((e) => <Option key={e.filename} value={e.filename}>{formatTimestamp(e.ts)}</Option>)}
           </Select>      
         </FormControl>
-        <FormControl>
+        {props.statsIndex && <FormControl>
           <FormLabel>Statistics exported at</FormLabel>
           <Select size='sm' value={statsEntry?.filename} onChange={(ev, value) => setStatsEntry(props.statsIndex?.find((e) => e.filename === value))}>
             {props.statsIndex?.map((e) => <Option key={e.filename} value={e.filename}>{formatTimestamp(e.ts)}</Option>)}
           </Select>      
-        </FormControl>
+        </FormControl>}      
       </Box>
-      <DataTable key={schemaEntry?.filename+'/'+statsEntry?.filename} data={schemaRows} columns={columns} keyAttr="id" treeGroupKeyAttr={'parentId'}/>
+      {schema?.info && <Sheet color="neutral" variant="soft" key='resultSheet' invertedColors sx={{ p: '1rem', mt: '1rem', mb: '1rem', borderRadius: '0.5rem',}}>
+          <Typography color="neutral" level='body-md'>Info:</Typography>
+          <code>{schema.info}</code>
+      </Sheet>}
+      {schemaRows && columns && <DataTable key={schemaEntry?.filename+'/'+statsEntry?.filename} data={schemaRows} columns={columns} keyAttr="id" treeGroupKeyAttr={'parentId'}/>}
     </Sheet>
   ) : <CircularProgress/>
 }
