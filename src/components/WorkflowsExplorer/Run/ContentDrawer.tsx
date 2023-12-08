@@ -7,6 +7,7 @@ import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import { createDataObjectChip } from '../../ConfigExplorer/ConfigurationTab';
 import { createPropertiesComponent } from '../../ConfigExplorer/PropertiesComponent';
+import InfoBox from '../../ConfigExplorer/InfoBox';
 
 const getRow = (attempt: Attempt, taskName: string) => {
     if (taskName === 'err') throw(new Error('was not able to fetch task name'));
@@ -26,17 +27,7 @@ const ContentSheet = (props: {action: Row}) => {
     
     return (
         <Sheet sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: '1rem' }}>
-            {action.message && 
-                <Sheet color="neutral" variant="soft" key='resultSheet' invertedColors
-                    sx={{ p: '1rem', mt: '1rem', mb: '1rem', borderRadius: '0.5rem',}}>
-                    <Typography color="neutral" level='body-md'>
-                        Info:
-                    </Typography>
-                    <code>
-                        {action.message}
-                    </code>
-                </Sheet>
-            }            
+            {action.message && <InfoBox info={action.message}/>}            
             {action.details.results.map((result) => {
                 const subFeedProps: any = result.metrics;
                 if (result.partitionValues && result.partitionValues.length > 0) subFeedProps!.partitionValues = result.partitionValues;

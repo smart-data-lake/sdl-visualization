@@ -6,6 +6,8 @@ import { compareFunc, getPropertyByPath, onlyUnique } from '../../util/helpers';
 import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
 import Option from '@mui/joy/Option';
 import { OverflowTooltip } from './OverflowTooltip';
+import { getMissingSchemaFileCmp } from './ElementDetails';
+import InfoBox from './InfoBox';
 
 /**
  * Table cell renderer calculating a percentage value against a given base value
@@ -189,6 +191,7 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
       title: 'AvgLen',
       property: 'stats.avgLen',
       renderer: nestedPropertyRenderer(),
+
       width: '75px'
     },
     maxLen: {
@@ -214,17 +217,19 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     .forEach(c => cols.push(c));
     return cols;
   }, [schemaRows]);
-  console.log(schemaRows, columns);
+
+  // prepare info message
+  const info = (schema ? schema.info : getMissingSchemaFileCmp(props.elementType, props.elementName));
 
   return !schemaIsLoading ? (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem', gap: '1rem', width: '100%', height: '100%' }}>
       <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem'}}>
-        <FormControl>
+        {props.schemaIndex && <FormControl>
           <FormLabel>Schema exported at</FormLabel>
           <Select size='sm' value={schemaEntry?.filename} onChange={(ev, value) => setSchemaEntry(props.schemaIndex?.find((e) => e.filename === value))}>
             {props.schemaIndex?.map((e) => <Option key={e.filename} value={e.filename}>{formatTimestamp(e.ts)}</Option>)}
           </Select>      
-        </FormControl>
+        </FormControl>}
         {props.statsIndex && <FormControl>
           <FormLabel>Statistics exported at</FormLabel>
           <Select size='sm' value={statsEntry?.filename} onChange={(ev, value) => setStatsEntry(props.statsIndex?.find((e) => e.filename === value))}>
@@ -232,10 +237,7 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
           </Select>      
         </FormControl>}      
       </Box>
-      {schema?.info && <Sheet color="neutral" variant="soft" key='resultSheet' invertedColors sx={{ p: '1rem', mt: '1rem', mb: '1rem', borderRadius: '0.5rem',}}>
-          <Typography color="neutral" level='body-md'>Info:</Typography>
-          <code>{schema.info}</code>
-      </Sheet>}
+      {info && <InfoBox info={info}/>}
       {schemaRows && columns && <DataTable key={schemaEntry?.filename+'/'+statsEntry?.filename} data={schemaRows} columns={columns} keyAttr="id" treeGroupKeyAttr={'parentId'}/>}
     </Sheet>
   ) : <CircularProgress/>

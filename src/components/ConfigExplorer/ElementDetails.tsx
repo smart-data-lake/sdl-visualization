@@ -1,6 +1,6 @@
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
-import { Button, Sheet, Tooltip, Typography } from "@mui/joy";
+import { Box, Button, Sheet, Tooltip, Typography } from "@mui/joy";
 import Tab from '@mui/joy/Tab';
 import TabList from '@mui/joy/TabList';
 import TabPanel from '@mui/joy/TabPanel';
@@ -16,30 +16,32 @@ import DescriptionTab from "./DescriptionTab";
 import LineageTab from "./LineageTab";
 import { useFetchDataObjectSchemaIndex, useFetchDataObjectStatsIndex, useFetchDescription } from '../../hooks/useFetchData';
 import SchemaTab from './SchemaTab';
+import { getLogger } from 'react-query/types/core/logger';
 
 
-function getMissingDescriptionFileCmp(elementType: string, elementName: string) {
-	return <div>
+export function getMissingDescriptionFileCmp(elementType: string, elementName: string) {
+	return <Box>
 		There is no detailed description for this element.<br/>
 		To add a description create the following Markdown file in your project folder:<br/>
 		<span style={{ fontWeight: 'bold' }}>description/{elementType}/{elementName}.md</span><br/>
 		You can use <a href="https://commonmark.org/">Commonmark Standard</a> to format your text.
-	</div>
+	</Box>
 }
 
-function getMissingSchemaFileCmp(elementType: string, elementName: string) {
-	return <div>
+export function getMissingSchemaFileCmp(elementType: string, elementName: string) {
+	return <Box>
 		There is no schema data for this DataObject available.<br/>
 		Structured DataObjects like SparkDataObjects or Tables have a schema at runtime.<br/>
 		To display it here, launch DataObjectSchemaExporter Java program to export it,<br/>
 		see also <a href="https://github.com/smart-data-lake/sdl-visualization">SDLB UI Readme</a>
-	</div>
+	</Box>
 }
 
 export default function ElementDetails(props: {configData?: ConfigData, parentCmpRef: React.RefObject<HTMLDivElement>}) {
 
   const {configData} = props;
   const {elementName, elementType, tab} = useParams();
+  const [lastTab, setLastTab] = React.useState('configuration');
   const [openLineage, setOpenLineage] = React.useState(false);
   const lineageRef = React.useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -57,6 +59,11 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 	} else return null;
   }, [configObj, configData]);
 
+  React.useEffect(() => {
+	if (tab) setLastTab(tab)
+	else if (lastTab === 'schema' && elementType != 'dataObjects' ) setLastTab('configuration')
+  }, [tab, elementType])
+
   const setSelectedTab = (v: any) => (tab ? navigateRel(`../${v}`) : navigateRel(`${v}`));
 
   const { data: description, isLoading: descriptionIsLoading } = useFetchDescription(elementType, elementName);
@@ -66,7 +73,7 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
   return (
 	<>
 		<Sheet sx={{ flex: 1, minWidth: '500px', height: '100%', display: 'flex', flexDirection: 'column',  p: '1rem 0rem 1rem 0.5rem'}}>
-			<Tabs size="md" value={tab || 'configuration'} onChange={(e,v) => setSelectedTab(v as string)} aria-label="element tabs" sx={{height: '100%'}}>
+			<Tabs size="md" value={tab || lastTab} onChange={(e,v) => setSelectedTab(v as string)} aria-label="element tabs" sx={{height: '100%'}}>
 				<Sheet sx={{ display: 'flex', justifyContent: 'space-between'}}>
 					<TabList>					
 						<Tab value="configuration">Configuration</Tab>

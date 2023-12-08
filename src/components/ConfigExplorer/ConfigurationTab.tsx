@@ -216,7 +216,7 @@ export default function ConfigurationTab(props: ElementProps) {
         {inputs.length > 0 && <Grid xs={12} xl={6}>{formatInputsOutputs(inputs,outputs)}</Grid>}
       </Box>
       <Box sx={{display: 'flex', flexWrap: 'wrap', gap: '1rem'}}>
-        {topAttributesCmp && <><Box>{topAttributesCmp}</Box><Box flex={1}/></>}
+        {topAttributesCmp && <><Box>{topAttributesCmp}</Box></>}
         {runs && runs.length>0 && <><Box flex={1}/><Box>{createRunsCmp(runs)}</Box></>}
         {stats && <><Box flex={1}/><Box>{createStatsCmp(stats)}</Box></>}
       </Box>
