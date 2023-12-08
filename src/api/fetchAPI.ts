@@ -13,4 +13,5 @@ export interface fetchAPI {
     getWorkflowRunsByAction: (name: string) => Promise<any>;
     getWorkflowRunsByDataObject: (name: string) => Promise<any>;
     getRun: (args: { name: string, runId: number, attemptId: number}) => Promise<any>;
+    clearCache: () => void;
 }

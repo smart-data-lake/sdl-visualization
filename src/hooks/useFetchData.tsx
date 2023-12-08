@@ -7,7 +7,7 @@ import { formatFileSize } from "../util/helpers";
 
 // lazy initialized
 var _fetcher: fetchAPI;
-function fetcher() {
+export function fetcher() {
   if (!_fetcher) _fetcher = getConfiguredFetcher();
   return _fetcher;
 }
@@ -22,7 +22,7 @@ export const useFetchWorkflows = () => {
   return useQuery({ queryKey: 'workflows', queryFn: () => fetcher().getWorkflows(), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
 }
 export const useFetchWorkflowRuns = (workflow: string) => {
-  return useQuery({ queryKey: ['workflowRun', workflow], queryFn: () => fetcher().getWorkflowRuns(workflow), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
+  return useQuery({ queryKey: ['workflowRun', workflow], queryFn: (context) => fetcher().getWorkflowRuns(workflow), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
 }
 export const useFetchWorkflowRunsByElement = (elementType: string, elementName: string) => {
   var queryFn = () => Promise.resolve(undefined as any[]|undefined);

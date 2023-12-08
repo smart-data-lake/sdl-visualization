@@ -1,6 +1,7 @@
 import { valueType } from "antd/es/statistic/utils";
 import { compareFunc, onlyUnique } from "../util/helpers";
 import { fetchAPI } from "./fetchAPI";
+import { IndeterminateCheckBoxTwoTone } from "@mui/icons-material";
 
 export class fetchAPI_local_statefiles implements fetchAPI {
     
@@ -123,5 +124,9 @@ export class fetchAPI_local_statefiles implements fetchAPI {
             return fetch(this.statePath + '/' + val.path)
                     .then(res => res.json())
         })        
+    };
+
+    clearCache = () => {
+        this._index = undefined;
     };
 }

@@ -47,4 +47,6 @@ export class fetchAPI_rest implements fetchAPI {
         return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, { mode: "cors" })
         .then((res) => res.json());
     };
+
+    clearCache = () => undefined    
 }
