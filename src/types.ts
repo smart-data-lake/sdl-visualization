@@ -133,8 +133,8 @@ export class Row implements MetaDataBaseObject {
     endTstmpPrepare?: string,
     startTstmpInit? : string,
     endTstmpInit?: string,
-    inputIds?: {id: string}[],
-    outputIds?: {id: string}[],
+    inputIds?: string[],
+    outputIds?: string[],
   }
   export type Results = [{
     type: string,

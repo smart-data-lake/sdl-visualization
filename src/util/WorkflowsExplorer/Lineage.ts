@@ -4,7 +4,7 @@ export class Lineage {
     lineageData: any;
     graph: DAGraph;
 
-    constructor(data: {action: string, inputIds: {id: string}[], outputIds: {id: string}[]}[]) {
+    constructor(data: {action: string, inputIds: string[], outputIds: string[]}[]) {
         const preprocessedData: {id: string, node: Node, edges: {id: string, to: Node}[]}[] = this.prepareGraphData(data)
         const nodes = this.getNodes(preprocessedData);
         const edges = this.getEdges(preprocessedData);
@@ -32,16 +32,16 @@ export class Lineage {
         return edges
     }
 
-    prepareGraphData = (data: {action: string, inputIds: {id: string}[], outputIds: {id: string}[]}[]) => {
+    prepareGraphData = (data: {action: string, inputIds: string[], outputIds: string[]}[]) => {
         let nodes: string[] = [];
         let graph: {id: string, node: Node, edges: {id: string, to: Node}[]}[] = [];
 
         data.forEach(action => {
             action.inputIds.forEach(elem => {
-                if (!nodes.includes(elem.id)) nodes.push(elem.id);
+                if (!nodes.includes(elem)) nodes.push(elem);
             });
             action.outputIds.forEach(elem => {
-                if (!nodes.includes(elem.id)) nodes.push(elem.id);
+                if (!nodes.includes(elem)) nodes.push(elem);
             });
         });
 
@@ -52,11 +52,11 @@ export class Lineage {
         nodes.forEach(node => {
             data.forEach(action => {
                 action.inputIds.forEach(input => {
-                    if (input.id === node) {
+                    if (input === node) {
                         action.outputIds.forEach(target => {
                             graph.forEach(elem => {
                                 if (elem.id === node) {
-                                    elem.edges.push({to: new Node(target.id), id: action.action})
+                                    elem.edges.push({to: new Node(target), id: action.action})
                                 }
                             })
                         });

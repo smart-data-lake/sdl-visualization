@@ -168,7 +168,7 @@ const TabNav = (props: { attempt: Attempt }) => {
     const setSelectedTab = (_e: any, v: any) => (tab && stepName ? navigateRel(`../../${v}`) : (tab ? navigateRel(`../${v}`) : navigateRel(`${v}`))); 
 
     const prepareGraph = (rows: Row[]) => {
-        let data: { action: string, inputIds: { id: string }[], outputIds: { id: string }[] }[] = [];
+        let data: { action: string, inputIds: string[], outputIds: string[] }[] = [];
         rows.forEach((row: Row) => {
             data.push({
                 action: row.step_name,
@@ -180,7 +180,10 @@ const TabNav = (props: { attempt: Attempt }) => {
         return data;
     }
 
-    const graph: DAGraph = new Lineage(prepareGraph(attempt.timelineRows)).graph;
+    const graph: DAGraph = useMemo(() => {
+        console.log("attempt", attempt);
+        return new Lineage(prepareGraph(attempt.timelineRows)).graph
+    }, [attempt]);
 
     return (
         <Sheet sx={{ display: 'flex', height: '100%', px: '1rem' }}>
@@ -193,7 +196,7 @@ const TabNav = (props: { attempt: Attempt }) => {
                         </TabList>
                         {!openLineage ?
                             (
-                                <IconButton disabled={attempt.timelineRows[0].details.inputIds ? false : true} color={'primary'} size="md" variant="solid" sx={{ ml: '1rem', px: '1rem', scale: '80%' }} onClick={() => setOpenLineage(!openLineage)}>
+                                <IconButton disabled={!attempt.timelineRows[0].details.inputIds} color={'primary'} size="md" variant="solid" sx={{ ml: '1rem', px: '1rem', scale: '80%' }} onClick={() => setOpenLineage(!openLineage)}>
                                     Open lineage
                                     <KeyboardDoubleArrowLeftIcon sx={{ ml: '0.5rem' }} />
                                 </IconButton>

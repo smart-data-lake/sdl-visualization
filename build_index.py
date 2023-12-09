@@ -38,10 +38,10 @@ def getRuns(files):
             appVersion = find("appVersion", data) # ignore if not found
             status = getStatus(actionsState)
             runEndTime = getRunEndTime(data)
-            actions = { 
+            actions = {
                 key: {
                     "state": actionsState[key]["state"], 
-                    "dataObjects": [d.get("id") or d for d in actionsState[key].get("outputIds") or []] or [r["subFeed"]["dataObjectId"] for r in actionsState[key]["results"] or []]
+                    "dataObjects": [d if isinstance(d,str) else d.get("id") for d in actionsState[key].get("outputIds", [])] or [r["subFeed"]["dataObjectId"] for r in actionsState[key].get("results", [])]
                 } for key in actionsState
             }
 
