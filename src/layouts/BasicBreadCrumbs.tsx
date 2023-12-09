@@ -31,7 +31,8 @@ const BasicBreadcrumbs = () => {
             sx={{color: 'white'}}
         >
             {links.map((item, idx) => 
-                (idx === links.length ? <Link onClick={() => handleClick(item)} key={item} sx={{color: 'white'}}>getItem(item, idx == 0)</Link> : getItem(item, idx == 0))
+                // create link for elements except the last
+                (idx < links.length -1 ? <Link onClick={() => handleClick(item)} key={item} sx={{color: 'white'}}>{getItem(item, idx == 0)}</Link> : getItem(item, idx == 0))
             )}
         </Breadcrumbs>
     );
