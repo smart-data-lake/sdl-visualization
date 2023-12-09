@@ -113,7 +113,7 @@ function listConfigFiles(url: string, path: string): Promise<string[]> {
 function readConfigIndexFile(baseUrl: string): Promise<string[]> {
     const files = getUrlContent(baseUrl+"/index")
     .then(text => {
-        return text.split("\n").filter(x => x.length > 0);
+        return text.split("\n").map(x => x.trim()).filter(x => x.length > 0);
     });
     return files;
 }
