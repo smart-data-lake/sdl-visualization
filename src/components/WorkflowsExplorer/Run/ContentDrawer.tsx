@@ -52,14 +52,14 @@ const ContentSheet = (props: {action: Row}) => {
 const ContentDrawer = (props: {attempt: Attempt}) => {
     const { attempt } = props;
     const { stepName } = useParams();
-    const {data: manifest} = useManifest();
-    const {data: configData} = useConfig(manifest);
+    //const {data: manifest} = useManifest();
+    //const {data: configData} = useConfig(manifest);
     const navigate = useNavigate();
     const navigateRel = (subPath: string) => navigate(subPath, {relative: 'path'}); // this navigates Relative to path, not route
 
     const action : Row = getRow(attempt, stepName || 'err');
     
-    const isActionInConfig = () => (configData && configData.actions[action.step_name])
+    //const isActionInConfig = () => (configData && configData.actions[action.step_name])
 
     return ( 
         <Sheet sx={{ gap: '1rem', height: '100%' }}>

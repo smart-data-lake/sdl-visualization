@@ -44,8 +44,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
     const {tab, stepName} = useParams();
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'step_name', additionalFilters: []})
     const [timelinePhases, setTimelinePhases] = useState(['Exec', 'Init', 'Prepare']);
-    const currURL = useLocation().pathname;
-    
+
     const selData = useMemo(() => {
         if (data && data.length>0) {
 			var selected = data;
@@ -135,7 +134,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
                     <TabPanel className='actions-table-panel' value='table' sx={{p: '0px', width: '100%', height: '100%'}}>
                         <Sheet
                             sx={{ height: '100%', backgroundColor: stepName ? 'primary.main' : 'none', opacity: stepName ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
-                            <DataTable data={selData} columns={columns} navigator={(row) => `${currURL.split('table')[0]}table/${row.step_name}`} keyAttr='step_name'/>
+                            <DataTable data={selData} columns={columns} navigator={(row) => (stepName ? `../${row.step_name}` : `${row.step_name}`)} keyAttr='step_name'/>
                         </Sheet>
                     </TabPanel>
                 </>)}
@@ -181,7 +180,6 @@ const TabNav = (props: { attempt: Attempt }) => {
     }
 
     const graph: DAGraph = useMemo(() => {
-        console.log("attempt", attempt);
         return new Lineage(prepareGraph(attempt.timelineRows)).graph
     }, [attempt]);
 

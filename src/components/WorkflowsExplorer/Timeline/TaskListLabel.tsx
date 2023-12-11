@@ -9,8 +9,8 @@ import { colorByStatus } from '../../../util/WorkflowsExplorer/style';
 // Component
 //
 
-const TaskListLabel = (props: {item: Row, displayPhases: string[]}) => {
-  const { item, displayPhases } = props
+const TaskListLabel = (props: {item: Row, displayPhases: string[], link?: string}) => {
+  const { item, displayPhases, link } = props  
 
   const getTotalDuration = () => {
     let duration = 0;
@@ -36,17 +36,7 @@ const TaskListLabel = (props: {item: Row, displayPhases: string[]}) => {
 
   return (
     <RowLabel type={'task'} isOpen={false} group={false} status={item.status}>
-        <Link
-          to={
-            getPath.task(
-              item.flow_id,
-              item.run_number,
-              item.step_name,
-              item.task_id,
-            )
-          }
-          data-testid="tasklistlabel-link"
-        >
+        <Link to={link!} relative='path' data-testid="tasklistlabel-link">
           <RowLabelContent>
             <RowLabelTaskName
               data-testid="tasklistlabel-text"

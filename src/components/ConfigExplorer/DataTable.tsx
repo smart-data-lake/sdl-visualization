@@ -40,6 +40,7 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
   const { data, columns, keyAttr, treeGroupKeyAttr, navigator } = props;
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate();
+  const navigateRel = (subPath: string) => navigate(subPath, {relative: 'path'}); // this navigates Relative to path, not route
   const dataTable = useTable();
 
   if (data && data.length > 0 && loading) setLoading(false);
@@ -131,7 +132,7 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
           dataRow: {
             elementAttributes: () => ({
               onClick: (e, data) => {
-                if (navigator) navigate(navigator(data.childProps.rowData));
+                if (navigator) navigateRel(navigator(data.childProps.rowData));
               }
             })
           },
