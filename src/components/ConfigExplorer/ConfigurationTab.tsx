@@ -182,7 +182,8 @@ export default function ConfigurationTab(props: ElementProps) {
         <td style={{padding: '2px 5px'}}>{formatTimestamp(run.attemptStartTime)}</td>
         <td style={{padding: '2px 5px', width: 'auto'}}>
           <Link to={`/workflows/${run.name}/${run.runId}/${run.attemptId}/table`}>{getIcon(run.status, '0px', {display: 'block', margin: 'auto'})}</Link>
-        </td>        
+        </td>
+        <td style={{padding: '2px 5px'}}><Link to={`/workflows/${run.name}`}>{run.name}</Link></td>
       </tr>
     )
     return (    
