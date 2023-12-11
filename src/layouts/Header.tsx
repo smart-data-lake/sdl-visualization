@@ -1,9 +1,10 @@
-import {List, ListItem, Sheet, Tooltip, Typography } from '@mui/joy'
+import {Box, IconButton, List, ListItem, Sheet, Tooltip, Typography } from '@mui/joy'
 import BasicBreadcrumbs from './BasicBreadCrumbs';
 import { useEffect, useRef, useState } from 'react';
 import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
+import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
 
 
@@ -61,7 +62,25 @@ const Header = () => {
                         <BasicBreadcrumbs />
                     </ListItem>
                     <ListItem>
-                        {(user || showLogin) && <Authenticator variation='modal'>
+                        {(user || showLogin) && <Authenticator variation='modal' components={{Header: () => (
+                            <Box position="relative">
+                                <IconButton 
+                                    variant='soft' 
+                                    size='sm'
+                                    sx={{
+                                        backgroundColor: 'white',
+                                        mr: -4,
+                                        borderRadius: '50%',
+                                        position: 'absolute', 
+                                        right: 12, 
+                                        top: -18,
+                                        minWidth: '1.25rem',
+                                        minHeight: '1.25rem'}}
+                                    onClick={() => setShowLogin(false)}>
+                                    <CloseIcon sx={{fontSize: '12pt'}} />
+                                </IconButton>
+                            </Box>
+                        )}}>
                            {() => (
                             <>
                                 <Typography fontSize="inherit" sx={{color: 'white'}}>{user?.attributes?.email}</Typography>
