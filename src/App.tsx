@@ -48,18 +48,17 @@ export default function App() {
     }
   }, [manifest])
 
-  if (!manifest?.auth) {
-    return <></>
-  }
+  const MainContent = () => (
+    <CssVarsProvider>
+      <CssBaseline />
+      <RouterProvider router={router()}/>
+    </CssVarsProvider>
+  )
 
   return (
     <ThemeProvider theme={amplifyTheme}>
-      <Authenticator.Provider>
-        <CssVarsProvider>
-          <CssBaseline />
-          <RouterProvider router={router()}/>
-        </CssVarsProvider>
-      </Authenticator.Provider>
+      {!manifest?.auth && <MainContent />}
+      {manifest?.auth && <Authenticator.Provider><MainContent /></Authenticator.Provider>}
     </ThemeProvider>
   );
 }
