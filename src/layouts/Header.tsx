@@ -1,5 +1,7 @@
 import { List, ListItem, Sheet } from '@mui/joy'
 import BasicBreadcrumbs from './BasicBreadCrumbs';
+import { useManifest } from '../hooks/useManifest';
+import Authentication from './Authentication';
 
 /**
  * Header is the header of the application. It contains the SDL logo and the breadcrumbs.
@@ -7,6 +9,8 @@ import BasicBreadcrumbs from './BasicBreadCrumbs';
  */
 
 const Header = () => {
+    const {data: manifest} = useManifest();
+    
     return ( 
         <>
             <Sheet
@@ -34,8 +38,11 @@ const Header = () => {
                     <ListItem>
                         <img alt="SDLB UI logo" src="images/sdl_logo_old_plain_white.svg" height={20} />
                     </ListItem>
-                    <ListItem>
+                    <ListItem sx={{flexGrow: 1}}>
                         <BasicBreadcrumbs />
+                    </ListItem>
+                    <ListItem>
+                        {manifest?.auth && <Authentication />}
                     </ListItem>
                 </List>
             </Sheet>
