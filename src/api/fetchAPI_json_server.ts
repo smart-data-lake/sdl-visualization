@@ -25,5 +25,13 @@ export class fetchAPI_json_server implements fetchAPI {
         return fetch(`${this.url}/runs?attemptId=${args.attemptId}&appConfig.applicationName=${args.name}&runId=${args.runId}`)
         .then(res => res.json())
         .then(data => data[0])
-    };    
+    };  
+    
+    getUsers(tenant: string) {
+        return new Promise((r) => r([]));
+    };
+
+    addUser(tenant: string, email: string, access: string) {
+        return new Promise((r) => r({}));
+    }
 }

@@ -10,6 +10,7 @@ import { getIcon } from "../../util/WorkflowsExplorer/StatusInfo";
 import { formatTimestamp } from "../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../util/WorkflowsExplorer/format";
 import { getPropertyByPath } from "../../util/helpers";
+import { dataTableStyleProps } from "../Common/DatatableStyle";
 
 export function nestedPropertyRenderer(defaultValue: string, paddingRight: string = '0') {
     return (prop: any) => {
@@ -97,19 +98,7 @@ export default function DataTable(props: {data: any[], columns: any[], keyAttr: 
     if (loading) return (<CircularProgress/>);
 
     return (
-        <Box sx={{ flex: 1, minHeight: 0, width: '100%', height: '100%',
-        fontFamily: 'Roboto,Helvetica,Arial,sans-serif', fontWeight: '400', fontSize: '0.875rem', // defaults from MuiTypography-root
-        '& ka-table-wrapper': {overflow: 'auto'},
-        '& .ka-thead-cell-content, .ka-cell-text': {whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'},
-        '& .ka-row': { cursor: 'pointer', '&:hover': { backgroundColor: '#f0f0ef' }},
-        '& .ka-thead-background': { backgroundColor: 'white' },
-        '& .ka-thead-cell': { color: 'primary', zIndex: '99', fontWeight: '600', height: '25px', paddingTop: '7px', paddingBottom: '7px'},
-        '& .ka-cell, .ka-thead-cell': {paddingLeft: '7px', paddingRight: '7px'},
-        '& .ka-cell': {paddingTop: '4px', paddingBottom: '4px'},
-        '& .ka-cell-text': {height: '25px'},
-        '& .ka-thead-cell-resize': {left: '3px'},
-        '& .ka': {height: '100%', width: '100%'}
-        }}>
+        <Box sx={{ flex: 1, minHeight: 0, width: '100%', height: '100%', ...dataTableStyleProps}}>
             <Table
                 rowKeyField={keyAttr}
                 data={data}

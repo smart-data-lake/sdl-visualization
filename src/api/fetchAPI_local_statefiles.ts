@@ -10,6 +10,10 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     constructor(path: string) {
         if (path) this.statePath = path;
     }
+    
+    getUsers(tenant: string) {
+        return new Promise((r) => r([]));
+    };
 
     // cache index for reuse in getRun
     _index: Promise<any[]> | undefined;
@@ -93,5 +97,9 @@ export class fetchAPI_local_statefiles implements fetchAPI {
             return fetch(this.statePath + '/' + val.path)
                     .then(res => res.json())
         })        
-    };    
+    };
+    
+    addUser(tenant: string, email: string, access: string) {
+        return new Promise((r) => r({}));
+    }
 }

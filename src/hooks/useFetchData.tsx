@@ -1,4 +1,4 @@
-import { useQuery } from "react-query";
+import { useMutation, useQuery } from "react-query";
 import { getConfiguredFetcher } from "../api/Fetcher";
 import { fetchAPI } from "../api/fetchAPI";
 
@@ -22,6 +22,14 @@ export const useFetchWorkflowRuns = (workflow: string) => {
 
 export const useFetchRun = (name: string, runId: number, attemptId: number) => {
     return useQuery({queryKey: ['run',name,runId,attemptId], queryFn: () => fetcher().getRun({name, runId, attemptId}), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
+}
+
+export const useFetchUsers = (tenant: string) => {
+    return useQuery({queryKey: ['users', tenant], queryFn: () => fetcher().getUsers(tenant)})
+}
+
+export const useAddUser = () => {
+    return useMutation(({tenant, email, access}: any) => fetcher().addUser(tenant,email,access));
 }
 
 export default useFetchWorkflows;

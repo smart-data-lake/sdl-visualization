@@ -14,6 +14,7 @@ import { Authenticator, ThemeProvider } from '@aws-amplify/ui-react';
 import { useEffect } from 'react';
 import { Amplify, Auth } from 'aws-amplify';
 import { amplifyTheme } from './theme';
+import Setting from './components/Settings/Setting';
 
 /**
  * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
@@ -34,6 +35,7 @@ export default function App() {
         <Route path='workflows/:flowId/:runNumber/:taskId/:tab/:stepName' element={<Run panelOpen={true}/>}/>
         <Route path='workflows/*' element={<NotFound/>}/>
         <Route path='config/*' element={<ConfigExplorer configData={configData}/>}/>
+        <Route path='settings/*' element={<Setting />}/>
       </Route>
     </Routes>
   )

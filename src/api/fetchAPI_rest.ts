@@ -25,12 +25,12 @@ export class fetchAPI_rest implements fetchAPI {
             );
     }
 
-    private async getRequestInfo(): Promise<RequestInit> {
+    private async getRequestInfo(method: string = 'GET', headers?: any): Promise<RequestInit> {
         try {
             const currentUserSession = await Auth.currentSession();
-            return { mode: "cors", headers: {'Authorization': currentUserSession.getIdToken().getJwtToken()}}
+            return { mode: "cors", method, headers: {'Authorization': currentUserSession.getIdToken().getJwtToken(), ...headers}}
         } catch {
-            return { mode: "cors" };
+            return { mode: "cors", method, headers};
         }
     }
 
@@ -49,4 +49,15 @@ export class fetchAPI_rest implements fetchAPI {
         return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, await this.getRequestInfo())
         .then((res) => res.json());
     };
+
+    getUsers = async (tenant: string) => {
+        return fetch(`${this.url}/users/${tenant}`, await this.getRequestInfo())
+        .then((res) => res.json());
+    }
+
+    addUser = async (tenant: string, email: string, access: string) => {
+        const requestInfo = await this.getRequestInfo('POST', {'Content-Type': 'application/json'});
+        requestInfo.body = JSON.stringify({email, access});
+        return fetch(`${this.url}/users/${tenant}`, requestInfo)
+    }
 }

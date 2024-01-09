@@ -1,6 +1,7 @@
 import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
 import { Box, IconButton, Tooltip, Typography } from "@mui/joy";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SettingsIcon from "@mui/icons-material/Settings";
 import LoginIcon from "@mui/icons-material/Login";
 import CloseIcon from "@mui/icons-material/Close";
 import { useEffect, useRef, useState } from "react";
@@ -27,6 +28,10 @@ export default function Authentication() {
   const logout = () => {
     setShowLogin(false);
     signOut();
+  };
+
+  const goToSetting = () => {
+    navigate("settings/users");
   };
 
   return (
@@ -67,6 +72,12 @@ export default function Authentication() {
                 <LogoutIcon
                   sx={{ color: "white", cursor: "pointer", ml: 2 }}
                   onClick={() => logout()}
+                />
+              </Tooltip>
+              <Tooltip title="Settings">
+                <SettingsIcon
+                  sx={{ color: "white", cursor: "pointer", ml: 2 }}
+                  onClick={() => goToSetting()}
                 />
               </Tooltip>
             </>
