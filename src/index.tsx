@@ -3,6 +3,7 @@ import App from "./App";
 import * as ReactDOMClient from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "react-query";
 import "@aws-amplify/ui-react/styles.css";
+import { TenantProvider } from "./hooks/TenantProvider";
 
 // react 17
 // import { render } from "react-dom";
@@ -25,8 +26,10 @@ const queryClient = new QueryClient({
 });
 root.render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <TenantProvider>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </TenantProvider>
   </StrictMode>
 );

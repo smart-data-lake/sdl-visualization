@@ -26,7 +26,7 @@ const columns: Column[] = [
 ];
 
 export default function Users() {
-  const { data } = useFetchUsers("PrivateTenant");
+  const { data } = useFetchUsers();
   const [modalOpened, setModalOpened] = useState(false);
 
   return (

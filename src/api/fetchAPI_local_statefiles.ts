@@ -57,7 +57,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         }, {});
     }
 
-    getWorkflows = async () => {
+    getWorkflows = async (tenant: string) => {
         return this.getIndex()
         .then(data => {
             const workflows = this.groupByWorkflowName(data);
@@ -78,7 +78,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     };
     
     
-    getWorkflowRuns = async (name: string) => {
+    getWorkflowRuns = async (tenant: string, name: string) => {
         return this.getIndex()
         .then(data => {
             const runs = data
@@ -89,7 +89,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     };
 
     
-    getRun = async (args: {name: string, runId: number, attemptId: number}) => {            
+    getRun = async (args: {tenant: string, name: string, runId: number, attemptId: number}) => {            
         return this.reuseIndex()
         .then(data => data.filter(run => (run.name === args.name && run.runId === args.runId && run.attemptId === args.attemptId))[0])
         .then(val => { 
@@ -101,5 +101,9 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     
     addUser(tenant: string, email: string, access: string) {
         return new Promise((r) => r({}));
+    }
+
+    getTenants() {
+        return new Promise<string[]>(r => r([]))
     }
 }

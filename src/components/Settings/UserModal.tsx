@@ -32,7 +32,6 @@ export default function UserModal({ open, onClose }) {
             const formData = new FormData(event.currentTarget);
             const formJson = Object.fromEntries((formData as any).entries());
             await addUserMutation.mutateAsync({
-              tenant: "PrivateTenant",
               ...formJson,
             });
             queryClient.invalidateQueries(["users", "PrivateTenant"]);

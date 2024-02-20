@@ -1,11 +1,53 @@
 import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
-import { Box, IconButton, Tooltip, Typography } from "@mui/joy";
+import {
+  Box,
+  Dropdown,
+  Grid,
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuItem,
+  Tooltip,
+  Typography,
+} from "@mui/joy";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LoginIcon from "@mui/icons-material/Login";
 import CloseIcon from "@mui/icons-material/Close";
+import PersonIcon from "@mui/icons-material/AccountCircleRounded";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTenant } from "../hooks/TenantProvider";
+import { useFetchTenants } from "../hooks/useFetchData";
+
+function TenantSelector() {
+  const { tenant, setTenant } = useTenant();
+  const { data: tenants = [] } = useFetchTenants();
+
+  return (
+    <Dropdown>
+      <MenuButton
+        sx={{ display: "flex" }}
+        slots={{
+          root: Box,
+        }}
+      >
+        <Typography
+          fontSize="inherit"
+          sx={{ color: "white", cursor: "pointer" }}
+        >
+          {tenant}
+        </Typography>
+      </MenuButton>
+
+      <Menu sx={{ padding: 2 }} size="sm">
+        {tenants.map((x) => (
+          <MenuItem onClick={() => setTenant(x)}>{x}</MenuItem>
+        ))}
+      </Menu>
+    </Dropdown>
+  );
+}
 
 export default function Authentication() {
   const { user, signOut, authStatus } = useAuthenticator();
@@ -29,6 +71,8 @@ export default function Authentication() {
     setShowLogin(false);
     signOut();
   };
+
+  const { tenant, setTenant } = useTenant();
 
   const goToSetting = () => {
     navigate("settings/users");
@@ -65,21 +109,42 @@ export default function Authentication() {
         >
           {() => (
             <>
-              <Typography fontSize="inherit" sx={{ color: "white" }}>
-                {user?.attributes?.email}
-              </Typography>
-              <Tooltip title="Sign out">
-                <LogoutIcon
-                  sx={{ color: "white", cursor: "pointer", ml: 2 }}
-                  onClick={() => logout()}
-                />
-              </Tooltip>
+              <TenantSelector />
               <Tooltip title="Settings">
                 <SettingsIcon
                   sx={{ color: "white", cursor: "pointer", ml: 2 }}
                   onClick={() => goToSetting()}
                 />
               </Tooltip>
+              <Dropdown>
+                <MenuButton
+                  sx={{ display: "flex" }}
+                  slots={{
+                    root: Box,
+                  }}
+                >
+                  <PersonIcon
+                    sx={{ color: "white", cursor: "pointer", ml: 2 }}
+                  />
+                </MenuButton>
+
+                <Menu sx={{ padding: 2 }} size="sm">
+                  <Typography fontSize="inherit" sx={{ marginBottom: 2 }}>
+                    {user?.attributes?.email}
+                  </Typography>
+                  <MenuItem onClick={logout}>
+                    <Box
+                      display="flex"
+                      width={1}
+                      alignItems="center"
+                      justifyContent="end"
+                    >
+                      Logout
+                      <LogoutIcon sx={{ cursor: "pointer", ml: 1 }} />
+                    </Box>
+                  </MenuItem>
+                </Menu>
+              </Dropdown>
             </>
           )}
         </Authenticator>

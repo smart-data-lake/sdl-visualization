@@ -34,19 +34,19 @@ export class fetchAPI_rest implements fetchAPI {
         }
     }
 
-    getWorkflows = () => {
-        return this.fetch(`${this.url}/workflows`)
+    getWorkflows = (tenant: string) => {
+        return this.fetch(`${this.url}/workflows?tenantName=${tenant}`)
             .catch(() => {
                 return [];
             });
     };  
 
-    getWorkflowRuns = (name: string) => {
-        return this.fetch(`${this.url}/workflow?name=${name}`);
+    getWorkflowRuns = (tenant: string, name: string) => {
+        return this.fetch(`${this.url}/workflow?name=${name}&tenantName=${tenant}`);
     };
 
-    getRun = async (args: { name: string; runId: number; attemptId: number }) => {
-        return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, await this.getRequestInfo())
+    getRun = async (args: { tenant: string, name: string; runId: number; attemptId: number }) => {
+        return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}&tenantName=${args.tenant}`, await this.getRequestInfo())
         .then((res) => res.json());
     };
 
@@ -59,5 +59,10 @@ export class fetchAPI_rest implements fetchAPI {
         const requestInfo = await this.getRequestInfo('POST', {'Content-Type': 'application/json'});
         requestInfo.body = JSON.stringify({email, access});
         return fetch(`${this.url}/users/${tenant}`, requestInfo)
+    }
+
+    async getTenants() {
+        return fetch(`${this.url}/tenants`, await this.getRequestInfo())
+        .then((res) => res.json());
     }
 }
