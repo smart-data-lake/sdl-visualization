@@ -70,14 +70,11 @@ def getRuns(files):
 
 def getStatus(actionsState):
     """Get the status of a state file."""
-    curr = "SUCCEEDED"
+    prio = ["FAILED", "CANCELLED", "RUNNING", "SUCCEEDED", "SKIPPED", "STARTED", "INITIALIZED", "PREPARED"]
+    minIdx = len(prio) -1
     for action in actionsState.values():
-        if action["state"] == "CANCELLED":
-            curr = "CANCELLED"
-        elif action["state"] == "FAILED":
-            curr = "FAILED"
-            
-    return curr
+        minIdx = min(minIdx, prio.index(action["state"]))            
+    return prio[minIdx]
 
 def getRunEndTime(stateFile):
     """Get the end time of a state file."""
