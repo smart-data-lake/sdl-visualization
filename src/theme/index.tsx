@@ -1,5 +1,8 @@
 import { DefaultTheme } from 'styled-components';
 import { rgba } from 'polished';
+import {
+  Theme,
+} from '@aws-amplify/ui-react';
 
 const spacer = {
   xs: 0.25,
@@ -158,5 +161,22 @@ const defaultTheme: DefaultTheme = {
 
   border,
 };
+
+export const amplifyTheme: Theme = {
+  name: "SDL",
+  tokens: {
+    colors: {
+      brand: {
+        primary: {
+          "10": "#e6eef7",
+          "20": "#dbeaf9",
+          "80": brandColor.blue,
+          "90": "#0b488f",
+          "100": brandColor.blue,
+        }
+      }
+    }
+  },
+}
 
 export default defaultTheme;

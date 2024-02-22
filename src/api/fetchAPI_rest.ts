@@ -1,3 +1,4 @@
+import { Auth } from "aws-amplify";
 import { fetchAPI } from "./fetchAPI";
 
 export class fetchAPI_rest implements fetchAPI {
@@ -7,8 +8,8 @@ export class fetchAPI_rest implements fetchAPI {
         this.url = url;
     }
 
-    private fetch(url: string) {
-        return fetch(url, { mode: "cors" })
+    private async fetch(url: string) {
+        return fetch(url, await this.getRequestInfo())
             .then((res) => res.json())
             .then((runs) =>
             runs.map((run) => {
@@ -24,9 +25,20 @@ export class fetchAPI_rest implements fetchAPI {
             );
     }
 
+    private async getRequestInfo(): Promise<RequestInit> {
+        try {
+            const currentUserSession = await Auth.currentSession();
+            return { mode: "cors", headers: {'Authorization': currentUserSession.getIdToken().getJwtToken()}}
+        } catch {
+            return { mode: "cors" };
+        }
+    }
+
     getWorkflows = () => {
         return this.fetch(`${this.url}/workflows`)
-            .catch((err) => console.log("Unexpected Server error: ", err));
+            .catch(() => {
+                return [];
+            });
     };  
 
     getWorkflowRuns = (name: string) => {
@@ -43,8 +55,8 @@ export class fetchAPI_rest implements fetchAPI {
         return Promise.resolve([])
     };        
     
-    getRun = (args: { name: string; runId: number; attemptId: number }) => {
-        return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, { mode: "cors" })
+    getRun = async (args: { name: string; runId: number; attemptId: number }) => {
+        return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, await this.getRequestInfo())
         .then((res) => res.json());
     };
 

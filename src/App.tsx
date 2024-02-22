@@ -10,6 +10,10 @@ import { useConfig } from './hooks/useConfig';
 import { useManifest } from './hooks/useManifest';
 import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
+import { Authenticator, ThemeProvider } from '@aws-amplify/ui-react';
+import { useEffect } from 'react';
+import { Amplify, Auth } from 'aws-amplify';
+import { amplifyTheme } from './theme';
 
 /**
  * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
@@ -37,12 +41,23 @@ export default function App() {
     { path: "*", Component: root },    
   ])
 
+  useEffect(() => {
+    if(manifest?.auth) {
+      Amplify.configure(manifest?.auth);
+    }
+  }, [manifest])
+
+  const MainContent = () => (
+    <CssVarsProvider>
+      <CssBaseline />
+      <RouterProvider router={router()}/>
+    </CssVarsProvider>
+  )
+
   return (
-    <>
-      <CssVarsProvider>
-        <CssBaseline />
-        <RouterProvider router={router()}/>
-      </CssVarsProvider>
-    </>
+    <ThemeProvider theme={amplifyTheme}>
+      {!manifest?.auth && <MainContent />}
+      {manifest?.auth && <Authenticator.Provider><MainContent /></Authenticator.Provider>}
+    </ThemeProvider>
   );
 }

@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import App from "./App";
 import * as ReactDOMClient from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "react-query";
-import { ReactQueryDevtools } from 'react-query/devtools'
+import "@aws-amplify/ui-react/styles.css";
 
 // react 17
 // import { render } from "react-dom";
