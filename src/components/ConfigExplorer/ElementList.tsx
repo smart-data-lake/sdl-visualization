@@ -134,7 +134,7 @@ export default function ElementList(props: ElementListProps) {
   ]
 
   function createElementList(id: string, listDef: {elementIcon: any, elements: any[]}) {
-    return listDef.elements
+    return listDef.elements.filter(x => x) // remove possibly undefined entries (dont know where they coming from...)
       .map((obj,i) => {
         const color = primaryColorIfSelected(id, obj.id)
         return (
@@ -208,7 +208,7 @@ export default function ElementList(props: ElementListProps) {
           <>
             <Divider orientation="vertical" />
             <Select size="sm" variant="plain" value={elementSearchType} required
-              onChange={(e,value) => setElementSearchType(value!)}
+              onChange={(e,value) => {setElementSearchText('');setElementSearchType(value!)}}
               renderValue={renderSearchType}
             >
               <Option key="id" value="id">{getSearchTypeElement('id')}</Option>
