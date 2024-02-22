@@ -55,7 +55,7 @@ export function randomAction(runStartTime : Date) {
                 isSkipped : true,
                 isDummy : true,
             } : undefined,
-            mainMetrics : state === 'SUCCEEDED' ? {
+            metrics : state === 'SUCCEEDED' ? {
                 stage : uniqueNamesGenerator({ dictionaries: [starWars] }),
                 num_tasks : Math.round(Math.random()),
                 records_written : Math.round(Math.random()*1000000),

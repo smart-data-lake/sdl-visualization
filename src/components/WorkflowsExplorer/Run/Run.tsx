@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useFetchRun } from "../../../hooks/useFetchData";
 import NotFound from "../../../layouts/NotFound";
 import PageHeader from "../../../layouts/PageHeader";
-import Attempt from "../../../util/WorkflowsExplorer/Attempt";
+import Attempt, { updateStateFile } from "../../../util/WorkflowsExplorer/Attempt";
 import TabNav from "./Tabs";
 
 /**
@@ -14,13 +14,13 @@ import TabNav from "./Tabs";
     @param {boolean} props.panelOpen - Indicates whether the details panel is open or not.
     @returns {JSX.Element} - The Run component UI.
 */
-const Run = (props : {panelOpen?: boolean}) => {
+const Run = () => {
     const {flowId, runNumber, taskId} = useParams();
     const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
 
     if (isLoading || isFetching || !data) return <CircularProgress/>
     
-    const attempt = data.detail ? undefined : new Attempt(data);
+    const attempt = data.detail ? undefined : new Attempt(updateStateFile(data));
     if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
 
     return (
@@ -28,9 +28,8 @@ const Run = (props : {panelOpen?: boolean}) => {
 			{data ? (
 				(!data.detail && attempt) ? (
                 <>
-                    <PageHeader title= {attempt.runInfo.workflowName + ': run ' + attempt.runInfo.runId + ' attempt ' + attempt.runInfo.attemptId} refresh={refetch} />
-                    {/* <RunDetails attempt={attempt}/> */}
-                    <TabNav attempt={attempt} panelOpen={props.panelOpen}/>
+                    <PageHeader title= {attempt.appName + ': run ' + attempt.runId + ' attempt ' + attempt.attemptId} refresh={refetch} />
+                    <TabNav attempt={attempt}/>
                 </>
                 ): <NotFound errorType={500}/>
             ): <NotFound/>

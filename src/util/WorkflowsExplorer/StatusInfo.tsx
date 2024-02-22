@@ -6,7 +6,7 @@ import { Tooltip } from '@mui/joy';
 import React from 'react';
 import { getStatusColor } from '../../components/WorkflowsExplorer/Timeline/TimelineRow/utils';
 
-export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
+export const getIcon = (status: string, marginLeft: string = '0.5rem', additionalStyle: object = {} ) => {
     const color = getStatusColor(status);
     const statusIconMap = {
         'SUCCEEDED': CheckCircleOutlineIcon,
@@ -18,7 +18,7 @@ export const getIcon = (status: string, marginLeft: string = '0.5rem') => {
         'CANCELLED': BlockOutlined
     };
     const iconName = (status ? statusIconMap[status.toUpperCase()] : HelpOutlineIcon) || HelpOutlineIcon;
-    const iconComponent = React.createElement(iconName, {sx: { color: color, scale: '80%', ml: marginLeft, zIndex: 0 }});
+    const iconComponent = React.createElement(iconName, {sx: { color: color, scale: '80%', ml: marginLeft, zIndex: 0, ...additionalStyle }});
     return (
         <Tooltip arrow title={status} enterDelay={500} enterNextDelay={500}>
             {iconComponent}

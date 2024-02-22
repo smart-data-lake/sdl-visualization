@@ -24,7 +24,7 @@ function getConfig(manifest:Manifest): () => Promise<ConfigData> {
       return listConfigFiles(configUrl, "/")
       .catch(err => {
         // b2) read config file list from static index.json
-        console.log("Could not list files in URL "+configUrl+", will try reading index.json. ("+err+")");
+        console.log("Could not list files in URL "+configUrl+", will try reading index file. ("+err+")");
         return readConfigIndexFile(configUrl);
       })
       .then(files => {

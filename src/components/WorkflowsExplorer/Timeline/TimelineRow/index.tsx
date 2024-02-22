@@ -1,8 +1,7 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import styled, { css } from 'styled-components';
 import { AsyncStatus, Row } from '../../../../types';
-import { getPathFor } from '../../../../util/WorkflowsExplorer/routing';
 import TaskListLabel from '../TaskListLabel';
 import { TimelineMetrics } from '../Timeline';
 import LineElement, { BoxGraphicValue } from './LineElement';
@@ -39,11 +38,14 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
 
 	const { groupingEnabled, ...lineElementMetrics } = timeline;
 
+    const {stepName} = useParams();
+	const link = stepName ? `../${item.step_name}` : item.step_name;
+
 	return (
 		<>
 			<Element>
-				<TaskListLabel item={item} displayPhases={displayPhases}/>
-				<RowElement item={item} paramsString={paramsString} onOpen={onOpen}>
+				<TaskListLabel item={item} displayPhases={displayPhases} link={link}/>
+				<RowElement item={item} paramsString={paramsString} onOpen={onOpen} link={link}>
 						<LineElement
 							key={item.finished_at}
 							timeline={lineElementMetrics}
@@ -65,13 +67,10 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
 	);
 };
 
-const RowElement = (props: React.PropsWithChildren<{ item: Row; onOpen: () => void; paramsString?: string }>) => {
-	const { item } = props;  
+const RowElement = (props: React.PropsWithChildren<{ item: Row; onOpen: () => void; paramsString?: string, link?: string }>) => {
+	const { item, link } = props;  
 	return (
-			<RowGraphLinkContainer
-				to={`${getPathFor.task(item)}`}
-				data-testid="timeline-row-graphic-container"
-			>
+			<RowGraphLinkContainer to={link!} relative='path' data-testid="timeline-row-graphic-container">
 				{props.children}
 			</RowGraphLinkContainer>
 		);

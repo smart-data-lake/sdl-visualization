@@ -1,22 +1,5 @@
 import { durationMillis } from "./util/WorkflowsExplorer/date";
 
-export type AttemptConfig = {
-    name: string;
-    runId : number;
-    attemptId : number;
-    runStartTime : Date;
-    attemptStartTime : Date;  
-};
-
-export type AttemptType = {
-    stateFile: StateFile; 
-    name: string;
-    runId: number;
-    runStartTime: string; 
-    rows: Row[];
-    run: Run;
-}
-
 export interface MetaDataBaseObject {
     flow_id: string;
     user_name: string;
@@ -38,7 +21,6 @@ export interface RunInfo {
 }   
 
 
-
 export type SortType = 'start time asc' | 'start time desc' | 'duration asc' | 'duration desc'
 
 export class Row implements MetaDataBaseObject {
@@ -57,10 +39,8 @@ export class Row implements MetaDataBaseObject {
     started_at: number;
     finished_at: number;
     duration: number;
-    metadata: Metadata;
     message: string;
     tags?: string[] | undefined;
-    run_id?: string;
     task_name?: string;
     foreach_label?: string;
     endTstmp?: number;
@@ -68,31 +48,28 @@ export class Row implements MetaDataBaseObject {
     endTstmpPrepare?: number;
     startTstmpInit? : number;
     endTstmpInit?: number;
-    inputIds?: {id: string}[];
-    outputIds?: {id: string}[];
+    details: Action;
    
-    constructor({ properties }: { properties: TaskProperty; }) {
-      this.flow_id = properties.runInfo.workflowName;
-      this.step_name = properties.actionName;
-      this.run_number = properties.action.executionId.runId;
-      this.attempt_id = properties.action.executionId.attemptId;
-      this.ts_epoch = new Date(properties.action.startTstmp).getTime();
-      this.status = properties.action.state as TaskStatus;
+    constructor(appName: string, action: Action, actionName: string) {
+      this.flow_id = appName;
+      this.step_name = actionName;
+      this.run_number = action.executionId.runId;
+      this.attempt_id = action.executionId.attemptId;
+      this.task_id = 1;
+      this.ts_epoch = new Date(action.startTstmp).getTime();
+      this.status = action.state as TaskStatus;
       this.started_at = this.ts_epoch;
-      this.duration = durationMillis(properties.action.duration === 'PT0S' ? 'PT0.001S' : properties.action.duration);
+      this.duration = durationMillis(action.duration === 'PT0S' ? 'PT0.001S' : action.duration);
       this.finished_at = this.started_at + (this.duration === 0 ? 1 : this.duration);
-      this.metadata = properties.action.results;
-      this.task_id = properties.runInfo.attemptId;
       this.user_name = '';
       this.system_tags = [];
-      this.message = properties.action.msg;
-      this.endTstmp = properties.action.endTstmp ? new Date(properties.action.endTstmp).getTime() : undefined;
-      this.startTstmpPrepare = properties.action.startTstmpPrepare ? new Date(properties.action.startTstmpPrepare).getTime() : undefined;
-      this.endTstmpPrepare = properties.action.endTstmpPrepare ? new Date(properties.action.endTstmpPrepare).getTime() : undefined;
-      this.startTstmpInit = properties.action.startTstmpInit ? new Date(properties.action.startTstmpInit).getTime() : undefined;
-      this.endTstmpInit = properties.action.endTstmpInit ? new Date(properties.action.endTstmpInit).getTime() : undefined;
-      this.inputIds = properties.action.inputIds;
-      this.outputIds = properties.action.outputIds;
+      this.message = action.msg;
+      this.endTstmp = action.endTstmp ? new Date(action.endTstmp).getTime() : undefined;
+      this.startTstmpPrepare = action.startTstmpPrepare ? new Date(action.startTstmpPrepare).getTime() : undefined;
+      this.endTstmpPrepare = action.endTstmpPrepare ? new Date(action.endTstmpPrepare).getTime() : undefined;
+      this.startTstmpInit = action.startTstmpInit ? new Date(action.startTstmpInit).getTime() : undefined;
+      this.endTstmpInit = action.endTstmpInit ? new Date(action.endTstmpInit).getTime() : undefined;
+      this.details = action;
     }
 
     /**
@@ -117,27 +94,7 @@ export class Row implements MetaDataBaseObject {
   
   
   export type TaskStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'SKIPPED' | 'PREPARED' | 'INITIALIZED';
-  
-  export interface TaskProperty {
-    runInfo: RunInfo,
-    action: Action,  
-    actionName: string;
-  }
-  
-  export type RunParams = {
-    appConfig : {
-      feedSel : string,
-      applicationName : string,
-      configuration : string,
-      parallelism : number,
-      statePath : string,
-      streaming : boolean
-    },
-    runId : number,
-    attemptId : number,
-    runStartTime : string,
-    attemptStartTime : string,
-  }
+
   export type StateFile = {
     appConfig : {
       feedSel : string,
@@ -169,26 +126,24 @@ export class Row implements MetaDataBaseObject {
     startTstmp : string,
     duration: string,
     msg: string,
-    results: Metadata,
+    results: Results,
     actionFinishTime?: number,
     endTstmp?: string,
     startTstmpPrepare? : string,
     endTstmpPrepare?: string,
     startTstmpInit? : string,
     endTstmpInit?: string,
-    inputIds?: {id: string}[],
-    outputIds?: {id: string}[],
+    inputIds?: string[],
+    outputIds?: string[],
   }
-  export type Metadata = [{
-    subFeed?: {
-      type?: string,
-      dataObjectId?: string,
-      partitionValues?: any[],
-      isSkipped?: boolean,
-      isDAGStart?: boolean,
-      isDummy?: boolean,
-    },
-    mainMetrics?: {
+  export type Results = [{
+    type: string,
+    dataObjectId: string,
+    partitionValues: any[],
+    isSkipped?: boolean,
+    isDAGStart?: boolean,
+    isDummy?: boolean,
+    metrics?: {
       stage?: string,
       count?: number, 
       num_tasks?: number,
@@ -216,15 +171,7 @@ export class Row implements MetaDataBaseObject {
     run_id?: string;
     duration?: number;
   }
-  
-  export interface _Step extends MetaDataBaseObject {
-    run_number: number;
-    run_id?: string;
-    step_name: string;
-    finished_at?: number;
-    duration?: number;
-  }
-  
+
   export class Step implements MetaDataBaseObject {
     run_number: number;
     run_id?: string;
@@ -248,19 +195,7 @@ export class Row implements MetaDataBaseObject {
       this.system_tags = [];
     }
   }
-  
-  export interface RunParam {
-    [key: string]: {
-      value: string;
-    };
-  }
-  
-  export interface Log {
-    row: number;
-    line: string;
-    timestamp?: number;
-  }
-  
+
   export type QueryParam = string | null;
   
   export type AsyncStatus = 'NotAsked' | 'Ok' | 'Error' | 'Loading';

@@ -13,7 +13,7 @@ const TimelineComponent: React.FC<TimelineComponentProps> = ({attempt}) => {
     return (
         <ThemeProvider theme={theme}>
         <GlobalStyle />
-            <VirtualizedTimeline run={attempt.run} rows={attempt.rows} displayPhases={[]}/>
+            <VirtualizedTimeline run={attempt.timelineRun} rows={attempt.timelineRows} displayPhases={[]}/>
         </ThemeProvider>
     );
 };

@@ -1,7 +1,7 @@
 import { CircularProgress, Sheet } from "@mui/joy";
 import { SortDirection } from "ka-table";
 import { useMemo, useState } from "react";
-import useFetchWorkflows from "../../hooks/useFetchData";
+import useFetchWorkflows, { fetcher } from "../../hooks/useFetchData";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
 import { checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
@@ -34,6 +34,11 @@ export default function Workflows() {
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {
 		setFilterParams({...filterParams, ...partialFilter})
 	}
+
+	function refreshData() {
+		fetcher().clearCache();
+		refetch();
+	}    
 
     const columns = [{
         title: 'Name',
@@ -73,7 +78,7 @@ export default function Workflows() {
         <>
             {data ? (
                 <Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>
-                    <PageHeader title={'Workflows'} noBack={true} refresh={refetch}/>
+                    <PageHeader title={'Workflows'} noBack={true} refresh={refreshData}/>
                     <ToolBar 
                         data={data} 
                         filterParams={filterParams}

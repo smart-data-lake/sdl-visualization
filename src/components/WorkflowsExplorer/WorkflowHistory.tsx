@@ -3,7 +3,7 @@ import { Box, CircularProgress, IconButton, Sheet, Tooltip, Typography } from "@
 import { SortDirection } from 'ka-table';
 import { useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { useFetchWorkflowRuns } from "../../hooks/useFetchData";
+import { fetcher, useFetchWorkflowRuns } from "../../hooks/useFetchData";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
 import { Filter, checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
@@ -65,6 +65,11 @@ export default function WorkflowHistory() {
 
 	function feedSelLinkRenderer(prop: any) {
 		return createFeedChip(prop.value, 'actions', 'sm', {mt: -1});
+	}
+
+	function refreshData() {
+		fetcher().clearCache();
+		refetch();
 	}
 
 	if (isLoading || isFetching) {
@@ -141,7 +146,7 @@ export default function WorkflowHistory() {
 		{!data || isLoading || isFetching ? <CircularProgress/> : null}
 		{data ? (
 			<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '5px 15px', gap: '15px', width: '100%', height: '100%' }}>
-				<PageHeader title={flowId!} refresh={refetch} />    
+				<PageHeader title={flowId!} refresh={refreshData} />    
 				<Sheet>
 					<Sheet sx={{display: 'flex', width: '100%', pb: '0.5rem', gap: '1rem'}}>
 						<Tooltip variant="solid" placement="right" title="This chart displays the runs in the current page. You can select a range or jump to a detailed run view by clicking on the corresponding bar.">
