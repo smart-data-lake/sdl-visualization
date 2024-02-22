@@ -111,7 +111,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     // get origin from data if it exists, add it to title
     if (rawData['_origin']) {      
       const relativePath = rawData._origin.path.split('config/').pop(); // pop = take last element
-      const sourceUrl = manifest?.configSourceUrl ? manifest.configSourceUrl.replace("{filename}", relativePath).replace('{lineNumber}', rawData.origin.lineNumber) : undefined;
+      const sourceUrl = manifest?.configSourceUrl ? manifest.configSourceUrl.replace("{filename}", relativePath).replace('{lineNumber}', rawData._origin.lineNumber) : undefined;
       const linkName = `${relativePath}:${rawData._origin.lineNumber}`
       title = (sourceUrl ? (<><span>{title} - </span><Link href={sourceUrl} target="_blank" onClick={(e) => e.stopPropagation()}>{linkName}</Link><span style={{flex: 1}}/></>) : title + ' - ' + linkName);      
     }
