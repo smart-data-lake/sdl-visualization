@@ -134,7 +134,7 @@ export default function ElementList(props: ElementListProps) {
   ]
 
   function createElementList(id: string, listDef: {elementIcon: any, elements: any[]}) {
-    return listDef.elements
+    return listDef.elements.filter(x => x) // remove possibly undefined entries (dont know where they coming from...)
       .map((obj,i) => {
         const color = primaryColorIfSelected(id, obj.id)
         return (
@@ -156,7 +156,7 @@ export default function ElementList(props: ElementListProps) {
       if (listDef.elementList) listDef.elementList!.setExpanded(!listDef.elementList!.expanded)
       else navigate(`/config/${listDef.id}`)
     }
-    return (<>
+    return (<Box key={listDef.id}>
       <ListItemButton color={color} key={listDef.id} onClick={expandClick} sx={{ pl: '0px', pr: '0px', pb: '0px', minHeight: '25px', color: primaryColorIfSelected(listDef.id) }} disabled={isDisabled}>
         <ListItemDecorator sx={{ minWidth: '27px'}}>
           {React.createElement(listDef.sectionIcon, {onClick: handleClickNavigate(`/config/${listDef.id}`)})}
@@ -165,11 +165,11 @@ export default function ElementList(props: ElementListProps) {
         {!isEmpty && (listDef.elementList!.expanded ? <ExpandLess /> : <ExpandMore />)}
       </ListItemButton>
       {!isEmpty && listDef.elementList!.expanded &&  (
-        <List size='sm'>
+        <List key={listDef.id+".list"} size='sm'>
           {createElementList(listDef.id, listDef.elementList!)}
         </List>
       )}
-    </>)
+    </Box>)
   }
 
   function getSearchTypeElement(value: string) {
@@ -208,15 +208,15 @@ export default function ElementList(props: ElementListProps) {
           <>
             <Divider orientation="vertical" />
             <Select size="sm" variant="plain" value={elementSearchType} required
-              onChange={(e,value) => setElementSearchType(value!)}
+              onChange={(e,value) => {setElementSearchText('');setElementSearchType(value!)}}
               renderValue={renderSearchType}
             >
-              <Option value="id">{getSearchTypeElement('id')}</Option>
-              <Option value="property">{getSearchTypeElement('property')}</Option>
-              <Option value="feedSel">{getSearchTypeElement('feedSel')}</Option>
+              <Option key="id" value="id">{getSearchTypeElement('id')}</Option>
+              <Option key="property" value="property">{getSearchTypeElement('property')}</Option>
+              <Option key="feedSel" value="feedSel">{getSearchTypeElement('feedSel')}</Option>
             </Select>
           </>
-        }        
+        }
       />
       </Tooltip>
 

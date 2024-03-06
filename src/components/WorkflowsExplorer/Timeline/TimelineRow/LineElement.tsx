@@ -1,10 +1,8 @@
 import { lighten } from 'polished';
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import styled, { DefaultTheme, css, keyframes } from 'styled-components';
 import { Row } from '../../../../types';
 import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
-import { getPathFor } from '../../../../util/WorkflowsExplorer/routing';
 import { TasksSortBy } from '../useTaskListSettings';
 import { getLengthLabelPosition, getRowStatus, statusColor } from './utils';
 
@@ -54,7 +52,6 @@ const LineElement: React.FC<LineElementProps> = ({
   
   //paramsString,
 }) => {
-	const navigate = useNavigate();
 	const status = getRowStatus(row);
 	// Extend visible area little bit to prevent lines seem like going out of bounds. Happens
 	// in some cases with short end task
@@ -113,14 +110,7 @@ const LineElement: React.FC<LineElementProps> = ({
 					}}
 					data-testid="boxgraphic"
 					dragging={dragging}
-					title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (unknown status)` : ''}`}
-					onClick={(e) => {
-					if (row.type === 'task') {
-						e.stopPropagation();
-						e.preventDefault();
-						navigate(`${getPathFor.attempt(row.data)}`);
-					}
-					}}
+					title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (unknown status)` : ''}`}				
 				>
 					{(isLastAttempt || status === 'RUNNING') && (
 					<RowMetricLabel duration={duration} labelPosition={labelPosition} data-testid="boxgraphic-label" />

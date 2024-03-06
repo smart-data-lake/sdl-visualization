@@ -1,70 +1,18 @@
 import CloseIcon from '@mui/icons-material/Close';
-import { Button, IconButton, Sheet, Table, Tooltip, Typography } from "@mui/joy";
+import { Box, IconButton, Sheet, Typography } from "@mui/joy";
 import { useNavigate, useParams } from "react-router-dom";
 import { useConfig } from "../../../hooks/useConfig";
 import { useManifest } from "../../../hooks/useManifest";
 import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
+import { createDataObjectChip } from '../../ConfigExplorer/ConfigurationTab';
+import { createPropertiesComponent } from '../../ConfigExplorer/PropertiesComponent';
+import InfoBox from '../../ConfigExplorer/InfoBox';
 
 const getRow = (attempt: Attempt, taskName: string) => {
     if (taskName === 'err') throw(new Error('was not able to fetch task name'));
 
-    return attempt.rows.filter((row) => {return row.step_name === taskName})[0];
-}
-
-/**
- * The result table component displays the metadata of a task. It is used in the ContentDrawer component.
- * It visually structures the information available in the metrics and subfeed properties of a task.
- * @param props.metrics metrics: any - the metrics of the task
- * @param props.subfeed subFeed: any - the subfeed of the task
- * @returns 
- */
-const ResultsTable = (props: {metrics?: any, subFeed?: any}) => {
-    const { metrics, subFeed } = props;
-    const formatByte = (bytes: number) => {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const dm = 2;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-    }
-    const data = metrics ? [
-        {name: 'Stage', value: metrics.stage},
-        {name: 'Bytes written', value: formatByte(metrics.bytes_written)},
-        {name: 'Number of tasks', value: metrics.num_tasks},/* 
-        {name: 'Records written', value: metrics.records_written}, */
-        {name: 'Count', value: metrics.count},
-    ] : [
-        {name: 'Type', value: subFeed.type},
-        {name: 'Data object ID', value: subFeed.dataObjectId},
-        {name: 'Is DAG start', value: subFeed.isDAGStar},
-    ]
-    const renderTable = () => {
-        return (
-            <Table size="sm">
-                <tbody>
-                    {data.map((data) => ( 
-                        <>
-                            {data.value && (
-                                <tr key={data.name}>
-                                    <td><b>{data.name}</b></td>
-                                    <td>{data.value}</td>
-                                </tr>
-                            )}
-                        </>
-                    ))}
-                </tbody>
-            </Table>
-        )
-    }
-
-    return (
-        <>
-            {metrics && renderTable()}
-            {subFeed && renderTable()}
-        </>
-    )
+    return attempt.timelineRows.filter((row) => {return row.step_name === taskName})[0];
 }
 
 /**
@@ -78,81 +26,19 @@ const ContentSheet = (props: {action: Row}) => {
     const { action } = props;
     
     return (
-        <Sheet
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                mr: '1rem',
-            }}
-        >
-            {action.metadata.map((meta) => {
-                const toDisplay : any[] = [];
-                if (meta.mainMetrics) {
-                    toDisplay.push(
-                        <Sheet 
-                        key='meta.mainMetrics'
-                        sx={{mb: '1.5rem'}}
-                        >
-                                <Typography noWrap level='title-md'>
-                                    Main metrics
-                                </Typography>
-                                <ResultsTable metrics={meta.mainMetrics}/>
-                            </Sheet>
-                        )
-                    } 
-                    if (meta.subFeed) {
-                        toDisplay.push(
-                            <Sheet 
-                            key='meta.subFeed'
-                            >
-                                <Typography noWrap level='title-md'>
-                                    Subfeed
-                                </Typography>
-                                <ResultsTable subFeed={meta.subFeed}/>
-                            </Sheet>
-                        )
-                    } 
-                    if (!meta.mainMetrics && !meta.subFeed) {
-                        toDisplay.push(
-                            <Typography noWrap level='title-md' key='noData'>
-                                Error: found no metadata to display
-                            </Typography>
-                        )
-                    }
-                    return (
-                        <Sheet 
-                        color="neutral" 
-                        variant="outlined"
-                        key='resultSheet'
-                        sx={{
-                            p: '1rem',
-                            mt: '1rem',
-                            borderRadius: '0.5rem',
-                            height: 'auto',
-                        }}>
-                            {toDisplay}
-                        </Sheet>
-                    )
-                })
-            }
-            {action.message && <Sheet 
-                color="neutral" 
-                variant="soft"
-                key='resultSheet'
-                invertedColors
-                sx={{
-                    p: '1rem',
-                    mt: '1rem',
-                    borderRadius: '0.5rem',
-                }}>
-                <Typography color="neutral" level='body-md'>
-                    Info:
-                </Typography>
-                <code>
-                    {action.message}
-                </code>
-            </Sheet>}
+        <Sheet sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: '1rem' }}>
+            {action.message && <InfoBox info={action.message}/>}            
+            {action.details.results.map((result) => {
+                const subFeedProps: any = result.metrics;
+                if (result.partitionValues && result.partitionValues.length > 0) subFeedProps!.partitionValues = result.partitionValues;
+                return <Box key={result.dataObjectId}>
+                    <Box sx={{ mb: '0.5rem' }}>
+                        <Typography level="title-sm" sx={{ display: 'inline' }} >Output</Typography>
+                        {createDataObjectChip(result.dataObjectId, 'sm', { ml: '0.5rem' })}
+                    </Box>
+                    {createPropertiesComponent({obj: subFeedProps, orderProposal: [], propsToIgnore: ['stage']})}
+                </Box>
+            })}
         </Sheet>
     )
 }
@@ -165,78 +51,30 @@ const ContentSheet = (props: {action: Row}) => {
  */
 const ContentDrawer = (props: {attempt: Attempt}) => {
     const { attempt } = props;
-    const { flowId, runNumber, taskId, tab, stepName } = useParams();
-    const {data: manifest} = useManifest();
-    const {data: configData} = useConfig(manifest);
+    const { stepName } = useParams();
+    //const {data: manifest} = useManifest();
+    //const {data: configData} = useConfig(manifest);
     const navigate = useNavigate();
+    const navigateRel = (subPath: string) => navigate(subPath, {relative: 'path'}); // this navigates Relative to path, not route
+
     const action : Row = getRow(attempt, stepName || 'err');
     
-    const isActionInConfig = () => (configData && configData.actions[action.step_name])
-
-    const handleClick = () => {
-        navigate(`/config/actions/${action.step_name}`);
-    }
+    //const isActionInConfig = () => (configData && configData.actions[action.step_name])
 
     return ( 
-        <Sheet 
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '1rem',
-                height: '100%', 
-                alignItems: 'flex-start',
-            }}
-            >
-            <Sheet
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '1rem',
-                    height: '100%', 
-                    alignItems: 'flex-start',
-                    
-                
-                }}
-            >
-            <Sheet>
-                <Sheet 
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        position: 'sticky',
-                        mb: '1rem',
-                    }}
-                >
-                    <Tooltip title={action.step_name}>
-                        <Typography sx={{cursor: 'default'}} noWrap level='h3'>
-                            {action.step_name}
-                        </Typography>
-                    </Tooltip>
-                    <IconButton
-                        variant="plain" 
-                        color="neutral" 
-                        size="sm" 
-                        onClick={() => navigate(`/workflows/${flowId}/${runNumber}/${taskId}/${tab}`)}
-                        >
+        <Sheet sx={{ gap: '1rem', height: '100%' }}>
+            <Sheet sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <Sheet sx={{display: 'flex', flexDirection: 'row', position: 'sticky'}}>
+                    <Typography sx={{ flex: 1, cursor: 'default'}} noWrap level='h4'>
+                        Metrics for {action.step_name}
+                    </Typography>
+                    <IconButton variant="plain" color="neutral" size="sm" onClick={() => navigateRel("..")}>
                         <CloseIcon />
                     </IconButton>
                 </Sheet>
-                <Sheet
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '1rem',
-                        height: '65vh',
-                        justifyContent: 'space-between',
-                        overflowY: 'auto',
-                    }}
-                    >
+                <Sheet sx={{ flex: 1, overflowY: 'auto', width: '100%' }}>
                         <ContentSheet action={action}/>
                 </Sheet>
-            </Sheet>
-            <Button disabled={!isActionInConfig()} onClick={() => handleClick() } size="sm" variant="solid">Open in Config Viewer</Button>
             </Sheet>
         </Sheet>
      );

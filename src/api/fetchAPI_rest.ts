@@ -44,11 +44,23 @@ export class fetchAPI_rest implements fetchAPI {
     getWorkflowRuns = (tenant: string, name: string) => {
         return this.fetch(`${this.url}/workflow?name=${name}&tenantName=${tenant}`);
     };
+    
+    getWorkflowRunsByAction = (name: string) => {
+        // TODO
+        return Promise.resolve([])
+    };    
 
+    getWorkflowRunsByDataObject = (name: string) => {
+        // TODO
+        return Promise.resolve([])
+    };        
+    
     getRun = async (args: { tenant: string, name: string; runId: number; attemptId: number }) => {
         return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}&tenantName=${args.tenant}`, await this.getRequestInfo())
         .then((res) => res.json());
     };
+
+    clearCache = () => undefined    
 
     getUsers = async (tenant: string) => {
         return fetch(`${this.url}/users/${tenant}`, await this.getRequestInfo())

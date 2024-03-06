@@ -24,7 +24,7 @@ const FilterMenu = (props: {title: string, setFilters: (filters: Filter[]) => vo
             <MenuButton size="sm" variant="outlined">{title}</MenuButton>               
             <Menu  size="sm">
                 {filters && filters.map((filter, index) => (
-                    <MenuItem>
+                    <MenuItem key={index}>
                         <Checkbox
                             color="neutral"                
                             size="sm"

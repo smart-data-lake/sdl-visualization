@@ -38,7 +38,12 @@ def getRuns(files):
             appVersion = find("appVersion", data) # ignore if not found
             status = getStatus(actionsState)
             runEndTime = getRunEndTime(data)
-            actionCounts = collections.Counter(map(lambda a: a["state"], actionsState.values()))
+            actions = {
+                key: {
+                    "state": actionsState[key]["state"], 
+                    "dataObjects": [d if isinstance(d,str) else d.get("id") for d in actionsState[key].get("outputIds", [])] or [r["subFeed"]["dataObjectId"] for r in actionsState[key].get("results", [])]
+                } for key in actionsState
+            }
 
             runs.append(
                 {
@@ -50,7 +55,7 @@ def getRuns(files):
                     "attemptStartTime": data["attemptStartTime"],
                     "runEndTime": runEndTime,
                     "status": status,
-                    "actionsStatus": actionCounts,
+                    "actions": actions,
                     "buildVersion": buildVersion,
                     "appVersion": appVersion,
                     "path": statefile["path"].lstrip("./"),
@@ -65,14 +70,11 @@ def getRuns(files):
 
 def getStatus(actionsState):
     """Get the status of a state file."""
-    curr = "SUCCEEDED"
+    prio = ["FAILED", "CANCELLED", "RUNNING", "SUCCEEDED", "SKIPPED", "STARTED", "INITIALIZED", "PREPARED"]
+    minIdx = len(prio) -1
     for action in actionsState.values():
-        if action["state"] == "CANCELLED":
-            curr = "CANCELLED"
-        elif action["state"] == "FAILED":
-            curr = "FAILED"
-            
-    return curr
+        minIdx = min(minIdx, prio.index(action["state"]))            
+    return prio[minIdx]
 
 def getRunEndTime(stateFile):
     """Get the end time of a state file."""
@@ -101,11 +103,10 @@ def buildStateIndex(path):
         runs = getRuns(files)
         indexFile = "index.json"
         with open(indexFile, "w") as outfile:
-            # this appends every run to the outfile
-            # not that this is not valid json, but it's easily appendable for new runs, thats what we need.
+            # this appends every run as json line to the outfile
             for run in runs:                
-                json.dump(run, outfile, ensure_ascii=False, indent=4, default=str)
-                print("\n---", file=outfile) # add new line after every run object
+                json.dump(run, outfile, ensure_ascii=False, default=str)
+                print("", file=outfile) # add new line after every run object
         print(f"Summaries written to {path}/{indexFile}\n \n")
         os.chdir(cwd)
 
@@ -114,17 +115,17 @@ def buildConfigIndex(path):
         print("The path you provided as argument does not exist. Skipping config index building.")
 
     else:
-        print(f"The tool will compile all config files in \"{path}\" and its subdirectories into \"index.json\". If no config files are present, a default empty index is returned:")
+        print(f"The tool will compile all config files in \"{path}\" and its subdirectories into \"index\" file. If no config files are present, a default empty index is returned:")
         print(f"Retrieving configs \"{path}\"...")
         cwd = os.getcwd()
         os.chdir(path)
         files = list_files(".", ".conf")
         print(f"{len(files)} files found.")
         print("Creating index...")
-        db = list(map(lambda f: f.lstrip("./"), files))
-        indexFile = "index.json"
+        indexFile = "index"
         with open(indexFile, "w") as outfile:
-            json.dump(db, outfile, ensure_ascii=False, indent=4)
+            for file in files:
+                outfile.write(file.lstrip("./")+"\n")
         print(f"Index written to {path}/{indexFile}\n \n")
         os.chdir(cwd)
 

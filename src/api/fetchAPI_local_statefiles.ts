@@ -1,5 +1,3 @@
-import { getRenderableIndexes } from "@mui/x-data-grid/internals";
-import { durationMillis } from "../util/WorkflowsExplorer/date";
 import { compareFunc, onlyUnique } from "../util/helpers";
 import { fetchAPI } from "./fetchAPI";
 
@@ -20,9 +18,9 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     getIndex() {
         const indexPath = this.statePath + "/index.json";
         this._index = fetch(indexPath)
-        // note that index.json is not a valid json file, but a concatenation of json objects separated by a line containing '---'.
+        // note that index.json is json lines file
         .then(res => res.text())
-        .then(res => res.split(/^\s*\-\-\-\s*$/m)
+        .then(res => res.split("\n")
                         .filter(obj => obj.trim().length > 0)
                         .map(obj => JSON.parse(obj)))
         .then(runs => runs
@@ -30,13 +28,24 @@ export class fetchAPI_local_statefiles implements fetchAPI {
                 // convert date strings to date
                 run.runStartTime = new Date(run.runStartTime);
                 run.attemptStartTime = new Date(run.attemptStartTime);
-                run.attemptStartTimeMillis = new Date(run.attemptStartTime).getTime(); // needed for HistorBarChart
+                run.attemptStartTimeMillis = new Date(run.attemptStartTime).getTime(); // needed for HistoBarChart
                 run.runEndTime = new Date(run.runEndTime);
                 run.duration = run.runEndTime.getTime() - run.attemptStartTime.getTime();
+                // precalc count by status
+                run.actionsStatus = Object.values((run.actions || {}) as object)
+                .map(action => action.state)
+                .reduce((group: {[key: string]: number}, state) => {
+                    if (!group[state]) group[state] = 1;
+                    else group[state] += 1;
+                    return group;
+                }, {})
+                // precalc list of dataObjects written
+                run.dataObjects = Object.values((run.actions || {}) as object)
+                .map(action => action.dataObjects).flat()
                 return run;
             })
         )
-        .then(runs => {console.log("got runs", runs); return runs})
+        .then(runs => {console.log(`got ${runs.length} runs`); return runs})
         .catch(err => {
             console.error(`Could not load index file ${indexPath}`, err);
             throw err;
@@ -58,7 +67,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     }
 
     getWorkflows = async (tenant: string) => {
-        return this.getIndex()
+        return this.reuseIndex()
         .then(data => {
             const workflows = this.groupByWorkflowName(data);
             return Object.entries(workflows).map(([name,runs]) => {
@@ -79,7 +88,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     
     
     getWorkflowRuns = async (tenant: string, name: string) => {
-        return this.getIndex()
+        return this.reuseIndex()
         .then(data => {
             const runs = data
             .filter(run => run.name === name)
@@ -88,6 +97,26 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         })
     };
 
+
+    getWorkflowRunsByAction = async (name: string) => {
+        return this.reuseIndex()
+        .then(data => {
+            const runs = data
+            .filter(run => Object.keys(run.actions || {}).some(x => x === name))
+            .sort(compareFunc('attemptStartTime'));
+            return runs
+        })
+    };        
+
+    getWorkflowRunsByDataObject = async (name: string) => {
+        return this.reuseIndex()
+        .then(data => {
+            const runs = data
+            .filter(run => (run.dataObjects as any[]).some(x => x === name))
+            .sort(compareFunc('attemptStartTime'));
+            return runs
+        })
+    };    
     
     getRun = async (args: {tenant: string, name: string, runId: number, attemptId: number}) => {            
         return this.reuseIndex()
@@ -97,6 +126,10 @@ export class fetchAPI_local_statefiles implements fetchAPI {
             return fetch(this.statePath + '/' + val.path)
                     .then(res => res.json())
         })        
+    };
+
+    clearCache = () => {
+        this._index = undefined;
     };
     
     addUser(tenant: string, email: string, access: string) {
