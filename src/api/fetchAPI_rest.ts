@@ -25,24 +25,24 @@ export class fetchAPI_rest implements fetchAPI {
             );
     }
 
-    private async getRequestInfo(): Promise<RequestInit> {
+    private async getRequestInfo(method: string = 'GET', headers?: any): Promise<RequestInit> {
         try {
             const currentUserSession = await Auth.currentSession();
-            return { mode: "cors", headers: {'Authorization': currentUserSession.getIdToken().getJwtToken()}}
+            return { mode: "cors", method, headers: {'Authorization': currentUserSession.getIdToken().getJwtToken(), ...headers}}
         } catch {
-            return { mode: "cors" };
+            return { mode: "cors", method, headers};
         }
     }
 
-    getWorkflows = () => {
-        return this.fetch(`${this.url}/workflows`)
+    getWorkflows = (tenant: string) => {
+        return this.fetch(`${this.url}/workflows?tenantName=${tenant}`)
             .catch(() => {
                 return [];
             });
     };  
 
-    getWorkflowRuns = (name: string) => {
-        return this.fetch(`${this.url}/workflow?name=${name}`);
+    getWorkflowRuns = (tenant: string, name: string) => {
+        return this.fetch(`${this.url}/workflow?name=${name}&tenantName=${tenant}`);
     };
     
     getWorkflowRunsByAction = (name: string) => {
@@ -55,10 +55,26 @@ export class fetchAPI_rest implements fetchAPI {
         return Promise.resolve([])
     };        
     
-    getRun = async (args: { name: string; runId: number; attemptId: number }) => {
-        return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}`, await this.getRequestInfo())
+    getRun = async (args: { tenant: string, name: string; runId: number; attemptId: number }) => {
+        return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}&tenantName=${args.tenant}`, await this.getRequestInfo())
         .then((res) => res.json());
     };
 
     clearCache = () => undefined    
+
+    getUsers = async (tenant: string) => {
+        return fetch(`${this.url}/users/${tenant}`, await this.getRequestInfo())
+        .then((res) => res.json());
+    }
+
+    addUser = async (tenant: string, email: string, access: string) => {
+        const requestInfo = await this.getRequestInfo('POST', {'Content-Type': 'application/json'});
+        requestInfo.body = JSON.stringify({email, access});
+        return fetch(`${this.url}/users/${tenant}`, requestInfo)
+    }
+
+    async getTenants() {
+        return fetch(`${this.url}/tenants`, await this.getRequestInfo())
+        .then((res) => res.json());
+    }
 }

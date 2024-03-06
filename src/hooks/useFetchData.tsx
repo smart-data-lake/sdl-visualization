@@ -1,8 +1,9 @@
-import { useQuery } from "react-query";
+import { useMutation, useQuery } from "react-query";
 import { getConfiguredFetcher } from "../api/Fetcher";
 import { fetchAPI } from "../api/fetchAPI";
 import { getUrlContent } from "../util/ConfigExplorer/HoconParser";
 import { formatFileSize } from "../util/helpers";
+import { useTenant } from "./TenantProvider";
 
 
 // lazy initialized
@@ -19,10 +20,13 @@ export function fetcher() {
 
 /**** Workflows  ****/
 export const useFetchWorkflows = () => {
-  return useQuery({ queryKey: 'workflows', queryFn: () => fetcher().getWorkflows(), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
+    const {tenant} = useTenant();
+    return useQuery({queryKey: ['workflows', tenant], queryFn: () => fetcher().getWorkflows(tenant), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
 }
+
 export const useFetchWorkflowRuns = (workflow: string) => {
-  return useQuery({ queryKey: ['workflowRun', workflow], queryFn: (context) => fetcher().getWorkflowRuns(workflow), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
+    const {tenant} = useTenant();
+    return useQuery({queryKey: ['workflow',workflow, tenant], queryFn: () => fetcher().getWorkflowRuns(tenant, workflow), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
 }
 export const useFetchWorkflowRunsByElement = (elementType: string, elementName: string) => {
   var queryFn = () => Promise.resolve(undefined as any[]|undefined);
@@ -31,7 +35,8 @@ export const useFetchWorkflowRunsByElement = (elementType: string, elementName: 
   return useQuery({ queryKey: ['workflowRunByAction', elementType, elementName], queryFn: queryFn, retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
 }
 export const useFetchRun = (name: string, runId: number, attemptId: number) => {
-  return useQuery({ queryKey: ['run', name, runId, attemptId], queryFn: () => fetcher().getRun({ name, runId, attemptId }), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
+    const {tenant} = useTenant();
+    return useQuery({queryKey: ['run',name,runId,attemptId, tenant], queryFn: () => fetcher().getRun({tenant, name, runId, attemptId}), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
 }
 
 /**** index files  ****/
@@ -141,6 +146,20 @@ function getDescription(elementType: string, elementName: string) {
 }
 export const useFetchDescription = (elementType: string|undefined, elementName: string|undefined) => {
   return useQuery({ queryKey: ['description',elementType,elementName], queryFn: () => getDescription(elementType!, elementName!), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
+}
+
+export const useFetchUsers = () => {
+    const {tenant} = useTenant();
+    return useQuery({queryKey: ['users', tenant], queryFn: () => fetcher().getUsers(tenant)})
+}
+
+export const useAddUser = () => {
+    const {tenant} = useTenant();
+    return useMutation(({email, access}: any) => fetcher().addUser(tenant,email,access));
+}
+
+export const useFetchTenants = () => {
+    return useQuery({queryKey: ['tenants'], queryFn: () => fetcher().getTenants(), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
 }
 
 export default useFetchWorkflows;

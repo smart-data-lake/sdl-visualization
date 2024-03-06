@@ -10,6 +10,7 @@ import { getIcon } from "../../util/WorkflowsExplorer/StatusInfo";
 import { formatTimestamp } from "../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../util/WorkflowsExplorer/format";
 import { getPropertyByPath } from "../../util/helpers";
+import { dataTableStyleProps } from "../Common/DatatableStyle";
 
 export function nestedPropertyRenderer(defaultValue: string = "", paddingRight: string = '0') {
   return (prop: any) => {
