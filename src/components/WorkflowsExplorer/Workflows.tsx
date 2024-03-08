@@ -43,7 +43,6 @@ export default function Workflows() {
     const columns = [{
         title: 'Name',
         property: 'name',
-        sortDirection: SortDirection.Ascend,
     }, {
         title: 'Last status',
         property: 'lastStatus',
@@ -59,7 +58,8 @@ export default function Workflows() {
 		title: 'Last attempt',
 		property: 'lastAttemptStartTime',
 		renderer: dateRenderer,
-		width: '175px'
+		width: '175px',
+	        sortDirection: SortDirection.Descend
 	}, {
         title: '# runs',
         property: 'numRuns',
