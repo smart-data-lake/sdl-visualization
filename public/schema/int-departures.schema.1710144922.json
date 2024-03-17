@@ -1,0 +1,63 @@
+{
+  "schema" : [ {
+    "name" : "icao24",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "firstSeen",
+    "dataType" : "long",
+    "nullable" : true
+  }, {
+    "name" : "estDepartureAirport",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "lastSeen",
+    "dataType" : "long",
+    "nullable" : true
+  }, {
+    "name" : "estArrivalAirport",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "callsign",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "estDepartureAirportHorizDistance",
+    "dataType" : "integer",
+    "nullable" : true
+  }, {
+    "name" : "estDepartureAirportVertDistance",
+    "dataType" : "integer",
+    "nullable" : true
+  }, {
+    "name" : "estArrivalAirportHorizDistance",
+    "dataType" : "integer",
+    "nullable" : true
+  }, {
+    "name" : "estArrivalAirportVertDistance",
+    "dataType" : "integer",
+    "nullable" : true
+  }, {
+    "name" : "departureAirportCandidatesCount",
+    "dataType" : "integer",
+    "nullable" : true
+  }, {
+    "name" : "arrivalAirportCandidatesCount",
+    "dataType" : "integer",
+    "nullable" : true
+  }, {
+    "name" : "created_at",
+    "dataType" : "timestamp",
+    "nullable" : true
+  }, {
+    "name" : "dt",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "dl_ts_captured",
+    "dataType" : "timestamp",
+    "nullable" : true
+  } ]
+}
