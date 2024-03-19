@@ -117,9 +117,6 @@ type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of 
 
 type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 
-// TODO:  implement this in a hook, refactor hooks
-let layout: string = "TB";
-
 /**const edgeTypes = {
   runLineage: RunLineageEdge,
 }**/
@@ -132,7 +129,7 @@ function LineageTab(props: flowProps) {
   const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']);
   const [pageClick, setPageClick] = useState(false);
   const [layoutChange, setLayoutChange] = useState(false);
-  // let [layout, setLayout] = useState('TB');
+  const [layout, setLayout] = useState('TB');
 
   function expandGraph(){
     let buttonMessage = onlyDirectNeighbours[0] ? 'Compress Graph' : 'Expand Graph';
@@ -217,6 +214,16 @@ function LineageTab(props: flowProps) {
     setEdges((eds) => eds.map(hide(hidden)));
   }, [hidden, onlyDirectNeighbours, pageClick, layoutChange]); //edges must be hidden at each render (that is, also when we expand/compress the graph)
 
+  // update the graph layout, either horizontal or vertical
+  // the input nodes and edges should be the custom classes imported from Graphs.ts
+  // not to be confused with dagre graph nodes and  edges
+  useEffect(() =>{
+    [nodes_init, edges_init] = prepareAndRenderGraph();
+    setLayoutChange(!layoutChange);
+    setNodes(nodes_init);
+    setEdges(edges_init);
+  }, [layout]);
+
   //Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
   const onNodesChange = useCallback(
     (changes: any) => setNodes((nds: any) => applyNodeChanges(changes, nds)),
@@ -268,23 +275,6 @@ function LineageTab(props: flowProps) {
     window.addEventListener('resize', () => handleResize());
   }**/
 
-  // update the graph layout, either horizontal or vertical
-  // the input nodes and edges should be the custom classes imported from Graphs.ts
-  // not to be confused with dagre graph nodes and  edges
-
-  const onLayout = useCallback(
-    (direction) => {
-      console.log("layouting");      
-      // setLayout(direction); 
-      layout = direction;
-      [nodes_init, edges_init] = prepareAndRenderGraph();
-      setLayoutChange(!layoutChange);
-      setNodes(nodes_init);
-      setEdges(edges_init);
-    },
-    [nodes, edges]
-  );
-
   // TODO: add onHover references
   return (
     <Box 
@@ -315,7 +305,7 @@ function LineageTab(props: flowProps) {
         <div title ={layout == 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'} className="controls" style={{zIndex: 4, cursor: 'pointer'}}>
           <IconButton 
             color={'neutral'}
-            onClick={() => onLayout(layout == 'TB' ? 'LR' : 'TB')}>
+            onClick={() => setLayout(layout == 'TB' ? 'LR' : 'TB')}>
             {layout == 'TB' ? <AlignVerticalTop/> : <AlignHorizontalLeft/>}
           </IconButton>
         </div>
