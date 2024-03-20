@@ -17,13 +17,19 @@ import dagre from 'dagre';
 import { AlignVerticalTop } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 
+// TODO: store the graph and its different layouts statically
+// TODO: add onHover references
 // TODO: implement icon for showing node types etc.
+
+
 function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB'){
   const isHorizontal = direction === 'LR';
-  var result: any[] = [];
+  var result: any[] = []; 
+
   dataObjectsAndActions.nodes.forEach((node)=>{
     //const dataObject = node as DataObject; //downcasting in order to be able to access the JSONObject attribute
     const dataObject = node
+    
     result.push({
       id: dataObject.id,
       position: {x: dataObject.position.x, y: dataObject.position.y},
@@ -39,10 +45,9 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
 }
 
 
-// TODO: Add horizonal option tab
 function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: string | undefined){
   var result: any[] = [];
-  const label_color = '#fdae44';
+  const labelColor = '#fcae1e';
 
   dataObjectsAndActions.edges.forEach(edge => {
     //const action = edge as Action; //downcasting in order to access jsonObject
@@ -64,7 +69,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       label_copy: action.id,
       labelBgPadding: [7, 7],
       labelBgBorderRadius: 8,
-      labelBgStyle: { fill: selected ? label_color : '#fff', fillOpacity: 1, stroke:  label_color}, // TODO: add fill color for clicked edge
+      labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, // TODO: add fill color for clicked edge
       //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
       style: { stroke: '#096bde', strokeWidth: 2},
       // type: 'runLineage',
@@ -193,6 +198,7 @@ function LineageTab(props: flowProps) {
     if (props.configData) {
       navigate(`/config/dataObjects/${node.id}`); //Link programmatically
     }
+    setSelectedEdgeId(''); // revert filled action label 
     setPageClick(!pageClick);
   } 
   function clickOnEdge(edge: flowEdgeWithString){
@@ -227,7 +233,6 @@ function LineageTab(props: flowProps) {
     window.addEventListener('resize', () => handleResize());
   }**/
 
-  // TODO: add onHover references
   return (
     <Box 
       className='data-flow' 
@@ -246,7 +251,10 @@ function LineageTab(props: flowProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodesConnectable={false} //prevents adding new edges
-        //edgeTypes={edgeTypes}
+        onNodeMouseEnter={(event, node) =>{}}
+        // onNodeMouseLeave={}
+        // onEdgeMouseEnter={}
+        // onEdgeMouseLeave={}
       >
         <Background />
         <MiniMap />
