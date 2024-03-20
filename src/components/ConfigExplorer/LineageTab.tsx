@@ -17,7 +17,7 @@ import dagre from 'dagre';
 import { AlignVerticalTop } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 
-// what if other what is the tradeoff when Graph.ts is used by a lot of classes that require the position?
+// TODO: implement icon for showing node types etc.
 function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB'){
   const isHorizontal = direction === 'LR';
   var result: any[] = [];
@@ -39,46 +39,16 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
 }
 
 
-/**
- * DEPRECATED: Uses Deprecated class "DAGraph_Old" that calculates the levels
- * of each node in order to layyer them. The method is replaced by the dagre library
- * for the layout functions.
- */
-/**function createReactFlowNodes_Old(dataObjectsAndActions: DAGraph){
-  var result: any[] = [];
-  var nodeType = 'default';
-  for (let currentLevel = 0; currentLevel<dataObjectsAndActions.levels.length; currentLevel++){
-    if(currentLevel===0){nodeType = 'input'}
-    else if(currentLevel===dataObjectsAndActions.levels.length){nodeType = 'output'}
-    else {nodeType = 'default'}
-    
-    const nodesInLevel = dataObjectsAndActions.nodes.filter(node => node.level === currentLevel);
-    //const dataObjectsInLevel = nodesInLevel as DataObject[];
-    const dataObjectsInLevel = nodesInLevel;
-
-    for (let i = 0; i<dataObjectsInLevel.length; i++){
-      var right_or_left = (i%2)*(i%2)-1;
-      var pos_x = 1000 - (right_or_left * 300 * (i+1));
-      var pos_y = (currentLevel+1) * 100;
-      result.push({
-        id: dataObjectsInLevel[i].id,
-        type: nodeType,
-        position: {x: pos_x, y: pos_y},
-        data: { label: dataObjectsInLevel[i].id },
-        style: {onclick: () => console.log("hello")},
-        //jsonString: JSON.stringify(dataObjectsInLevel[i].jsonObject , null, '\t'),
-      });
-    }
-  }
-  return result;
-}**/
-
 // TODO: Add horizonal option tab
-function createReactFlowEdges(dataObjectsAndActions: DAGraph){
+function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: string | undefined){
   var result: any[] = [];
+  const label_color = '#fdae44';
+
   dataObjectsAndActions.edges.forEach(edge => {
     //const action = edge as Action; //downcasting in order to access jsonObject
     const action = edge; //downcasting in order to access jsonObjectsourcePosition: 'right',
+    const selected = selectedEdgeId === action.id;
+
     result.push({
       old_id: action.id, //what we use for linking
       id: action.id + action.fromNode.id+action.toNode.id, //because it has to be unique
@@ -94,7 +64,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph){
       label_copy: action.id,
       labelBgPadding: [7, 7],
       labelBgBorderRadius: 8,
-      labelBgStyle: { fill: '#fff', fillOpacity: 1, stroke: '#ed7b24' },
+      labelBgStyle: { fill: selected ? label_color : '#fff', fillOpacity: 1, stroke:  label_color}, // TODO: add fill color for clicked edge
       //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
       style: { stroke: '#096bde', strokeWidth: 2},
       // type: 'runLineage',
@@ -117,9 +87,6 @@ type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of 
 
 type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 
-/**const edgeTypes = {
-  runLineage: RunLineageEdge,
-}**/
 function LineageTab(props: flowProps) {
   const url = useParams();
 
@@ -130,6 +97,7 @@ function LineageTab(props: flowProps) {
   const [pageClick, setPageClick] = useState(false);
   const [layoutChange, setLayoutChange] = useState(false);
   const [layout, setLayout] = useState('TB');
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>('');
 
   function expandGraph(){
     let buttonMessage = onlyDirectNeighbours[0] ? 'Compress Graph' : 'Expand Graph';
@@ -147,7 +115,7 @@ function LineageTab(props: flowProps) {
       const partialEdges = partialGraphPair[1];
       const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges, layout);
       nodes_init = createReactFlowNodes(partialGraph, layout);
-      edges_init = createReactFlowEdges(partialGraph);
+      edges_init = createReactFlowEdges(partialGraph, selectedEdgeId);
     }
   
     else if(props.elementType==='actions'){
@@ -156,32 +124,16 @@ function LineageTab(props: flowProps) {
       const partialEdges = partialGraphPair[1];
       const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges, layout);
       nodes_init = createReactFlowNodes(partialGraph, layout);
-      edges_init = createReactFlowEdges(partialGraph);
+      edges_init = createReactFlowEdges(partialGraph, selectedEdgeId);
     }
   
     else{ //to be able to see the complete lineage when selecting connections / global
       nodes_init = createReactFlowNodes(doa, layout);
-      edges_init = createReactFlowEdges(doa);
+      edges_init = createReactFlowEdges(doa, selectedEdgeId);
     }
     return [nodes_init, edges_init];
 
   }
-
-  
-  //DEPRECATED
-  /**function renderPartialGraph(nodeId: string){
-
-    const partialGraphPair = doa.returnPartialGraphInputs(nodeId);
-    const partialNodes = partialGraphPair[0];
-    const partialEdges = partialGraphPair[1];
-    const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges);
-
-    const newNodes = createReactFlowNodes(partialGraph);
-    const newEdges = createReactFlowEdges(partialGraph);
-
-    setNodes(newNodes);
-    setEdges(newEdges);
-  }**/
 
   useEffect(() => {
     setNodes(nodes_init);
@@ -238,7 +190,6 @@ function LineageTab(props: flowProps) {
   // handlers for navigating dataObjects and actions
   const navigate = useNavigate();   
   function clickOnNode(node: flowNodeWithString){
-    //renderPartialGraph(node.id); //DEPRECATED WAY OF SHOWING PARTIAL GRAPHS
     if (props.configData) {
       navigate(`/config/dataObjects/${node.id}`); //Link programmatically
     }
@@ -250,6 +201,7 @@ function LineageTab(props: flowProps) {
     } else {
       navigate( `/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${edge.old_id}`);
     }
+    setSelectedEdgeId(edge.old_id);
     setPageClick(!pageClick);
   }
 
