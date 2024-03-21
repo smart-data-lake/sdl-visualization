@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef} from 'react';
-import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, isNode } from 'react-flow-renderer';
+import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, isNode, Position } from 'react-flow-renderer';
 import DataObjectsAndActions, { Action, DAGraph, PartialDataObjectsAndActions, computeNodePositions } from '../../util/ConfigExplorer/Graphs';
 import { useNavigate } from "react-router-dom";
 import './ComponentsStyles.css';
@@ -17,14 +17,16 @@ import dagre from 'dagre';
 import { AlignVerticalTop } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 
+import { Node as GraphNode } from '../../util/ConfigExplorer/Graphs';
+import { Edge as GraphEdge } from '../../util/ConfigExplorer/Graphs';
+
 // TODO: store the graph and its different layouts statically
 // TODO: add onHover references
 // TODO: implement icon for showing node types etc.
 
-
-function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB'){
+function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB'): Node[] {
   const isHorizontal = direction === 'LR';
-  var result: any[] = []; 
+  var result: Node[] = []; 
 
   dataObjectsAndActions.nodes.forEach((node)=>{
     //const dataObject = node as DataObject; //downcasting in order to be able to access the JSONObject attribute
@@ -33,11 +35,10 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
     result.push({
       id: dataObject.id,
       position: {x: dataObject.position.x, y: dataObject.position.y},
-      data: {label: dataObject.id},
+      data: {label: dataObject.id, isCenterNode: dataObject.isCenterNode},
       style: {background: dataObject.backgroundColor},
-      isCenterNode: dataObject.isCenterNode,
-      targetPosition: isHorizontal ? 'left' : 'top',
-      sourcePosition: isHorizontal ? 'right' : 'bottom'
+      targetPosition: isHorizontal ? Position.Left : Position.Top,
+      sourcePosition: isHorizontal ? Position.Right : Position.Bottom
       //jsonString: JSON.stringify(dataObject.jsonObject, null, '\t'), //Do we need this??
     })
   });
@@ -45,8 +46,8 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
 }
 
 
-function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: string | undefined){
-  var result: any[] = [];
+function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: string | undefined): Edge[] {
+  var result: Edge[] = [];
   const labelColor = '#fcae1e';
 
   dataObjectsAndActions.edges.forEach(edge => {
@@ -55,7 +56,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
     const selected = selectedEdgeId === action.id;
 
     result.push({
-      old_id: action.id, //what we use for linking
+      // old_id: action.id, //what we use for linking
       id: action.id + action.fromNode.id+action.toNode.id, //because it has to be unique
       source: action.fromNode.id,
       target: action.toNode.id,
@@ -65,8 +66,10 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
         height: 10,
         color: '#096bde',
       },
-      // label: action.id, // the action tab should not be shown on initialization
-      label_copy: action.id,
+      data: {
+        label_copy: action.id,
+        old_id: action.id
+      },
       labelBgPadding: [7, 7],
       labelBgBorderRadius: 8,
       labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, // TODO: add fill color for clicked edge
@@ -92,94 +95,99 @@ type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of 
 
 type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
 
+
 function LineageTab(props: flowProps) {
+  
+  // initialization 
+  console.log("call LineageTab");
   const url = useParams();
+  const doa = props.graph ? props.graph : new DataObjectsAndActions(props.configData); 
 
-  const doa = props.graph ? props.graph : new DataObjectsAndActions(props.configData); //
-  let nodes_init: any[] = [];
-  let edges_init: any[] = [];
-  const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']);
-  const [pageClick, setPageClick] = useState(false);
-  const [layoutChange, setLayoutChange] = useState(false);
+  let nodes_init: Node[] = [];
+  let edges_init: Edge[] = [];
+
+  const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
   const [layout, setLayout] = useState('TB');
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>('');
-
-  function expandGraph(){
-    let buttonMessage = onlyDirectNeighbours[0] ? 'Compress Graph' : 'Expand Graph';
-    setOnlyDirectNeighbours([!onlyDirectNeighbours[0], buttonMessage]);
-    console.log('hidden: ', hidden);
-    console.log("curr direction: " +layout);
-  }
-
-  function prepareAndRenderGraph(){
-    // console.log("renderng " + layout_direction);
-    if (props.elementType==='dataObjects'){ //only a partial graph
-      const partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(props.elementName) : doa.returnPartialGraphInputs(props.elementName);
-      //const partialGraphPair = doa.returnPartialGraphInputs(props.elementName);
-      const partialNodes = partialGraphPair[0];
-      const partialEdges = partialGraphPair[1];
-      const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges, layout);
-      nodes_init = createReactFlowNodes(partialGraph, layout);
-      edges_init = createReactFlowEdges(partialGraph, selectedEdgeId);
-    }
-  
-    else if(props.elementType==='actions'){
-      const partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighboursFromEdge(props.elementName) : doa.returnPartialGraphInputsFromEdge(props.elementName);
-      const partialNodes = partialGraphPair[0];
-      const partialEdges = partialGraphPair[1];
-      const partialGraph = new PartialDataObjectsAndActions(partialNodes, partialEdges, layout);
-      nodes_init = createReactFlowNodes(partialGraph, layout);
-      edges_init = createReactFlowEdges(partialGraph, selectedEdgeId);
-    }
-  
-    else{ //to be able to see the complete lineage when selecting connections / global
-      nodes_init = createReactFlowNodes(doa, layout);
-      edges_init = createReactFlowEdges(doa, selectedEdgeId);
-    }
-    return [nodes_init, edges_init];
-
-  }
-
-  useEffect(() => {
-    setNodes(nodes_init);
-    setEdges(edges_init);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props]); // Only re-run the effect if nodes_init changes
-
-  useEffect(()=>{
-    const new_graph = prepareAndRenderGraph();
-    setNodes(new_graph[0]);
-    setEdges(new_graph[1]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onlyDirectNeighbours]); //Re-render the graph after expanding or contracting
-
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>(''); // wird verschwinden mit anderer Sicht
+  let [hidden, setHidden] = useState(useParams().elementType === 'dataObjects' ? true : false); 
+ 
   let initial_render = prepareAndRenderGraph();
   const [nodes, setNodes] = useState(initial_render[0]);
-  const [edges, setEdges] = useState(initial_render[0]);
-  let [hidden, setHidden] = useState(useParams().elementType === 'dataObjects' ? true : false); 
+  const [edges, setEdges] = useState(initial_render[1]);
 
-  const hide = (hidden: boolean) => (edge: any) => {
-    if (hidden){
-      edge.label = '';
-    }else{
-      edge.label = edge.label_copy;
+  const navigate = useNavigate();            // handlers for navigating dataObjects and actions
+  const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
+
+
+  // helper functions
+  function expandGraph(): void {
+    let buttonMessage = onlyDirectNeighbours[0] ? 'Compress Graph' : 'Expand Graph';
+    setOnlyDirectNeighbours([!onlyDirectNeighbours[0], buttonMessage]);
+  }
+
+  function prepareAndRenderGraph(): [Node[], Edge[]] {
+    var partialGraphPair: [GraphNode[],GraphEdge[]] = [[],[]];
+
+    if (props.elementType==='dataObjects'){ //only a partial graph
+      partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(props.elementName) : doa.returnPartialGraphInputs(props.elementName);
     }
-    return edge;
+    else if(props.elementType==='actions'){
+      partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighboursFromEdge(props.elementName) : doa.returnPartialGraphInputsFromEdge(props.elementName);
+    } else {
+      throw Error("Unknown type" + props.elementType)
+    }
+
+    const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout);
+    let nodes = createReactFlowNodes(partialGraph, layout);
+    let edges = createReactFlowEdges(partialGraph, selectedEdgeId);
+    return [nodes, edges];
+  }
+
+  function showLabels(edges: Edge[]) {
+    return edges.map(e => {
+      e.label = (hidden ? '' : e.data.label_copy);
+      return e;
+    })
   };
 
-  useEffect(() => {
-    setEdges((eds) => eds.map(hide(hidden)));
-  }, [hidden, onlyDirectNeighbours, pageClick, layoutChange]); //edges must be hidden at each render (that is, also when we expand/compress the graph)
+  function clickOnNode(node: flowNodeWithString){
+    if (props.configData) {
+      navigate(`/config/dataObjects/${node.id}`);
+    }
+    setSelectedEdgeId(''); // revert filled action label (this will, however, always change, if we navigate from the config tab)
+  } 
 
-  // update the graph layout, either horizontal or vertical
-  // the input nodes and edges should be the custom classes imported from Graphs.ts
-  // not to be confused with dagre graph nodes and  edges
+  function clickOnEdge(edge: flowEdgeWithString){
+    if (props.configData) { 
+      navigate(`/config/actions/${edge.data.old_id}`); //Link programmatically
+    } else {
+      navigate( `/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${edge.data.old_id}`);
+    }
+    setSelectedEdgeId(edge.data.old_id);
+  }
+ 
+
+  // Effects 
+  /*
+    Re-render the lineage graph on:
+
+    1. layout change
+    2. graph expansion/collapse. 
+    3. edge label visibility set
+
+    The labels have to be set again or they will not be visible if we
+    have previousely set them.
+
+    TODO: maybe we shouldn't rerender the graph if we navigate while the graph is expanded?
+  */
   useEffect(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
-    setLayoutChange(!layoutChange);
     setNodes(nodes_init);
-    setEdges(edges_init);
-  }, [layout]);
+    setEdges(edges_init); // set edge visibility
+    setEdges(             // set edge label visibility
+      (eds) => showLabels(eds)
+    );
+  }, [hidden, layout, onlyDirectNeighbours, props]);
 
   //Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
   const onNodesChange = useCallback(
@@ -192,46 +200,6 @@ function LineageTab(props: flowProps) {
     [setEdges]
   );
   
-  // handlers for navigating dataObjects and actions
-  const navigate = useNavigate();   
-  function clickOnNode(node: flowNodeWithString){
-    if (props.configData) {
-      navigate(`/config/dataObjects/${node.id}`); //Link programmatically
-    }
-    setSelectedEdgeId(''); // revert filled action label 
-    setPageClick(!pageClick);
-  } 
-  function clickOnEdge(edge: flowEdgeWithString){
-    if (props.configData) { 
-      navigate(`/config/actions/${edge.old_id}`); //Link programmatically
-    } else {
-      navigate( `/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${edge.old_id}`);
-    }
-    setSelectedEdgeId(edge.old_id);
-    setPageClick(!pageClick);
-  }
-
-  // container holding SVG needs manual height resizing to fill 100%
-  const chartBox = useRef<HTMLDivElement>();
-  /**const [contentHeight, setContentHeight] = useState(100);**/
-
-  /**const reactFlow = useReactFlow();**/
-
-  /**function handleResize() {
-    if (chartBox.current) {
-      const height = window.innerHeight - chartBox.current.offsetTop - 25; // 25px bottom margin...
-      setContentHeight(height);
-    }
-  }**/
-
-//Asynchronously changes the centering of the lineage
-  /**function init() {
-    handleResize();
-    setTimeout(() => {
-      reactFlow.setCenter(0, 0, {zoom: 0.8});
-    }, 1);
-    window.addEventListener('resize', () => handleResize());
-  }**/
 
   return (
     <Box 
@@ -244,14 +212,13 @@ function LineageTab(props: flowProps) {
       <ReactFlow 
         nodes={nodes}
         edges={edges}
-        /*onInit={init}*/
         defaultPosition={[0,0]} 
         onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
         onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodesConnectable={false} //prevents adding new edges
-        onNodeMouseEnter={(event, node) =>{}}
+        // onNodeMouseEnter={(event, node) =>{}}
         // onNodeMouseLeave={}
         // onEdgeMouseEnter={}
         // onEdgeMouseLeave={}
