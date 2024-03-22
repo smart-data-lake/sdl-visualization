@@ -51,6 +51,7 @@ function getTsFromIndexFilename(statsFile: string): Date {
 }
 function getTsIndex(type: string, subtype: string, elementName: string): Promise<TsIndexEntry[] | undefined> {
 	const filename = `/${type}/${elementName}.${subtype}.index`;
+  console.log("fetching file " + filename);
 	return getUrlContent(filename)
 	.then((content: string) => 
     content.split(/\r?\n/)

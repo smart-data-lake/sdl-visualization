@@ -1,4 +1,6 @@
+import { assert } from 'console';
 import dagre from 'dagre';
+import ReactFlow from 'react-flow-renderer';
 
 const central_node_color = '#addbff';
 
@@ -79,8 +81,6 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
     public destNodes: Node[];
     public levelOneNodes: Node[];
 
-
-
     constructor(nodes: Node[], edges: Edge[]){
         this.nodes = nodes; //maybe remove if not necessary
         this.edges = edges;
@@ -94,6 +94,21 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
         // this.changeLevelForAllNodes(); //compute levels for all nodes. Not needed anymore since the layout is done automatically.
         this.computeLevelsList();
         
+    }
+
+    setNodes(newNodes: Node[]){
+        this.nodes = newNodes;
+    }
+
+    setEdges(newEdges: Edge[]){
+        this.edges = newEdges;
+    } 
+
+    setLayout(layout: string){
+        if(['TB', 'LR'].includes(layout)){
+            const nodesWithPos = computeNodePositions(this.nodes, this.edges, layout);
+            this.setNodes(nodesWithPos);
+        }
     }
 
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
@@ -265,11 +280,16 @@ function getActions(actionsJSON: any, dataObjects: any){
 }
 
 
-export function computeNodePositions(nodes: Node[], edges: Edge[]){
+//TODO: maybe refactor more code, e.g. extract nodes/edges forEach
+export function computeNodePositions(nodes: Node[], edges: Edge[], direction: string = 'TB'){
     //instantiate dagre Graph
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({});
     dagreGraph.setDefaultEdgeLabel(function() { return {}; });
+
+    // set graph layout
+    console.log("resetting layout to " + direction);
+    dagreGraph.setGraph({ rankdir: direction });
     
     //add nodes + edges to the graph and calculate layout
     nodes.forEach((node)=>{
@@ -284,8 +304,6 @@ export function computeNodePositions(nodes: Node[], edges: Edge[]){
     // so it matches the React Flow node anchor point (top left).
     nodes.forEach((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
-        //node.targetPosition = isHorizontal ? 'left' : 'top'; //To know where the edge starts (optional)
-        //node.sourcePosition = isHorizontal ? 'right' : 'bottom'; //(Optional)
         node.position = {
         x: nodeWithPosition.x - node.width / 2,
         y: nodeWithPosition.y - node.height / 2,
@@ -311,7 +329,6 @@ export function computeNodePositions(nodes: Node[], edges: Edge[]){
 
     return nodes;
 }
-
   
 export default class DataObjectsAndActions extends DAGraph{
     constructor(public jsonObject: any){
@@ -324,8 +341,8 @@ export default class DataObjectsAndActions extends DAGraph{
 }
 
 export class PartialDataObjectsAndActions extends DAGraph{
-    constructor(public nodes: Node[], public edges: Edge[]){
-        const nodesWithPos = computeNodePositions(nodes, edges);
+    constructor(public nodes: Node[], public edges: Edge[], public layout_direction:  string = 'TB'){
+        const nodesWithPos = computeNodePositions(nodes, edges, layout_direction);
         super(nodesWithPos, edges);
     }
 }
