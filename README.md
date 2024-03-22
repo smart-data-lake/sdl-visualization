@@ -4,7 +4,7 @@ SDL Visualizer is a single page web application to show SDLB configuration and w
 # Usage
 
 Prerequisites
-- NodeJS version 18 ([see](https://nodejs.dev/en/download/))
+- NodeJS version 20 ([see](https://nodejs.dev/en/download/))
 - Yarn ([see](https://classic.yarnpkg.com/lang/en/docs/install/#windows-stable))
 
 ## Developer server
