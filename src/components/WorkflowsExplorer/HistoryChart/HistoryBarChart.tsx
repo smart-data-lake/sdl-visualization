@@ -29,7 +29,7 @@ const HistoryBarChart = (props: {runs: any[], selectRange: (range: [Date,Date]) 
     //TODO: ticks on y axis are not yet optimal
     // logarithmic scale, or tune maxY?
     //const scale = scaleLog().base(Math.E);
-    const maxY = runs.map(run => run.duration as number).reduce((max, cur) => Math.max(max,cur));
+    const maxY = (runs.length > 0 ? runs.map(run => run.duration as number).reduce((max, cur) => Math.max(max,cur)) : 1);
     const maxYFloorMinute = Math.max(Math.floor(maxY/1000/60)*1000*60, 1000*60); // value for main tick on y axis, minimum is 1 minute
     const maxYCeilMinute = maxYFloorMinute + 1000*60; // add an additional minute for the domain max y value
 

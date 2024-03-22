@@ -1,4 +1,4 @@
-import { getPropertyByPath, onlyUnique } from "../helpers";
+import { getPropertyByPath, isArray, onlyUnique } from "../helpers";
 
 export class ConfigData {
     public dataObjects = {};
@@ -84,9 +84,14 @@ export class InitialConfigDataLists implements ConfigDataLists {
         }
         return (obj:any) => {
             const v = getPropertyByPath(obj,propClean);
-            return (v && typeof v !== 'object' && v.toString().match(regexObj));
+            return (v && (
+                (typeof v !== 'object' && v.match(regexObj)) ||
+                (isArray(v) && v.some(e => e.match(regexObj)))
+            ));
         }        
     }
+
+    
 
     /*
      * Filter action list with extended syntax: "<prefix:?><regex>,<operation?><prefix:?><regex>;...".

@@ -59,7 +59,7 @@ function getTsIndex(type: string, subtype: string, elementName: string): Promise
     .map((e) => {return {filename: e, ts: getTsFromIndexFilename(e)}})
     .reverse()
   )
-	.catch((error) => {console.log(error); return undefined});
+	.catch((error) => {console.log(error, filename); return undefined});
 }
 
 

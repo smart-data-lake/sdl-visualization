@@ -3,7 +3,7 @@
       "name" : "icao24",
       "dataType" : "string",
       "nullable" : true
-    }, {
+    }, { 
       "name" : "firstSeen",
       "dataType" : "long",
       "nullable" : true

@@ -3,13 +3,14 @@ import AltRouteIcon from '@mui/icons-material/AltRoute';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import LanIcon from '@mui/icons-material/Lan';
+import ClearIcon from '@mui/icons-material/Clear';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import Public from '@mui/icons-material/Public';
 import RocketLaunch from '@mui/icons-material/RocketLaunch';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import TableView from '@mui/icons-material/TableView';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
-import { Box, List, ListItemButton, ListItemContent, ListItemDecorator, Typography } from '@mui/joy';
+import { Box, IconButton, List, ListItemButton, ListItemContent, ListItemDecorator, Typography } from '@mui/joy';
 import Divider from '@mui/joy/Divider';
 import Input from '@mui/joy/Input';
 import Option from '@mui/joy/Option';
@@ -200,12 +201,14 @@ export default function ElementList(props: ElementListProps) {
       <Tooltip arrow title={`Search text for type=${elementSearchType} not valid: ${elementSearchTextErr}`} placement='bottom' color="danger" open={(elementSearchTextErr ? true : false)} variant="soft">
       <Input
         placeholder="Search element"
-        sx={{paddingRight: '0px'}}
+        sx={{paddingRight: '0px', "--Input-minHeight": 0}}
+        slotProps={{endDecorator: {sx: {marginLeft: "0px"}}}}
         value={elementSearchText}
         onChange={(e) => setElementSearchText(e.target.value)}
         error={(elementSearchTextErr ? true : false)}
         endDecorator={
           <>
+            <IconButton onClick={() => setElementSearchText('')} disabled={!(elementSearchText?.length>0)} variant='plain' sx={{"--IconButton-size": "20px"}}><ClearIcon /></IconButton>
             <Divider orientation="vertical" />
             <Select size="sm" variant="plain" value={elementSearchType} required
               onChange={(e,value) => {setElementSearchText('');setElementSearchType(value!)}}
