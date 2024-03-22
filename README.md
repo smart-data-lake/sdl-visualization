@@ -5,7 +5,7 @@ SDL Visualizer is a single page web application to show SDLB configuration and w
 
 Prerequisites
 - NodeJS version 20 ([see](https://nodejs.dev/en/download/))
-- Yarn ([see](https://classic.yarnpkg.com/lang/en/docs/install/#windows-stable))
+- Yarn. [See here](https://classic.yarnpkg.com/lang/en/docs/install/#windows-stable) for Yarn Classic or [here](https://yarnpkg.com/getting-started/install) for modern Yarn. If you prefer using Yarn Classic, be sure to use a version >= 1.22.x. 
 
 ## Developer server
 
