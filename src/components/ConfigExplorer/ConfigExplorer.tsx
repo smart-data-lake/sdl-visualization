@@ -9,6 +9,7 @@ import ElementDetails from './ElementDetails';
 import ElementList from './ElementList';
 import ElementTable from './ElementTable';
 import GlobalConfigView from './GlobalConfigView';
+import ErrorBoundary from '../../layouts/ErrorBoundary';
 
 
 interface SearchFilterDef {
@@ -61,9 +62,9 @@ function ConfigExplorer(props: { configData?: ConfigData }) {
 				<ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
 				<DraggableDivider id="config-elementlist" cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
 				<Routes>
-					<Route path=":elementType" element={<ElementTable dataLists={filteredConfigDataLists!} />} />
-					<Route path=":elementType/:elementName/:tab?" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} />
-					<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} />
+					<Route path=":elementType" element={<ElementTable dataLists={filteredConfigDataLists!} />} errorElement={<ErrorBoundary/>} />
+					<Route path=":elementType/:elementName/:tab?" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} errorElement={<ErrorBoundary/>} />
+					<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} errorElement={<ErrorBoundary/>} />
 				</Routes>
 			</Sheet>
 		</Sheet>

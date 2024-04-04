@@ -15,6 +15,7 @@ import { useEffect } from 'react';
 import { Amplify, Auth } from 'aws-amplify';
 import { amplifyTheme } from './theme';
 import Setting from './components/Settings/Setting';
+import ErrorBoundary from './layouts/ErrorBoundary';
 
 /**
  * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
@@ -29,9 +30,9 @@ export default function App() {
     <Routes>
       <Route element={<RootLayout isLoading={isLoading}/>}>
         <Route index element={<Home/>}/>
-        <Route path='workflows/' element={<Workflows/>}/>
-        <Route path='workflows/:flowId' element={<WorkflowHistory/>}/>
-        <Route path='workflows/:flowId/:runNumber/:taskId/:tab?/:stepName?' element={<Run/>}/>
+        <Route path='workflows/' element={<Workflows/>} errorElement={<ErrorBoundary/>}/>
+        <Route path='workflows/:flowId' element={<WorkflowHistory/>} errorElement={<ErrorBoundary/>}/>
+        <Route path='workflows/:flowId/:runNumber/:taskId/:tab?/:stepName?' element={<Run/>} errorElement={<ErrorBoundary/>}/>
         <Route path='workflows/*' element={<NotFound/>}/>
         <Route path='config/*' element={<ConfigExplorer configData={configData}/>}/>
         <Route path='settings/*' element={<Setting />}/>

@@ -18,7 +18,7 @@ export function withDefault<Type>(input: Type, defaultVal: Type) {
 export function hoconify(obj: any, level: number = 0, addStartIndent: boolean = true, propertiesToIgnore: (string) => boolean = () => false): string {
   const startIndent = (addStartIndent ?  getIndent(level) : '');
   const endIndent = getIndent(level);
-  if (typeof obj == 'object' && Array.isArray(obj)) {
+  if (isArray(obj)) {
     return startIndent + '[\n' + obj.map(e => hoconify(e, level+1, true, propertiesToIgnore)).join('\n') + '\n' + endIndent + ']';
   } else if (typeof obj == 'object') {
     return startIndent + '{\n' + hoconifyObjectEntries(obj, level+1, propertiesToIgnore) + '\n' + endIndent + '}';
@@ -49,8 +49,8 @@ function hoconifyObjectEntries(obj: object, level: number, propertiesToIgnore: (
 export function getPropertyByPath(object: any, path: string) {
   return path
    .split(/[.[\]'"]/)
-   .filter(p => p)
-   .reduce((o, p) => o ? o[p] : undefined, object);
+   .filter(k => k)
+   .reduce((o, k) => o ? o[k] : undefined, object);
 }
 
 /**
@@ -122,4 +122,18 @@ export function formatFileSize(size: number){
     if (str.length == 0) return str;
     var str1 = str.replace(/([A-Z])/g, (match) => ` ${match}`);
     return str1.charAt(0).toUpperCase() + str1.slice(1);
+  }
+
+  /**
+   * Check if value is a number
+   */
+  export function isNumber(value) {
+    return typeof value === 'number';
+  }
+
+  /**
+   * Check if value is an array
+   */
+  export function isArray(value) {
+    return typeof value == 'object' && Array.isArray(value);
   }

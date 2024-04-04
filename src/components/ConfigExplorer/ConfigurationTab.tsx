@@ -212,7 +212,7 @@ export default function ConfigurationTab(props: ElementProps) {
           {feedChip()}
           {layerChip()}
           {subjectAreaChip()}
-          {tags.map(tag => createSearchChip("tags", tag, props.elementType, <SellIcon />, "warning"))}
+          {tags.map(tag => createSearchChip("metadata.tags", tag, props.elementType, <SellIcon />, "warning"))}
         </Box>
         {inputs.length > 0 && <Grid xs={12} xl={6}>{formatInputsOutputs(inputs,outputs)}</Grid>}
       </Box>
