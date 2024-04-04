@@ -24,6 +24,7 @@
 .pnp.js
 /public/state
 .venv
+.turbo
 
 # testing
 /coverage

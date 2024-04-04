@@ -1,6 +1,12 @@
+/*
+    A general Graph structure that is used by React components
+
+    TODO list:
+    - Add more overriding methods for partial graphs
+    - refactor, remove redundant code
+*/
 import { assert } from 'console';
 import dagre from 'dagre';
-import ReactFlow from 'react-flow-renderer';
 
 const central_node_color = '#addbff';
 
@@ -26,10 +32,15 @@ type id = string
 
 type position = {
     x: number,
-    y: number
+    y: number,
 }
 
-export class Node{
+export const enum NodeType { // could potentially be replaced by polymorphism
+    DataNode, 
+    ActionNode
+}
+
+export abstract class Node{
     public id: id;
     public position: position;
     public width: number;
@@ -38,8 +49,9 @@ export class Node{
     public backgroundColor: string;
     public isCenterNode: boolean;
     public data: {id: string};
+    public nodeType: NodeType;
 
-    constructor(id: id, position?: {x: number, y: number}, level: number = -1){
+    constructor(nodeType: NodeType, id: id, position?: {x: number, y: number}, level: number = -1){
         this.id = id;
         this.level = level //level defines the longest path starting from all input nodes
         this.position = position ? position : {x:0, y:0};
@@ -48,9 +60,15 @@ export class Node{
         this.backgroundColor = '#FFFFFF';
         this.isCenterNode = false;
         this.data = {id: this.id}
+        this.nodeType = nodeType;
+    }
+
+    setid(newid: string){
+        this.id = newid;
     }
 } 
 
+// TODO: can be simplified in future versions, does not have to store that many attirbutes
 export class Edge{
 
     public fromNode: Node;
@@ -72,9 +90,8 @@ export class Edge{
     }
 }
 
-
-export class DAGraph{ //problem: we're not checking if the graph is acyclic.
-
+// TODO: getactiongrpah getdataobjgraph methods
+export class DAGraph { 
     public nodes: Node[];
     public edges: Edge[];
     public levels: number[];
@@ -92,8 +109,47 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
         this.levelOneNodes = this.nodes.filter(x => !destinationNodes.includes(x)); //nodes without incoming edges
 
         // this.changeLevelForAllNodes(); //compute levels for all nodes. Not needed anymore since the layout is done automatically.
-        this.computeLevelsList();
-        
+        // this.computeLevelsList();
+    }
+
+    /*
+        For a cleaner representation, we represent every set of actions that ends in the same (data) node
+        as a single action node. This is done by merging the actions into a single action node and renaming it.
+    */
+    #mergeCommonEdges(){
+        const actions = this.nodes.filter(node => node.nodeType === NodeType.ActionNode) as ActionObject[];
+        const newNodes: Node[] = [];
+        const newEdges: Edge[] = [];
+        const processed = new Set<string>();
+        var counter = 0;
+      
+        actions.forEach(action => {
+          const actionId = action.id; // actionId = fromNode.id-toNode.id
+          const actionType = action.getActionType();
+
+            if (!processed.has(action.id)) { 
+                // Find all actions that are part of the same N-ary function
+                const relatedActions = actions.filter(a => {return a.toNode.id === action.toNode.id && a.getActionType() === actionType}); 
+                relatedActions.forEach(a => processed.add(a.id));
+
+                // Merge related actions into a single action node and rename
+                const newFromNodeId = `${counter++}:merged-fromNodes-to-${actionId}`;
+                const newToNodeId = `${counter++}:merged-toNode-${actionId}`;
+                const newActionId = `${counter++}:merged-${actionId}`;
+                const newFromNode = new DataObject(newFromNodeId);
+                const newToNode = new DataObject(newToNodeId);
+                const mergedAction = new ActionObject(newFromNode, newToNode, newActionId);
+                newNodes.push(mergedAction);
+
+                const lastActions = actions.filter(a => a.toNode.id === action.fromNode.id);
+                lastActions.forEach(la => {
+                    newEdges.push(new Edge(la, mergedAction, `${la.id}<==>${newActionId}`));
+                });
+           }
+        });
+
+        this.nodes = newNodes;
+        this.edges = newEdges;
     }
 
     setNodes(newNodes: Node[]){
@@ -108,8 +164,93 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
         if(['TB', 'LR'].includes(layout)){
             const nodesWithPos = computeNodePositions(this.nodes, this.edges, layout);
             this.setNodes(nodesWithPos);
+        } else {
+            console.log(`"layout ${layout} is not supported. Please use 'TB' or 'LR'`);
         }
     }
+
+    getNodeById(identifier: string){
+        return this.nodes.find(node => node.id === identifier);
+    }
+
+    getEdgeById(identier: string){
+        return this.edges.find(edge => edge.id === identier);
+    }
+
+    /*
+        Returns a new graph with dataObject as nodes. potentially slow
+        maybe creating action and dataobj graphs separately on initialization is better
+
+        Caveat: this assumes that we have a full graph view
+
+        TODO: may be simplified when we merge the actions when constructing the graph
+    */
+    getDataGraph(): DAGraph {
+        const newEdges: Edge[] = [];
+
+        this.nodes.filter(node => node.nodeType === NodeType.ActionNode).forEach(a => {
+            this.edges.filter(ie => ie.toNode.id === a.id).forEach(in_edge => {
+                this.edges.filter(oe => oe.fromNode.id === a.id).forEach(out_edge => {
+                    newEdges.push(new Edge(in_edge.fromNode, out_edge.toNode, in_edge.fromNode.id + '->' + a.id + '->' + out_edge.toNode.id));
+                });
+            });
+        });
+
+        return new DAGraph(this.nodes.filter(node => node.nodeType === NodeType.DataNode), 
+                           newEdges);
+    }
+    
+    /**
+     * 
+     * Returns a new graph with ActionObject as ndoes. The edges are built by connecting neighbouring actions.
+     *  In rare case, an action object can have multiple incoming and outgoing edges
+
+        Caveat: this assumes that we have a full graph view
+
+     * merge n-ary action functions, e.g. if D1 -> A and D2 -> A, then merge D1 and D2 into a single action node 
+     * while it could be the case that the out degree of the action node is > 1, we can merge by only looking
+     * at the in-degree of the action node 
+     * 
+     * TODO: add source and sink nodes
+     * 
+     */
+
+    getActionGraph(): DAGraph {
+        const actions = this.nodes.filter(node => node.nodeType === NodeType.ActionNode) as ActionObject[];
+        const newNodes: Node[] = [];
+        const newEdges: Edge[] = [];
+        const processed = new Set<string>();
+      
+        actions.forEach(action => {
+          const actionId = action.id; // actionId = fromNode.id-toNode.id
+          const actionType = action.getActionType();
+
+            if (!processed.has(action.id)) { 
+                // Find all actions that are part of the same N-ary function
+                
+                const relatedActions = actions.filter(a => {return a.toNode.id === action.toNode.id && a.getActionType() === actionType}); 
+                relatedActions.forEach(a => processed.add(a.id));
+                const numMerged = relatedActions.length;
+
+                // Merge related actions into a single action node and rename
+                const newFromNodeId = `${numMerged}:merged-fromNodes-to-${actionId}`;
+                const newToNodeId = `${numMerged}:merged-toNode-${actionId}`;
+                const newActionId = `${numMerged}:merged-${actionId}`;
+                const newFromNode = new DataObject(newFromNodeId);
+                const newToNode = new DataObject(newToNodeId);
+                const mergedAction = new ActionObject(newFromNode, newToNode, newActionId, {type: actionType});
+                newNodes.push(mergedAction);
+
+                const lastActions = actions.filter(a => a.toNode.id === action.fromNode.id);
+                lastActions.forEach(la => {
+                    newEdges.push(new Edge(la, mergedAction, `${la.id}<==>${newActionId}`));
+                });
+           }
+        });
+
+        return new DAGraph(newNodes, newEdges);
+    }
+
 
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
     returnPartialGraphInputs(specificNodeId:id, colorNode:boolean = true): [Node[], Edge[]]{
@@ -183,57 +324,47 @@ export class DAGraph{ //problem: we're not checking if the graph is acyclic.
         edges.forEach(edge => edge.isCentral = true);
         return [predsAndSuccs, edges];
     }
+}
 
-    /**
-     * DEPRECATED
-     * @param destNode 
-     * @returns Defines level of a node (DEPRECATED as the layout is done by the ReactFlow library)
-     */
-    longestPath(destNode: Node): number { //defines level of a node
-        var result = 0
-        if (this.destNodes.includes(destNode)){
-            var incomingEdges = this.edges.filter(edge => edge.toNode === destNode);
-            var incomingNodesLongestPath = incomingEdges.map(edge => this.longestPath(edge.fromNode));
-            //console.log(destNode);
-            //console.log(incomingNodesLongestPath);
-            result = Math.max(...incomingNodesLongestPath)+1;
+/*
+    A newer implementation of the Graph structure that is used by the Lineage Grpph
+    Both DataObjects and Actions will be represented as Nodes 
+*/
+export class ActionObject extends Node {
+    public jsonObject?: any;
+    public fromNode: Node;
+    public toNode: Node;
+
+    constructor(fromNode: Node, toNode: Node, id: id, jsonObject?: any){
+        super(NodeType.ActionNode, id);
+        this.jsonObject = jsonObject;
+        this.fromNode = fromNode;
+        this.toNode = toNode;
+    }
+
+    getActionType(): string | undefined {
+        if (this.jsonObject){
+            return this.jsonObject.type;
+        } else {
+            console.error('Cannot read action type, ActionObject does not have a jsonObject.');
         }
-        return result
-    }
-    /**
-     * DEPRECATED as the layout is done by the ReactFlow library
-     */
-    changeLevelForAllNodes(): void {
-        this.nodes.forEach(node => {
-            node.level = this.longestPath(node)
-        })
-    }
-
-    /**
-     * DEPRECATED as the layout is done by the ReactFlow library
-     */
-    computeLevelsList(){
-        this.nodes.forEach(node =>{
-            if (this.levels[node.level]===undefined){
-                this.levels[node.level] = 1;
-            } 
-            else{
-                this.levels[node.level] += 1;
-            }
-        });
     }
 }
 
+/*
+    DataObjects and Actions are represented as vertices and edges respectively in the Lineage Graph
+    These implementations will be deprecated in future versions since we will implement actions as
+    vertices as well so that the layout can be done automatically.
+*/
+export class DataObject extends Node { // does the same as getDataObjects 
+    public jsonObject?: any;
 
-export class DataObject extends Node {
-    public jsonObject: any;
-
-    constructor(id: id, jsonObject: any){
-        super(id);
+    constructor(id: id, jsonObject?: any){
+        super(NodeType.DataNode, id);
         this.jsonObject = jsonObject;
     }
-  }
-  
+}
+
 export class Action extends Edge {
     public jsonObject: any;
 
@@ -243,8 +374,7 @@ export class Action extends Edge {
     }
   }
 
-
-function getDataObjects(dataObjectsJSON: any){
+    function getDataObjects(dataObjectsJSON: any): DataObject[]{
     var result: DataObject[] = [];
     const allDataObjects = Object.keys(dataObjectsJSON);
     allDataObjects.forEach(dataObject =>{
@@ -254,21 +384,25 @@ function getDataObjects(dataObjectsJSON: any){
     return result;
 }
 
-function getActions(actionsJSON: any, dataObjects: any){
+// may be deprecated in future versions
+function getActions(actionsJSON: any, dataObjects: any): Action[] { // edge type
     const result: Action[] = [];
     const allActions: string[] = Object.keys(actionsJSON);
     allActions.forEach(actionId => {
-        const action = actionsJSON[actionId];
         // collect input/outputIds
+        const action = actionsJSON[actionId];
         const inputIds: string[] = [];
         const outputIds: string[] = [];
         if (action['inputIds']) action['inputIds'].forEach((id: string) => inputIds.push(id));
         if (action['outputIds']) action['outputIds'].forEach((id: string) => outputIds.push(id));
         if (action['inputId']) inputIds.push(action['inputId']);
         if (action['outputId']) outputIds.push(action['outputId']);
+
         // attributes for MLflow*Actions have non-standard namings...
+        // maybe future versions that are compatible with more frameworks/libs should be considered
         if (action.type === 'MLflowPredictAction') inputIds.push(action.mlflowId);
         if (action.type === 'MLflowTrainAction') outputIds.push(action.mlflowId);
+
         inputIds.forEach((inputId: string) => {
             outputIds.forEach((outputId: string) => {
                 const a = new Action(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, action);
@@ -279,16 +413,76 @@ function getActions(actionsJSON: any, dataObjects: any){
     return result;    
 }
 
+/*
+    get action objects either as edges or both edges and nodes. the former one is used for the lineage graph that
+    implements actions as edges. The latter one is used where both actions and data objects are nodes
+    May need to be refactored
+*/
+function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean = false): Action[] | [ActionObject[], Action[]]{ // node type
+    const result: Action[] = [];
+    const actionNodes: ActionObject[] = [];
+    const allActions: string[] = Object.keys(actionsJSON);
+    allActions.forEach(actionId => {
+
+        const action = actionsJSON[actionId];
+
+        // collect input/outputIds
+        const inputIds: string[] = [];
+        const outputIds: string[] = [];
+        if (action['inputIds']) action['inputIds'].forEach((id: string) => inputIds.push(id));
+        if (action['outputIds']) action['outputIds'].forEach((id: string) => outputIds.push(id));
+        if (action['inputId']) inputIds.push(action['inputId']);
+        if (action['outputId']) outputIds.push(action['outputId']);
+
+        // attributes for MLflow*Actions have non-standard namings...
+        // maybe future versions that are compatible with more frameworks/libs should be considered
+        if (action.type === 'MLflowPredictAction') inputIds.push(action.mlflowId);
+        if (action.type === 'MLflowTrainAction') outputIds.push(action.mlflowId);
+        
+        if (getAll){ 
+            // merge data and action nodes
+            inputIds.forEach((inputId: string) => {
+                outputIds.forEach((outputId: string) => {
+                    const doFrom = dataObjects.find((o: any) => o.id === inputId);
+                    const doTo = dataObjects.find((o: any) => o.id === outputId);
+                    const actionObject = new ActionObject(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, action);
+                    actionNodes.push(actionObject);
+
+                    // create id for incomming and outgoing edges to the action object
+                    const incommingEdge = new Action(doFrom, actionObject, actionId + `"_from_${inputId}"`, action); 
+                    const outgoingEdge = new Action(actionObject, doTo, actionId + `"_to_${outputId}"`, action);
+                    result.push(incommingEdge);
+                    result.push(outgoingEdge);
+                });
+            });
+        } else {
+            // an action is treated as an edge, no merge needed
+            inputIds.forEach((inputId: string) => {
+                outputIds.forEach((outputId: string) => {
+                    const a = new Action(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, action);
+                    result.push(a);
+                });
+            });
+        }
+        
+    });
+
+    if(getAll){
+        return [actionNodes, result];
+    } else {
+        return result;   
+    }     
+}
+
 
 //TODO: maybe refactor more code, e.g. extract nodes/edges forEach
-export function computeNodePositions(nodes: Node[], edges: Edge[], direction: string = 'TB'){
+export function computeNodePositions(nodes: Node[], edges: Edge[], direction: string = 'TB'): Node[] {
     //instantiate dagre Graph
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({});
     dagreGraph.setDefaultEdgeLabel(function() { return {}; });
 
     // set graph layout
-    console.log("resetting layout to " + direction);
     dagreGraph.setGraph({ rankdir: direction });
     
     //add nodes + edges to the graph and calculate layout
@@ -330,6 +524,9 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
     return nodes;
 }
   
+/* 
+    Older versions of lineage graph constructors
+*/
 export default class DataObjectsAndActions extends DAGraph{
     constructor(public jsonObject: any){
         const dataObjects: DataObject[] = getDataObjects(jsonObject.dataObjects);
@@ -347,34 +544,17 @@ export class PartialDataObjectsAndActions extends DAGraph{
     }
 }
   
-
-
-
-
-
 /*
-const n1 = new Node('1')
-const n2 = new Node('2')
-const n3 = new Node('3')
-const n4 = new Node('4')
-const n5 = new Node('5')
-const n6 = new Node('6')
-const n7 = new Node('7')
-const n8 = new Node('8')
-const n9 = new Node('9')
-
-const e41 = new Edge(n4, n1, "e41")
-const e42 = new Edge(n4, n2, "e42")
-const e43 = new Edge(n4, n3, "e43")
-const e17 = new Edge(n1, n7, "e17")
-const e28 = new Edge(n2, n8, "e28")
-const e36 = new Edge(n3, n6, "e36")
-const e75 = new Edge(n7, n5, "e75")
-const e26 = new Edge(n2, n6, "e26")
-const e85 = new Edge(n8, n5, "e85")
-const e86 = new Edge(n8, n6, "e86")
-const e96 = new Edge(n9, n6, "e96")
-
-const g = new DAGraph([n1, n2, n3, n4, n5, n6, n7, n8, n9], [e41, e42, e43, e17, e28, e36, e75, e26, e85, e86, e96])
-const partial = g.returnPartialGraphInputs('5');
+    Newer versions of lineage grpah constructors
+    The graph is constructed by linking action and data nodes via unique ids
 */
+export  class DataObjectsAndActionsSep extends DAGraph{ // TODO: make this default afterwards
+    constructor(public jsonObject: any){
+        const dataObjects: DataObject[] = getDataObjects(jsonObject.dataObjects);
+        const [actionObjects, edges] = getActionsObjects(jsonObject.actions, dataObjects, true) as [ActionObject[], Action[]];
+        const dataObjectsAndActions: Node[] = dataObjects.concat(actionObjects);
+        const dataObjectsWithPosition = computeNodePositions(dataObjectsAndActions, edges) as Node[]; 
+        super(dataObjectsWithPosition, edges);
+        this.jsonObject = jsonObject;
+    }
+}
