@@ -37,7 +37,8 @@ type position = {
 
 export const enum NodeType { // could potentially be replaced by polymorphism
     DataNode, 
-    ActionNode
+    ActionNode, 
+    CommonNode,
 }
 
 export abstract class Node{
@@ -51,7 +52,7 @@ export abstract class Node{
     public data: {id: string};
     public nodeType: NodeType;
 
-    constructor(nodeType: NodeType, id: id, position?: {x: number, y: number}, level: number = -1){
+    constructor(id: id, nodeType?: NodeType, position?: {x: number, y: number}, level: number = -1){
         this.id = id;
         this.level = level //level defines the longest path starting from all input nodes
         this.position = position ? position : {x:0, y:0};
@@ -60,7 +61,7 @@ export abstract class Node{
         this.backgroundColor = '#FFFFFF';
         this.isCenterNode = false;
         this.data = {id: this.id}
-        this.nodeType = nodeType;
+        this.nodeType = (nodeType !== undefined) ? nodeType : NodeType.CommonNode;
     }
 
     setid(newid: string){
@@ -220,6 +221,12 @@ export class DAGraph {
         const newNodes: Node[] = [];
         const newEdges: Edge[] = [];
         const processed = new Set<string>();
+
+        // add source and sink nodes
+        const srcNode = new HelperNode("source");
+        const sinkNode = new HelperNode("sink");
+        newNodes.push(srcNode);
+        newNodes.push(sinkNode);
       
         actions.forEach(action => {
           const actionId = action.id; // actionId = fromNode.id-toNode.id
@@ -242,9 +249,17 @@ export class DAGraph {
                 newNodes.push(mergedAction);
 
                 const lastActions = actions.filter(a => a.toNode.id === action.fromNode.id);
+                if (lastActions.length === 0) {
+                    newEdges.push(new Edge(srcNode, mergedAction, `source->${newActionId}`));
+                }
                 lastActions.forEach(la => {
                     newEdges.push(new Edge(la, mergedAction, `${la.id}<==>${newActionId}`));
                 });
+
+                const nextActions = actions.filter(a => a.fromNode.id === action.toNode.id);
+                if (nextActions.length === 0) {
+                    newEdges.push(new Edge(mergedAction, sinkNode, `${newActionId}->sink`));
+                }
            }
         });
 
@@ -330,13 +345,22 @@ export class DAGraph {
     A newer implementation of the Graph structure that is used by the Lineage Grpph
     Both DataObjects and Actions will be represented as Nodes 
 */
+class HelperNode extends Node{
+    public data: any;
+
+    constructor(id: id, data?: any){
+        super(id, NodeType.CommonNode);
+        this.data = data;
+    }
+}
+
 export class ActionObject extends Node {
     public jsonObject?: any;
     public fromNode: Node;
     public toNode: Node;
 
     constructor(fromNode: Node, toNode: Node, id: id, jsonObject?: any){
-        super(NodeType.ActionNode, id);
+        super(id, NodeType.ActionNode);
         this.jsonObject = jsonObject;
         this.fromNode = fromNode;
         this.toNode = toNode;
@@ -360,7 +384,7 @@ export class DataObject extends Node { // does the same as getDataObjects
     public jsonObject?: any;
 
     constructor(id: id, jsonObject?: any){
-        super(NodeType.DataNode, id);
+        super(id, NodeType.DataNode);
         this.jsonObject = jsonObject;
     }
 }

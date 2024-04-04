@@ -55,11 +55,13 @@ test('get data graph, single I/O source', () => {
                           [e11, e12, e21, e22, e31, e32]);
 
     const dataGraph = g.getDataGraph();
+
     const edges = dataGraph.edges;
     const nodes = dataGraph.nodes;
 
     expect(nodes.length).toBe(4);
     expect(edges.length).toBe(3);
+  
 
     edges.forEach((edge) => {
         expect(edge.fromNode.nodeType).toBe(NodeType.DataNode);
@@ -120,7 +122,7 @@ test('get data graph, multiple I/O sources', () => {
     
     const dataGraph = g.getDataGraph();
 
-    expect(dataGraph.edges.length).toBe(7);
+    expect(dataGraph.edges.length).toBe(7); // includes source and sink nodes
     expect(dataGraph.nodes.length).toBe(5);
 
     // hard-coded edge values
@@ -164,8 +166,8 @@ test('get action graph, single I/O source', () => {
                           [e12_in, e12_out, e23_in, e23_out]);
 
     const actionGraph = g.getActionGraph();
-    expect(actionGraph.nodes.length).toBe(2);
-    expect(actionGraph.edges.length).toBe(1); // might need to be adjusted if we introduce source and sink nodes
+    expect(actionGraph.nodes.length).toBe(4);
+    expect(actionGraph.edges.length).toBe(3); 
 })
 
 // {d1, d2} -> a1 -> {d3}; {d4} -> a3 -> {d3}
@@ -193,11 +195,11 @@ test('get action graph, multiple I/O source', () => {
     const actionGraph = g.getActionGraph();
 
     // test action types
-    expect(actionGraph.nodes.length).toBe(2);
+    expect(actionGraph.nodes.length).toBe(4);
 
     // should be the same as above
     const actionTypes = new Set(actionGraph.nodes.filter((n)=>n.nodeType));
-    expect(actionTypes.size).toBe(2);
+    expect(actionTypes.size).toBe(4);
 })
 
 // TODO
