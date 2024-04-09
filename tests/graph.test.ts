@@ -1,7 +1,11 @@
 
 /**
  * Tests Graph class
+ * 
+ * The graph creation might need to be adapted (so that we dont have to create n separate actions 
+ * for an n-ary function)
  */
+import { graphlib } from 'dagre';
 import {DAGraph, NodeType, Node, Edge, ActionObject, DataObject, Action} from '../src/util/ConfigExplorer/Graphs.ts';
 import {expect, test, it} from 'vitest';
 
@@ -32,8 +36,9 @@ test('data graph creation', () => {
     expect(e4.fromNode.id).toBe("n1");
 })
 
-
-// n1 -> a1 -> n2 -> a2 -> n3 -> a3 -> n4
+/*
+     n1 -> a1 -> n2 -> a2 -> n3 -> a3 -> n4
+*/     
 test('get data graph, single I/O source', () => {
     const n1 = new DataObject('n1');
     const n2 = new DataObject('n2');
@@ -85,8 +90,10 @@ test('get data graph, single I/O source', () => {
     expect(e_n3_n4?.toNode).toBe(n4);
 })
 
-//  {d1, d2, d4} -> a1 -> {d3, d5}; {d4} -> a2 -> {d3}
-test('get data graph, multiple I/O sources', () => {
+/*
+  {d1, d2, d4} -> a1 -> {d3, d5}; {d4} -> a2 -> {d3}
+*/
+  test('get data graph, multiple I/O sources', () => {
     const n1 = new DataObject('n1');
     const n2 = new DataObject('n2');
     const n3 = new DataObject('n3');
@@ -145,10 +152,12 @@ test('get data graph, multiple I/O sources', () => {
 
 // TODO
 test('get data graph, data read from lineage', () => {
-    
+ 
 })
 
-// n1 -> a1 -> n2 -> a2 -> n3 
+/*
+     n1 -> a1 -> n2 -> a2 -> n3 
+*/
 test('get action graph, single I/O source', () => {
     const n1 = new DataObject('n1');
     const n2 = new DataObject('n2');
@@ -170,7 +179,9 @@ test('get action graph, single I/O source', () => {
     expect(actionGraph.edges.length).toBe(3); 
 })
 
-// {d1, d2} -> a1 -> {d3}; {d4} -> a3 -> {d3}
+/*
+    {d1, d2} -> a1 -> {d3}; {d4} -> a3 -> {d3}
+*/
 test('get action graph, multiple I/O source', () => {
     const n1 = new DataObject('n1');
     const n2 = new DataObject('n2');
@@ -205,4 +216,94 @@ test('get action graph, multiple I/O source', () => {
 // TODO
 test('get action graph, data read from lineage', () => {
     
+})
+
+/*
+    1.   d4 -> a3 ->  d1, d5 -> a4 -> d2
+    2.   {d1, d2} -> {a1, a2} as a -> d3
+
+*/
+test("get action graph, single n-ary action, no duplicates", () => {
+    const d1 = new DataObject('d1');
+    const d2 = new DataObject('d2');
+    const d3 = new DataObject('d3');
+    const d4 = new DataObject('d4');
+    const d5 = new DataObject('d5');
+    const a1 = new ActionObject(d1, d3, 'join', {type: "actionType1"})
+    const a2 = new ActionObject(d2, d3, 'join', {type: "actionType1"})
+    const a3 = new ActionObject(d4, d1, 'comp d4-d1', {type: "actionType2"} ) //
+    const a4 = new ActionObject(d5, d2, 'comp d5-d2', {type: "actionType3"} )
+
+    const e1_in = new Edge(d1, a1, 'e1_in')
+    const e2_in = new Edge(d2, a2, 'e2_in');
+    const e1_out = new Edge(a1, d3, 'e1_out')
+    const e2_out = new Edge(a2, d3, 'e2_out')
+    const e3_in = new Edge(d4, a3, 'e3_in')
+    const e4_in = new Edge(d5, d2, 'e4_in')
+    const e3_out = new Edge(a3, d1, 'e3_out')
+    const e4_out = new Edge(a4, d2, 'e4_out')
+
+    const g = new DAGraph([d1, d2, d3, d4, d5, a1, a2, a3, a4],
+        [e1_in, e1_out, e2_in, e2_out, e3_in, e3_out, e4_in, e4_out])
+
+    const actionGraph = g.getActionGraph()
+    // actionGraph.edges.forEach( e => {
+    //     console.log(e.fromNode.id + " TO " + e.toNode.id)
+    // })
+
+    expect(actionGraph.nodes.length).toBe(5);
+    expect(actionGraph.edges.length).toBe(5);
+    
+})
+
+/*
+    The demo example:
+    1. ext_departures -> dld_ded_dep -> int_departures
+    2. ext_airports -> dld_airp -> stg_airports -> hist_airp -> int_airports
+    3. {int_departures, int_airports} -> join -> btl_dep_arr_airports -> comp_dist -> btl_distances
+*/
+test("get action graph, demo example, no duplicates", () => {
+    const ext_airports = new DataObject('ext-arports');
+    const stg_airports = new DataObject('stg-airports');
+    const int_airports = new DataObject('int-airports');
+    const ext_departures = new DataObject('ext-departures');
+    const int_departures = new DataObject('int-departures');
+    const btl_dep_arr_airports = new DataObject('btl-dep-arr-airports');
+    const btl_distances = new DataObject('btl-distances'); 
+
+    const dld_ded_dep = new ActionObject(ext_departures, int_departures, "download deduplicate departures", {type: "DOWNLOAD"})
+    const dld_airp = new ActionObject(ext_airports, stg_airports, "download airports", {type: "DOWNLOAD"})
+    const hist_airp = new ActionObject(stg_airports, int_airports, "historize airports", {type: "HISTORIZE"})
+    const join_0 = new ActionObject(int_departures, btl_dep_arr_airports, "join airports and departures", {type: "JOIN"})
+    const join_1 = new ActionObject(int_airports, btl_dep_arr_airports, "join airports and departures", {type: "JOIN"})
+    const comp_dist = new ActionObject(btl_dep_arr_airports, btl_distances, "compute distances", {type: "COMPUTE"})
+    
+    const e1 = new Edge(ext_departures, dld_ded_dep, "e1");
+    const e2 = new Edge(dld_ded_dep, int_departures,"e2");
+    const e3 = new Edge(ext_airports, dld_airp, "e3");
+    const e4 = new Edge(dld_airp, stg_airports, "e4");
+    const e5 = new Edge(stg_airports, hist_airp, "e5");
+
+    const e6 = new Edge(int_departures, join_0, "e6");
+    const e7 = new Edge(int_airports, join_1, "e7");
+    const e8 = new Edge(join_0, btl_dep_arr_airports, "e8");
+    const e9 = new Edge(join_1, btl_dep_arr_airports, "e9");
+
+    const e10 = new Edge(btl_dep_arr_airports, comp_dist, "e10");
+    const e11 = new Edge(comp_dist, btl_distances, "e11");
+
+    const g = new DAGraph([ext_airports, stg_airports, int_airports, ext_departures, int_departures, btl_dep_arr_airports, btl_distances, dld_ded_dep, dld_airp, hist_airp, join_0, join_1, comp_dist],
+                          [e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11]);
+
+    const actionGraph = g.getActionGraph();
+
+    // check for duplicates
+    actionGraph.edges.forEach( e => {
+        console.log(e.fromNode.id + " TO " + e.toNode.id)
+    })
+    expect(actionGraph.edges.length).toBe(7);
+    const actionIds = new Set(actionGraph.edges.map((n) => n.id));
+    expect(actionIds.size).toBe(7);
+
+
 })
