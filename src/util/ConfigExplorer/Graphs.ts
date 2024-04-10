@@ -222,7 +222,7 @@ export class DAGraph {
         const processed = new Set<string>();
 
         // add source and sink nodes
-        const srcNode = new CommonNode("source");
+        const srcNode = new CommonNode("src");
         const sinkNode = new CommonNode("sink");
         newNodes.push(srcNode);
         newNodes.push(sinkNode);
@@ -343,8 +343,11 @@ export class DAGraph {
         specificNode.isCenterNode = true;
         if(colorNode){specificNode.backgroundColor=central_node_color;}
         const edges = this.edges.filter(edge => edge.fromNode.id === specificNodeId || edge.toNode.id === specificNodeId);
-        let predsAndSuccs: Node[] = this.nodes.filter(node => edges.some(edge => edge.toNode.id === node.id || edge.fromNode.id === node.id));
-        return [predsAndSuccs.concat(specificNode), edges];
+        const nodes: Node[] = [];
+        edges.filter(e => {e.fromNode.id === specificNodeId? 
+                                                            nodes.push(e.toNode) : 
+                                                            nodes.push(e.fromNode)});
+        return [nodes.concat(specificNode), edges];
     }
 
     returnDirectNeighboursFromEdge(specificEdgeId: id): [Node[], Edge[]]{
@@ -413,8 +416,6 @@ export class FlexibleActionObject extends Node {
             console.error('Cannot read action type, ActionObject does not have a jsonObject.');
         }
     }
-
-
 }
 
 /*
