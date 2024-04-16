@@ -9,6 +9,44 @@ import { graphlib } from 'dagre';
 import {DAGraph, NodeType, Node, Edge, ActionObject, DataObject, Action} from '../src/util/ConfigExplorer/Graphs.ts';
 import {expect, test, it} from 'vitest';
 
+
+function construct_demo_example_graph(): DAGraph {
+    const ext_airports = new DataObject('ext-arports');
+    const stg_airports = new DataObject('stg-airports');
+    const int_airports = new DataObject('int-airports');
+    const ext_departures = new DataObject('ext-departures');
+    const int_departures = new DataObject('int-departures');
+    const btl_dep_arr_airports = new DataObject('btl-dep-arr-airports');
+    const btl_distances = new DataObject('btl-distances'); 
+
+    const dld_ded_dep = new ActionObject(ext_departures, int_departures, "download deduplicate departures", {type: "DOWNLOAD"})
+    const dld_airp = new ActionObject(ext_airports, stg_airports, "download airports", {type: "DOWNLOAD"})
+    const hist_airp = new ActionObject(stg_airports, int_airports, "historize airports", {type: "HISTORIZE"})
+    const join_0 = new ActionObject(int_departures, btl_dep_arr_airports, "join airports and departures", {type: "JOIN"})
+    const join_1 = new ActionObject(int_airports, btl_dep_arr_airports, "join airports and departures", {type: "JOIN"})
+    const comp_dist = new ActionObject(btl_dep_arr_airports, btl_distances, "compute distances", {type: "COMPUTE"})
+    
+    const e1 = new Edge(ext_departures, dld_ded_dep, "e1");
+    const e2 = new Edge(dld_ded_dep, int_departures,"e2");
+    const e3 = new Edge(ext_airports, dld_airp, "e3");
+    const e4 = new Edge(dld_airp, stg_airports, "e4");
+    const e5 = new Edge(stg_airports, hist_airp, "e5");
+    const e6 = new Edge(hist_airp, int_airports, "e6");
+
+    const e7 = new Edge(int_departures, join_0, "e7");
+    const e8 = new Edge(int_airports, join_1, "e8");
+    const e9 = new Edge(join_0, btl_dep_arr_airports, "e9");
+    const e10 = new Edge(join_1, btl_dep_arr_airports, "e10");
+
+    const e11 = new Edge(btl_dep_arr_airports, comp_dist, "e11");
+    const e12 = new Edge(comp_dist, btl_distances, "e12");
+
+    const g = new DAGraph([ext_airports, stg_airports, int_airports, ext_departures, int_departures, btl_dep_arr_airports, btl_distances, dld_ded_dep, dld_airp, hist_airp, join_0, join_1, comp_dist],
+                          [e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12]);
+
+    return g;
+}
+
 test('data graph creation', () => {
     const n1 = new DataObject('n1');
     const n2 = new DataObject('n2');
@@ -263,38 +301,7 @@ test("get action graph, single n-ary action, no duplicates", () => {
     3. {int_departures, int_airports} -> join -> btl_dep_arr_airports -> comp_dist -> btl_distances
 */
 test("get action graph, demo example, no duplicates", () => {
-    const ext_airports = new DataObject('ext-arports');
-    const stg_airports = new DataObject('stg-airports');
-    const int_airports = new DataObject('int-airports');
-    const ext_departures = new DataObject('ext-departures');
-    const int_departures = new DataObject('int-departures');
-    const btl_dep_arr_airports = new DataObject('btl-dep-arr-airports');
-    const btl_distances = new DataObject('btl-distances'); 
-
-    const dld_ded_dep = new ActionObject(ext_departures, int_departures, "download deduplicate departures", {type: "DOWNLOAD"})
-    const dld_airp = new ActionObject(ext_airports, stg_airports, "download airports", {type: "DOWNLOAD"})
-    const hist_airp = new ActionObject(stg_airports, int_airports, "historize airports", {type: "HISTORIZE"})
-    const join_0 = new ActionObject(int_departures, btl_dep_arr_airports, "join airports and departures", {type: "JOIN"})
-    const join_1 = new ActionObject(int_airports, btl_dep_arr_airports, "join airports and departures", {type: "JOIN"})
-    const comp_dist = new ActionObject(btl_dep_arr_airports, btl_distances, "compute distances", {type: "COMPUTE"})
-    
-    const e1 = new Edge(ext_departures, dld_ded_dep, "e1");
-    const e2 = new Edge(dld_ded_dep, int_departures,"e2");
-    const e3 = new Edge(ext_airports, dld_airp, "e3");
-    const e4 = new Edge(dld_airp, stg_airports, "e4");
-    const e5 = new Edge(stg_airports, hist_airp, "e5");
-
-    const e6 = new Edge(int_departures, join_0, "e6");
-    const e7 = new Edge(int_airports, join_1, "e7");
-    const e8 = new Edge(join_0, btl_dep_arr_airports, "e8");
-    const e9 = new Edge(join_1, btl_dep_arr_airports, "e9");
-
-    const e10 = new Edge(btl_dep_arr_airports, comp_dist, "e10");
-    const e11 = new Edge(comp_dist, btl_distances, "e11");
-
-    const g = new DAGraph([ext_airports, stg_airports, int_airports, ext_departures, int_departures, btl_dep_arr_airports, btl_distances, dld_ded_dep, dld_airp, hist_airp, join_0, join_1, comp_dist],
-                          [e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11]);
-
+    const g = construct_demo_example_graph();
     const actionGraph = g.getActionGraph();
 
     // check for duplicates
@@ -304,6 +311,71 @@ test("get action graph, demo example, no duplicates", () => {
     expect(actionGraph.edges.length).toBe(7);
     const actionIds = new Set(actionGraph.edges.map((n) => n.id));
     expect(actionIds.size).toBe(7);
-
-
 })
+
+
+test("test get partial graph, data objects only, no duplicates", () =>{
+    const n1 = new DataObject('n1');
+    const n2 = new DataObject('n2');
+    const n3 = new DataObject('n3');
+    const n4 = new DataObject('n4');
+
+    const e1 = new Edge(n1, n2, "e1");
+    const e2 = new Edge(n2, n3, "e2");
+    const e3 = new Edge(n3, n4, "e3");
+    const e4 = new Edge(n1, n3, "e4");
+
+    const g = new DAGraph([n1, n2, n3, n4], 
+                          [e1, e2, e3, e4],);
+
+    const specificNodeId = 'n3';
+
+    // returns the partial graph with the specific node as the root
+    // includes every predecessor and successor node and their edges
+    const [nodes, edges] = g.returnPartialGraphInputs(specificNodeId)
+    expect(nodes.length).toBe(4);
+    expect(edges.length).toBe(4);
+
+    // returns the direct neighbours of the specific node
+    // the edges between the direct neighbours are not present
+    const [nodes_direct, edges_direct] = g.returnDirectNeighbours(specificNodeId);
+    console.log(nodes_direct)
+    expect(nodes_direct.length).toBe(4);
+    expect(edges_direct.length).toBe(3);
+})
+
+/*
+    Tests whether there are duplicates in the partial graph
+    we need the edges to be merged in the constructor, if not, we would expect more nodes and edges, 
+    which does not correspond to the displayed lineage graph. The lineage graph maskes use of the
+    function getActionObjects, where the edges are actually merged.
+*/
+test("get partial graph from demo example full graph, no duplicates", ()=>{
+    const g = construct_demo_example_graph();
+
+    const specificNodeId = 'btl-dep-arr-airports';
+    const [nodes, edges] = g.returnPartialGraphInputs(specificNodeId); 
+    expect(nodes.length).toBe(12);
+    expect(edges.length).toBe(11);
+
+    const [nodes_direct, edges_direct] = g.returnDirectNeighbours(specificNodeId);
+    console.log(nodes_direct)
+    expect(nodes_direct.length).toBe(3); // if we don't merge n-ary actions in the constructor, we would expect more nodes
+    expect(edges_direct.length).toBe(2); // same for edges
+})
+
+
+// test("get partial graph from demo example action and data graph, no duplicates", ()=>{
+//     const g = construct_demo_example_graph();
+
+//     const specificNodeId = 'btl-dep-arr-airports';
+//     const actionGraph = g.getActionGraph();
+//     const dataGraph = g.getDataGraph();
+
+//     const[actionGraphNodes, actionGraphEdges] = actionGraph.returnPartialGraphInputs(specificNodeId);
+//     const[actionGraphDirectNodes, actionGraphDirectEdges] = actionGraph.returnDirectNeighbours(specificNodeId);
+
+
+//     const[dataGraphNodes, dataGraphEdges] = dataGraph.returnPartialGraphInputs(specificNodeId);
+//     const[dataGraphDirectNodes, dataGraphDirectEdges] = dataGraph.returnDirectNeighbours(specificNodeId);
+// })
