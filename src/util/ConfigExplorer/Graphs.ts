@@ -4,8 +4,8 @@
     TODO list:
     - Add more overriding methods for partial graphs
     - refactor, remove redundant code
+    - add grouped graph
 */
-import { assert } from 'console';
 import dagre from 'dagre';
 
 const central_node_color = '#addbff';
@@ -51,8 +51,10 @@ export abstract class Node{
     public isCenterNode: boolean;
     public data: {id: string};
     public nodeType: NodeType;
+    public fromNodes: Node[];
+    public toNodes: Node[];
 
-    constructor(id: id, nodeType?: NodeType, position?: {x: number, y: number}, level: number = -1){
+    constructor(id: id, nodeType?: NodeType, position?: {x: number, y: number}, level: number = -1, fromNodes?: Node[], toNodes?: Node[]){
         this.id = id;
         this.level = level //level defines the longest path starting from all input nodes
         this.position = position ? position : {x:0, y:0};
@@ -62,6 +64,8 @@ export abstract class Node{
         this.isCenterNode = false;
         this.data = {id: this.id}
         this.nodeType = (nodeType !== undefined) ? nodeType : NodeType.CommonNode;
+        this.fromNodes = fromNodes ? fromNodes : [];
+        this.toNodes = toNodes ? toNodes : [];
     }
 
     setid(newid: string){
@@ -102,55 +106,55 @@ export class DAGraph {
         this.nodes = nodes; //maybe remove if not necessary
         this.edges = edges;
         this.levels = [];
-
         var destinationNodes: Node[] = [];
         this.edges.forEach(edge => {destinationNodes.push(edge.toNode)});
         this.destNodes = [...new Set(destinationNodes)]; //Nodes with incoming edges (remove duplicates)
         this.levelOneNodes = this.nodes.filter(x => !destinationNodes.includes(x)); //nodes without incoming edges
-
-        // this.changeLevelForAllNodes(); //compute levels for all nodes. Not needed anymore since the layout is done automatically.
-        // this.computeLevelsList();
+        // this.#mergeCommonActionEdges(); // testing
     }
 
     /*
-        For a cleaner representation, we represent every set of actions that ends in the same (data) node
-        as a single action node. This is done by merging the actions into a single action node and renaming it.
-        //TODO
+        For every dataNode, merge all incoming action edges into a single edge with a singl actionNode
+        This should only affect the full graph, not data or action graph
+        At this point we assume that there are no action nodes with multiple incoming edges
+
+        It is a degenerate case when we have multiple actions of the same type but actually some of them are not related 
+        e.g. {a1, a2, a3} -> d, all actions or of the same type, but {a1, a2} and a3 are not related, then we should not merge them 
+        This is not implemented here because we cannot know if they are related or not from the way the graph is constructed -> future update possible
     */
-    #mergeCommonEdges(){
-        const actions = this.nodes.filter(node => node.nodeType === NodeType.ActionNode) as ActionObject[];
-        const newNodes: Node[] = [];
+    #mergeCommonActionEdges(){
+        const dataNodes = this.nodes.filter(node => node.nodeType === NodeType.DataNode);
         const newEdges: Edge[] = [];
-        const processed = new Set<string>();
-        var counter = 0;
-      
-        actions.forEach(action => {
-          const actionId = action.id; // actionId = fromNode.id-toNode.id
-          const actionType = action.getActionType();
+        dataNodes.forEach(node => {
+            const actionSet = new Map<string, ActionObject[]>(); // action id: actionNodes
+            const relatedDataObjs: DataObject[] = [];
+            this.edges.filter(edge => edge.toNode === node && edge.fromNode.nodeType === NodeType.ActionNode).forEach(edge => {
+                const currAction = edge.fromNode;
+                const actionType = (currAction as ActionObject).getActionType();
+                actionSet.has(actionType) ? actionSet.get(actionType).push(edge.fromNode as ActionObject) : actionSet.set(actionType, [edge.fromNode]);
+                const relatedDataObj = edge.fromNode.fromNodes[0] as DataObject; // assume only on input node
+                relatedDataObjs.push(relatedDataObj);
+                // remove redundant nodes
+                this.nodes.splice(this.nodes.indexOf(edge.fromNode), 1);
+            });
 
-            if (!processed.has(action.id)) { 
-                // Find all actions that are part of the same N-ary function
-                const relatedActions = actions.filter(a => {return a.toNode.id === action.toNode.id && a.getActionType() === actionType}); 
-                relatedActions.forEach(a => processed.add(a.id));
-
-                // Merge related actions into a single action node and rename
-                // temporarily reomved ${counter++}:merged- prefix
-                const newFromNodeId = `merged-from-${actionId}`;
-                const newToNodeId = `merged-to-${actionId}`;
-                const newActionId = actionId;
-                const newFromNode = new DataObject(newFromNodeId);
-                const newToNode = new DataObject(newToNodeId);
-                const mergedAction = new ActionObject(newFromNode, newToNode, newActionId);
-                newNodes.push(mergedAction);
-
-                const lastActions = actions.filter(a => a.toNode.id === action.fromNode.id);
-                lastActions.forEach(la => {
-                    newEdges.push(new Edge(la, mergedAction, `${la.id}<==>${newActionId}`));
-                });
-           }
+            for (const [actionType, relatedActionObjs] of actionSet){
+                if (relatedActionObjs.length > 1){
+                    const newActionNode = new ActionObject(relatedActionObjs,[node], actionType, {type: relatedActionObjs[0].getActionType()});
+                    this.nodes.push(newActionNode);
+                    newEdges.push(new Edge(newActionNode, node, actionType));
+                    relatedDataObjs.forEach(d => {
+                        newEdges.push(new Edge(d, newActionNode, actionType))
+                    });
+                } else {
+                    newEdges.push(new Edge(relatedActionObjs[0], node, actionType));
+                    relatedDataObjs.forEach(d => {
+                        newEdges.push(new Edge(d, relatedActionObjs[0], actionType))
+                    });
+                
+                }
+            }
         });
-
-        this.nodes = newNodes;
         this.edges = newEdges;
     }
 
@@ -213,6 +217,7 @@ export class DAGraph {
      * while it could be the case that the out degree of the action node is > 1, we can merge by only looking
      * at the in-degree of the action node 
      * 
+     * TODO: will be updated with merge common actions
      */
 
     getActionGraph(): DAGraph {
@@ -222,7 +227,7 @@ export class DAGraph {
         const processed = new Set<string>();
 
         // add source and sink nodes
-        const srcNode = new CommonNode("src");
+        const srcNode = new CommonNode("source");
         const sinkNode = new CommonNode("sink");
         newNodes.push(srcNode);
         newNodes.push(sinkNode);
@@ -233,7 +238,12 @@ export class DAGraph {
 
             if (!processed.has(action.id)) { 
                 // Find all actions that are part of the same N-ary function
-                const relatedActions = actions.filter(a => {return a.toNode.id === action.toNode.id && a.getActionType() === actionType}); 
+                // a.
+                // const relatedActions = actions.filter(a => {
+                //     return a.getActionType() === actionType &&
+                //            this.nodes.some(n => a.toNodes.includes(n) === action.toNodes.includes(n))
+                // }); 
+                const relatedActions = actions.filter(a => a.getActionType() === actionType && a.toNode.id === action.toNode.id)
                 relatedActions.forEach(a => processed.add(a.id));
                 const relatedActionSourceIds = relatedActions.map((a)=>a.fromNode.id)
 
@@ -274,6 +284,11 @@ export class DAGraph {
         return new DAGraph(newNodes, newEdges);
     }
 
+    // // TODO
+    // getGroupedGraph(attribute: any){
+
+    // }
+
 
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
     returnPartialGraphInputs(specificNodeId:id, colorNode:boolean = true): [Node[], Edge[]]{
@@ -309,7 +324,8 @@ export class DAGraph {
         }
 
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
-        console.log("spec node id (part graph inputs): ", specificNodeId)
+        console.log("spec node id (part graph inputs): ", specificNodeId);
+        this.nodes.forEach(node => console.log(node.id));
         console.log("spec node (part graph inputs): ", specificNode)
         console.log("specific node (ret  part graph inputs): ", specificNode)
         specificNode.isCenterNode = true;
@@ -373,6 +389,8 @@ class CommonNode extends Node{
 
 export class ActionObject extends Node {
     public jsonObject?: any;
+    // public fromNodes: Node[];
+    // public toNodes: Node[];
     public fromNode: Node;
     public toNode: Node;
 
@@ -383,37 +401,13 @@ export class ActionObject extends Node {
         this.toNode = toNode;
     }
 
-    getActionType(): string | undefined {
+    getActionType(): string {
         if (this.jsonObject){
             return this.jsonObject.type;
         } else {
-            console.error('Cannot read action type, ActionObject does not have a jsonObject.');
-        }
-    }
-}
-
-/*
-    new type of actionObject so that the action inputs are dynamically adjustible
-
-    TODO: replace the onld one with ths
-*/
-export class FlexibleActionObject extends Node {
-    public jsonObject?: any;
-    public fromNodes: Node[];
-    public toNodes: Node[]; // what about sets
-
-    constructor(fromNode: Node[], toNode: Node[], id: id, jsonObject?: any){
-        super(id, NodeType.ActionNode);
-        this.jsonObject = jsonObject;
-        this.fromNodes = fromNode;
-        this.toNodes = toNode;
-    }
-
-    getActionType(): string | undefined {
-        if (this.jsonObject){
-            return this.jsonObject.type;
-        } else {
-            console.error('Cannot read action type, ActionObject does not have a jsonObject.');
+            console.warn('Cannot read action type, ActionObject does not have a jsonObject. Returning AnyType');
+            return 'AnyType';
+            // console.error('Cannot read action type, ActionObject does not have a jsonObject.');
         }
     }
 }
@@ -489,8 +483,8 @@ function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean =
     const result: Action[] = [];
     const actionNodes: ActionObject[] = [];
     const allActions: string[] = Object.keys(actionsJSON);
-    allActions.forEach(actionId => {
 
+    allActions.forEach(actionId => {
         const action = actionsJSON[actionId];
 
         // collect input/outputIds
@@ -507,13 +501,14 @@ function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean =
         if (action.type === 'MLflowTrainAction') outputIds.push(action.mlflowId);
         
         if (getAll){ 
-            // merge data and action nodes
+            // merge data and action nodes here TODO
             inputIds.forEach((inputId: string) => {
                 outputIds.forEach((outputId: string) => {
                     const doFrom = dataObjects.find((o: any) => o.id === inputId);
                     const doTo = dataObjects.find((o: any) => o.id === outputId);
                     const actionObject = new ActionObject(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, action);
                     actionNodes.push(actionObject);
+                    console.log("create action object: ", actionObject);
 
                     // create id for incomming and outgoing edges to the action object
                     const incommingEdge = new Action(doFrom, actionObject, actionId + `"_from_${inputId}"`, action); 

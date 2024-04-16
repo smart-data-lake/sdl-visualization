@@ -22,30 +22,21 @@ import { useParams } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
 
 // mui imports
-import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
-import AlignHorizontalLeftIcon from '@mui/icons-material/AlignHorizontalLeft';
-import AlignVerticalTopIcon from '@mui/icons-material/AlignVerticalTop';
-import OpenWithIcon from '@mui/icons-material/OpenWith';
-import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
-import { Box, IconButton } from '@mui/joy';
-import { AlignVerticalTop } from '@mui/icons-material';
-import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
+import Box from '@mui/material/Box';
+
 
 // local imports
-import './ComponentsStyles.css';
-import DownloadButton from './DownloadLineageButton';
-import {DAGraph, PartialDataObjectsAndActions, DataObjectsAndActionsSep } from '../../util/ConfigExplorer/Graphs';
-import { TaskStatus } from '../../types';
-import { ConfigData } from '../../util/ConfigExplorer/ConfigData';
-import { Node as GraphNode } from '../../util/ConfigExplorer/Graphs';
-import { Edge as GraphEdge } from '../../util/ConfigExplorer/Graphs';
-import { NodeType } from '../../util/ConfigExplorer/Graphs';
-import {TurboNode,  TurboEdge, CustomNode} from './LineageTabComponents';
+import {DAGraph, PartialDataObjectsAndActions, DataObjectsAndActionsSep } from '../../../util/ConfigExplorer/Graphs';
+import { TaskStatus } from '../../../types';
+import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
+import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
+import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
+import { NodeType } from '../../../util/ConfigExplorer/Graphs';
+import {TurboNode,  TurboEdge, CustomNode} from './LineageGraphComponents';
 import { ReactFlowProvider } from 'reactflow';
+import { ConsoleLogger } from '@aws-amplify/core';
+import {DraggableLineageGraphToolBar} from './LineageGraphToolbar';
 
-
-// todo: add new libs to project setup, package.json
-// TODO: store the graph and its different layouts statically
 // TODO: add onHover references
 // TODO: implement icon for showing node types etc.
 // TODO: implement a nodeFactory? 
@@ -63,7 +54,7 @@ const edgeTypes = {
 // TODO: maybe add more parameters to the flowProps interface
 interface flowProps {
   elementName: string;
-  elementType: string;
+  elementType: string; // we have either dataObjects or actions now
   configData?: ConfigData;
   graph?: PartialDataObjectsAndActions;
   runContext?: boolean;
@@ -72,10 +63,7 @@ interface flowProps {
 interface flowPropsWithSeparateDataAndAction extends flowProps {
   dataGraph?: PartialDataObjectsAndActions;   // dataobject only
   actionGraph?: PartialDataObjectsAndActions; // actions only  
-  // member "graph" is a graph with both data and actions, without labels or minimal label information
 }
-
-
 
 function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB'): ReactFlowNode[] {
   const isHorizontal = direction === 'LR';
@@ -101,7 +89,7 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
         // type: 'custom', // should match the name defined in custom node types
       };
 
-    } else if (nodeType === NodeType.ActionNode){ // currently copied from dataNode
+    } else if (nodeType === NodeType.ActionNode || nodeType === NodeType.CommonNode){ // currently copied from dataNode
       newNode = {
         id: dataObject.id,
         position: {x: dataObject.position.x, y: dataObject.position.y},
@@ -135,7 +123,6 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
     var newEdge = {} as ReactFlowEdge;
 
     if (edge.toNode.id === undefined || edge.fromNode.id === undefined) {
-      console.log(edge.source);
       throw Error("Edge has no source or target");
     }
 
@@ -181,7 +168,7 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
    // initialization 
    const url = useParams();
    const fullGraph = props.graph ? props.graph : new DataObjectsAndActionsSep(props.configData); 
-   const dataGraph = props.dataGraph ? props.actionGraph : fullGraph.getDataGraph(); // TODO: needs to be implemented 
+   const dataGraph = props.dataGraph ? props.dataGraph : fullGraph.getDataGraph();
    const actionGraph = props.actionGraph ? props.actionGraph :  fullGraph.getActionGraph();
  
    let nodes_init: ReactFlowNode[] = [];
@@ -201,7 +188,7 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
 
    // helper functions
-  function expandGraph(): void {
+   function expandGraph(): void {
     let buttonMessage = onlyDirectNeighbours[0] ? 'Compress Graph' : 'Expand Graph';
     setOnlyDirectNeighbours([!onlyDirectNeighbours[0], buttonMessage]);
   }
@@ -209,27 +196,33 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
   function prepareAndRenderGraph(): [ReactFlowNode[], ReactFlowEdge[]] { // 
     var partialGraphPair: [GraphNode[],GraphEdge[]] = [[],[]];
     var doa: DAGraph;
-    if (graphView === 'full'){ // TODO: customize choice
+    var centralNodeId: string = props.elementName;
+
+    // get the right central node for the graph
+    // design choice (currently 2 is implemented):
+    // 1. center the graph globally when we change the graph view while veiwing a node of different type
+    // 2. center the graph to the direct neighbour when we change the graph view while viewing a node of different type
+    // what about initial state?
+    if (graphView === 'full'){ // choose a central node for the graph
       doa = fullGraph;
     } else if (graphView === 'data'){
-      doa = dataGraph as PartialDataObjectsAndActions;
-    } else if (graphView === 'actions'){
-      doa = actionGraph as PartialDataObjectsAndActions;
+      doa = dataGraph;
+      if(props.elementType === 'actions'){ // switch to data graph when an action is selected -> select the first data node id
+        centralNodeId = dataGraph.levelOneNodes[0].id;
+      }
+    } else if (graphView === 'action'){
+      doa = actionGraph;
+      if (props.elementType === 'dataObjects'){ // switch to action graph when a data object is selected -> select, should only be possible on first change
+        centralNodeId = 'source';
+      }
     } else {
       throw Error("Unknown graph view " + graphView);
     }
 
-    // TODO: we need a third button for the full graph view? not sure if we need type distinction here
-    // if (props.elementType==='dataObjects'){
-    //   partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(props.elementName) : doa.returnPartialGraphInputs(props.elementName);
-    // }    else {
-    //   throw Error("Unknown type" + props.elementType)
-    // }
-    // else if(props.elementType==='actions'){
-    //   partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighboursFromEdge(props.elementName) : doa.returnPartialGraphInputsFromEdge(props.elementName);
-    // } 
-    partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(props.elementName) : doa.returnPartialGraphInputs(props.elementName);
+    partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout);
+        
+    console.log("partial graph: ", partialGraph)
     let nodes = createReactFlowNodes(partialGraph, layout);
     let edges = createReactFlowEdges(partialGraph, selectedEdgeId);
     return [nodes, edges];
@@ -247,10 +240,8 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
   // node type distinction
   function clickOnNode(node: ReactFlowNode){
     let propsHasConfigData = props.configData;
-    console.log(node.data.nodeType + "is the node type");
 
     if(node.data.nodeType === NodeType.DataNode){
-      console.log("action");
       if(propsHasConfigData){
         navigate(`/config/dataObjects/${node.id}`); 
       }
@@ -276,24 +267,11 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
     
   }
 
-  // a handler for changing the view
-  // actual view change is done in prepareAndRenderGraph
-  // a dropdown item may not always have an eventKey defined, thus we use a null check
-  const handleViewChange = (eventKey: string | null) => {
-    if (eventKey !== null) {
-    setGraphView(eventKey);
-    }
-  }
-
-
-  // TODO: add / adjust Effects 
+  // TODO: the edges remain on every click, might be because that the centralNode id is not correctly set (or we just don't use it because of renamings)
   useEffect(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
     setEdges(edges_init); // set edge visibility
-    setEdges(             // set edge label visibility
-      (eds) => showLabels(eds)
-    );
   }, [hidden, layout, onlyDirectNeighbours, props, graphView]);
 
   // Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
@@ -306,8 +284,7 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
     (changes: any) => setEdges((eds: any) => applyEdgeChanges(changes, eds)),
     [setEdges]
   );
-
-// TODO: integrate new components
+  
   return (
     <Box
       className='data-flow'
@@ -317,106 +294,36 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
       }}
     >
       <ReactFlowProvider>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          defaultPosition={[0, 0]}
-          onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
-          // onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodesConnectable={false} //prevents adding new edges
-          nodeTypes={nodeTypes}
-        >
-          <Background/>
-          <MiniMap
-            nodeStrokeColor={(n) => {
-              if (n.style?.background) return n.style.background.toString();
-              if (n.type === 'input') return '#0041d0';
-              if (n.type === 'output') return '#ff0072';
-              if (n.type === 'default') return '#1a192b';
-
-              return '#eee';
-            }}
-            nodeColor={(n) => {
-              if (n.style?.background) return n.style.background.toString();
-
-              return '#fff';
-            }}
-            nodeBorderRadius={2}
-          />
-          <Controls />
-          <Box
-            sx={{
-              position: 'absolute',
-              left: 9,
-              bottom: 135,
-              display: 'flex',
-              flexDirection: 'column-reverse',
-            }}
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            defaultPosition={[0, 0]}
+            onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
+            // onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodesConnectable={false} 
+            nodeTypes={nodeTypes}
           >
-            <div style={{ position: 'absolute', bottom: '20px', right: '20px' }}>
-              <DropdownButton
-                id="graph-view-dropdown"
-                title={graphView ? graphView : 'Select View'}
-                onSelect={handleViewChange}
-              >
-                <Dropdown.Item eventKey={"data"}>Data Graph</Dropdown.Item>
-                <Dropdown.Item eventKey={"action"}>Action Graph</Dropdown.Item>
-                <Dropdown.Item eventKey={"full"}>Full Graph</Dropdown.Item>
-              </DropdownButton>
-            </div>
+            <Background/>
+            {/* <MiniMap/> */}
+            {/* <Controls /> */}
 
-            <div
-              title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'}
-              className="controls"
-              style={{ zIndex: 4, cursor: 'pointer' }}
-            >
-              <IconButton
-                color={'neutral'}
-                onClick={() => setLayout(layout === 'TB' ? 'LR' : 'TB')}
-              >
-                {layout === 'TB' ? <AlignVerticalTop /> : <AlignHorizontalLeft />}
-              </IconButton>
-            </div>
-
-            <div
-              title='Display / Hide action IDs'
-              style={{ zIndex: 4, cursor: 'pointer' }}
-            >
-              <IconButton
-                color={hidden ? 'neutral' : 'primary'}
-                onClick={() => setHidden(!hidden)}
-              >
-                <RocketLaunchOutlined />
-              </IconButton>
-            </div>
-
-            {props.configData && (
-              <div
-                title={onlyDirectNeighbours[1] as string}
-                style={{ zIndex: 4, cursor: 'pointer' }}
-              >
-                <IconButton
-                  color='neutral'
-                  onClick={expandGraph}
-                >
-                  {onlyDirectNeighbours[0] ? <OpenWithIcon /> : <CloseFullscreenIcon />}
-                </IconButton>
-              </div>
-            )}
-
-            <div
-              title='Download image as PNG file'
-              style={{ zIndex: 4, cursor: 'pointer' }}
-            >
-              <DownloadButton />
-            </div>
-          </Box>
-        </ReactFlow>
-      </ReactFlowProvider>
-    </Box>
-  );
-}
+          </ReactFlow>
+          <DraggableLineageGraphToolBar
+            isPropsConfigDefined={props.configData !== undefined}
+            hidden={hidden}
+            setHidden={setHidden}
+            expanded={onlyDirectNeighbours[0]}
+            setExpanded={expandGraph}
+            expansionState={onlyDirectNeighbours[1]}
+            layout={layout}
+            setLayout={setLayout}
+            graphView={graphView}
+            setGraphView={setGraphView}
+          />
+        </ReactFlowProvider>
+      </Box>
+    );}
 
 export default LineageTabSep;

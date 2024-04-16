@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, isNode, Position } from 'react-flow-renderer';
-import DataObjectsAndActions, { Action, DAGraph, PartialDataObjectsAndActions, computeNodePositions } from '../../util/ConfigExplorer/Graphs';
+import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions, DataObjectsAndActionsSep } from '../../../util/ConfigExplorer/Graphs';
 import { useNavigate } from "react-router-dom";
 import './ComponentsStyles.css';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
@@ -10,19 +10,48 @@ import { useParams } from 'react-router-dom';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import DownloadButton from './DownloadLineageButton';
-import { ConfigData } from '../../util/ConfigExplorer/ConfigData';
+import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
 import { Box, IconButton } from '@mui/joy';
-import { TaskStatus } from '../../types';
+import { TaskStatus } from '../../../types';
 import dagre from 'dagre';
 import { AlignVerticalTop } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 
-import { Node as GraphNode } from '../../util/ConfigExplorer/Graphs';
-import { Edge as GraphEdge } from '../../util/ConfigExplorer/Graphs';
-
+import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
+import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
+import { NodeType } from '../../../util/ConfigExplorer/Graphs';
+import {TurboNode,  TurboEdge, CustomNode} from './LineageGraphComponents';
+import { ReactFlowProvider } from 'reactflow';
 // TODO: store the graph and its different layouts statically
 // TODO: add onHover references
 // TODO: implement icon for showing node types etc.
+// TODO: implement a nodeFactory? 
+// TODO: statically store data graph, action graph and entire graph, custom grouping in graph attibutes
+
+const nodeTypes = {
+  turbo: TurboNode,
+  custom: CustomNode,
+};
+
+const edgeTypes = {
+  turbo: TurboEdge,
+};
+
+// accessed as ag attributes
+// TODO: maybe add more parameters to the flowProps interface
+interface flowProps {
+  elementName: string;
+  elementType: string;
+  configData?: ConfigData;
+  graph?: PartialDataObjectsAndActions;
+  runContext?: boolean;
+}
+
+type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of ReactFlow with an (optional) String attribute. 
+
+type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
+
+
 
 function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB'): Node[] {
   const isHorizontal = direction === 'LR';
@@ -31,16 +60,38 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
   dataObjectsAndActions.nodes.forEach((node)=>{
     //const dataObject = node as DataObject; //downcasting in order to be able to access the JSONObject attribute
     const dataObject = node
-    
-    result.push({
-      id: dataObject.id,
-      position: {x: dataObject.position.x, y: dataObject.position.y},
-      data: {label: dataObject.id, isCenterNode: dataObject.isCenterNode},
-      style: {background: dataObject.backgroundColor},
-      targetPosition: isHorizontal ? Position.Left : Position.Top,
-      sourcePosition: isHorizontal ? Position.Right : Position.Bottom
-      //jsonString: JSON.stringify(dataObject.jsonObject, null, '\t'), //Do we need this??
-    })
+    const nodeType = dataObject.nodeType;
+    var newNode: Node = {} as Node;
+
+    if (nodeType === NodeType.DataNode){
+      newNode = {
+        id: dataObject.id,
+        position: {x: dataObject.position.x, y: dataObject.position.y},
+        data: {label: dataObject.id, 
+          isCenterNode: dataObject.isCenterNode, 
+        },
+        style: {background: dataObject.backgroundColor},
+        targetPosition: isHorizontal ? Position.Left : Position.Top,
+        sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+        // type: 'custom', // should match the name defined in custom node types
+      };
+
+    } else if (nodeType === NodeType.ActionNode){ // currently copied from dataNode
+      newNode = {
+        id: dataObject.id,
+        position: {x: dataObject.position.x, y: dataObject.position.y},
+        data: {label: dataObject.id, isCenterNode: dataObject.isCenterNode},
+        style: {background: dataObject.backgroundColor},
+        targetPosition: isHorizontal ? Position.Left : Position.Top,
+        sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+        type: 'custom',
+      };
+
+    } else {
+      throw Error("Node type " + (typeof nodeType) + "  not supported");
+    }
+
+    result.push(newNode);
   });
   return result;
 }
@@ -54,8 +105,16 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
     //const action = edge as Action; //downcasting in order to access jsonObject
     const action = edge; //downcasting in order to access jsonObjectsourcePosition: 'right',
     const selected = selectedEdgeId === action.id;
+    var newEdge = {} as Edge;
 
-    result.push({
+    console.log(edge.toNode.id + " " + edge.fromNode.id);
+
+    if (edge.toNode.id === undefined || edge.fromNode.id === undefined) {
+      console.log(edge.source);
+      throw Error("Edge has no source or target");
+    }
+
+    newEdge = {
       // old_id: action.id, //what we use for linking
       id: action.id + action.fromNode.id+action.toNode.id, //because it has to be unique
       source: action.fromNode.id,
@@ -72,30 +131,20 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       },
       labelBgPadding: [7, 7],
       labelBgBorderRadius: 8,
-      labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, // TODO: add fill color for clicked edge
-      //jsonString: JSON.stringify(action.jsonObject, null, '\t'),
+      labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, 
       style: { stroke: '#096bde', strokeWidth: 2},
-      // type: 'runLineage',
-      animated:  true, // TODO: only set edges that have been run and add description for the edges
-    });
+      animated:  true, 
+    };
+    result.push(newEdge);
   });
+
   return result;
 }
 
-
-interface flowProps {
-  elementName: string;
-  elementType: string;
-  configData?: ConfigData;
-  graph?: PartialDataObjectsAndActions;
-  runContext?: boolean;
-}
-
-type flowNodeWithString = Node<any> & {jsonString?:string} //merge Node type of ReactFlow with an (optional) String attribute. 
-
-type flowEdgeWithString = Edge<any> & {jsonString?:string} & {old_id?: string}
-
-
+/*
+  Older version of Lineage Tab, implements actions as edges and dataObjects as nodes
+  edge labels are overlapping 
+*/
 function LineageTab(props: flowProps) {
   
   // initialization 
@@ -140,6 +189,8 @@ function LineageTab(props: flowProps) {
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout);
     let nodes = createReactFlowNodes(partialGraph, layout);
     let edges = createReactFlowEdges(partialGraph, selectedEdgeId);
+
+    
     return [nodes, edges];
   }
 
@@ -201,6 +252,8 @@ function LineageTab(props: flowProps) {
   );
   
 
+  // caveat: to avoid Zustand error, the Reactflow element with custom implementation of nodes/edges has to be wrapped
+  // within the ReactflowProvider Tag as direct children, not in separate files
   return (
     <Box 
       className='data-flow' 
@@ -209,6 +262,7 @@ function LineageTab(props: flowProps) {
         height: '100%',
       }} 
     >
+    <ReactFlowProvider>
       <ReactFlow 
         nodes={nodes}
         edges={edges}
@@ -218,12 +272,10 @@ function LineageTab(props: flowProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodesConnectable={false} //prevents adding new edges
-        // onNodeMouseEnter={(event, node) =>{}}
-        // onNodeMouseLeave={}
-        // onEdgeMouseEnter={}
-        // onEdgeMouseLeave={}
+        nodeTypes={nodeTypes}
+        // edgeTypes={edgeTypes}
       >
-        <Background />
+        <Background/>
         <MiniMap />
         <Controls />
         <Box sx={{position: 'absolute', left: 9, bottom: 135, display: 'flex', flexDirection: 'column-reverse'}}>
@@ -258,6 +310,7 @@ function LineageTab(props: flowProps) {
         </div>
         </Box>
       </ReactFlow>
+      </ReactFlowProvider>
     </Box>
   );
 }
