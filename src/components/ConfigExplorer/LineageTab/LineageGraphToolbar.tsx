@@ -189,7 +189,7 @@ function DownloadLineageButton() {
 /*
   The main toolbar component
 */
-function LineageGraphToolbar({isPropsConfigDefined, graphView, setGraphView, layout, setLayout, expanded, setExpanded, expansionState, hidden, setHidden}) {
+function LineageGraphToolbar(props) {
   return <Box
     sx={{
       position: 'absolute',
@@ -208,12 +208,12 @@ function LineageGraphToolbar({isPropsConfigDefined, graphView, setGraphView, lay
       },
     }}
   >
-      <GraphViewSelector graphView={graphView} setGraphView={setGraphView}/>
+      <GraphViewSelector graphView={props.graphView} setGraphView={props.setGraphView}/>
       <Divider orientation='horizontal'/>
-      <LayoutButton layout={layout} setLayout={setLayout}/>
-      {isPropsConfigDefined && <GraphExpansionButton expanded={expanded} setExpanded={setExpanded} expansionState={expansionState}/>}
+      <LayoutButton layout={props.layout} setLayout={props.setLayout}/>
+      {props.isPropsConfigDefined && <GraphExpansionButton expanded={props.expanded} setExpanded={props.setExpanded} expansionState={props.expansionState}/>}
       <Divider orientation='horizontal'/>
-      <ShowActionButton hidden={hidden} setHidden={setHidden}/>
+      <ShowActionButton hidden={props.hidden} setHidden={props.setHidden}/>
       <DownloadLineageButton/>
 </Box>
 }
