@@ -58,6 +58,8 @@ function downloadImage(dataUrl: string) {
   a.click();
 }
 
+const componentZIndex = 4;
+
 /*
   Individual components of the toolbar with its custom hooks
 */
@@ -92,14 +94,15 @@ const GraphViewSelector = ({graphView, setGraphView}) => {
     return getSearchTypeElement(option.value);
   }
 
+
   return (
     <div>
-        <Select value={getSearchTypeElement(graphView)} required
-                renderValue={renderSearchType}
-                variant="plain"
+        <Select variant="plain"
                 size="sm"
+                value={getSearchTypeElement(graphView)} required
                 onChange={handleChange}
-                style={{ zIndex: 4, cursor: 'pointer' }}
+                renderValue={renderSearchType}
+                style={{ zIndex: componentZIndex, cursor: 'pointer' }}
                 >
           <Option id="full" value="full">{getSearchTypeElement('full')}</Option>
           <Option id="data" value="data">{getSearchTypeElement('data')}</Option>
@@ -113,7 +116,7 @@ const LayoutButton = ({layout, setLayout}) => {
   return <div
   title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'}
   className="controls"
-  style={{ zIndex: 4, cursor: 'pointer' }}
+  style={{ zIndex:  componentZIndex, cursor: 'pointer' }}
 >
   <IconButton
     color={'neutral'}
@@ -132,7 +135,7 @@ const GraphExpansionButton = ({expanded, setExpanded, expansionState}) => {
 
   return <div
       title={expansionState as string}
-      style={{ zIndex: 4, cursor: 'pointer' }}
+      style={{ zIndex:  componentZIndex, cursor: 'pointer' }}
     >
       <IconButton
         color='neutral'
@@ -146,7 +149,7 @@ const GraphExpansionButton = ({expanded, setExpanded, expansionState}) => {
 const ShowActionButton = ({hidden, setHidden}) => {
   return  <div
   title='Display / Hide action IDs'
-  style={{ zIndex: 4, cursor: 'pointer' }}
+  style={{ zIndex:  componentZIndex, cursor: 'pointer' }}
 >
   <IconButton
     color={hidden ? 'neutral' : 'primary'}
@@ -175,7 +178,7 @@ function DownloadLineageButton() {
   return (
     <div
       title='Download image as PNG file'
-      style={{ zIndex: 4, cursor: 'pointer' }}
+      style={{ zIndex:  componentZIndex, cursor: 'pointer' }}
     >
       <IconButton
         color='neutral'
@@ -192,6 +195,7 @@ function DownloadLineageButton() {
 function LineageGraphToolbar(props) {
   return <Box
     sx={{
+      zIndex: componentZIndex,
       position: 'absolute',
       left: 9,
       bottom: 135,
