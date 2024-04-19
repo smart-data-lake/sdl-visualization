@@ -14,9 +14,8 @@
 */
 
 // react component imports
-import { useState, useCallback, useEffect, useRef} from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node as ReactFlowNode, Edge as ReactFlowEdge, MarkerType, isNode, Position } from 'react-flow-renderer';
-import DropdownButton from 'react-bootstrap/DropdownButton';
 import Dropdown from 'react-bootstrap/Dropdown';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
@@ -32,7 +31,7 @@ import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
 import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
 import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
-import {TurboNode,  TurboEdge, CustomNode} from './LineageGraphComponents';
+import {CustomDataNode, CustomActionNode} from './LineageGraphComponents';
 import { ReactFlowProvider } from 'reactflow';
 import { ConsoleLogger } from '@aws-amplify/core';
 import {DraggableLineageGraphToolBar} from './LineageGraphToolbar';
@@ -42,17 +41,22 @@ import {DraggableLineageGraphToolBar} from './LineageGraphToolbar';
 // TODO: implement a nodeFactory? 
 // TODO: statically store data graph, action graph and entire graph, custom grouping in graph attibutes
 
+/*
+ Add custom node and edge types
+*/
 const nodeTypes = {
-  turbo: TurboNode,
-  custom: CustomNode,
-};
+  // turbo: TurboNode,
+  customDataNode: CustomDataNode,
+  customActionNode: CustomActionNode,
+}
 
-const edgeTypes = {
-  turbo: TurboEdge,
-};
+// const edgeTypes = {
+//   turbo: TurboEdge,
+// };
+
 
 // TODO: maybe add more parameters to the flowProps interface
-interface flowProps {
+export interface flowProps {
   elementName: string;
   elementType: string; // we have either dataObjects or actions now
   configData?: ConfigData;
@@ -60,51 +64,45 @@ interface flowProps {
   runContext?: boolean;
 }
 
-interface flowPropsWithSeparateDataAndAction extends flowProps {
+export interface flowPropsWithSeparateDataAndAction extends flowProps {
   dataGraph?: PartialDataObjectsAndActions;   // dataobject only
   actionGraph?: PartialDataObjectsAndActions; // actions only  
 }
 
-function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB'): ReactFlowNode[] {
+function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB', props: flowPropsWithSeparateDataAndAction): ReactFlowNode[] {
   const isHorizontal = direction === 'LR';
+  const nodes = dataObjectsAndActions.nodes;
   var result: ReactFlowNode[] = []; 
 
-  dataObjectsAndActions.nodes.forEach((node)=>{
-    //const dataObject = node as DataObject; //downcasting in order to be able to access the JSONObject attribute
+  nodes.forEach((node)=>{
     const dataObject = node
     const nodeType = dataObject.nodeType;
-    var newNode: ReactFlowNode = {} as ReactFlowNode;
-
-    if (nodeType === NodeType.DataNode){
-      newNode = {
-        id: dataObject.id,
-        position: {x: dataObject.position.x, y: dataObject.position.y},
-        data: {label: dataObject.id, 
-               isCenterNode: dataObject.isCenterNode, 
-               nodeType: nodeType
+    const newNode = {
+      id: dataObject.id,
+      type: 'customDataNode', // should match the name defined in custom node types
+      position: {x: dataObject.position.x, y: dataObject.position.y},
+      data: {
+        props: props,
+        label: dataObject.id, 
+        isCenterNode: dataObject.isCenterNode, 
+        nodeType: nodeType,
+        targetPosition: isHorizontal ? Position.Left : Position.Top,
+        sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+        // the following are hard coded for testing
+        progress: nodeType === NodeType.ActionNode ? (Math.random()*100).toFixed(1) : undefined, 
+        metric: "sum", 
+        jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined,
+        properties: {
+          p1: "prop 1",
+          p2: "prop 2",
+          p3: "prop 3"
         },
-        style: {background: dataObject.backgroundColor},
-        targetPosition: isHorizontal ? Position.Left : Position.Top,
-        sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
-        // type: 'custom', // should match the name defined in custom node types
-      };
+        style: {
+          background: dataObject.backgroundColor,
+        },
+      },
 
-    } else if (nodeType === NodeType.ActionNode || nodeType === NodeType.CommonNode){ // currently copied from dataNode
-      newNode = {
-        id: dataObject.id,
-        position: {x: dataObject.position.x, y: dataObject.position.y},
-        data: {label: dataObject.id, 
-               isCenterNode: dataObject.isCenterNode,
-               nodeType: nodeType},
-        style: {background: dataObject.backgroundColor},
-        targetPosition: isHorizontal ? Position.Left : Position.Top,
-        sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
-        // type: 'custom',
-      };
-
-    } else {
-      throw Error("Node type " + (typeof nodeType) + "  not supported");
-    }
+    } as ReactFlowNode
 
     result.push(newNode);
   });
@@ -177,7 +175,6 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
    const [graphView, setGraphView] = useState('full'); // control for action/data/full graph view 
    const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
    const [layout, setLayout] = useState('TB');
-   const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>(''); // wird verschwinden mit anderer Sicht
    let [hidden, setHidden] = useState(useParams().elementType === 'dataObjects' ? true : false); 
   
    let initial_render = prepareAndRenderGraph();
@@ -220,51 +217,12 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
     }
 
     partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
-    const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout);
+    const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout, props.configData);
         
     console.log("partial graph: ", partialGraph)
-    let nodes = createReactFlowNodes(partialGraph, layout);
-    let edges = createReactFlowEdges(partialGraph, selectedEdgeId);
+    let nodes = createReactFlowNodes(partialGraph, layout, props);
+    let edges = createReactFlowEdges(partialGraph, undefined);
     return [nodes, edges];
-  }
-
-  // we don't need labels for now
-  function showLabels(edges: ReactFlowEdge[]) {
-    return edges.map(e => {
-      e.label = (hidden ? '' : e.data.label_copy);
-      return e;
-    })
-  };
-
-
-  // node type distinction
-  function clickOnNode(node: ReactFlowNode){
-    let propsHasConfigData = props.configData;
-
-    if(node.data.nodeType === NodeType.DataNode){
-      if(propsHasConfigData){
-        navigate(`/config/dataObjects/${node.id}`); 
-      }
-      setSelectedEdgeId(''); // revert filled action label (this will, however, always change, if we navigate from the config tab)
-
-    } else if (node.data.nodeType === NodeType.ActionNode){
-
-      if(propsHasConfigData){
-        navigate(`/config/actions/${node.id}`);
-      } else {
-        navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${node.id}`);
-      }
-      setSelectedEdgeId(node.data.old_id);
-
-    } else {
-      throw Error("Unknown node type: " + node.data.nodeType);
-    }
-   
-  } 
-
-  // can be removed or implement other stuff here after clickOnNode is implemented
-  function clickOnEdge(edge: ReactFlowEdge){
-    
   }
 
   // TODO: the edges remain on every click, might be because that the centralNode id is not correctly set (or we just don't use it because of renamings)
@@ -298,7 +256,7 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
             nodes={nodes}
             edges={edges}
             defaultPosition={[0, 0]}
-            onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
+            // onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
             // onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
