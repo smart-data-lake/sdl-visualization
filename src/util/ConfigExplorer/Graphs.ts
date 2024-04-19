@@ -6,6 +6,7 @@
     - refactor, remove redundant code
     - add grouped graph
 */
+import { NoEncryption } from '@mui/icons-material';
 import dagre from 'dagre';
 
 const central_node_color = '#addbff';
@@ -264,19 +265,10 @@ export class DAGraph {
                     return relatedActionSourceIds.includes(a.toNode.id) && (uniqueLastActions.hasOwnProperty(a.toNode.id) ? false : (uniqueLastActions[a.toNode.id] = true));
                 });
 
-                if (lastActions.length === 0) {
-                    newEdges.push(new Edge(srcNode, mergedAction, `source->${newActionId}`));
-                } else {
+                if (lastActions.length > 0) {
                     lastActions.forEach(la => { // no duplicates here
                         newEdges.push(new Edge(la, mergedAction, `${la.id}->${newActionId}`));
                     });
-                }
-                console.log("last actions; ", lastActions)
-                
-
-                const nextActions = actions.filter(a => a.fromNode.id === action.toNode.id);
-                if (nextActions.length === 0) {
-                    newEdges.push(new Edge(mergedAction, sinkNode, `${newActionId}->sink`));
                 }
            }
         });
@@ -399,6 +391,7 @@ export class ActionObject extends Node {
         this.jsonObject = jsonObject;
         this.fromNode = fromNode;
         this.toNode = toNode;
+        this.jsonObject = jsonObject;
     }
 
     getActionType(): string {
@@ -544,8 +537,8 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
     dagreGraph.setGraph({});
     dagreGraph.setDefaultEdgeLabel(function() { return {}; });
 
-    // set graph layout
-    dagreGraph.setGraph({ rankdir: direction });
+    // set graph layout and the minimum between-node distance, ranksep is needed for computing all node distances
+    dagreGraph.setGraph({ rankdir: direction, nodesep: 200, ranksep: 200});
     
     //add nodes + edges to the graph and calculate layout
     nodes.forEach((node)=>{
@@ -600,9 +593,10 @@ export default class DataObjectsAndActions extends DAGraph{
 }
 
 export class PartialDataObjectsAndActions extends DAGraph{
-    constructor(public nodes: Node[], public edges: Edge[], public layout_direction:  string = 'TB'){
+    constructor(public nodes: Node[], public edges: Edge[], public layout_direction:  string = 'TB', public jsonObject?: any){
         const nodesWithPos = computeNodePositions(nodes, edges, layout_direction);
         super(nodesWithPos, edges);
+        this.jsonObject = jsonObject;
     }
 }
   
