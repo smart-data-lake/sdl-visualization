@@ -89,20 +89,22 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 							</span>
 						</Tooltip>
 					</TabList>
-					<Sheet>
-						{!openLineage ?
-							(
-								<Button size="sm" onClick={() => setOpenLineage(!openLineage)}>
-									Open lineage
-									<KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
-								</Button>
-							) : (
-								<Button variant='soft' size="sm" onClick={() => setOpenLineage(!openLineage)}>
-									Close lineage
-									<KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem'}}/>
-								</Button>
-						)}
-					</Sheet>
+					{	(elementType === "dataObjects" || elementType === "actions") && 
+						(<Sheet>
+							{!openLineage ?
+								(
+									<Button size="sm" onClick={() => setOpenLineage(!openLineage)}>
+										Open lineage
+										<KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
+									</Button>
+								) : (
+									<Button variant='soft' size="sm" onClick={() => setOpenLineage(!openLineage)}>
+										Close lineage
+										<KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem'}}/>
+									</Button>
+							)}
+						</Sheet>)
+					}
 				</Sheet>
 				<TabPanel value="configuration" className="content-panel" sx={{height: '100%', width: '100%', overflow: 'auto'}}>
 					<ConfigurationTab data={configObj} connection={connectionConfigObj} statsIndex={statsIndex} elementName={elementName!} elementType={elementType!} />
