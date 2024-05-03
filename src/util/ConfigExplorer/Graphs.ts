@@ -158,8 +158,8 @@ export class DAGraph {
        this.levelOneNodes = this.#computeLevelOneNodes();
         if (mergeEdges){
             this.#mergeCommonActionEdges(); // testing
-            this.nodes = this.removeDuplicatesFromObjArray(this.nodes);
-            this.edges = this.removeDuplicatesFromObjArray(this.edges);
+            this.nodes = this.removeDuplicatesFromObjArrayOnAttributes(this.nodes, ["id"]);
+            this.edges = this.removeDuplicatesFromObjArrayOnAttributes(this.edges, ["id"])//, ["toNode.id"]);
         }
     }
 
@@ -231,9 +231,9 @@ export class DAGraph {
 
                     const newActionNode = new ActionObject(dataObjs, [node], actionId, jsonObjs);
                     this.nodes.push(newActionNode);
-                    this.edges.push(new Edge(newActionNode, node, actionId));
+                    this.edges.push(new Edge(newActionNode, node, `${newActionNode.id}=${actionType}=${node.id}`));
                     dataObjs.forEach(d => {
-                        this.edges.push(new Edge(d, newActionNode, d.id, actionId))
+                        this.edges.push(new Edge(d, newActionNode, `${d.id}=${actionType}=${actionId}`, actionId)) //
                     });
 
                     // remove redundant nodes and edges
@@ -254,8 +254,16 @@ export class DAGraph {
         non-clean cleanup unmerged edges due to custom M:N DF actions
         Will be updated in mergeCommonEdges
     */
-    removeDuplicatesFromObjArray<T>(arr: T[]){
-        return [...new Map(arr.map(v => [JSON.stringify(v), v])).values()];
+    removeDuplicatesFromObjArrayOnAttributes<T>(arr: T[], attr: string[] | undefined){ // fromNode.id, toNode.id
+        if (attr !== undefined){
+            if (attr!.length === 0){
+                return [...new Map(arr.map(v => [JSON.stringify(v), v])).values()];
+            } else {
+                return arr.filter((v,i,a)=>a.findIndex(v2=>attr.every(k=>v2[k] ===v[k]))===i)
+            }
+        } else {
+            return arr;
+        }
     }
 
     // gets e1 from e2 in D -> e1 -> A -> e2 -> D' 
@@ -365,6 +373,7 @@ export class DAGraph {
 
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
     returnPartialGraphInputs(specificNodeId:id, colorNode:boolean = true): [Node[], Edge[]]{
+        console.log("returnPartialInp called");
         function predecessors(nodeId: id, graph: DAGraph){
             var nodes = new Set<Node>();
             var edges = new Set<Edge>();
@@ -378,7 +387,7 @@ export class DAGraph {
                 }
             });
             return [nodes, edges];
-        }
+        } 
 
 
         function successors(nodeId: id, graph:DAGraph){
@@ -427,6 +436,7 @@ export class DAGraph {
 
     returnDirectNeighbours(specificNodeId: id, colorNode:boolean = true): [Node[], Edge[]]{
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
+        console.log("returnDirNeighb called");
         // console.log(this.nodes); // can this be called on subgrpah only?
         // console.log("spec node id (direct neighbours): ", specificNodeId)
         // console.log("spec node (direct neighbours): ", specificNode)
@@ -555,6 +565,7 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({});
     dagreGraph.setDefaultEdgeLabel(function() { return {}; });
+    console.log("direction: ", direction);
 
     // set graph layout and the minimum between-node distance, ranksep is needed for computing all node distances
     dagreGraph.setGraph({ rankdir: direction, nodesep: 200, ranksep: 200});
