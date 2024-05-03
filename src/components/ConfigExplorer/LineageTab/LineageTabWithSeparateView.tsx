@@ -31,7 +31,7 @@ import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
 import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
 import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
-import {CustomDataNode, CustomActionNode} from './LineageGraphComponents';
+import {CustomDataNode} from './LineageGraphComponents';
 import { ReactFlowProvider } from 'reactflow';
 import { ConsoleLogger } from '@aws-amplify/core';
 import {DraggableLineageGraphToolBar} from './LineageGraphToolbar';
@@ -47,7 +47,7 @@ import {DraggableLineageGraphToolBar} from './LineageGraphToolbar';
 const nodeTypes = {
   // turbo: TurboNode,
   customDataNode: CustomDataNode,
-  customActionNode: CustomActionNode,
+  // customActionNode: CustomActionNode,
 }
 
 // const edgeTypes = {
@@ -59,14 +59,12 @@ const nodeTypes = {
 export interface flowProps {
   elementName: string;
   elementType: string; // we have either dataObjects or actions now
-  configData?: ConfigData;
-  graph?: PartialDataObjectsAndActions;
+  configData: ConfigData;
   runContext?: boolean;
 }
 
 export interface flowPropsWithSeparateDataAndAction extends flowProps {
-  dataGraph?: PartialDataObjectsAndActions;   // dataobject only
-  actionGraph?: PartialDataObjectsAndActions; // actions only  
+  configData: ConfigData;
 }
 
 function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB', props: flowPropsWithSeparateDataAndAction): ReactFlowNode[] {
@@ -92,14 +90,6 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
         progress: nodeType === NodeType.ActionNode ? (Math.random()*100).toFixed(1) : undefined, 
         metric: "sum", 
         jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined,
-        properties: {
-          p1: "prop 1",
-          p2: "prop 2",
-          p3: "prop 3"
-        },
-        style: {
-          background: dataObject.backgroundColor,
-        },
       },
 
     } as ReactFlowNode
@@ -143,7 +133,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       labelBgBorderRadius: 8,
       labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, 
       style: { stroke: '#096bde', strokeWidth: 2},
-      animated:  true, 
+      // animated:  true, 
     };
     result.push(newEdge);
   });
@@ -165,9 +155,6 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
 function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
    // initialization 
    const url = useParams();
-   const fullGraph = props.graph ? props.graph : new DataObjectsAndActionsSep(props.configData); 
-   const dataGraph = props.dataGraph ? props.dataGraph : fullGraph.getDataGraph();
-   const actionGraph = props.actionGraph ? props.actionGraph :  fullGraph.getActionGraph();
  
    let nodes_init: ReactFlowNode[] = [];
    let edges_init: ReactFlowEdge[] = [];
@@ -175,7 +162,7 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
    const [graphView, setGraphView] = useState('full'); // control for action/data/full graph view 
    const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
    const [layout, setLayout] = useState('TB');
-   let [hidden, setHidden] = useState(useParams().elementType === 'dataObjects' ? true : false); 
+   let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false); 
   
    let initial_render = prepareAndRenderGraph();
    const [nodes, setNodes] = useState(initial_render[0]);
@@ -200,17 +187,19 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
     // 1. center the graph globally when we change the graph view while veiwing a node of different type
     // 2. center the graph to the direct neighbour when we change the graph view while viewing a node of different type
     // what about initial state?
-    if (graphView === 'full'){ // choose a central node for the graph
-      doa = fullGraph;
+    if (graphView === 'full'){ 
+      doa = props.configData.fullGraph!;
     } else if (graphView === 'data'){
-      doa = dataGraph;
-      if(props.elementType === 'actions'){ // switch to data graph when an action is selected -> select the first data node id
-        centralNodeId = dataGraph.levelOneNodes[0].id;
+      doa = props.configData.dataGraph!;
+      if(props.elementType === 'actions'){ 
+        // switch to data graph when an action is selected -> select the first data node id
+        centralNodeId = props.configData.dataGraph!.levelOneNodes[0].id;
       }
     } else if (graphView === 'action'){
-      doa = actionGraph;
-      if (props.elementType === 'dataObjects'){ // switch to action graph when a data object is selected -> select, should only be possible on first change
-        centralNodeId = 'source';
+      doa = props.configData.actionGraph!;
+      if (props.elementType === 'dataObjects'){ 
+        // switch to action graph when a data object is selected -> select, should only be possible on first change
+        centralNodeId = props.configData.actionGraph!.levelOneNodes[0].id;
       }
     } else {
       throw Error("Unknown graph view " + graphView);
@@ -264,8 +253,8 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
             nodeTypes={nodeTypes}
           >
             <Background/>
-            {/* <MiniMap/> */}
-            {/* <Controls /> */}
+            <MiniMap/> 
+            <Controls />
 
           </ReactFlow>
           <DraggableLineageGraphToolBar
