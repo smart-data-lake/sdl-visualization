@@ -158,6 +158,8 @@ export class DAGraph {
        this.levelOneNodes = this.#computeLevelOneNodes();
         if (mergeEdges){
             this.#mergeCommonActionEdges(); // testing
+            this.nodes = this.removeDuplicatesFromObjArray(this.nodes);
+            this.edges = this.removeDuplicatesFromObjArray(this.edges);
         }
     }
 
@@ -186,26 +188,22 @@ export class DAGraph {
         This is not implemented here because we cannot know if they are related or not from the way the graph is constructed -> future update possible
     */
     #mergeCommonActionEdges(){
-        // merge actions and related edges by looking at non root data nodes, skip M:N actions 
+        // merge actions and related edges by looking at non root data nodes, skip M:N (cases?) and 1:N actions 
         // merging is done by jsonObj.type, not by actionNode.id
         const nonRootNodes = this.nodes.filter(n => !this.levelOneNodes.includes(n) && n.nodeType === NodeType.DataNode);
 
         nonRootNodes.forEach(node => {
+            // skip 1:N cases
             // get incomming edges from actions to current dataNode and filter them by action type
             // data objects can NOT be directly connected to each other
             const actionSet = new Map<string, [DataObject[], Edge[], ActionObject[], string]>(); // action id: actionNodes
             this.edges.filter(edge => edge.toNode === node).forEach(edge => {
                 const currAction = edge.fromNode as ActionObject;
-                // if (currAction.toNodes.length > 1){
-                    
-                // }
-
                 const actionType = currAction.getActionType();
                 const actionId = currAction.id;
 
                 // keep track of nodes in every type of action
                 // this works because we have guarantee that pred(pred(n)) of a dataNode n will be a dataNode
-                console.log("pred edge: ", this.#getEdgePredecessor(edge));
                 const relatedDataObj = this.#getEdgePredecessor(edge).fromNode as DataObject; // TODO: change for M:N actions
                 if (actionSet.has(actionType)) {
                     const actionSetEntry = actionSet.get(actionType)!;
@@ -248,6 +246,16 @@ export class DAGraph {
             }
         });
 
+    }
+
+    /*
+        Remove elements from array that have the same attributes 
+
+        non-clean cleanup unmerged edges due to custom M:N DF actions
+        Will be updated in mergeCommonEdges
+    */
+    removeDuplicatesFromObjArray<T>(arr: T[]){
+        return [...new Map(arr.map(v => [JSON.stringify(v), v])).values()];
     }
 
     // gets e1 from e2 in D -> e1 -> A -> e2 -> D' 
@@ -323,8 +331,6 @@ export class DAGraph {
             })
            
         });
-
-        // console.log("get dg edges: ", newEdges.length);
         return new DAGraph(newNodes, [...newEdges.values()], false);
     }
     
@@ -349,12 +355,9 @@ export class DAGraph {
         actions.forEach(action => {
             const actionType = action.getActionType();
             const directlyReachableActions = this.#getDirectlyReachableActionSuccessors(action);
-
-            // update edges (caveat: correctly link node ids for handle labels)
             directlyReachableActions.forEach(toAction =>{
                 newEdges.push(new Edge(action, toAction, `${action.id}->${toAction.id}`, actionType));
             }) 
-            // console.log("dir actions: ", directlyReachableActions);
         });
 
         return new DAGraph(newNodes, newEdges, false);
