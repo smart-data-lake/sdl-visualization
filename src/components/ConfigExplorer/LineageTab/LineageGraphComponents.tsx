@@ -1,14 +1,19 @@
 /*
     Custom ReactFlow Nodes and Edges that are used in the LineageTab as well as theme styling
-    TODO: should implement an Abstract class of custom Node and custom Edge
+
+    TODO: 
+    -should implement an Abstract class of custom Node and custom Edge
+    -should show last 5 runs states 
+    -should implement textoverflow handler
+    -adjust between node distance (max width and text-overflow)
+    -performance meltdown issue
+    -sohuld be able to show all nodes of the same type (generic function in Graph.ts)
 */
 import { memo, useRef, useCallback, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
 import { Handle, NodeProps, Position } from 'reactflow';
 import { EdgeProps, getBezierPath } from 'reactflow';
-import { borderColor, borderRadius, padding, position } from 'polished';
 
-import {ThemeProvider, createTheme} from '@mui/system';// shouldnt this be material? doesnt fail now somehow...
 import { Divider, IconButton, Tooltip} from '@mui/joy';
 import Box from '@mui/joy/Box';
 import LinearProgress from '@mui/joy/LinearProgress';
@@ -16,27 +21,14 @@ import { InfoOutlined, ExpandMore , ExpandLess, ArrowOutward  } from '@mui/icons
 import Typography from '@mui/joy/Typography';
 import FunctionsIcon from '@mui/icons-material/Functions';
 import Link from '@mui/joy/Link';
+import Button from '@mui/joy/Button';
+import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
+import TableViewIcon from '@mui/icons-material/TableView';
 
 import { Node as GraphNode, Edge as GraphEdge, NodeType } from '../../../util/ConfigExplorer/Graphs';
-import Button from '@mui/joy/Button';
 import { flowPropsWithSeparateDataAndAction } from './LineageTabWithSeparateView';
-
-const theme = createTheme({
-  palette: {
-    background: {
-      paper: '#fff',
-    },
-    primary: {
-      main: '#ff0000',
-    },
-    secondary: {
-      main: '#00ff00',
-    },
-    success:{
-      dark: '#009688',
-    }
-  },
-})
+import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
+import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 
 const dataNodeStyles = {
   padding: '10px',
@@ -59,8 +51,13 @@ const actionNodeStyles = {
       marginBottom: '10px',
     }
   },
-
 };
+
+const nodeColors = {
+  centralNode: '#addbff',
+  dataNode: '',
+  actionNode: ''
+}
 
 const getActionStatus = (progress) => {
   if (progress < 100) {
@@ -70,51 +67,56 @@ const getActionStatus = (progress) => {
   }
 };
 
-const renderProperties = (properties) => {
+/*
+  Render relevant information from runs
+*/
+const renderProperties = (runs) => {
+  // console.log("run props: ", runs)
   return (
     <div>
-      {Object.entries(properties).map(([key, value]) => (
+      {/* <Divider sx={{mt:4, mb:1}} orientation='horizontal'/>
+      {runs.map(([key, value]) => (
         <Typography key={key} variant="plain">
           {key}: {value}
         </Typography>
-      ))}
+      ))} */}
     </div>
   );
 };
 
+/*
+  This will be integrated later as soon as 
+  we can link object type descriptions 
+*/
 const handleTypeClick = () => {
-  // Handle click event to show documentation
   console.log('Show documentation');
 };
 
-
-
-// we don't need labels for now
-// const showLabels(edges: ReactFlowEdge[]) {
-//   return edges.map(e => {
-//     e.label = (hidden ? '' : e.data.label_copy);
-//     return e;
-//   })
-// };
-
-// export memo? 
 export const CustomDataNode = ({ data }) => {
   // TODO: remove redundant vars that we can get from props
+  // TODO: run status is the same for all nodes now, check runData
   const { id, label, isCenterNode, nodeType, targetPosition, sourcePosition, 
-          properties, progress, metric, style, jsonObject, props
+          progress, metric, style, jsonObject, props
   } = data;
   const [ showDetails, setShowDetails ] = useState(false);
   const chartBox = useRef<HTMLDivElement>(); 
-  const color = progress < 30 ? actionNodeStyles.progressBar.color.low : 
+  const progressColor = progress < 30 ? actionNodeStyles.progressBar.color.low : 
                 progress < 70 ? actionNodeStyles.progressBar.color.medium : 
                 progress < 100 ? actionNodeStyles.progressBar.color.high:
                 actionNodeStyles.progressBar.color.done;
+  const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; //'linear-gradient(to right bottom, #430089, #82ffa1)'
+
   const nodeSubTypeName: string = jsonObject ? jsonObject.type : label;
   const nodeTypeName: string = nodeType === NodeType.ActionNode  ? "Action" :
                                nodeType === NodeType.DataNode ? "Data" :
                                "";
   const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, '')
   const schemaViewerURL = 'https://smartdatalake.ch/json-schema-viewer'
+
+  const { data: runs} = useFetchWorkflowRunsByElement(props.elementType, props.elementName);
+  const lastRun = runs?.at(-1);
+  const totalRuns = runs?.length;
+  console.log("total runs: ", totalRuns)
 
   // handlers
   const navigate = useNavigate();
@@ -124,7 +126,6 @@ export const CustomDataNode = ({ data }) => {
   const handleDetailsClick = (props: flowPropsWithSeparateDataAndAction, nodeId: string, nodeType: NodeType) => {
 
     let propsHasConfigData = props.configData;
-    console.log("props: ", props);
 
     if(nodeType === NodeType.DataNode){
       if(propsHasConfigData){
@@ -149,10 +150,115 @@ export const CustomDataNode = ({ data }) => {
         <Typography level="body-xs" utterBottom variant="plain">
           {progress}% complete
         </Typography>
-        <LinearProgress determinate size="lg" value={progress} sx={{marginBottom: actionNodeStyles.progressBar.bar.marginBottom, color: color}}  />
+        {/* <LinearProgress determinate size="lg" value={progress} sx={{marginBottom: actionNodeStyles.progressBar.bar.marginBottom, color: color}}  /> */}
       </>
     );
   };
+
+  /*
+    small components
+  */
+ function showNodeTypeName(){
+    return <Box 
+          sx={{
+            border: '1px solid #ddd',
+            borderRadius: '3px',
+            position: 'relative',
+            bgcolor: '#ddd',
+            textAlign: 'center',
+            display: 'inline-block'
+          }}>
+            {nodeTypeName}
+          </Box> 
+  }
+
+  function showObjectTitle(){    
+    const objectType = nodeType === NodeType.ActionNode ? "Action Object" : "Data Object";
+    return <Typography level="body-xs" sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', 
+                                              marginRight: '15px'}}>
+              <div style={{display: 'flex', flexDirection: 'row'}}>
+                <div style={{justifyContent: 'flex-end'}}>
+                  <Tooltip title={objectType}>
+                    {nodeType === NodeType.ActionNode ? <RocketLaunchOutlined/> : <TableViewIcon/>}
+                  </Tooltip>
+                </div>
+
+                <Tooltip title={nodeSubTypeName}>
+                  <Box onClick={() => window.open(schemaViewerURL, '_blank')} 
+                    sx={{marginLeft:'7px', 
+                      textAlign: 'center', 
+                      // border: '',
+                      borderRadius: '2px',
+                      display: 'inline-block',
+                      "&:hover": {
+                      backgroundColor: 'rgb(7, 120, 200, 0.42)',
+                      },
+                    }}
+                    >
+                  {abbr}
+                  </Box>
+                </Tooltip>
+                
+                <div>
+                  {lastRun?.status !== undefined  && (getIcon(lastRun?.status, '0px', {display: 'block'}))}
+                </div>
+
+                
+                {/* <div style={{justifyContent: 'flex-end'}}>
+                  {lastRun.status !== undefined  && (getIcon(lastRun.status, '0px', {display: 'block'}))}
+                  {runs && (`runs: ${totalRuns}`)}
+                </div> */}
+                
+                {/* <IconButton size="xs" 
+                component={Link}
+                to={schemaViewerURL}
+                variant='contained'
+                sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px'}}>
+                <InfoOutlined />
+                </IconButton> */}
+
+              </div>
+            </Typography>
+  }
+
+  function showObjectName(){
+    return <Tooltip title="View Object Details">
+              <Button variant='plain' onClick={() => handleDetailsClick(props, label, nodeType)}>
+                <Typography level="body-lg" 
+                            sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px', marginLeft: '10px'}}>
+                  {label}
+                </Typography> 
+              </Button>  
+            </Tooltip>
+  }
+
+  function showProgressBar(color, progress){
+    return  <>
+              <Divider sx={{mt:5, mb:1}}  orientation='horizontal'/>
+                      {renderProgressBar(color, progress)}
+                      <Box sx={{
+                        bgcolor: color,
+                        border: '1px solid #ddd',
+                        borderRadius: '10px',
+                        width: 0.3,
+                        justifyContent: 'flex-end'
+                        }}>
+                        <Box flex={0} sx={{justifyContent: 'center', display: 'flex', color: '#fff', fontSize: 'xs', paddingRight: 1}}>
+                          {getActionStatus(progress)}
+                        </Box>
+                      </Box> 
+            </>
+  }
+
+  function showProperties(){
+    return <IconButton title='Show object properties'
+           // style={{borderRadius: 1, }}
+           size="sm" 
+           sx={{display: 'inline', float: 'right'}} onClick={() => setShowDetails(!showDetails)}>
+           {/* {showDetails ?   "hide props": "show props"}   */}
+           {showDetails ?  <ExpandLess />: <ExpandMore />}
+           </IconButton>
+  }
 
   return (
     <Box 
@@ -160,66 +266,21 @@ export const CustomDataNode = ({ data }) => {
       ref={chartBox}
       sx={{
         padding: '10px',
-        border: '1px solid #ddd',
-        borderRadius: '10px',
+        border: '3px solid #a9a9a9',
+        ...(nodeType === NodeType.ActionNode && {borderRadius: '40px',}),
         minWidth: '200px',
         minHeight: '100px',
         position: 'relative',
-        bgcolor: style.background
+        bgcolor: bgcolor// replace by customed colors here
       }}
     >
       <Handle type="source" position={sourcePosition} id={id}/>
 
       <div>
-        <Typography level="body-xs" sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', 
-                                          marginRight: '15px'}}>
-          <div style={{display: 'flex', flexDirection: 'row'}}>
-              <Box 
-                sx={{
-                  border: '1px solid #ddd',
-                  borderRadius: '3px',
-                  position: 'relative',
-                  bgcolor: '#ddd',
-                  textAlign: 'center',
-                  display: 'inline-block'
-                }}>
-                  {nodeTypeName}
-              </Box>
-              
-              <Tooltip title={nodeSubTypeName}>
-                <Box onClick={() => window.open(schemaViewerURL, '_blank')} 
-                     sx={{marginLeft:'7px', 
-                          textAlign: 'center', 
-                          // border: '',
-                          borderRadius: '2px',
-                          display: 'inline-block',
-                          "&:hover": {
-                            backgroundColor: 'rgb(7, 120, 200, 0.42)',
-                          },
-                        }}
-                        >
-                  {abbr}
-                </Box>
-              </Tooltip>
-              {/* <IconButton size="xs" 
-                          component={Link}
-                          to={schemaViewerURL}
-                          variant='contained'
-                          sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px'}}>
-                <InfoOutlined />
-              </IconButton> */}
-
-          </div>
-        </Typography>
-        <Tooltip title="View Object Details">
-          <Button variant='plain' onClick={() => handleDetailsClick(props, label, nodeType)}>
-            <Typography level="body-lg" 
-                        sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px', marginLeft: '10px'}}>
-              {label}
-            </Typography> 
-          </Button>  
-        </Tooltip>
+        {showObjectTitle()}
+        {showObjectName()}
       </div>
+      {showProperties()}
       
       {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}> */}
       {/* <Typography level='body-xs' variant="soft">          
@@ -227,40 +288,10 @@ export const CustomDataNode = ({ data }) => {
         {metric}
       </Typography> */}
       {/* </div> */}
-      <IconButton title='Show object properties'
-                  // style={{borderRadius: 1, }}
-                  size="sm" 
-                  sx={{display: 'inline', float: 'right'}} onClick={() => setShowDetails(!showDetails)}>
-        {/* {showDetails ?   "hide props": "show props"}   */}
-        {showDetails ?   <ExpandLess />: <ExpandMore />}
-      </IconButton>
 
-      { nodeType === NodeType.DataNode ? (
-        <>
-        </>
-      ) : (
-        <>
-          {/* <Divider sx={{mt:5, mb:1}}  orientation='horizontal'/>
-          {renderProgressBar(color, progress)}
-          <Box sx={{
-            bgcolor: color,
-            border: '1px solid #ddd',
-            borderRadius: '10px',
-            width: 0.3,
-            justifyContent: 'flex-end'
-            }}>
-            <Box flex={0} sx={{justifyContent: 'center', display: 'flex', color: '#fff', fontSize: 'xs', paddingRight: 1}}>
-              {getActionStatus(progress)}
-            </Box>
-          </Box> */}
-        </>
-      )} 
-
-     
       { showDetails && (
         <>
-          <Divider sx={{mt:4, mb:1}} orientation='horizontal'/>
-          {renderProperties(properties)}
+          {renderProperties(runs)}
         </>
         )
       }
@@ -269,7 +300,3 @@ export const CustomDataNode = ({ data }) => {
     </Box>
   );
 };
-
-export const CustomActionNode = ({data}) => {
-
-}
