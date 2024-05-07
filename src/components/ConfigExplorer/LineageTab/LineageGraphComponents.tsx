@@ -11,8 +11,7 @@
 */
 import { memo, useRef, useCallback, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
-import { Handle, NodeProps, Position } from 'reactflow';
-import { EdgeProps, getBezierPath } from 'reactflow';
+import { Handle, useUpdateNodeInternals, EdgeProps, getBezierPath} from 'reactflow';
 
 import { Divider, IconButton, Tooltip} from '@mui/joy';
 import Box from '@mui/joy/Box';
@@ -92,12 +91,42 @@ const handleTypeClick = () => {
   console.log('Show documentation');
 };
 
-export const CustomDataNode = ({ data }) => {
-  // TODO: remove redundant vars that we can get from props
-  // TODO: run status is the same for all nodes now, check runData
-  const { id, label, isCenterNode, nodeType, targetPosition, sourcePosition, 
-          progress, metric, style, jsonObject, props
+
+export const CustomEdge = ({
+  id,
+  sourceX, sourceY, targetX, targetY,
+  sourcePosition,targetPosition,
+  style = {},
+  markerEnd,
+}: EdgeProps) => {
+
+  const [edgePath] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  return (
+    <>
+      <path
+        id={id}
+        style={style}
+        className="react-flow__edge-path"
+        d={edgePath}
+        markerEnd={markerEnd}
+      />
+    </>
+  );
+}
+
+export const CustomDataNode = ( {data} ) => {
+  const { props, label, isCenterNode, nodeType, targetPosition, sourcePosition, 
+          progress, jsonObject
   } = data;
+
   const [ showDetails, setShowDetails ] = useState(false);
   const chartBox = useRef<HTMLDivElement>(); 
   const progressColor = progress < 30 ? actionNodeStyles.progressBar.color.low : 
@@ -106,17 +135,15 @@ export const CustomDataNode = ({ data }) => {
                 actionNodeStyles.progressBar.color.done;
   const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; //'linear-gradient(to right bottom, #430089, #82ffa1)'
 
-  const nodeSubTypeName: string = jsonObject ? jsonObject.type : label;
-  const nodeTypeName: string = nodeType === NodeType.ActionNode  ? "Action" :
-                               nodeType === NodeType.DataNode ? "Data" :
+  const nodeSubTypeName: string = jsonObject !== undefined ? jsonObject.type : label;
+  const nodeTypeName: string = nodeType === NodeType.ActionNode  ? "actions" :
+                               nodeType === NodeType.DataNode ? "dataObjects" :
                                "";
-  const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, '')
+  const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, '') // take the capital letters and the first letter of the camelCase name
   const schemaViewerURL = 'https://smartdatalake.ch/json-schema-viewer'
-
-  const { data: runs} = useFetchWorkflowRunsByElement(props.elementType, props.elementName);
+  const { data: runs} = useFetchWorkflowRunsByElement(nodeTypeName, label);
   const lastRun = runs?.at(-1);
-  const totalRuns = runs?.length;
-  console.log("total runs: ", totalRuns)
+  // const totalRuns = runs?.length;
 
   // handlers
   const navigate = useNavigate();
@@ -271,10 +298,10 @@ export const CustomDataNode = ({ data }) => {
         minWidth: '200px',
         minHeight: '100px',
         position: 'relative',
-        bgcolor: bgcolor// replace by customed colors here
+        bgcolor: bgcolor
       }}
     >
-      <Handle type="source" position={sourcePosition} id={id}/>
+      <Handle type="source" position={sourcePosition} id={`${label}`}/>
 
       <div>
         {showObjectTitle()}
@@ -296,7 +323,7 @@ export const CustomDataNode = ({ data }) => {
         )
       }
         
-      <Handle type="target" position={targetPosition} id={id}/>
+      <Handle type="target" position={targetPosition} id={`${label}`}/>
     </Box>
   );
 };
