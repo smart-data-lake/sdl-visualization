@@ -33,6 +33,7 @@ const dataNodeStyles = {
   padding: '10px',
   border: '1px solid #ddd',
   borderRadius: '10px',
+  maxWidth: '100px',
   minWidth: '200px',
   position: 'relative',
 };
@@ -142,7 +143,7 @@ export const CustomDataNode = ( {data} ) => {
   const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, '') // take the capital letters and the first letter of the camelCase name
   const schemaViewerURL = 'https://smartdatalake.ch/json-schema-viewer'
   const { data: runs} = useFetchWorkflowRunsByElement(nodeTypeName, label);
-  const lastRun = runs?.at(-1);
+  const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
   // const totalRuns = runs?.length;
 
   // handlers
@@ -252,7 +253,15 @@ export const CustomDataNode = ( {data} ) => {
     return <Tooltip title="View Object Details">
               <Button variant='plain' onClick={() => handleDetailsClick(props, label, nodeType)}>
                 <Typography level="body-lg" 
-                            sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px', marginLeft: '10px'}}>
+                            sx={{ 
+                              fontWeight: 'bold', 
+                              textOverflow: 'ellipsis', 
+                              overflow: 'hidden', 
+                              whiteSpace: 'nowrap', 
+                              marginBottom: '1px', 
+                              maxWidth: '150px',
+                              maxHeight: '30px'
+                            }}>
                   {label}
                 </Typography> 
               </Button>  
@@ -279,7 +288,6 @@ export const CustomDataNode = ( {data} ) => {
 
   function showProperties(){
     return <IconButton title='Show object properties'
-           // style={{borderRadius: 1, }}
            size="sm" 
            sx={{display: 'inline', float: 'right'}} onClick={() => setShowDetails(!showDetails)}>
            {/* {showDetails ?   "hide props": "show props"}   */}
@@ -296,16 +304,29 @@ export const CustomDataNode = ( {data} ) => {
         border: '3px solid #a9a9a9',
         ...(nodeType === NodeType.ActionNode && {borderRadius: '40px',}),
         minWidth: '200px',
-        minHeight: '100px',
+        maxWidth: '200px',
+        minHeight: '80px',
+        maxHeight: '95px',
         position: 'relative',
-        bgcolor: bgcolor
+        bgcolor: bgcolor,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        flexDirection: 'row'
       }}
     >
       <Handle type="source" position={sourcePosition} id={`${label}`}/>
 
       <div>
         {showObjectTitle()}
-        {showObjectName()}
+        <div style={{
+                    display: 'flex',
+                    // alignItems: 'left',
+                    // justifyContent: 'center',
+                    textOverflow: 'ellipsis',
+                    width: '50px'
+                }}>
+                    {showObjectName()}
+          </div>
       </div>
       {showProperties()}
       
