@@ -119,8 +119,6 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       id: uniqueId, // has to be unique, linked to node ids
       source: fromNodeId,
       target: toNodeId,
-      // sourceHandle:`${fromNodeId}-out`, // There is only one handle per side
-      // targetHandle:`${toNodeId}-in`,
       markerEnd: {
         type: MarkerType.ArrowClosed,
         width: 10,
@@ -202,21 +200,24 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
       throw Error("Unknown graph view " + graphView);
     }
 
+    // reset isCenterNode flags otherwise all previous ones will be colored
+    doa.nodes.forEach(node => {
+      node.isCenterNode = false;
+    }) 
+
     // When the layout has changed, the nodes and edges have to be recomputed
     partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout, props.configData);
     let nodes = createReactFlowNodes(partialGraph, layout, props);
-    const n = nodes[0];
     let edges = createReactFlowEdges(partialGraph, undefined);
     return [nodes, edges];
   }
 
-  // TODO: the edges remain on every click, might be because that the centralNode id is not correctly set (or we just don't use it because of renamings)
   useEffect(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
     setEdges(edges_init); 
-  }, [hidden, layout, onlyDirectNeighbours, props, graphView]);
+  }, [hidden, layout, onlyDirectNeighbours, props, graphView, url]);
 
   // Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
   const onNodesChange = useCallback(
