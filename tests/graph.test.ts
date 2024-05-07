@@ -266,7 +266,7 @@ test('get action graph, multiple I/O source', () => {
 })
 
 // TODO
-test('get action graph, data read from lineage', () => {
+test.skip('get action graph, data read from lineage', () => {
     
 })
 
@@ -376,17 +376,6 @@ test("get partial graph from demo example full graph, no duplicates", ()=>{
     expect(edges_direct.length).toBe(2); // no merge: 3
 })
 
-// TODO
-test("get partial data graph from DataObjectsAndActionsSep", () =>{
-    const g = construct_demo_example_graph();
-    
-})
-
-// TODO
-test("get partial action graph from DataObjectsAndActionsSep", () =>{
-    const g = construct_demo_example_graph();
-    
-})
 
 /*
  * n1 -> a1 -> n2
@@ -470,7 +459,7 @@ test("simple closed branch", () =>{
     {n2, n3} -> a2 -> N
     {n4, n5, n6} -> a3 -> N
 */
-test("> 2 action types", () =>{
+test("N:1 action, > 2 action types", () =>{
     const N = new DataObject('N');
     const n1 = new DataObject('n1');
     const n2 = new DataObject('n2');
@@ -508,7 +497,5 @@ test("> 2 action types", () =>{
     expect(g.edges.length).toBe(9); // (1 + 2 + 3) in + 3 out
 })
 
-/*
 
-*/
-test("Re-access same type fo actionwhile merging")
+// TODO: maybe add reachability tests
