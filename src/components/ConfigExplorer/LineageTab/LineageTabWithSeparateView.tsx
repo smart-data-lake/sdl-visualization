@@ -31,10 +31,10 @@ import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
 import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
 import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
-import {CustomDataNode} from './LineageGraphComponents';
+import {CustomDataNode, CustomEdge} from './LineageGraphComponents';
 import { ReactFlowProvider } from 'reactflow';
 import { ConsoleLogger } from '@aws-amplify/core';
-import {DraggableLineageGraphToolBar} from './LineageGraphToolbar';
+import {LineageGraphToolbar} from './LineageGraphToolbar';
 
 // TODO: add onHover references
 // TODO: implement icon for showing node types etc.
@@ -45,14 +45,12 @@ import {DraggableLineageGraphToolBar} from './LineageGraphToolbar';
  Add custom node and edge types
 */
 const nodeTypes = {
-  // turbo: TurboNode,
   customDataNode: CustomDataNode,
-  // customActionNode: CustomActionNode,
 }
 
-// const edgeTypes = {
-//   turbo: TurboEdge,
-// };
+const edgeTypes = {
+  customEdge: CustomEdge,
+};
 
 
 // TODO: maybe add more parameters to the flowProps interface
@@ -70,6 +68,8 @@ export interface flowPropsWithSeparateDataAndAction extends flowProps {
 function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB', props: flowPropsWithSeparateDataAndAction): ReactFlowNode[] {
   const isHorizontal = direction === 'LR';
   const nodes = dataObjectsAndActions.nodes;
+  const targetPos = isHorizontal ? Position.Left : Position.Top;
+  const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
   var result: ReactFlowNode[] = []; 
 
   nodes.forEach((node)=>{
@@ -79,21 +79,21 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
       id: dataObject.id,
       type: 'customDataNode', // should match the name defined in custom node types
       position: {x: dataObject.position.x, y: dataObject.position.y},
+      targetPosition: targetPos,
+      sourcePosition: sourcePos,
       data: {
         props: props,
         label: dataObject.id, 
         isCenterNode: dataObject.isCenterNode, 
         nodeType: nodeType,
-        targetPosition: isHorizontal ? Position.Left : Position.Top,
-        sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+        targetPosition: targetPos,
+        sourcePosition: sourcePos,
         // the following are hard coded for testing
         progress: nodeType === NodeType.ActionNode ? (Math.random()*100).toFixed(1) : undefined, 
-        metric: "sum", 
         jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined,
       },
 
     } as ReactFlowNode
-
     result.push(newNode);
   });
   return result;
@@ -105,29 +105,27 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
   const labelColor = '#fcae1e';
 
   dataObjectsAndActions.edges.forEach(edge => {
-    //const action = edge as Action; //downcasting in order to access jsonObject
-    const action = edge; //downcasting in order to access jsonObjectsourcePosition: 'right',
-    const selected = selectedEdgeId === action.id;
+    const selected = selectedEdgeId === edge.id;
+    const uniqueId =  edge.id + edge.fromNode.id+edge.toNode.id;
+    const fromNodeId = edge.fromNode.id;
+    const toNodeId = edge.toNode.id;
     var newEdge = {} as ReactFlowEdge;
 
     if (edge.toNode.id === undefined || edge.fromNode.id === undefined) {
       throw Error("Edge has no source or target");
     }
-
     newEdge = {
-      // : action.id, //what we use for linking
-      id: action.id + action.fromNode.id+action.toNode.id, //because it has to be unique
-      source: action.fromNode.id,
-      target: action.toNode.id,
+      type: 'customEdge',
+      id: uniqueId, // has to be unique, linked to node ids
+      source: fromNodeId,
+      target: toNodeId,
+      // sourceHandle:`${fromNodeId}-out`, // There is only one handle per side
+      // targetHandle:`${toNodeId}-in`,
       markerEnd: {
         type: MarkerType.ArrowClosed,
         width: 10,
         height: 10,
         color: '#096bde',
-      },
-      data: {
-        label_copy: action.id,
-        old_id: action.id
       },
       labelBgPadding: [7, 7],
       labelBgBorderRadius: 8,
@@ -186,7 +184,6 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
     // design choice (currently 2 is implemented):
     // 1. center the graph globally when we change the graph view while veiwing a node of different type
     // 2. center the graph to the direct neighbour when we change the graph view while viewing a node of different type
-    // what about initial state?
     if (graphView === 'full'){ 
       doa = props.configData.fullGraph!;
     } else if (graphView === 'data'){
@@ -205,11 +202,11 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
       throw Error("Unknown graph view " + graphView);
     }
 
+    // When the layout has changed, the nodes and edges have to be recomputed
     partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout, props.configData);
-        
-    console.log("partial graph: ", partialGraph)
     let nodes = createReactFlowNodes(partialGraph, layout, props);
+    const n = nodes[0];
     let edges = createReactFlowEdges(partialGraph, undefined);
     return [nodes, edges];
   }
@@ -218,7 +215,7 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
   useEffect(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
-    setEdges(edges_init); // set edge visibility
+    setEdges(edges_init); 
   }, [hidden, layout, onlyDirectNeighbours, props, graphView]);
 
   // Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
@@ -251,13 +248,14 @@ function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
             onEdgesChange={onEdgesChange}
             nodesConnectable={false} 
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
           >
             <Background/>
-            <MiniMap/> 
+            {/* <MiniMap/>  */}
             <Controls />
 
           </ReactFlow>
-          <DraggableLineageGraphToolBar
+          <LineageGraphToolbar
             isPropsConfigDefined={props.configData !== undefined}
             hidden={hidden}
             setHidden={setHidden}
