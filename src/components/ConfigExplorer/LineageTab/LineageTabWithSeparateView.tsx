@@ -61,9 +61,6 @@ export interface flowProps {
   runContext?: boolean;
 }
 
-export interface flowPropsWithSeparateDataAndAction extends flowProps {
-  configData: ConfigData;
-}
 
 function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB', props: flowPropsWithSeparateDataAndAction): ReactFlowNode[] {
   const isHorizontal = direction === 'LR';
@@ -148,7 +145,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
   -grouping by attributes ( see JsonSchemaViewer https://smartdatalake.ch/json-schema-viewer for which atttributes can be used, i.e. jsonObject.type in Graph constructor)
   -implement graph layout setter as getDataGraph, getActionGraph and keep a whole graph view, the performance can be optimized later
 */
-function LineageTabSep(props: flowPropsWithSeparateDataAndAction) {
+function LineageTabSep(props: flowProps) {
    // initialization 
    const url = useParams();
  
