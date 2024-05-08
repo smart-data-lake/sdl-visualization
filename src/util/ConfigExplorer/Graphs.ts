@@ -6,7 +6,6 @@
     - refactor, remove redundant code
     - add grouped graph
 */
-import { NoEncryption } from '@mui/icons-material';
 import dagre from 'dagre';
 import { ConfigData } from './ConfigData';
 
@@ -155,7 +154,7 @@ export class DAGraph {
         this.edges = edges;
         this.levels = [];
 
-       this.levelOneNodes = this.#computeLevelOneNodes();
+        this.levelOneNodes = this.#computeLevelOneNodes();
         if (mergeEdges){
             this.#mergeCommonActionEdges(); 
             this.nodes = this.removeDuplicatesFromObjArrayOnAttributes(this.nodes, ["id"]);
@@ -190,7 +189,7 @@ export class DAGraph {
         const nonRootNodes = this.nodes.filter(n => !this.levelOneNodes.includes(n) && n.nodeType === NodeType.DataNode);
 
         nonRootNodes.forEach(node => {
-            // skip 1:N cases
+            // skip M:N cases
             // get incomming edges from actions to current dataNode and filter them by action type
             // data objects can NOT be directly connected to each other
             const actionSet = new Map<string, [DataObject[], Edge[], ActionObject[], string]>(); // action id: actionNodes
@@ -247,7 +246,7 @@ export class DAGraph {
      * Remove elements from array that have the same specified attributes.
      * 
      * @param {T} arr - The array we want to filter
-     * @param {string[]} attr - An array of attributes we want to filter on
+     * @param {string[]} attr - An array of attributes we want to filter on. If undefined, this function returns the unmodified input array.
      * 
      * @returns {T} The filtered array
      */
@@ -256,7 +255,7 @@ export class DAGraph {
             if (attr!.length === 0){
                 return [...new Map(arr.map(v => [JSON.stringify(v), v])).values()];
             } else {
-                return arr.filter((v,i,a)=>a.findIndex(v2=>attr.every(k=>v2[k] ===v[k]))===i)
+                return arr.filter((v,i,a) => a.findIndex(v2 => attr.every(k => v2[k] === v[k])) === i)
             }
         } else {
             return arr;
@@ -372,7 +371,7 @@ export class DAGraph {
     }
 
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
-    returnPartialGraphInputs(specificNodeId:id, colorNode:boolean = true): [Node[], Edge[]]{
+    returnPartialGraphInputs(specificNodeId:id): [Node[], Edge[]]{
         function predecessors(nodeId: id, graph: DAGraph){
             var nodes = new Set<Node>();
             var edges = new Set<Edge>();
@@ -419,7 +418,7 @@ export class DAGraph {
         let edgesWithId = this.edges.filter(edge => edge.id === specificEdgeId);
         let result: [Node[], Edge[]] = [[], []];
         for (let i = 0 ; i < edgesWithId.length ; i++){
-            let [nodesNext, edgesNext] = this.returnPartialGraphInputs(edgesWithId[i].toNode.id, false);
+            let [nodesNext, edgesNext] = this.returnPartialGraphInputs(edgesWithId[i].toNode.id);
             result = [setAsArray(union(new Set(result[0]), new Set(nodesNext))), setAsArray(union(new Set(result[1]), new Set(edgesNext)))]
         }
         const specificEdges: Edge[] = this.edges.filter(edge => edge.id===specificEdgeId);
@@ -429,9 +428,8 @@ export class DAGraph {
         return result;
     }
 
-    returnDirectNeighbours(specificNodeId: id, colorNode:boolean = true): [Node[], Edge[]]{
+    returnDirectNeighbours(specificNodeId: id): [Node[], Edge[]]{
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
-        console.log("returnDirNeighb called");
         specificNode.isCenterNode = true;
         const edges = this.edges.filter(edge => edge.fromNode.id === specificNodeId || edge.toNode.id === specificNodeId);
         const nodes: Node[] = [];
@@ -557,7 +555,7 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
     dagreGraph.setDefaultEdgeLabel(function() { return {}; });
 
     // set graph layout and the minimum between-node distance, ranksep is needed for computing all node distances
-    dagreGraph.setGraph({ rankdir: direction, nodesep: 200, ranksep: 200});
+    dagreGraph.setGraph({ rankdir: direction, nodesep: 100, ranksep: 100});
     
     //add nodes + edges to the graph and calculate layout
     nodes.forEach((node)=>{
@@ -605,7 +603,7 @@ export default class DataObjectsAndActions extends DAGraph{
     constructor(public jsonObject: any){
         const dataObjects: DataObject[] = getDataObjects(jsonObject.dataObjects);
         const actions: Action[] = getActions(jsonObject.actions, dataObjects);
-        const dataObjectsWithPosition: DataObject[] = computeNodePositions(dataObjects, actions) as DataObject[]; //Downcasting because the function returns a Node[]
+        const dataObjectsWithPosition: DataObject[] = computeNodePositions(dataObjects, actions) as DataObject[];
         super(dataObjectsWithPosition, actions);
         this.jsonObject = jsonObject;
     }
