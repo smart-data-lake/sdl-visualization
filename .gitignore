@@ -13,6 +13,9 @@
 /public/state/heidi
 /public/state/random
 
+/public/schema
+/public/config
+
 /data_directory
 
 /src/data/random_db.json
