@@ -125,7 +125,7 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 				<DraggableDivider id="config-lineage" cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} parentCmpRef={props.parentCmpRef} />
 				<Sheet sx={{height: '100%', minWidth: '100px'}} ref={lineageRef}>
 					{/* <ReactFlowProvider> */}
-						<LineageTabSep configData={configData} elementName={elementName as string} elementType={elementType as string} />
+						<LineageTabSep configData={configData} connection={connectionConfigObj} elementName={elementName as string} elementType={elementType as string} />
 					{/* </ReactFlowProvider> */}
 				</Sheet>
 			</>

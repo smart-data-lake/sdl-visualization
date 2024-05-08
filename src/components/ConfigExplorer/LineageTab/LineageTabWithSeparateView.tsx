@@ -16,30 +16,24 @@
 // react component imports
 import { useState, useCallback, useEffect, useRef, useMemo} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node as ReactFlowNode, Edge as ReactFlowEdge, MarkerType, isNode, Position } from 'react-flow-renderer';
-import Dropdown from 'react-bootstrap/Dropdown';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
 
 // mui imports
 import Box from '@mui/material/Box';
 
-
 // local imports
 import {DAGraph, PartialDataObjectsAndActions, DataObjectsAndActionsSep } from '../../../util/ConfigExplorer/Graphs';
-import { TaskStatus } from '../../../types';
 import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
 import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
 import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import {CustomDataNode, CustomEdge} from './LineageGraphComponents';
 import { ReactFlowProvider } from 'reactflow';
-import { ConsoleLogger } from '@aws-amplify/core';
-import {LineageGraphToolbar} from './LineageGraphToolbar';
+import {DraggableLineageGraphToolBar} from './LineageGraphToolbar';
 
 // TODO: add onHover references
-// TODO: implement icon for showing node types etc.
 // TODO: implement a nodeFactory? 
-// TODO: statically store data graph, action graph and entire graph, custom grouping in graph attibutes
 
 /*
  Add custom node and edge types
@@ -53,33 +47,36 @@ const edgeTypes = {
 };
 
 
-// TODO: maybe add more parameters to the flowProps interface
 export interface flowProps {
   elementName: string;
   elementType: string; // we have either dataObjects or actions now
   configData: ConfigData;
+  connection: any;
   runContext?: boolean;
 }
 
 
-function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB', props: flowPropsWithSeparateDataAndAction): ReactFlowNode[] {
+function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB', props: flowProps): ReactFlowNode[] {
   const isHorizontal = direction === 'LR';
   const nodes = dataObjectsAndActions.nodes;
   const targetPos = isHorizontal ? Position.Left : Position.Top;
   const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
   var result: ReactFlowNode[] = []; 
 
+  // If we need more information to be displayed on the node, 
+  // just add more fields to the flowProps interface and access it in the custom node component.
+  // The additional props can be passed in ElementDetails where the LineageTab is opened.
   nodes.forEach((node)=>{
     const dataObject = node
     const nodeType = dataObject.nodeType;
     const newNode = {
       id: dataObject.id,
-      type: 'customDataNode', // should match the name defined in custom node types
+      type: 'customDataNode',   // should match the name defined in custom node types
       position: {x: dataObject.position.x, y: dataObject.position.y},
-      targetPosition: targetPos,
+      targetPosition: targetPos, // required for the node positions to actually change internally
       sourcePosition: sourcePos,
       data: {
-        props: props,
+        props: props,         
         label: dataObject.id, 
         isCenterNode: dataObject.isCenterNode, 
         nodeType: nodeType,
@@ -112,7 +109,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       throw Error("Edge has no source or target");
     }
     newEdge = {
-      type: 'customEdge',
+      type: 'smoothstep',//'customEdge',
       id: uniqueId, // has to be unique, linked to node ids
       source: fromNodeId,
       target: toNodeId,
@@ -138,12 +135,6 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
 /*
   Implements the Lineage tab for separated action and dataObject view
   edge labels will be replaced by action nodes in the full graph view
-
-  TODO list:
-  -adapt & add effect and state functions for all views
-  -buttons for switching between data and action view and full graph view
-  -grouping by attributes ( see JsonSchemaViewer https://smartdatalake.ch/json-schema-viewer for which atttributes can be used, i.e. jsonObject.type in Graph constructor)
-  -implement graph layout setter as getDataGraph, getActionGraph and keep a whole graph view, the performance can be optimized later
 */
 function LineageTabSep(props: flowProps) {
    // initialization 
@@ -249,11 +240,11 @@ function LineageTabSep(props: flowProps) {
             edgeTypes={edgeTypes}
           >
             <Background/>
-            {/* <MiniMap/>  */}
+            <MiniMap/> 
             <Controls />
 
           </ReactFlow>
-          <LineageGraphToolbar
+          <DraggableLineageGraphToolBar
             isPropsConfigDefined={props.configData !== undefined}
             hidden={hidden}
             setHidden={setHidden}

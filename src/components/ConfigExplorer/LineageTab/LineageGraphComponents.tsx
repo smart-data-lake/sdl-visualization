@@ -13,19 +13,20 @@ import { memo, useRef, useCallback, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
 import { Handle, useUpdateNodeInternals, EdgeProps, getBezierPath} from 'reactflow';
 
-import { Divider, IconButton, Tooltip} from '@mui/joy';
+import { Divider, IconButton, Tooltip, Chip} from '@mui/joy';
 import Box from '@mui/joy/Box';
 import LinearProgress from '@mui/joy/LinearProgress';
 import { InfoOutlined, ExpandMore , ExpandLess, ArrowOutward  } from '@mui/icons-material';
 import Typography from '@mui/joy/Typography';
 import FunctionsIcon from '@mui/icons-material/Functions';
-import Link from '@mui/joy/Link';
 import Button from '@mui/joy/Button';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
+import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import TableViewIcon from '@mui/icons-material/TableView';
+import { Link } from "react-router-dom";
 
 import { Node as GraphNode, Edge as GraphEdge, NodeType } from '../../../util/ConfigExplorer/Graphs';
-import { flowPropsWithSeparateDataAndAction } from './LineageTabWithSeparateView';
+import { flowProps } from './LineageTabWithSeparateView';
 import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 
@@ -93,34 +94,12 @@ const handleTypeClick = () => {
 };
 
 
-export const CustomEdge = ({
-  id,
-  sourceX, sourceY, targetX, targetY,
-  sourcePosition,targetPosition,
-  style = {},
-  markerEnd,
-}: EdgeProps) => {
-
-  const [edgePath] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
-
-  return (
-    <>
-      <path
-        id={id}
-        style={style}
-        className="react-flow__edge-path"
-        d={edgePath}
-        markerEnd={markerEnd}
-      />
-    </>
-  );
+function createConnectionChip(name: string){
+  return(
+    <Link to={"/config/connections/"+name}>
+      <Chip key={"connections/"+name} color="primary" startDecorator={<LanOutlinedIcon />} variant="outlined" >{name}</Chip>
+    </Link>
+  )
 }
 
 export const CustomDataNode = ( {data} ) => {
@@ -151,7 +130,7 @@ export const CustomDataNode = ( {data} ) => {
   const url = useParams();
 
   // navigate to object and show details on label click
-  const handleDetailsClick = (props: flowPropsWithSeparateDataAndAction, nodeId: string, nodeType: NodeType) => {
+  const handleDetailsClick = (props: flowProps, nodeId: string, nodeType: NodeType) => {
 
     let propsHasConfigData = props.configData;
 
@@ -202,15 +181,18 @@ export const CustomDataNode = ( {data} ) => {
 
   function showObjectTitle(){    
     const objectType = nodeType === NodeType.ActionNode ? "Action Object" : "Data Object";
-    return <Typography level="body-xs" sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', 
-                                              marginRight: '15px'}}>
-              <div style={{display: 'flex', flexDirection: 'row'}}>
+    return <Typography level="body-xs" sx={{ fontWeight: 'bold', 
+                                             textOverflow: 'ellipsis', 
+                                             overflow: 'hidden', 
+                                             whiteSpace: 'nowrap', 
+                                             marginRight: '15px'}}>
+              <div style={{display: 'flex', 
+                           flexDirection: 'row'}}>
                 <div style={{justifyContent: 'flex-end'}}>
                   <Tooltip title={objectType}>
                     {nodeType === NodeType.ActionNode ? <RocketLaunchOutlined/> : <TableViewIcon/>}
                   </Tooltip>
                 </div>
-
                 <Tooltip title={nodeSubTypeName}>
                   <Box onClick={() => window.open(schemaViewerURL, '_blank')} 
                     sx={{marginLeft:'7px', 
@@ -226,7 +208,9 @@ export const CustomDataNode = ( {data} ) => {
                   {abbr}
                   </Box>
                 </Tooltip>
-                
+                {/* <div>
+                  {createConnectionChip(props.connection.id)}  
+                </div> */}
                 <div>
                   {lastRun?.status !== undefined  && (getIcon(lastRun?.status, '0px', {display: 'block'}))}
                 </div>
@@ -320,8 +304,6 @@ export const CustomDataNode = ( {data} ) => {
         {showObjectTitle()}
         <div style={{
                     display: 'flex',
-                    // alignItems: 'left',
-                    // justifyContent: 'center',
                     textOverflow: 'ellipsis',
                     width: '50px'
                 }}>
@@ -348,3 +330,33 @@ export const CustomDataNode = ( {data} ) => {
     </Box>
   );
 };
+
+export const CustomEdge = ({
+  id,
+  sourceX, sourceY, targetX, targetY,
+  sourcePosition,targetPosition,
+  style = {},
+  markerEnd,
+}: EdgeProps) => {
+
+  const [edgePath] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  return (
+    <>
+      <path
+        id={id}
+        style={style}
+        className="react-flow__edge-path"
+        d={edgePath}
+        markerEnd={markerEnd}
+      />
+    </>
+  );
+}
