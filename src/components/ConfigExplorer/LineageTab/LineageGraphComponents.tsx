@@ -8,7 +8,7 @@
 */
 import { memo, useRef, useCallback, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
-import { Handle, useUpdateNodeInternals, EdgeProps, getBezierPath} from 'reactflow';
+import { Handle, useUpdateNodeInternals, EdgeProps, getBezierPath, getStraightPath, getSmoothStepPath} from 'reactflow';
 
 import { Divider, IconButton, Tooltip, Chip} from '@mui/joy';
 import Box from '@mui/joy/Box';
@@ -207,7 +207,7 @@ export const CustomDataNode = ( {data} ) => {
                   </Box>
                 </Tooltip>
                 {/* <div>
-                  {createConnectionChip(props.connection.id)}  
+                  {createConnectionChip(props.connection.id)} // need distinction on objects without conn.  
                 </div> */}
                 <div>
                   {lastRun?.status !== undefined  && (getIcon(lastRun?.status, '0px', {display: 'block'}))}
@@ -243,7 +243,7 @@ export const CustomDataNode = ( {data} ) => {
                               marginBottom: '1px', 
                               maxWidth: '150px',
                               maxHeight: '30px',
-                              fontSize:22
+                              fontSize:21
                             }}>
                   {label}
                 </Typography> 
@@ -330,6 +330,7 @@ export const CustomDataNode = ( {data} ) => {
   );
 };
 
+//https://github.com/xyflow/xyflow/discussions/2347
 export const CustomEdge = ({
   id,
   sourceX, sourceY, targetX, targetY,
@@ -338,7 +339,7 @@ export const CustomEdge = ({
   markerEnd,
 }: EdgeProps) => {
 
-  const [edgePath] = getBezierPath({
+  const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
@@ -355,6 +356,7 @@ export const CustomEdge = ({
         className="react-flow__edge-path"
         d={edgePath}
         markerEnd={markerEnd}
+        
       />
     </>
   );
