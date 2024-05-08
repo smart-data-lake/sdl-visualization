@@ -1,4 +1,4 @@
-/*
+4/*
     A newer version of the lineage tab under construction that has the following features:
 
     - Separated view for data objects and actions and the full graph
@@ -139,6 +139,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
 function LineageTabSep(props: flowProps) {
    // initialization 
    const url = useParams();
+   console.log("props: ", props);
  
    let nodes_init: ReactFlowNode[] = [];
    let edges_init: ReactFlowEdge[] = [];
@@ -176,13 +177,15 @@ function LineageTabSep(props: flowProps) {
       doa = props.configData.dataGraph!;
       if(props.elementType === 'actions'){ 
         // switch to data graph when an action is selected -> select the first data node id
-        centralNodeId = props.configData.dataGraph!.levelOneNodes[0].id;
+        centralNodeId = props.elementName;
+        // centralNodeId = props.configData.dataGraph!.levelOneNodes[0].id;
       }
     } else if (graphView === 'action'){
       doa = props.configData.actionGraph!;
       if (props.elementType === 'dataObjects'){ 
         // switch to action graph when a data object is selected -> select, should only be possible on first change
-        centralNodeId = props.configData.actionGraph!.levelOneNodes[0].id;
+        // centralNodeId = props.configData.actionGraph!.levelOneNodes[0].id;
+        centralNodeId = props.elementName;
       }
     } else {
       throw Error("Unknown graph view " + graphView);
