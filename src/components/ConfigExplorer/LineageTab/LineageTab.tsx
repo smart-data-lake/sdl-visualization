@@ -2,43 +2,25 @@ import { useState, useCallback, useEffect, useRef} from 'react';
 import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, isNode, Position } from 'react-flow-renderer';
 import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions, DataObjectsAndActionsSep } from '../../../util/ConfigExplorer/Graphs';
 import { useNavigate } from "react-router-dom";
-import './ComponentsStyles.css';
+import '../ComponentsStyles.css';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import AlignHorizontalLeftIcon from '@mui/icons-material/AlignHorizontalLeft';
 import AlignVerticalTopIcon from '@mui/icons-material/AlignVerticalTop';
 import { useParams } from 'react-router-dom';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
-import DownloadButton from './DownloadLineageButton';
+import DownloadLineageButton from './LineageGraphToolbar';
 import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
 import { Box, IconButton } from '@mui/joy';
-import { TaskStatus } from '../../../types';
-import dagre from 'dagre';
 import { AlignVerticalTop } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 
 import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
 import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
-import {TurboNode,  TurboEdge, CustomNode} from './LineageGraphComponents';
 import { ReactFlowProvider } from 'reactflow';
-// TODO: store the graph and its different layouts statically
-// TODO: add onHover references
-// TODO: implement icon for showing node types etc.
-// TODO: implement a nodeFactory? 
-// TODO: statically store data graph, action graph and entire graph, custom grouping in graph attibutes
-
-const nodeTypes = {
-  turbo: TurboNode,
-  custom: CustomNode,
-};
-
-const edgeTypes = {
-  turbo: TurboEdge,
-};
 
 // accessed as ag attributes
-// TODO: maybe add more parameters to the flowProps interface
 interface flowProps {
   elementName: string;
   elementType: string;
@@ -219,18 +201,6 @@ function LineageTab(props: flowProps) {
  
 
   // Effects 
-  /*
-    Re-render the lineage graph on:
-
-    1. layout change
-    2. graph expansion/collapse. 
-    3. edge label visibility set
-
-    The labels have to be set again or they will not be visible if we
-    have previousely set them.
-
-    TODO: maybe we shouldn't rerender the graph if we navigate while the graph is expanded?
-  */
   useEffect(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
@@ -272,8 +242,6 @@ function LineageTab(props: flowProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodesConnectable={false} //prevents adding new edges
-        nodeTypes={nodeTypes}
-        // edgeTypes={edgeTypes}
       >
         <Background/>
         <MiniMap />
@@ -306,7 +274,7 @@ function LineageTab(props: flowProps) {
         </div>}
 
         <div title='Download image as PNG file' style={{ zIndex: 4, cursor: 'pointer' }}>
-          <DownloadButton />
+          <DownloadLineageButton />
         </div>
         </Box>
       </ReactFlow>
