@@ -2,11 +2,8 @@
     Custom ReactFlow Nodes and Edges that are used in the LineageTab as well as theme styling
 
     TODO: 
-    -should implement an Abstract class of custom Node and custom Edge
-    -should show last 5 runs states 
     -should implement textoverflow handler
     -adjust between node distance (max width and text-overflow)
-    -performance meltdown issue
     -sohuld be able to show all nodes of the same type (generic function in Graph.ts)
 */
 import { memo, useRef, useCallback, useState } from 'react';
@@ -203,6 +200,7 @@ export const CustomDataNode = ( {data} ) => {
                       "&:hover": {
                       backgroundColor: 'rgb(7, 120, 200, 0.42)',
                       },
+                      fontSize: 14
                     }}
                     >
                   {abbr}
@@ -244,7 +242,8 @@ export const CustomDataNode = ( {data} ) => {
                               whiteSpace: 'nowrap', 
                               marginBottom: '1px', 
                               maxWidth: '150px',
-                              maxHeight: '30px'
+                              maxHeight: '30px',
+                              fontSize:22
                             }}>
                   {label}
                 </Typography> 
