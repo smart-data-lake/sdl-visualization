@@ -30,7 +30,7 @@ import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import {CustomDataNode, CustomEdge} from './LineageGraphComponents';
 import { Panel, ReactFlowProvider, useReactFlow, useStoreApi } from 'reactflow';
-import {DraggableLineageGraphToolBar} from './LineageGraphToolbar';
+import {DraggableLineageGraphToolbar, LineageGraphToolbar} from './LineageGraphToolbar';
 
 // TODO: add onHover references
 // TODO: implement a nodeFactory? 
@@ -97,9 +97,9 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
 function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: string | undefined): ReactFlowEdge[] {
   var result: ReactFlowEdge[] = [];
   const labelColor = '#fcae1e';
-  const highlightedColor = "#1A192B";
+  const highlightedColor = "#1A192B"; // red?
   const normalColor = '#096bde';
-  const edgeColor = ? highlightedColor : normalColor;
+  const edgeColor = selectedEdgeId ? highlightedColor : normalColor;
   const highlightedWidth = 3;
 
   dataObjectsAndActions.edges.forEach(edge => {
@@ -140,7 +140,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
   Implements the Lineage tab for separated action and dataObject view
   edge labels will be replaced by action nodes in the full graph view
 */
-function LineageTabSep(props: flowProps) {
+function LineageTabCore(props: flowProps) {
    // initialization 
    const url = useParams();
  
@@ -158,23 +158,6 @@ function LineageTabSep(props: flowProps) {
  
    const navigate = useNavigate();            // handlers for navigating dataObjects and actions
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
-
-  //  const store = useStoreApi();
-  //  const { setCenter } = useReactFlow();
-  //  const focusNode = () => {
-  //   const { nodeInternals } = store.getState();
-  //   const nodes = Array.from(nodeInternals).map(([, node]) => node);
-
-  //   if (nodes.length > 0) {
-  //     const node = nodes[0];
-
-  //     const x = node.position.x + node.width / 2;
-  //     const y = node.position.y + node.height / 2;
-  //     const zoom = 1.85;
-
-  //     setCenter(x, y, { zoom, duration: 1000 });
-  //   }
-  // };
 
    // helper functions
    function expandGraph(): void {
@@ -222,20 +205,10 @@ function LineageTabSep(props: flowProps) {
     return [nodes, edges];
   }
 
-  // const onRestore = useCallback(() => {
-  //   const restoreFlow = async () => {
-  //       const x = 0, y = 0, zoom = 1;
-  //       setViewport({ x, y, zoom});
-  //   };
-  //   restoreFlow();
-  // },  [setViewport]);
-
   useEffect(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
     setEdges(edges_init); 
-    
-    // onRestore();
   }, [hidden, layout, onlyDirectNeighbours, props, graphView, url]);
 
   // Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
@@ -250,55 +223,65 @@ function LineageTabSep(props: flowProps) {
     [setEdges]
   );
 
-  const onEdgeMouseEnter = (event, edge) =>{
-    const eid = edge.id;
-
-  }
+  // const clickOnEdge = (edge) => {
+  //   const e = edges.filter(edg => edg.id === edge.id);
+  //   e.
+  // }
+  const filteredCenterNode = nodes.filter(node => node.data.isCenterNode);
+  const centerNode = filteredCenterNode.length === 0 ? new Node() : filteredCenterNode[0];
   
   return (
-    <Box
+    <>
+     <Box
       className='data-flow'
       ref={chartBox}
       sx={{
         height: '100%',
       }}
-    >
-      <ReactFlowProvider>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            defaultPosition={[0, 0]}
-            // onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
-            // onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
-            // onNodesChange={onNodesChange}
-            // onEdgesChange={onEdgesChange}
-            nodesConnectable={false} 
-            nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
-            fitView
-          >
-            {/* <Panel position="top-right">
-              <button onClick={focusNode}>focus</button>
-            </Panel> */}
-            <Background/>
-            <MiniMap/> 
-            <Controls />
-
-          </ReactFlow>
-          <DraggableLineageGraphToolBar
-            isPropsConfigDefined={props.configData !== undefined}
-            hidden={hidden}
-            setHidden={setHidden}
-            expanded={onlyDirectNeighbours[0]}
-            setExpanded={expandGraph}
-            expansionState={onlyDirectNeighbours[1]}
-            layout={layout}
-            setLayout={setLayout}
-            graphView={graphView}
-            setGraphView={setGraphView}
-          />
-        </ReactFlowProvider>
+      >
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          defaultPosition={[0, 0]}
+          //onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
+          // onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodesConnectable={false} 
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          fitView
+        >
+          <Background/>
+          {/* <MiniMap/>  */}
+          <Controls />
+        </ReactFlow>
+          <LineageGraphToolbar
+          isPropsConfigDefined={props.configData !== undefined}
+          hidden={hidden}
+          setHidden={setHidden}
+          expanded={onlyDirectNeighbours[0]}
+          setExpanded={expandGraph}
+          expansionState={onlyDirectNeighbours[1]}
+          layout={layout}
+          setLayout={setLayout}
+          graphView={graphView}
+          setGraphView={setGraphView}
+          centerNode={centerNode}
+        />
       </Box>
-    );}
+    </>
+  )          
+}
+
+
+function LineageTabSep(props: flowProps){
+  return (
+      <ReactFlowProvider>
+        <LineageTabCore {...props}/>
+      </ReactFlowProvider>
+  )
+}
+
 
 export default LineageTabSep;
