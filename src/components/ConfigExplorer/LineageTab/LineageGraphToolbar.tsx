@@ -24,25 +24,10 @@ import { useCallback, useState } from 'react';
 import { useReactFlow } from 'reactflow';
 
 /*
-  A palette for custom node stylinng
+  Styling
 */
-const theme = createTheme({
-  palette: {
-    background: {
-      paper: '#fff',
-    },
-    primary: {
-      main: '#ff0000',
-    },
-    secondary: {
-      main: '#00ff00',
-    },
-    success:{
-      main: '#009688',
-    }
-  },
-})
-
+const componentZIndex = 4;
+const styles = { zIndex:  componentZIndex, cursor: 'pointer' }
 /*
   helper function for image downloading
 */
@@ -53,7 +38,7 @@ function downloadImage(dataUrl: string) {
   a.click();
 }
 
-const componentZIndex = 4;
+
 
 /*
   Individual components of the toolbar with its custom hooks
@@ -85,19 +70,17 @@ const GraphViewSelector = ({graphView, setGraphView}) => {
   }
 
   function renderSearchType(option: SelectOption<string> | null) {
-    if (!option) return null;
-    return getSearchTypeElement(option.value);
+    if (!option) {return null};
+    return getSearchTypeElement(option!.value);
   }
-
-
   return (
-    <div>
+    <div style={styles}>
         <Select variant="plain"
                 size="sm"
-                value={getSearchTypeElement(graphView)} required
+                value={graphView}
                 onChange={handleChange}
                 renderValue={renderSearchType}
-                style={{ zIndex: componentZIndex, cursor: 'pointer' }}
+                style={{ zIndex: componentZIndex, cursor: 'pointer', position: 'relative'}}
                 >
           <Option id="full" value="full">{getSearchTypeElement('full')}</Option>
           <Option id="data" value="data">{getSearchTypeElement('data')}</Option>
@@ -111,7 +94,7 @@ const LayoutButton = ({layout, setLayout}) => {
   return <div
   title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'}
   className="controls"
-  style={{ zIndex:  componentZIndex, cursor: 'pointer' }}
+  style={styles}
 >
   <IconButton
     color={'neutral'}
@@ -130,7 +113,7 @@ const GraphExpansionButton = ({expanded, setExpanded, expansionState}) => {
 
   return <div
       title={expansionState as string}
-      style={{ zIndex:  componentZIndex, cursor: 'pointer' }}
+      style={styles}
     >
       <IconButton
         color='neutral'
@@ -144,7 +127,7 @@ const GraphExpansionButton = ({expanded, setExpanded, expansionState}) => {
 const ShowActionButton = ({hidden, setHidden}) => {
   return  <div
   title='Display / Hide action IDs'
-  style={{ zIndex:  componentZIndex, cursor: 'pointer' }}
+  style={styles}
 >
   <IconButton
     color={hidden ? 'neutral' : 'primary'}
@@ -173,7 +156,7 @@ function DownloadLineageButton() {
   return (
     <div
       title='Download image as PNG file'
-      style={{ zIndex:  componentZIndex, cursor: 'pointer' }}
+      style={styles}
     >
       <IconButton
         color='neutral'
@@ -198,7 +181,7 @@ function RecenterButton({}) {
 /*
   The main toolbar component
 */
-function LineageGraphToolbar(props) {
+export function LineageGraphToolbar(props) {
   return <Box
     sx={{
       zIndex: componentZIndex,
@@ -210,6 +193,7 @@ function LineageGraphToolbar(props) {
       border: '1px solid',
       borderColor: 'divider',
       borderRadius: '7px',
+      width: 50,
       bgcolor: 'white',
       color: 'grey.900',
       boxShadow: 2,
@@ -231,7 +215,7 @@ function LineageGraphToolbar(props) {
 /*
   Make the toolbar optionally draggable
 */
-export function DraggableLineageGraphToolBar(props) {
+export function DraggableLineageGraphToolbar(props) {
   return (
     <Draggable>
       <LineageGraphToolbar {...props}/>
