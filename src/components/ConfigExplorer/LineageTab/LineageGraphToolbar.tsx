@@ -2,23 +2,17 @@
  * The toolbar for the lineage graph 
  * modified from https://github.com/trananhtuat/animated-sidebar-indicator/blob/main/src/components/sidebar/Sidebar.jsx
  */
-import { AlignVerticalTop } from '@mui/icons-material';
+import { AlignVerticalTop, RocketOutlined } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
-
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
+import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
 import { useTheme } from '@mui/material/styles';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { IconButton, Tooltip, Divider,Sheet, Stack } from '@mui/joy';
 import Select, {SelectOption} from '@mui/joy/Select';
 import Option from '@mui/joy/Option';
-import MenuItem from '@mui/joy/MenuItem';
-import FormControl from '@mui/joy/FormControl';
-import ArrowDropDownOutlinedIcon from '@mui/icons-material/ArrowDropDownOutlined';
- 
 import SchemaIcon from '@mui/icons-material/Schema';
-import TransformIcon from '@mui/icons-material/Transform';
-import DatasetIcon from '@mui/icons-material/Dataset';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
@@ -26,7 +20,8 @@ import { toPng } from 'html-to-image';
 import Box from '@mui/material/Box';
 
 import Draggable from 'react-draggable';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useReactFlow } from 'reactflow';
 
 /*
   A palette for custom node stylinng
@@ -79,11 +74,11 @@ const GraphViewSelector = ({graphView, setGraphView}) => {
         </Tooltip>,
       data:
         <Tooltip arrow title='show data graph' enterDelay={500} enterNextDelay={500} placement='right'>
-          <DatasetIcon />
+          <TableViewTwoTone />
         </Tooltip>,
       action: 
         <Tooltip arrow title='show action graph' enterDelay={500} enterNextDelay={500} placement='right'>
-          <TransformIcon />
+          <RocketLaunchOutlined />
         </Tooltip>    
     }
     return options[value];
@@ -187,6 +182,17 @@ function DownloadLineageButton() {
       </IconButton>
     </div>
   );
+}
+
+function RecenterButton({}) {
+  const {setViewport} = useReactFlow();
+  const onRestore = useCallback(() => {
+    const restoreFlow = async () => {
+        const x = 0, y = 0, zoom = 1;
+        setViewport({ x, y, zoom});
+    };
+    restoreFlow();
+  },  [setViewport]);
 }
 
 /*
