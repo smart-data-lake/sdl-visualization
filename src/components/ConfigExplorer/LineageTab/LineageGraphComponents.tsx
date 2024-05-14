@@ -151,7 +151,7 @@ export const CustomDataNode = ( {data} ) => {
   const renderProgressBar = (color, progress) => {
     return (
       <>
-        <Typography level="body-xs" utterBottom variant="plain">
+        <Typography level="body-xs" variant="plain"> 
           {progress}% complete
         </Typography>
         {/* <LinearProgress determinate size="lg" value={progress} sx={{marginBottom: actionNodeStyles.progressBar.bar.marginBottom, color: color}}  /> */}
@@ -346,6 +346,7 @@ export const CustomEdge = ({
     targetX,
     targetY,
     targetPosition,
+    borderRadius: 70
   });
 
   return (
