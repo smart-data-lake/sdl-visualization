@@ -169,7 +169,6 @@ function LineageTabCore(props: flowProps) {
    const navigate = useNavigate();            // handlers for navigating dataObjects and actions
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
 
-   const {getNode, getEdge} = useReactFlow();
    const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
    // helper functions
@@ -275,6 +274,7 @@ function LineageTabCore(props: flowProps) {
   }
 
   const onEdgeClick = (_event, edge) => {
+    resetEdgeStyles();
     setEdges((e) =>{
       return e.map((elem) =>{
         if(elem.id === edge.id){
