@@ -7,6 +7,7 @@ import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
+import { LoopOutlined } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { IconButton, Tooltip, Divider,Sheet, Stack } from '@mui/joy';
@@ -20,7 +21,7 @@ import { toPng } from 'html-to-image';
 import Box from '@mui/material/Box';
 
 import Draggable from 'react-draggable';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useReactFlow } from 'reactflow';
 
 /*
@@ -37,7 +38,6 @@ function downloadImage(dataUrl: string) {
   a.setAttribute('href', dataUrl);
   a.click();
 }
-
 
 
 /*
@@ -80,8 +80,15 @@ const GraphViewSelector = ({graphView, setGraphView}) => {
                 value={graphView}
                 onChange={handleChange}
                 renderValue={renderSearchType}
-                style={{ zIndex: componentZIndex, cursor: 'pointer', position: 'relative'}}
-                >
+                style={{ zIndex: componentZIndex, cursor: 'pointer', position: 'relative', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        }}
+                slots={{
+                  button: renderSearchType(graphView)
+                }}
+        >
           <Option id="full" value="full">{getSearchTypeElement('full')}</Option>
           <Option id="data" value="data">{getSearchTypeElement('data')}</Option>
           <Option id="action" value="action">{getSearchTypeElement('action')}</Option>
@@ -167,15 +174,14 @@ function DownloadLineageButton() {
   );
 }
 
-function RecenterButton({}) {
-  const {setViewport} = useReactFlow();
-  const onRestore = useCallback(() => {
-    const restoreFlow = async () => {
-        const x = 0, y = 0, zoom = 1;
-        setViewport({ x, y, zoom});
-    };
-    restoreFlow();
-  },  [setViewport]);
+function RecenterButton({handleOnClick}){
+  return (
+    <div>
+      <IconButton onClick={handleOnClick}>
+        <LoopOutlined/>
+      </IconButton>
+    </div>
+  )
 }
 
 /*
@@ -204,6 +210,7 @@ export function LineageGraphToolbar(props) {
   >
       <GraphViewSelector graphView={props.graphView} setGraphView={props.setGraphView}/>
       <Divider orientation='horizontal'/>
+      <RecenterButton handleOnClick={props.handleOnClick}/>
       <LayoutButton layout={props.layout} setLayout={props.setLayout}/>
       {props.isPropsConfigDefined && <GraphExpansionButton expanded={props.expanded} setExpanded={props.setExpanded} expansionState={props.expansionState}/>}
       <Divider orientation='horizontal'/>

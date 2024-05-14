@@ -15,9 +15,11 @@
 
 // react component imports
 import { useState, useCallback, useEffect, useRef, useMemo} from 'react';
-import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node as ReactFlowNode, Edge as ReactFlowEdge, MarkerType, isNode, Position } from 'react-flow-renderer';
+import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node as ReactFlowNode, Edge as ReactFlowEdge,
+   MarkerType, Position } from 'react-flow-renderer';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
+import { Panel, useViewport, useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
 
 // mui imports
 import Box from '@mui/material/Box';
@@ -29,7 +31,7 @@ import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
 import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import {CustomDataNode, CustomEdge} from './LineageGraphComponents';
-import { Panel, ReactFlowProvider, useReactFlow, useStoreApi } from 'reactflow';
+import { ReactFlowProvider, useReactFlow } from 'reactflow';
 import {DraggableLineageGraphToolbar, LineageGraphToolbar} from './LineageGraphToolbar';
 
 // TODO: add onHover references
@@ -50,8 +52,8 @@ const edgeTypes = {
 export interface flowProps {
   elementName: string;
   elementType: string; // we have either dataObjects or actions now
-  configData: ConfigData;
   connection: any;
+  configData?: ConfigData;
   runContext?: boolean;
 }
 
@@ -152,12 +154,17 @@ function LineageTabCore(props: flowProps) {
    const [layout, setLayout] = useState('TB');
    let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false); 
   
-   let initial_render = prepareAndRenderGraph();
-   const [nodes, setNodes] = useState(initial_render[0]);
-   const [edges, setEdges] = useState(initial_render[1]);
+   let initialRender = prepareAndRenderGraph();
+  //  const [nodes, setNodes] = useState(initial_render[0]);
+  //  const [edges, setEdges] = useState(initial_render[1]);
+   const [nodes, setNodes, onNodesChange] = useNodesState(initialRender[0]);
+   const [edges, setEdges, onEdgesChange] = useEdgesState(initialRender[1]);
  
    const navigate = useNavigate();            // handlers for navigating dataObjects and actions
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
+
+   const {setViewport, fitView, getNode, getNodes} = useReactFlow();
+   const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
    // helper functions
    function expandGraph(): void {
@@ -175,18 +182,18 @@ function LineageTabCore(props: flowProps) {
     // 1. center the graph globally when we change the graph view while veiwing a node of different type
     // 2. center the graph to the direct neighbour when we change the graph view while viewing a node of different type
     if (graphView === 'full'){ 
-      doa = props.configData.fullGraph!;
+      doa = props.configData!.fullGraph!;
     } else if (graphView === 'data'){
-      doa = props.configData.dataGraph!;
+      doa = props.configData!.dataGraph!;
       if(props.elementType === 'actions'){ 
         // switch to data graph when an action is selected -> select the first data node id
-        centralNodeId = props.configData.dataGraph!.levelOneNodes[0].id;
+        centralNodeId = props.configData!.dataGraph!.levelOneNodes[0].id;
       }
     } else if (graphView === 'action'){
-      doa = props.configData.actionGraph!;
+      doa = props.configData!.actionGraph!;
       if (props.elementType === 'dataObjects'){ 
         // switch to action graph when a data object is selected -> select, should only be possible on first change
-        centralNodeId = props.configData.actionGraph!.levelOneNodes[0].id;
+        centralNodeId = props.configData!.actionGraph!.levelOneNodes[0].id;
       }
     } else {
       throw Error("Unknown graph view " + graphView);
@@ -205,31 +212,49 @@ function LineageTabCore(props: flowProps) {
     return [nodes, edges];
   }
 
+
+  // reset view port with the center node in the middle 
+  function resetViewPortCentered(rfi: ReactFlowInstance | null): void {
+    const filteredCenterNode = nodes.filter(node => node.data.isCenterNode);
+    if (rfi && nodes?.length) {
+      const n = rfi.getNode(filteredCenterNode[0].id)
+      rfi.fitView({ nodes: [n as ReactFlowNode], duration: 400 });
+    }
+  }
+
+  // reset the view port with the center node on top left
+  function resetViewPort(rfi: ReactFlowInstance | null): void {
+    const filteredCenterNode = nodes.filter(node => node.data.isCenterNode);
+    if (rfi && nodes?.length) {
+      const n = rfi.getNode(filteredCenterNode[0].id)
+      rfi.setViewport({x: n?.positionAbsolute?.x!, y: n?.positionAbsolute?.y!, zoom: 1})
+    }
+  }
+
   useEffect(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
     setEdges(edges_init); 
+    resetViewPort(reactFlowInstance);
   }, [hidden, layout, onlyDirectNeighbours, props, graphView, url]);
 
-  // Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
-  // TODO: edges and node should not refresh on every change
-  const onNodesChange = useCallback(
-    (changes: any) => setNodes((nds: any) => applyNodeChanges(changes, nds)),
-    [setNodes]
-  );
-  
-  const onEdgesChange = useCallback(
-    (changes: any) => setEdges((eds: any) => applyEdgeChanges(changes, eds)),
-    [setEdges]
-  );
+  // set reactflow instance on init so that we can access the internal state of it
+  const onInit = (rfi) => {
+    setReactFlowInstance(rfi);
+  };
+
+  const onNodeClick = (_event, _node) => {
+    !props.runContext && onNodesChange
+  }
+
+  const handleResetViewPort = () => {
+    resetViewPortCentered(reactFlowInstance);
+  }
 
   // const clickOnEdge = (edge) => {
   //   const e = edges.filter(edg => edg.id === edge.id);
   //   e.
-  // }
-  const filteredCenterNode = nodes.filter(node => node.data.isCenterNode);
-  const centerNode = filteredCenterNode.length === 0 ? new Node() : filteredCenterNode[0];
-  
+
   return (
     <>
      <Box
@@ -240,11 +265,12 @@ function LineageTabCore(props: flowProps) {
       }}
       >
         <ReactFlow
+          onInit={onInit}
           nodes={nodes}
           edges={edges}
           defaultPosition={[0, 0]}
-          //onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
-          // onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
+          onNodeClick={onNodeClick}
+          // onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge}}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           nodesConnectable={false} 
@@ -267,9 +293,10 @@ function LineageTabCore(props: flowProps) {
           setLayout={setLayout}
           graphView={graphView}
           setGraphView={setGraphView}
-          centerNode={centerNode}
+          handleOnClick={handleResetViewPort}
         />
-      </Box>
+    </Box>
+     
     </>
   )          
 }
