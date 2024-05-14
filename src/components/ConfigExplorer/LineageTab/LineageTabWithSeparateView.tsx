@@ -218,7 +218,7 @@ function LineageTabCore(props: flowProps) {
   }
 
 
-  // reset view port with the center node in the middle 
+  // reset view port to the center of the lineage graph
   function resetViewPortCentered(rfi: ReactFlowInstance | null): void {
     const filteredCenterNode = nodes.filter(node => node.data.isCenterNode);
     if (rfi && nodes?.length) {
