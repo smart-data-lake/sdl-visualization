@@ -4,9 +4,9 @@
  */
 import { AlignVerticalTop, RocketOutlined } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
-import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
-import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
+import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined'
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
+import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import { LoopOutlined } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -21,8 +21,6 @@ import { toPng } from 'html-to-image';
 import Box from '@mui/material/Box';
 
 import Draggable from 'react-draggable';
-import { useCallback, useEffect, useState } from 'react';
-import { useReactFlow } from 'reactflow';
 
 /*
   Styling
@@ -174,7 +172,8 @@ function DownloadLineageButton() {
   );
 }
 
-function RecenterButton({handleOnClick}){
+function ResetViewPortButton({handleOnClick}){
+  console.log("reset")
   return (
     <div>
       <IconButton onClick={handleOnClick}>
@@ -183,6 +182,18 @@ function RecenterButton({handleOnClick}){
     </div>
   )
 }
+
+function CenterFocusButton({handleOnClick}){
+  console.log("focus")
+  return (
+    <div>
+      <IconButton onClick={handleOnClick}>
+        <FilterCenterFocusIcon/>
+      </IconButton>
+    </div>
+  )
+}
+
 
 /*
   The main toolbar component
@@ -210,7 +221,8 @@ export function LineageGraphToolbar(props) {
   >
       <GraphViewSelector graphView={props.graphView} setGraphView={props.setGraphView}/>
       <Divider orientation='horizontal'/>
-      <RecenterButton handleOnClick={props.handleOnClick}/>
+      <ResetViewPortButton handleOnClick={props.handleOnClickResetViewport}/>
+      <CenterFocusButton handleOnClick={props.handleOnClickCenterFocus}/>
       <LayoutButton layout={props.layout} setLayout={props.setLayout}/>
       {props.isPropsConfigDefined && <GraphExpansionButton expanded={props.expanded} setExpanded={props.setExpanded} expansionState={props.expansionState}/>}
       <Divider orientation='horizontal'/>

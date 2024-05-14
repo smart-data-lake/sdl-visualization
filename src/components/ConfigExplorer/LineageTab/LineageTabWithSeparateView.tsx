@@ -138,7 +138,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, 
       style: { stroke:  edgeColor, strokeWidth: 4.5},
       // animated:  true, 
-    };
+    } as ReactFlowEdge;
     result.push(newEdge);
   });
 
@@ -230,12 +230,13 @@ function LineageTabCore(props: flowProps) {
   // reset the view port with the center node on top left
   function resetViewPort(rfi: ReactFlowInstance | null): void {
     const filteredCenterNode = nodes.filter(node => node.data.isCenterNode);
+    console.log("filered: ", filteredCenterNode);
     if (rfi && nodes?.length) {
+      console.log("rfi");
       const n = rfi.getNode(filteredCenterNode[0].id)
       rfi.setViewport({x: n?.positionAbsolute?.x!, y: n?.positionAbsolute?.y!, zoom: 1})
     }
   }
-
 
   // reset node styles on pane click
   function resetEdgeStyles(){
@@ -257,6 +258,7 @@ function LineageTabCore(props: flowProps) {
     })
   }
 
+  // defines the conditions to (re-)render the lineage graph
   useEffect(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
@@ -295,10 +297,14 @@ function LineageTabCore(props: flowProps) {
     });
   }
 
-
-  const handleResetViewPort = () => {
+  const handleCenterFocus = () => {
     resetViewPortCentered(reactFlowInstance);
   }
+
+  const handleResetViewPort = () => {
+    resetViewPort(reactFlowInstance);
+  }
+
 
   return (
     <>
@@ -339,7 +345,9 @@ function LineageTabCore(props: flowProps) {
           setLayout={setLayout}
           graphView={graphView}
           setGraphView={setGraphView}
-          handleOnClick={handleResetViewPort}
+          handleOnClickResetViewport={handleResetViewPort}
+          handleOnClickCenterFocus={handleCenterFocus}
+          reactFlowInstance={reactFlowInstance}
         />
     </Box>
      
