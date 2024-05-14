@@ -15,8 +15,8 @@
 
 // react component imports
 import { useState, useCallback, useEffect, useRef, useMemo} from 'react';
-import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node as ReactFlowNode, Edge as ReactFlowEdge,
-   MarkerType, Position } from 'react-flow-renderer';
+import ReactFlow, {Background, MiniMap, Controls, Node as ReactFlowNode, Edge as ReactFlowEdge,
+   MarkerType, Position, updateEdge } from 'react-flow-renderer';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
 import { Panel, useViewport, useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
@@ -36,6 +36,18 @@ import {DraggableLineageGraphToolbar, LineageGraphToolbar} from './LineageGraphT
 
 // TODO: add onHover references
 // TODO: implement a nodeFactory? 
+
+/*
+Global styles to be refactored
+*/
+const labelColor = '#fcae1e';
+const defaultEdgeColor = '#b1b1b7';
+const highLightedEdgeColor = '#096bde';
+
+const defaultEdgeStrokeWidth = 4.5
+const highlightedEdgeStrokeWidth = 6;
+
+const zIndex = 4;
 
 /*
  Add custom node and edge types
@@ -98,11 +110,7 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
 
 function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: string | undefined): ReactFlowEdge[] {
   var result: ReactFlowEdge[] = [];
-  const labelColor = '#fcae1e';
-  const highlightedColor = "#1A192B"; // red?
-  const normalColor = '#096bde';
-  const edgeColor = selectedEdgeId ? highlightedColor : normalColor;
-  const highlightedWidth = 3;
+  const edgeColor = selectedEdgeId ? highLightedEdgeColor : defaultEdgeColor;
 
   dataObjectsAndActions.edges.forEach(edge => {
     const selected = selectedEdgeId === edge.id;
@@ -128,7 +136,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       labelBgPadding: [7, 7],
       labelBgBorderRadius: 8,
       labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, 
-      style: { stroke:  edgeColor, strokeWidth: 3.5},
+      style: { stroke:  edgeColor, strokeWidth: 4.5},
       // animated:  true, 
     };
     result.push(newEdge);
@@ -155,16 +163,14 @@ function LineageTabCore(props: flowProps) {
    let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false); 
   
    let initialRender = prepareAndRenderGraph();
-  //  const [nodes, setNodes] = useState(initial_render[0]);
-  //  const [edges, setEdges] = useState(initial_render[1]);
    const [nodes, setNodes, onNodesChange] = useNodesState(initialRender[0]);
    const [edges, setEdges, onEdgesChange] = useEdgesState(initialRender[1]);
  
    const navigate = useNavigate();            // handlers for navigating dataObjects and actions
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
 
-   const {setViewport, fitView, getNode, getNodes} = useReactFlow();
-   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+   const {getNode, getEdge} = useReactFlow();
+   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
    // helper functions
    function expandGraph(): void {
@@ -231,6 +237,27 @@ function LineageTabCore(props: flowProps) {
     }
   }
 
+
+  // reset node styles on pane click
+  function resetEdgeStyles(){
+    setEdges((edge) => {
+      return edge.map((e) =>{
+        e.style = {
+          ...e.style,
+          stroke: defaultEdgeColor,
+          strokeWidth: defaultEdgeStrokeWidth
+        }
+        e.markerEnd = {
+          type: MarkerType.ArrowClosed,
+          width: 10,
+          height: 10,
+          color:  defaultEdgeColor,
+        }
+        return e;
+      })
+    })
+  }
+
   useEffect(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
@@ -244,16 +271,34 @@ function LineageTabCore(props: flowProps) {
   };
 
   const onNodeClick = (_event, _node) => {
-    !props.runContext && onNodesChange
+    !props.runContext && onNodesChange;
   }
+
+  const onEdgeClick = (_event, edge) => {
+    setEdges((e) =>{
+      return e.map((elem) =>{
+        if(elem.id === edge.id){
+          elem.style = {
+            ...elem.style,
+            stroke: highLightedEdgeColor,
+            strokeWidth: highlightedEdgeStrokeWidth,
+          }
+          elem.markerEnd = {
+            type: MarkerType.ArrowClosed,
+            width: 10,
+            height: 10,
+            color:  highLightedEdgeColor,
+          }
+        }
+        return elem;
+      })
+    });
+  }
+
 
   const handleResetViewPort = () => {
     resetViewPortCentered(reactFlowInstance);
   }
-
-  // const clickOnEdge = (edge) => {
-  //   const e = edges.filter(edg => edg.id === edge.id);
-  //   e.
 
   return (
     <>
@@ -270,9 +315,10 @@ function LineageTabCore(props: flowProps) {
           edges={edges}
           defaultPosition={[0, 0]}
           onNodeClick={onNodeClick}
-          // onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge}}
+          onEdgeClick={onEdgeClick}
           onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
+          // onEdgesChange={onEdgesChange}
+          onPaneClick={resetEdgeStyles}
           nodesConnectable={false} 
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}

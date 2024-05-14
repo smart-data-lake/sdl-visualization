@@ -335,7 +335,7 @@ export const CustomEdge = ({
   id,
   sourceX, sourceY, targetX, targetY,
   sourcePosition,targetPosition,
-  style = {},
+  style,
   markerEnd,
 }: EdgeProps) => {
 
