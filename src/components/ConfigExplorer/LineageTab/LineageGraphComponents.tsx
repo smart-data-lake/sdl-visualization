@@ -285,7 +285,7 @@ export const CustomDataNode = ( {data} ) => {
       sx={{
         padding: '10px',
         border: '3px solid #a9a9a9',
-        ...(nodeType === NodeType.ActionNode && {borderRadius: '40px',}),
+        ...(nodeType === NodeType.ActionNode && {borderRadius: '20px',}),
         minWidth: '200px',
         maxWidth: '200px',
         minHeight: '80px',
@@ -346,19 +346,16 @@ export const CustomEdge = ({
     targetX,
     targetY,
     targetPosition,
-    borderRadius: 70
+    borderRadius: 10
   });
 
   return (
-    <>
       <path
         id={id}
         style={style}
         className="react-flow__edge-path"
         d={edgePath}
         markerEnd={markerEnd}
-        
       />
-    </>
   );
 }

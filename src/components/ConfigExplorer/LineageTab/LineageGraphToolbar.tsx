@@ -226,7 +226,7 @@ export function LineageGraphToolbar(props) {
       <LayoutButton layout={props.layout} setLayout={props.setLayout}/>
       {props.isPropsConfigDefined && <GraphExpansionButton expanded={props.expanded} setExpanded={props.setExpanded} expansionState={props.expansionState}/>}
       <Divider orientation='horizontal'/>
-      <ShowActionButton hidden={props.hidden} setHidden={props.setHidden}/>
+      {/* <ShowActionButton hidden={props.hidden} setHidden={props.setHidden}/> */}
       <DownloadLineageButton/>
 </Box>
 }
