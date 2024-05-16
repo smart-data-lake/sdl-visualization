@@ -173,9 +173,10 @@ function DownloadLineageButton() {
 }
 
 function ResetViewPortButton({handleOnClick}){
-  console.log("reset")
   return (
-    <div>
+    <div
+      title='Center viewport'
+      style={styles}>
       <IconButton onClick={handleOnClick}>
         <LoopOutlined/>
       </IconButton>
@@ -184,9 +185,10 @@ function ResetViewPortButton({handleOnClick}){
 }
 
 function CenterFocusButton({handleOnClick}){
-  console.log("focus")
   return (
-    <div>
+    <div
+      title='Focus on central node'
+      style={styles}>
       <IconButton onClick={handleOnClick}>
         <FilterCenterFocusIcon/>
       </IconButton>

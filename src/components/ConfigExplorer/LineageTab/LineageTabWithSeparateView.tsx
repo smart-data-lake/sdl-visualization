@@ -44,10 +44,9 @@ const labelColor = '#fcae1e';
 const defaultEdgeColor = '#b1b1b7';
 const highLightedEdgeColor = '#096bde';
 
-const defaultEdgeStrokeWidth = 4.5
-const highlightedEdgeStrokeWidth = 6;
+const defaultEdgeStrokeWidth = 3
+const highlightedEdgeStrokeWidth = 5;
 
-const zIndex = 4;
 
 /*
  Add custom node and edge types
@@ -136,7 +135,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       labelBgPadding: [7, 7],
       labelBgBorderRadius: 8,
       labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, 
-      style: { stroke:  edgeColor, strokeWidth: 4.5},
+      style: { stroke:  edgeColor, strokeWidth: defaultEdgeStrokeWidth},
       // animated:  true, 
     } as ReactFlowEdge;
     result.push(newEdge);
@@ -219,7 +218,7 @@ function LineageTabCore(props: flowProps) {
 
 
   // reset view port to the center of the lineage graph
-  function resetViewPortCentered(rfi: ReactFlowInstance | null): void {
+  function resetViewPort(rfi: ReactFlowInstance | null): void {
     const filteredCenterNode = nodes.filter(node => node.data.isCenterNode);
     if (rfi && nodes?.length) {
       const n = rfi.getNode(filteredCenterNode[0].id)
@@ -227,14 +226,14 @@ function LineageTabCore(props: flowProps) {
     }
   }
 
-  // reset the view port with the center node on top left
-  function resetViewPort(rfi: ReactFlowInstance | null): void {
+  // reset the view port with the center node in the center
+  function resetViewPortCentered(rfi: ReactFlowInstance | null): void {
     const filteredCenterNode = nodes.filter(node => node.data.isCenterNode);
-    console.log("filered: ", filteredCenterNode);
     if (rfi && nodes?.length) {
-      console.log("rfi");
       const n = rfi.getNode(filteredCenterNode[0].id)
-      rfi.setViewport({x: n?.positionAbsolute?.x!, y: n?.positionAbsolute?.y!, zoom: 1})
+      const width = n?.width!;
+      const height = n?.height!;
+      rfi.setViewport({x: n?.positionAbsolute?.x! + width, y: n?.positionAbsolute?.y! + height, zoom: 1})
     }
   }
 
@@ -263,7 +262,7 @@ function LineageTabCore(props: flowProps) {
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
     setEdges(edges_init); 
-    resetViewPort(reactFlowInstance);
+    resetViewPortCentered(reactFlowInstance);
   }, [hidden, layout, onlyDirectNeighbours, props, graphView, url]);
 
   // set reactflow instance on init so that we can access the internal state of it
