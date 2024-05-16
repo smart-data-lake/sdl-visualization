@@ -160,6 +160,8 @@ function LineageTabCore(props: flowProps) {
    const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
    const [layout, setLayout] = useState('TB');
    let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false); 
+
+   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | undefined>(undefined);
   
    let initialRender = prepareAndRenderGraph();
    const [nodes, setNodes, onNodesChange] = useNodesState(initialRender[0]);
@@ -167,8 +169,6 @@ function LineageTabCore(props: flowProps) {
  
    const navigate = useNavigate();            // handlers for navigating dataObjects and actions
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
-
-   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
    // helper functions
    function expandGraph(): void {
@@ -262,8 +262,8 @@ function LineageTabCore(props: flowProps) {
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
     setEdges(edges_init); 
-    resetViewPortCentered(reactFlowInstance);
-  }, [hidden, layout, onlyDirectNeighbours, props, graphView, url]);
+    resetViewPortCentered(reactFlowInstance!);
+  }, [hidden, layout, onlyDirectNeighbours, props, graphView, url, reactFlowInstance]);
 
   // set reactflow instance on init so that we can access the internal state of it
   const onInit = (rfi) => {
@@ -297,11 +297,16 @@ function LineageTabCore(props: flowProps) {
   }
 
   const handleCenterFocus = () => {
-    resetViewPortCentered(reactFlowInstance);
+    if(reactFlowInstance){
+      resetViewPortCentered(reactFlowInstance);
+    }
+
   }
 
   const handleResetViewPort = () => {
-    resetViewPort(reactFlowInstance);
+    if(reactFlowInstance){
+      resetViewPort(reactFlowInstance);
+    }
   }
 
 
