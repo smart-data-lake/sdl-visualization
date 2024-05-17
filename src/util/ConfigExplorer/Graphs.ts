@@ -1,10 +1,5 @@
 /*
     A general Graph structure that is used by React components
-
-    TODO list:
-    - Add more overriding methods for partial graphs
-    - refactor, remove redundant code
-    - add grouped graph
 */
 import dagre from 'dagre';
 import { ConfigData } from './ConfigData';
@@ -42,7 +37,7 @@ export const enum NodeType { // could be replaced by polymorphism
     CommonNode,
 }
 
-export abstract class Node {
+export class Node {
     public id: id;
     public position: position;
     public width: number;
@@ -74,7 +69,7 @@ export abstract class Node {
 } 
 
 // TODO: can be simplified in future versions, does not have to store that many attirbutes
-export class Edge{
+export class Edge {
     public fromNode: Node;
     public toNode: Node;
     public id: id;
@@ -555,7 +550,7 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
     dagreGraph.setDefaultEdgeLabel(function() { return {}; });
 
     // set graph layout and the minimum between-node distance, ranksep is needed for computing all node distances
-    dagreGraph.setGraph({ rankdir: direction, nodesep: 100, ranksep: 100});
+    dagreGraph.setGraph({ rankdir: direction, nodesep: 150, ranksep: 150});
     
     //add nodes + edges to the graph and calculate layout
     nodes.forEach((node)=>{
