@@ -14,7 +14,7 @@
 */
 
 // react component imports
-import { useState, useCallback, useEffect, useRef, useMemo} from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo} from 'react';
 import ReactFlow, {Background, MiniMap, Controls, Node as ReactFlowNode, Edge as ReactFlowEdge,
    MarkerType, Position, updateEdge } from 'react-flow-renderer';
 import { useParams } from 'react-router-dom';
@@ -33,9 +33,6 @@ import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import {CustomDataNode, CustomEdge} from './LineageGraphComponents';
 import { ReactFlowProvider, useReactFlow } from 'reactflow';
 import {DraggableLineageGraphToolbar, LineageGraphToolbar} from './LineageGraphToolbar';
-
-// TODO: add onHover references
-// TODO: implement a nodeFactory? 
 
 /*
 Global styles to be refactored
@@ -137,6 +134,10 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, 
       style: { stroke:  edgeColor, strokeWidth: defaultEdgeStrokeWidth},
       // animated:  true, 
+      data: {
+        anchorEl: null,
+        anchorElSVG: null
+      }
     } as ReactFlowEdge;
     result.push(newEdge);
   });
@@ -159,7 +160,7 @@ function LineageTabCore(props: flowProps) {
    const [graphView, setGraphView] = useState('full'); // control for action/data/full graph view 
    const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
    const [layout, setLayout] = useState('TB');
-   let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false); 
+   const [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false); 
 
    const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | undefined>(undefined);
   
@@ -169,6 +170,7 @@ function LineageTabCore(props: flowProps) {
  
    const navigate = useNavigate();            // handlers for navigating dataObjects and actions
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
+   const [edgePopoverAnchorEl, setEdgePopoverAnchorEl] = useState<React.SVGProps<SVGPathElement> | null>(null);
 
    // helper functions
    function expandGraph(): void {
@@ -239,6 +241,7 @@ function LineageTabCore(props: flowProps) {
 
   // reset node styles on pane click
   function resetEdgeStyles(){
+    setEdgePopoverAnchorEl(null);
     setEdges((edge) => {
       return edge.map((e) =>{
         e.style = {
@@ -252,6 +255,7 @@ function LineageTabCore(props: flowProps) {
           height: 10,
           color:  defaultEdgeColor,
         }
+        e.data.anchorEl = null//edgePopoverAnchorEl;
         return e;
       })
     })
@@ -274,8 +278,10 @@ function LineageTabCore(props: flowProps) {
     !props.runContext && onNodesChange;
   }
 
-  const onEdgeClick = (_event, edge) => {
+  const onEdgeClick = (event: React.MouseEvent<Element>, edge) => {
+    // reset edge styles and set anchor element for currently selected edge for the popover window
     resetEdgeStyles();
+    setEdgePopoverAnchorEl(event.target as React.SVGProps<SVGPathElement>); // this is currently null, have to get it via event.target
     setEdges((e) =>{
       return e.map((elem) =>{
         if(elem.id === edge.id){
@@ -289,6 +295,9 @@ function LineageTabCore(props: flowProps) {
             width: 10,
             height: 10,
             color:  highLightedEdgeColor,
+          }
+          elem.data = {
+            anchorEl: edgePopoverAnchorEl,//event.target as React.SVGProps<SVGPathElement>,
           }
         }
         return elem;

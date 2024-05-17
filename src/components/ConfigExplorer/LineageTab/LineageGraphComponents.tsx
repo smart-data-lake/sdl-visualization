@@ -1,12 +1,7 @@
 /*
     Custom ReactFlow Nodes and Edges that are used in the LineageTab as well as theme styling
-
-    TODO: 
-    -should implement textoverflow handler
-    -adjust between node distance (max width and text-overflow)
-    -sohuld be able to show all nodes of the same type (generic function in Graph.ts)
 */
-import { memo, useRef, useCallback, useState } from 'react';
+import { memo, useRef, useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
 import { Handle, useUpdateNodeInternals, EdgeProps, getBezierPath, getStraightPath, getSmoothStepPath} from 'reactflow';
 
@@ -21,6 +16,7 @@ import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import TableViewIcon from '@mui/icons-material/TableView';
 import { Link } from "react-router-dom";
+import { Popover } from '@mui/material';
 
 import { Node as GraphNode, Edge as GraphEdge, NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { flowProps } from './LineageTabWithSeparateView';
@@ -70,7 +66,6 @@ const getActionStatus = (progress) => {
   Render relevant information from runs
 */
 const renderProperties = (runs) => {
-  // console.log("run props: ", runs)
   return (
     <div>
       {/* <Divider sx={{mt:4, mb:1}} orientation='horizontal'/>
@@ -338,6 +333,7 @@ export const CustomEdge = ({
   sourcePosition,targetPosition,
   style,
   markerEnd,
+  data,
 }: EdgeProps) => {
 
   const [edgePath] = getSmoothStepPath({
@@ -350,11 +346,31 @@ export const CustomEdge = ({
     borderRadius: 10
   });
 
+  // show pop-up window whenever the edge has been selected
+  let anchorEl = data.anchorElSVG;
+  const open = Boolean(anchorEl);
+  const popoverId = open ? 'simple-popover' : undefined;
+  const handleClose = () => {
+    anchorEl = undefined;
+  }
+
   // maybe use BaseEdge...
   return (
     <>
       <path style={style} className="react-flow__edge-path-selector" d={edgePath} markerEnd={markerEnd} fillRule="evenodd"/>
       <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={markerEnd}/>
+      <Popover
+        id={popoverId}
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+      >
+        <Typography sx={{ p: 2 }}>The content of the Popover.</Typography>
+      </Popover>
     </>
   );
 }
