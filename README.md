@@ -12,6 +12,8 @@ This branch is used to implement miscellaneous minor features for the SDL UI. Se
 - [ ] Make the toolbar draggable
 - [ ] Improve minimap contrast / coloring
 - [ ] Properly display object names (e.g. make objects horizontally resizable)
+- [ ] Redesign toolbar appearance
+- [ ] Add search bar to filter by object attributes
 
 
 #### Diverse :gear:
