@@ -26,6 +26,7 @@ import { Node as GraphNode, Edge as GraphEdge, NodeType } from '../../../util/Co
 import { flowProps } from './LineageTabWithSeparateView';
 import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
+import './LineageTab.css'
 
 const dataNodeStyles = {
   padding: '10px',
@@ -349,13 +350,11 @@ export const CustomEdge = ({
     borderRadius: 10
   });
 
+  // maybe use BaseEdge...
   return (
-      <path
-        id={id}
-        style={style}
-        className="react-flow__edge-path"
-        d={edgePath}
-        markerEnd={markerEnd}
-      />
+    <>
+      <path style={style} className="react-flow__edge-path-selector" d={edgePath} markerEnd={markerEnd} fillRule="evenodd"/>
+      <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={markerEnd}/>
+    </>
   );
 }
