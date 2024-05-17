@@ -2,7 +2,6 @@ import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
 import {
   Box,
   Dropdown,
-  Grid,
   IconButton,
   Menu,
   MenuButton,
@@ -14,7 +13,6 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LoginIcon from "@mui/icons-material/Login";
 import CloseIcon from "@mui/icons-material/Close";
-import PersonIcon from "@mui/icons-material/AccountCircleRounded";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "../hooks/TenantProvider";
@@ -72,8 +70,6 @@ export default function Authentication() {
     signOut();
   };
 
-  const { tenant, setTenant } = useTenant();
-
   const goToSetting = () => {
     navigate("settings/users");
   };
@@ -110,12 +106,6 @@ export default function Authentication() {
           {() => (
             <>
               <TenantSelector />
-              <Tooltip title="Settings">
-                <SettingsIcon
-                  sx={{ color: "white", cursor: "pointer", ml: 2 }}
-                  onClick={() => goToSetting()}
-                />
-              </Tooltip>
               <Dropdown>
                 <MenuButton
                   sx={{ display: "flex" }}
@@ -123,7 +113,7 @@ export default function Authentication() {
                     root: Box,
                   }}
                 >
-                  <PersonIcon
+                  <SettingsIcon
                     sx={{ color: "white", cursor: "pointer", ml: 2 }}
                   />
                 </MenuButton>
@@ -137,10 +127,20 @@ export default function Authentication() {
                       display="flex"
                       width={1}
                       alignItems="center"
-                      justifyContent="end"
+                      justifyContent="space-between"
                     >
                       Logout
                       <LogoutIcon sx={{ cursor: "pointer", ml: 1 }} />
+                    </Box>
+                  </MenuItem>
+                  <MenuItem onClick={goToSetting}>
+                    <Box
+                      display="flex"
+                      width={1}
+                      alignItems="center"
+                      justifyContent="start"
+                    >
+                      User Management
                     </Box>
                   </MenuItem>
                 </Menu>
