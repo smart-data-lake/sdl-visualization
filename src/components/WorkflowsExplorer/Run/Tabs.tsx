@@ -15,7 +15,8 @@ import theme from "../../../theme";
 import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import { checkFiltersAvailability, stateFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
-import LineageTab from "../../ConfigExplorer/LineageTab";
+import LineageTab from '../../ConfigExplorer/LineageTab/LineageTab';
+import LineageTabSep from '../../ConfigExplorer/LineageTab/LineageTabWithSeparateView'; // testing new component
 import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
 import ToolBar from "../ToolBar/ToolBar";
 import ContentDrawer from './ContentDrawer';
@@ -213,9 +214,7 @@ const TabNav = (props: { attempt: Attempt }) => {
                 <>
                     <DraggableDivider id="workflow-lineage" cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} />
                     <Sheet ref={lineageRef}>
-                        <ReactFlowProvider>
-                            <LineageTab graph={graph} elementName="" elementType="" />
-                        </ReactFlowProvider>
+                            <LineageTabSep graph={graph} elementName="" elementType="" />
                     </Sheet>
                 </>
             )}
