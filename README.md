@@ -13,7 +13,10 @@ This branch is used to implement miscellaneous minor features for the SDL UI. Se
 - [ ] Improve minimap contrast / coloring
 - [ ] Properly display object names (e.g. make objects horizontally resizable)
 - [ ] Redesign toolbar appearance
-- [ ] Add search bar to filter by object attributes
+- [ ] Add search bar to filter by object attributes (or can this be done by filtering in the config explorer first and render the resulting graph?)
+- [ ] Highlight from and to nodes' border
+- [ ] Incorporate Reactflow Toolbar buttons (except the lock) into LineageGraphToolbar
+
 
 
 #### Diverse :gear:
