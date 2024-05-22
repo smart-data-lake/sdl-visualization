@@ -61,7 +61,7 @@
     "react-syntax-highlighter": "^15.5.0",
     "react-tooltip": "^4.2.17",
     "react-virtualized": "^9.21.2",
-    "reactflow": "^11.7.3",
+    "reactflow": "^11.11.3",
     "recharts": "^2.12.2",
     "reconnecting-websocket": "^4.4.0",
     "remark-gfm": "^3.0.1",
