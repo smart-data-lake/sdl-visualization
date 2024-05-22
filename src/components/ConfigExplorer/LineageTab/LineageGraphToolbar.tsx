@@ -2,23 +2,20 @@
  * The toolbar for the lineage graph 
  * modified from https://github.com/trananhtuat/animated-sidebar-indicator/blob/main/src/components/sidebar/Sidebar.jsx
  */
-import { AlignVerticalTop, RocketOutlined } from '@mui/icons-material';
+import { AlignVerticalTop, LoopOutlined } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
-import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined'
-import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
-import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
-import { LoopOutlined } from '@mui/icons-material';
-import { useTheme } from '@mui/material/styles';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { IconButton, Tooltip, Divider,Sheet, Stack } from '@mui/joy';
-import Select, {SelectOption} from '@mui/joy/Select';
-import Option from '@mui/joy/Option';
-import SchemaIcon from '@mui/icons-material/Schema';
-import OpenWithIcon from '@mui/icons-material/OpenWith';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
-import { toPng } from 'html-to-image';
+import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
+import OpenWithIcon from '@mui/icons-material/OpenWith';
+import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
+import SchemaIcon from '@mui/icons-material/Schema';
+import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
+import { Divider, IconButton, Tooltip } from '@mui/joy';
+import Option from '@mui/joy/Option';
+import Select, { SelectOption } from '@mui/joy/Select';
 import Box from '@mui/material/Box';
+import { toPng } from 'html-to-image';
 
 import Draggable from 'react-draggable';
 
@@ -72,26 +69,17 @@ const GraphViewSelector = ({graphView, setGraphView}) => {
     return getSearchTypeElement(option!.value);
   }
   return (
-    <div style={styles}>
         <Select variant="plain"
                 size="sm"
                 value={graphView}
                 onChange={handleChange}
                 renderValue={renderSearchType}
-                style={{ zIndex: componentZIndex, cursor: 'pointer', position: 'relative', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        }}
-                slots={{
-                  button: renderSearchType(graphView)
-                }}
+                sx={{ zIndex: componentZIndex, '& .MuiSelect-button': {overflow: "visible"}}}
         >
           <Option id="full" value="full">{getSearchTypeElement('full')}</Option>
           <Option id="data" value="data">{getSearchTypeElement('data')}</Option>
           <Option id="action" value="action">{getSearchTypeElement('action')}</Option>
         </Select>
-    </div>
   );
 }
 

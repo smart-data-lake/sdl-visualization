@@ -19,7 +19,7 @@ import ReactFlow, {Background, MiniMap, Controls, Node as ReactFlowNode, Edge as
    MarkerType, Position, updateEdge } from 'react-flow-renderer';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
-import { Panel, useViewport, useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
+import { Panel, useViewport, useNodesState, useEdgesState, ReactFlowInstance, NodeChange } from 'reactflow';
 
 // mui imports
 import Box from '@mui/material/Box';
@@ -163,9 +163,8 @@ function LineageTabCore(props: flowProps) {
 
    const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | undefined>(undefined);
   
-   let initialRender = prepareAndRenderGraph();
-   const [nodes, setNodes, onNodesChange] = useNodesState(initialRender[0]);
-   const [edges, setEdges, onEdgesChange] = useEdgesState(initialRender[1]);
+   const [nodes, setNodes] = useState<ReactFlowNode<any>[]>([]);
+   const [edges, setEdges] = useState<ReactFlowEdge<any>[]>([]);
  
    const navigate = useNavigate();            // handlers for navigating dataObjects and actions
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
@@ -190,14 +189,18 @@ function LineageTabCore(props: flowProps) {
     } else if (graphView === 'data'){
       doa = props.configData!.dataGraph!;
       if(props.elementType === 'actions'){ 
-        // switch to data graph when an action is selected -> select the first data node id
-        centralNodeId = props.configData!.dataGraph!.levelOneNodes[0].id;
+        // switch to data graph when an action is selected -> navigate to first direct neighbour
+        const [neighours, ] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
+        navigate(`/config/dataObjects/${neighours[0].id}`);
+        return [[],[]];
       }
     } else if (graphView === 'action'){
       doa = props.configData!.actionGraph!;
       if (props.elementType === 'dataObjects'){ 
-        // switch to action graph when a data object is selected -> select, should only be possible on first change
-        centralNodeId = props.configData!.actionGraph!.levelOneNodes[0].id;
+        // switch to action graph when a data object is selected -> navigate to first direct neighbour
+        const [neighours, ] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
+        navigate(`/config/actions/${neighours[0].id}`);
+        return [[],[]];
       }
     } else {
       throw Error("Unknown graph view " + graphView);
@@ -233,7 +236,7 @@ function LineageTabCore(props: flowProps) {
       const n = rfi.getNode(filteredCenterNode[0].id)
       const width = n?.width!;
       const height = n?.height!;
-      rfi.setViewport({x: n?.positionAbsolute?.x! + width, y: n?.positionAbsolute?.y! + height, zoom: 1})
+      rfi.setViewport({x: n?.positionAbsolute?.x! + width, y: n?.positionAbsolute?.y! + height, zoom: rfi?.getZoom() || 1})
     }
   }
 
@@ -269,10 +272,6 @@ function LineageTabCore(props: flowProps) {
   const onInit = (rfi) => {
     setReactFlowInstance(rfi);
   };
-
-  const onNodeClick = (_event, _node) => {
-    !props.runContext && onNodesChange;
-  }
 
   const onEdgeClick = (_event, edge) => {
     resetEdgeStyles();
@@ -321,18 +320,17 @@ function LineageTabCore(props: flowProps) {
       >
         <ReactFlow
           onInit={onInit}
-          nodes={nodes}
-          edges={edges}
+          defaultNodes={nodes}
+          defaultEdges={edges}
           defaultPosition={[0, 0]}
-          onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
-          onNodesChange={onNodesChange}
-          // onEdgesChange={onEdgesChange}
           onPaneClick={resetEdgeStyles}
           nodesConnectable={false} 
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
+          minZoom={0.02}
+          maxZoom={1}
         >
           <Background/>
           {/* <MiniMap/>  */}

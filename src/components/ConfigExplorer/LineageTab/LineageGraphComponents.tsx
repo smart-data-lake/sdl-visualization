@@ -6,27 +6,24 @@
     -adjust between node distance (max width and text-overflow)
     -sohuld be able to show all nodes of the same type (generic function in Graph.ts)
 */
-import { memo, useRef, useCallback, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
-import { Handle, useUpdateNodeInternals, EdgeProps, getBezierPath, getStraightPath, getSmoothStepPath} from 'reactflow';
+import { EdgeProps, Handle, getSmoothStepPath } from 'reactflow';
 
-import { Divider, IconButton, Tooltip, Chip} from '@mui/joy';
-import Box from '@mui/joy/Box';
-import LinearProgress from '@mui/joy/LinearProgress';
-import { InfoOutlined, ExpandMore , ExpandLess, ArrowOutward  } from '@mui/icons-material';
-import Typography from '@mui/joy/Typography';
-import FunctionsIcon from '@mui/icons-material/Functions';
-import Button from '@mui/joy/Button';
-import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
+import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
+import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import TableViewIcon from '@mui/icons-material/TableView';
+import { Chip, Divider, IconButton, Tooltip } from '@mui/joy';
+import Box from '@mui/joy/Box';
+import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
 
-import { Node as GraphNode, Edge as GraphEdge, NodeType } from '../../../util/ConfigExplorer/Graphs';
-import { flowProps } from './LineageTabWithSeparateView';
-import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
-import './LineageTab.css'
+import { NodeType } from '../../../util/ConfigExplorer/Graphs';
+import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
+import './LineageTab.css';
+import { flowProps } from './LineageTabWithSeparateView';
 
 const dataNodeStyles = {
   padding: '10px',
@@ -179,76 +176,57 @@ export const CustomDataNode = ( {data} ) => {
 
   function showObjectTitle(){    
     const objectType = nodeType === NodeType.ActionNode ? "Action Object" : "Data Object";
-    return <Typography level="body-xs" sx={{ fontWeight: 'bold', 
-                                             textOverflow: 'ellipsis', 
-                                             overflow: 'hidden', 
-                                             whiteSpace: 'nowrap', 
-                                             marginRight: '15px'}}>
-              <div style={{display: 'flex', 
-                           flexDirection: 'row'}}>
-                <div style={{justifyContent: 'flex-end'}}>
-                  <Tooltip title={objectType}>
-                    {nodeType === NodeType.ActionNode ? <RocketLaunchOutlined/> : <TableViewIcon/>}
-                  </Tooltip>
-                </div>
-                <Tooltip title={nodeSubTypeName}>
-                  <Box onClick={() => window.open(schemaViewerURL, '_blank')} 
-                    sx={{marginLeft:'7px', 
-                      textAlign: 'center', 
-                      // border: '',
-                      borderRadius: '2px',
-                      display: 'inline-block',
-                      "&:hover": {
-                      backgroundColor: 'rgb(7, 120, 200, 0.42)',
-                      },
-                      fontSize: 14
-                    }}
-                    >
-                  {abbr}
-                  </Box>
-                </Tooltip>
-                {/* <div>
-                  {createConnectionChip(props.connection.id)} // need distinction on objects without conn.  
-                </div> */}
-                <div>
-                  {lastRun?.status !== undefined  && (getIcon(lastRun?.status, '0px', {display: 'block'}))}
-                </div>
+    return (
+      <Box sx={{display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
+        <Tooltip title={objectType}>
+          {nodeType === NodeType.ActionNode ? <RocketLaunchOutlined sx={{height: '18px'}}/> : <TableViewIcon sx={{height: '18px'}}/>}
+        </Tooltip>
+        <Tooltip title={nodeSubTypeName}>
+          <Typography level="body-xs" onClick={() => window.open(schemaViewerURL, '_blank')} 
+            sx={{marginLeft:'3px', cursor: 'pointer', fontSize: 14, fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap'}}
+            >
+          {abbr}
+          </Typography>
+        </Tooltip>
+        {/* <div>
+          {createConnectionChip(props.connection.id)} // need distinction on objects without conn.  
+        </div> */}
+        <Box sx={{flex: 1}}/>
+        {lastRun?.status !== undefined  && (getIcon(lastRun?.status, '0px', {scale: '100%'}))}
 
-                
-                {/* <div style={{justifyContent: 'flex-end'}}>
-                  {lastRun.status !== undefined  && (getIcon(lastRun.status, '0px', {display: 'block'}))}
-                  {runs && (`runs: ${totalRuns}`)}
-                </div> */}
-                
-                {/* <IconButton size="xs" 
-                component={Link}
-                to={schemaViewerURL}
-                variant='contained'
-                sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px'}}>
-                <InfoOutlined />
-                </IconButton> */}
+        {/* <div style={{justifyContent: 'flex-end'}}>
+          {lastRun.status !== undefined  && (getIcon(lastRun.status, '0px', {display: 'block'}))}
+          {runs && (`runs: ${totalRuns}`)}
+        </div> */}
+        
+        {/* <IconButton size="xs" 
+        component={Link}
+        to={schemaViewerURL}
+        variant='contained'
+        sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px'}}>
+        <InfoOutlined />
+        </IconButton> */}
 
-              </div>
-            </Typography>
+      </Box>
+    )
   }
 
   function showObjectName(){
-    return <Tooltip title="View Object Details">
-              <Button variant='plain' onClick={() => handleDetailsClick(props, label, nodeType)}>
-                <Typography level="body-lg" 
-                            sx={{ 
-                              fontWeight: 'bold', 
-                              textOverflow: 'ellipsis', 
-                              overflow: 'hidden', 
-                              whiteSpace: 'nowrap', 
-                              marginBottom: '1px', 
-                              maxWidth: '150px',
-                              maxHeight: '30px',
-                              fontSize:21
-                            }}>
-                  {label}
-                </Typography> 
-              </Button>  
+    return <Tooltip title={`${label}: view details`}>
+              <Typography level="body-lg" 
+                          sx={{ 
+                            fontWeight: 'bold', 
+                            textOverflow: 'ellipsis', 
+                            overflow: 'hidden', 
+                            whiteSpace: 'nowrap', 
+                            maxWidth: '100%',
+                            maxHeight: '30px',
+                            fontSize:21,
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => handleDetailsClick(props, label, nodeType)} >
+                {label}
+              </Typography> 
             </Tooltip>
   }
 
@@ -302,15 +280,9 @@ export const CustomDataNode = ( {data} ) => {
 
       <div>
         {showObjectTitle()}
-        <div style={{
-                    display: 'flex',
-                    textOverflow: 'ellipsis',
-                    width: '50px'
-                }}>
-                    {showObjectName()}
-          </div>
+        {showObjectName()}
       </div>
-      {showProperties()}
+      {/*showProperties()*/}
       
       {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}> */}
       {/* <Typography level='body-xs' variant="soft">          
@@ -319,12 +291,12 @@ export const CustomDataNode = ( {data} ) => {
       </Typography> */}
       {/* </div> */}
 
-      { showDetails && (
+      {/* showDetails && (
         <>
           {renderProperties(runs)}
         </>
         )
-      }
+      */}
         
       <Handle type="target" position={targetPosition} id={`${label}`}/>
     </Box>
