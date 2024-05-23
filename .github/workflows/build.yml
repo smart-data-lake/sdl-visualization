@@ -41,7 +41,7 @@ jobs:
         CI: '' # disable CI mode as it makes build fail on warnings
 
     - name: Upload build to artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: sdl-visualizer
         path: |
