@@ -40,7 +40,7 @@ jobs:
       env:
         CI: '' # disable CI mode as it makes build fail on warnings
 
-    - name: Upload build to artifact
+    - name: Upload build and additional files to artifact
       uses: actions/upload-artifact@v4
       with:
         name: sdl-visualizer
@@ -53,12 +53,6 @@ jobs:
           build/sdl_logo192.png
           build/lighttpd.conf
           build/README.md
-
-    - name: Upload additional files to artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: sdl-visualizer
-        path: |
           build_index.sh
           build_index.py
           requirements.txt          
