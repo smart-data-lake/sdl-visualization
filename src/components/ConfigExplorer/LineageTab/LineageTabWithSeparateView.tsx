@@ -14,25 +14,26 @@
 */
 
 // react component imports
-import { useState, useCallback, useEffect, useRef, useMemo} from 'react';
-import ReactFlow, {Background, MiniMap, Controls, Node as ReactFlowNode, Edge as ReactFlowEdge,
-   MarkerType, Position, updateEdge } from 'react-flow-renderer';
-import { useParams } from 'react-router-dom';
-import { useNavigate } from "react-router-dom";
-import { Panel, useViewport, useNodesState, useEdgesState, ReactFlowInstance, NodeChange } from 'reactflow';
+import { useEffect, useRef, useState } from 'react';
+import ReactFlow, {
+  Background,
+  Controls,
+  MarkerType, Position,
+  Edge as ReactFlowEdge,
+  Node as ReactFlowNode
+} from 'react-flow-renderer';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ReactFlowInstance } from 'reactflow';
 
 // mui imports
 import Box from '@mui/material/Box';
 
 // local imports
-import {DAGraph, PartialDataObjectsAndActions, DataObjectsAndActionsSep } from '../../../util/ConfigExplorer/Graphs';
+import { ReactFlowProvider } from 'reactflow';
 import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
-import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
-import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
-import { NodeType } from '../../../util/ConfigExplorer/Graphs';
-import {CustomDataNode, CustomEdge} from './LineageGraphComponents';
-import { ReactFlowProvider, useReactFlow } from 'reactflow';
-import {DraggableLineageGraphToolbar, LineageGraphToolbar} from './LineageGraphToolbar';
+import { DAGraph, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions } from '../../../util/ConfigExplorer/Graphs';
+import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
+import { LineageGraphToolbar } from './LineageGraphToolbar';
 
 // TODO: add onHover references
 // TODO: implement a nodeFactory? 
@@ -74,6 +75,8 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
   const nodes = dataObjectsAndActions.nodes;
   const targetPos = isHorizontal ? Position.Left : Position.Top;
   const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
+  const sinkNodes = dataObjectsAndActions.getSinkNodes();
+  const isExpanded = true; // temporary
   var result: ReactFlowNode[] = []; 
 
   // If we need more information to be displayed on the node, 
@@ -82,6 +85,8 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
   nodes.forEach((node)=>{
     const dataObject = node
     const nodeType = dataObject.nodeType;
+    const isSink = sinkNodes.includes(dataObject);
+
     const newNode = {
       id: dataObject.id,
       type: 'customDataNode',   // should match the name defined in custom node types
@@ -95,6 +100,8 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
         nodeType: nodeType,
         targetPosition: targetPos,
         sourcePosition: sourcePos,
+        isSink: isSink,
+        isExpanded: isExpanded,
         // the following are hard coded for testing
         progress: nodeType === NodeType.ActionNode ? (Math.random()*100).toFixed(1) : undefined, 
         jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined,
@@ -136,7 +143,6 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       labelBgBorderRadius: 8,
       labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, 
       style: { stroke:  edgeColor, strokeWidth: defaultEdgeStrokeWidth},
-      // animated:  true, 
     } as ReactFlowEdge;
     result.push(newEdge);
   });
@@ -330,7 +336,7 @@ function LineageTabCore(props: flowProps) {
           edgeTypes={edgeTypes}
           fitView
           minZoom={0.02}
-          maxZoom={1}
+          maxZoom={3}
         >
           <Background/>
           {/* <MiniMap/>  */}

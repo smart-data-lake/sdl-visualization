@@ -18,12 +18,15 @@ import { Chip, Divider, IconButton, Tooltip } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
+import IndeterminateCheckBoxOutlinedIcon from '@mui/icons-material/IndeterminateCheckBoxOutlined';
+import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
 
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
 import { flowProps } from './LineageTabWithSeparateView';
+import { Position } from 'react-flow-renderer';
 
 const dataNodeStyles = {
   padding: '10px',
@@ -98,7 +101,7 @@ function createConnectionChip(name: string){
 }
 
 export const CustomDataNode = ( {data} ) => {
-  const { props, label, isCenterNode, nodeType, targetPosition, sourcePosition, 
+  const { props, label, isCenterNode, nodeType, isSink, isExpanded, targetPosition, sourcePosition, 
           progress, jsonObject
   } = data;
 
@@ -248,6 +251,8 @@ export const CustomDataNode = ( {data} ) => {
             </>
   }
 
+  //test
+  const expand = true;
   function showProperties(){
     return <IconButton title='Show object properties'
            size="sm" 
@@ -257,8 +262,15 @@ export const CustomDataNode = ( {data} ) => {
            </IconButton>
   }
 
+  // the offset is symmetric
+  const isVerticalLayout = sourcePosition === Position.Bottom; // maybe this is a bug because the hanle is not updated in the first change;
+  const handleHOffset = isVerticalLayout ? '1px' : '24px';
+  const handleWOffset = isVerticalLayout ? '24px' : '1px';
   return (
-    <Box 
+    <div style={{ display: 'flex',
+                  flexDirection: 'row', 
+               }}>
+      <Box 
       zIndex={4} 
       ref={chartBox}
       sx={{
@@ -271,12 +283,19 @@ export const CustomDataNode = ( {data} ) => {
         maxHeight: '95px',
         position: 'relative',
         bgcolor: bgcolor,
-        overflow: 'hidden',
+        // overflow: 'hidden',
         textOverflow: 'ellipsis',
-        flexDirection: 'row'
+        // flexDirection: 'row'
       }}
     >
-      <Handle type="source" position={sourcePosition} id={`${label}`}/>
+      <Handle type="source" position={sourcePosition} id={`${label}`} 
+              style={{height: handleHOffset, width: handleWOffset, background: 0, border: 0}} 
+              >
+        { !isSink && (() => {
+                      if(isExpanded) return <IndeterminateCheckBoxOutlinedIcon style={{ background: '#fff' }} />
+                      else return <AddBoxOutlinedIcon style={{ background: '#fff' }} />})()
+        }
+      </Handle>
 
       <div>
         {showObjectTitle()}
@@ -299,7 +318,8 @@ export const CustomDataNode = ( {data} ) => {
       */}
         
       <Handle type="target" position={targetPosition} id={`${label}`}/>
-    </Box>
+      </Box>
+    </div>
   );
 };
 

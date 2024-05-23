@@ -142,14 +142,16 @@ export class DAGraph {
     public nodes: Node[];
     public edges: Edge[];
     public levels: number[];
-    public levelOneNodes: Node[];
+    public sourceNodes: Node[];
+    public sinkNodes: Node[];
 
     constructor(nodes: Node[], edges: Edge[], mergeEdges: boolean = true){
         this.nodes = nodes; 
         this.edges = edges;
         this.levels = [];
 
-        this.levelOneNodes = this.#computeLevelOneNodes();
+        this.sourceNodes = this.#computeSourceNodes();
+        this.sinkNodes = this.#computeSinkNodes();
         if (mergeEdges){
             this.#mergeCommonActionEdges(); 
             this.nodes = this.removeDuplicatesFromObjArrayOnAttributes(this.nodes, ["id"]);
@@ -161,11 +163,16 @@ export class DAGraph {
         Compute the list of nodes without incomming edges.
         If the graph is an ActionGraph, the nodes will be actionNodes, otherwise they will be dataNodes
     */
-    #computeLevelOneNodes(){
-        var destinationNodes: Node[] = [];
-        this.edges.forEach(edge => {destinationNodes.push(edge.toNode)});
-        const destNodes = [...new Set(destinationNodes)]; //Nodes with incoming edges (remove duplicates)
-        return this.nodes.filter(x => !destNodes.includes(x)); //nodes without incoming edges
+    #computeSourceNodes(){
+        return this.nodes.filter(n => this.edges.filter(e => e.toNode === n).length === 0);
+    }
+
+    /*
+        Compuers the list of nodes without outgoing edges
+        We do this by filtering the nodes from the edges, as a node might contain a dest and a src node list
+    */
+    #computeSinkNodes(){
+        return this.nodes.filter(n => this.edges.filter(e => e.fromNode === n).length === 0);
     }
 
     /*
@@ -181,7 +188,7 @@ export class DAGraph {
     #mergeCommonActionEdges(){
         // merge actions and related edges by looking at non root data nodes, skip M:N  and 1:N actions 
         // merging is done by jsonObj.type, not by actionNode.id
-        const nonRootNodes = this.nodes.filter(n => !this.levelOneNodes.includes(n) && n.nodeType === NodeType.DataNode);
+        const nonRootNodes = this.nodes.filter(n => !this.sourceNodes.includes(n) && n.nodeType === NodeType.DataNode);
 
         nonRootNodes.forEach(node => {
             // skip M:N cases
@@ -235,6 +242,16 @@ export class DAGraph {
                 }
             }
         });
+    }
+
+    getSourceNodes(){
+        if (!this.sourceNodes) throw new Error("The source nodes have not been computed yet");
+        return this.sourceNodes;
+    }
+
+    getSinkNodes(){
+        if (!this.sinkNodes) throw new Error("The sink nodes have not been computed yet");
+        return this.sinkNodes;
     }
 
     /**
