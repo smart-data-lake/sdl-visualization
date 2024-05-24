@@ -51,6 +51,10 @@ jobs:
           build/assets/*
           build/images/*
           build/*
+          !build/config
+          !build/envConfig
+          !build/description
+          !build/schema
           
     - name: 'If build on master branch, bump version on develop'
       if: ${{ github.ref_name == 'master' }}
