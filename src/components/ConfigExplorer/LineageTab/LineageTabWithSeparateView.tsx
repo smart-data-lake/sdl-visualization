@@ -35,9 +35,6 @@ import { DAGraph, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObj
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
 import { LineageGraphToolbar } from './LineageGraphToolbar';
 
-// TODO: add onHover references
-// TODO: implement a nodeFactory? 
-
 /*
 Global styles to be refactored
 */
@@ -70,13 +67,30 @@ export interface flowProps {
 }
 
 
-function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB', props: flowProps): ReactFlowNode[] {
+export interface reactFlowNodeProps {
+  props: flowProps,         
+  label: string, 
+  isCenterNode: boolean, 
+  nodeType: NodeType,
+  targetPosition: Position,
+  sourcePosition: Position
+  isSink: boolean,
+  progress: number | undefined, 
+  jsonObject: any,
+  expandNodeFunc: (id: string,  isExpanded: boolean) => void
+}
+
+
+function createReactFlowNodes(dataObjectsAndActions: DAGraph, 
+                              direction: string = 'TB', 
+                              expandNodeFunc: (id: string, isExpanded: boolean) => void, 
+                              props: flowProps): ReactFlowNode[] {
   const isHorizontal = direction === 'LR';
   const nodes = dataObjectsAndActions.nodes;
   const targetPos = isHorizontal ? Position.Left : Position.Top;
   const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
   const sinkNodes = dataObjectsAndActions.getSinkNodes();
-  const isExpanded = true; // temporary
+  // const isExpanded = true; // temporary
   var result: ReactFlowNode[] = []; 
 
   // If we need more information to be displayed on the node, 
@@ -86,6 +100,19 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
     const dataObject = node
     const nodeType = dataObject.nodeType;
     const isSink = sinkNodes.includes(dataObject);
+    const data: reactFlowNodeProps = {
+      props: props,         
+      label: dataObject.id, 
+      isCenterNode: dataObject.isCenterNode, 
+      nodeType: nodeType,
+      targetPosition: targetPos,
+      sourcePosition: sourcePos,
+      isSink: isSink,
+      // the following are hard coded for testing
+      progress: nodeType === NodeType.ActionNode ? Math.round(Math.random()*100): undefined, 
+      jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined,
+      expandNodeFunc: expandNodeFunc,
+    }
 
     const newNode = {
       id: dataObject.id,
@@ -93,21 +120,9 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
       position: {x: dataObject.position.x, y: dataObject.position.y},
       targetPosition: targetPos, // required for the node positions to actually change internally
       sourcePosition: sourcePos,
-      data: {
-        props: props,         
-        label: dataObject.id, 
-        isCenterNode: dataObject.isCenterNode, 
-        nodeType: nodeType,
-        targetPosition: targetPos,
-        sourcePosition: sourcePos,
-        isSink: isSink,
-        isExpanded: isExpanded,
-        // the following are hard coded for testing
-        progress: nodeType === NodeType.ActionNode ? (Math.random()*100).toFixed(1) : undefined, 
-        jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined,
-      },
-
+      data: data,
     } as ReactFlowNode
+
     result.push(newNode);
   });
   return result;
@@ -181,6 +196,16 @@ function LineageTabCore(props: flowProps) {
     setOnlyDirectNeighbours([!onlyDirectNeighbours[0], buttonMessage]);
   }
 
+  function expandNodeFunc(id: string, isExpanded: boolean):  void {
+      // if expanded, show the direct out neighbours of the node with the id; if unexpanded, hide all descendants
+      // currently implemented for out Elements
+      if(isExpanded){
+
+      } else {
+
+      }
+  }
+
   function prepareAndRenderGraph(): [ReactFlowNode[], ReactFlowEdge[]] { // 
     var partialGraphPair: [GraphNode[],GraphEdge[]] = [[],[]];
     var doa: DAGraph;
@@ -220,7 +245,7 @@ function LineageTabCore(props: flowProps) {
     // When the layout has changed, the nodes and edges have to be recomputed
     partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout, props.configData);
-    let nodes = createReactFlowNodes(partialGraph, layout, props);
+    let nodes = createReactFlowNodes(partialGraph, layout, expandNodeFunc, props);
     let edges = createReactFlowEdges(partialGraph, undefined);
     return [nodes, edges];
   }

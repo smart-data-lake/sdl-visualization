@@ -28,6 +28,7 @@ import './LineageTab.css';
 import { flowProps } from './LineageTabWithSeparateView';
 import { Position } from 'react-flow-renderer';
 import { reactFlowNodeProps } from './LineageTabWithSeparateView';
+import { layout } from 'dagre';
 
 /*
   Styles to refactor
@@ -116,8 +117,9 @@ export const CustomDataNode = ( {data} ) => {
   const [ showDetails, setShowDetails ] = useState(false);
   const [ isExpanded, setIsExpanded ] = useState(false);
   const chartBox = useRef<HTMLDivElement>(); 
-  useEffect(() => {expandNodeFunc(label, isExpanded)}, [isExpanded]);
 
+  const isCenterNodeAncestor = true;
+  const isCenterNodeDescendant = true;
   const progressColor = progress === undefined ? actionNodeStyles.progressBar.color.done : // dummy placeholder for undefined progres
                         progress < 30 ? actionNodeStyles.progressBar.color.low : 
                         progress < 70 ? actionNodeStyles.progressBar.color.medium : 
@@ -135,6 +137,9 @@ export const CustomDataNode = ( {data} ) => {
   const { data: runs} = useFetchWorkflowRunsByElement(nodeTypeName, label);
   const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
   // const totalRuns = runs?.length;
+
+  // Effects
+  useEffect(() => {expandNodeFunc(label, isExpanded)}, [isExpanded]);
 
   // handlers
   const navigate = useNavigate();
@@ -279,6 +284,8 @@ export const CustomDataNode = ( {data} ) => {
   const isVerticalLayout = sourcePosition === Position.Bottom; // maybe this is a bug because the hanle is not updated in the first change;
   const handleHOffset = isVerticalLayout ? '1px' : '24px';
   const handleWOffset = isVerticalLayout ? '24px' : '1px';
+  // const sourceHandleClassName = isVerticalLayout ? 
+  // const destHandleClassName
   return (
     <div style={{ display: 'flex',
                   flexDirection: 'row', 
@@ -300,10 +307,11 @@ export const CustomDataNode = ( {data} ) => {
       }}
     >
       <Handle type="source" position={sourcePosition} id={`${label}`} 
-              style={{height: handleHOffset, width: handleWOffset, background: 0, border: 0}} 
+              style={{height: handleHOffset, width: handleWOffset, background: 0, border: 0, 
+                      bottom: (isVerticalLayout ? "10px" : undefined), right: (!isVerticalLayout ? "10px" : undefined)}} 
               >
         <IconButton onClick={() => setIsExpanded(!isExpanded)} sx={{ minHeight: 0, minWidth: 0, padding: 0}}>
-        { !isSink && (() => {
+        { (!isSink && isCenterNodeAncestor) && (() => {
                       if(isExpanded) return <IndeterminateCheckBoxOutlinedIcon style={{...expandButtonStyles}}/>
                       else return <AddBoxOutlinedIcon style={{...expandButtonStyles}} />})()
         }
@@ -330,7 +338,17 @@ export const CustomDataNode = ( {data} ) => {
         )
       */}
         
-      <Handle type="target" position={targetPosition} id={`${label}`}/>
+      <Handle type="target" position={targetPosition} id={`${label}`} 
+              style={{height: handleHOffset, width: handleWOffset, background: 0, border: 0, 
+                      top: (isVerticalLayout ? "-14px": undefined), left: (!isVerticalLayout ? "-14px": undefined)}} 
+              >
+        <IconButton onClick={() => setIsExpanded(!isExpanded)} sx={{ minHeight: 0, minWidth: 0, padding: 0}}>
+        { (!isSink && isCenterNodeDescendant) && (() => {
+                      if(isExpanded) return <IndeterminateCheckBoxOutlinedIcon style={{...expandButtonStyles}}/>
+                      else return <AddBoxOutlinedIcon style={{...expandButtonStyles}} />})()
+        }
+        </IconButton>
+      </Handle>
       </Box>
     </div>
   );
