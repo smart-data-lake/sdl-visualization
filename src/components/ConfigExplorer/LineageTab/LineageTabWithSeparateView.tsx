@@ -63,7 +63,6 @@ const edgeTypes = {
 export interface flowProps {
   elementName: string;
   elementType: string; // we have either dataObjects or actions now
-  connection: any;
   configData?: ConfigData;
   runContext?: boolean;
 }
@@ -97,7 +96,7 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
         sourcePosition: sourcePos,
         // the following are hard coded for testing
         progress: nodeType === NodeType.ActionNode ? (Math.random()*100).toFixed(1) : undefined, 
-        jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined,
+        jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node['jsonObject'] : undefined, //TODO: node.jsonObject?
       },
 
     } as ReactFlowNode
