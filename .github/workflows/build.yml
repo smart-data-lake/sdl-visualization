@@ -31,7 +31,7 @@ jobs:
       with:
         node-version: 20
 
-    - name: get-npm-version
+    - name: Get-npm-version
       id: package-version
       uses: martinbeentjes/npm-get-version-action@main
 
@@ -40,22 +40,17 @@ jobs:
       env:
         CI: '' # disable CI mode as it makes build fail on warnings
 
-    - name: Upload build and additional files to artifact
+    - name: Add additional files to build
+      run: cp build_index.* requirements.txt build 
+
+    - name: Upload build to artifact
       uses: actions/upload-artifact@v4
       with:
         name: sdl-visualizer
         path: |
-          build/**/*.js
-          build/assets/*.css
+          build/assets/*
           build/images/*
-          build/index.html
-          build/manifest.json
-          build/sdl_logo192.png
-          build/lighttpd.conf
-          build/README.md
-          build_index.sh
-          build_index.py
-          requirements.txt          
+          build/*
           
     - name: 'If build on master branch, bump version on develop'
       if: ${{ github.ref_name == 'master' }}
