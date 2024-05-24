@@ -6,7 +6,7 @@
     -adjust between node distance (max width and text-overflow)
     -sohuld be able to show all nodes of the same type (generic function in Graph.ts)
 */
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
 import { EdgeProps, Handle, getSmoothStepPath } from 'reactflow';
 
@@ -27,7 +27,11 @@ import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
 import { flowProps } from './LineageTabWithSeparateView';
 import { Position } from 'react-flow-renderer';
+import { reactFlowNodeProps } from './LineageTabWithSeparateView';
 
+/*
+  Styles to refactor
+*/
 const dataNodeStyles = {
   padding: '10px',
   border: '1px solid #ddd',
@@ -51,6 +55,10 @@ const actionNodeStyles = {
     }
   },
 };
+
+const expandButtonStyles = {
+  background: '#fff',
+}
 
 const nodeColors = {
   centralNode: '#addbff',
@@ -101,17 +109,22 @@ function createConnectionChip(name: string){
 }
 
 export const CustomDataNode = ( {data} ) => {
-  const { props, label, isCenterNode, nodeType, isSink, isExpanded, targetPosition, sourcePosition, 
-          progress, jsonObject
-  } = data;
+  const { props, label, isCenterNode, nodeType, isSink, targetPosition, sourcePosition, 
+          progress, jsonObject, expandNodeFunc 
+  }: reactFlowNodeProps = data;
 
   const [ showDetails, setShowDetails ] = useState(false);
+  const [ isExpanded, setIsExpanded ] = useState(false);
   const chartBox = useRef<HTMLDivElement>(); 
-  const progressColor = progress < 30 ? actionNodeStyles.progressBar.color.low : 
-                progress < 70 ? actionNodeStyles.progressBar.color.medium : 
-                progress < 100 ? actionNodeStyles.progressBar.color.high:
-                actionNodeStyles.progressBar.color.done;
+  useEffect(() => {expandNodeFunc(label, isExpanded)}, [isExpanded]);
+
+  const progressColor = progress === undefined ? actionNodeStyles.progressBar.color.done : // dummy placeholder for undefined progres
+                        progress < 30 ? actionNodeStyles.progressBar.color.low : 
+                        progress < 70 ? actionNodeStyles.progressBar.color.medium : 
+                        progress < 100 ? actionNodeStyles.progressBar.color.high:
+                        actionNodeStyles.progressBar.color.done;
   const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; //'linear-gradient(to right bottom, #430089, #82ffa1)'
+
 
   const nodeSubTypeName: string = jsonObject !== undefined ? jsonObject.type : label;
   const nodeTypeName: string = nodeType === NodeType.ActionNode  ? "actions" :
@@ -283,18 +296,18 @@ export const CustomDataNode = ( {data} ) => {
         maxHeight: '95px',
         position: 'relative',
         bgcolor: bgcolor,
-        // overflow: 'hidden',
         textOverflow: 'ellipsis',
-        // flexDirection: 'row'
       }}
     >
       <Handle type="source" position={sourcePosition} id={`${label}`} 
               style={{height: handleHOffset, width: handleWOffset, background: 0, border: 0}} 
               >
+        <IconButton onClick={() => setIsExpanded(!isExpanded)} sx={{ minHeight: 0, minWidth: 0, padding: 0}}>
         { !isSink && (() => {
-                      if(isExpanded) return <IndeterminateCheckBoxOutlinedIcon style={{ background: '#fff' }} />
-                      else return <AddBoxOutlinedIcon style={{ background: '#fff' }} />})()
+                      if(isExpanded) return <IndeterminateCheckBoxOutlinedIcon style={{...expandButtonStyles}}/>
+                      else return <AddBoxOutlinedIcon style={{...expandButtonStyles}} />})()
         }
+        </IconButton>
       </Handle>
 
       <div>
