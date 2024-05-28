@@ -254,6 +254,90 @@ export class DAGraph {
         return this.sinkNodes;
     }
 
+    getDirectDescendants(node: Node){
+        if(!node){
+            throw Error("Cannot perform DFS on an undefined node")
+        }
+        return this.#dfsForward(node);
+    }
+
+    getDirectAncestors(node: Node){
+        if(!node){
+            throw Error("Cannot perform DFS on an undefined node")
+        }
+        return this.#dfsBackward(node);
+    }
+
+    /*
+        Returns an array of reachable nodes of a given node in depth-first search order 
+    */
+    #dfsForward(node: Node){
+        const visit = (node: Node, visited: Map<string, Node>) =>  {
+            if (!visited.has(node.id)){
+                visited.set(node.id, node);
+                const outEdges = this.edges.filter(edge => edge.fromNode.id === node.id);
+                outEdges.forEach(edge => visit(edge.toNode, visited));
+            }
+        }
+        const visited: Map<string, Node> = new Map();
+        visit(node, visited);
+        return Array.from(visited.values());
+    }
+
+    /*
+        Returns an array of nodes from which the given node is reachable
+    */
+    #dfsBackward(node: Node){
+        const visit = (node: Node, visited: Map<string, Node>) =>  {
+            if (!visited.has(node.id)){
+                visited.set(node.id, node);
+                const outEdges = this.edges.filter(edge => edge.toNode.id === node.id);
+                outEdges.forEach(edge => visit(edge.fromNode, visited));
+            }
+        }
+        const visited: Map<string, Node> = new Map();
+        visit(node, visited);
+        return Array.from(visited.values());
+    }
+
+
+    /*
+        Returns an array of nodes and an array of edges, that are reachable a given node in depth-first search order 
+    */
+        #dfsForwardWithEdges(node: Node){
+            const visit = (node: Node, visitedNodes: Map<string, Node>, visitedEdges: Map<string, Edge>) =>  {
+                if (!visitedNodes.has(node.id)){
+                    visitedNodes.set(node.id, node);
+                    const [outNodes, outEdges] = this.getOutElems(node.id);
+                    outEdges.forEach(edge => {visitedEdges.set(edge.id, edge)});
+                    outEdges.forEach(edge => visit(edge.fromNode, visitedNodes, visitedEdges));
+                }
+            }
+            const visitedNodes: Map<string, Node> = new Map();
+            const visitedEdges: Map<string, Edge> = new Map();
+            visit(node, visitedNodes, visitedEdges);
+            return Array.from(visited.values());
+        }
+    
+        /*
+            Returns an array of nodes and an array of edges, from which the given node is reachable
+        */
+        #dfsBackwardWithEdges(node: Node){
+            const visit = (node: Node, visited: Map<string, Node>) =>  {
+                if (!visited.has(node.id)){
+                    visited.set(node.id, node);
+                    const outEdges = this.edges.filter(edge => edge.toNode.id === node.id);
+                    outEdges.forEach(edge => visit(edge.fromNode, visited));
+                }
+            }
+            const visited: Map<string, Node> = new Map();
+            visit(node, visited);
+            return Array.from(visited.values());
+        }
+
+
+
+
     /**
      * Remove elements from array that have the same specified attributes.
      * 
@@ -456,6 +540,18 @@ export class DAGraph {
         const edges: Edge[] = this.edges.filter(edge => edge.id === specificEdgeId);
         edges.forEach(edge => edge.isCentral = true);
         return [predsAndSuccs, edges];
+    }
+
+    getOutElems(specificNodeId: id): [Node[], Edge[]]{
+        const outEdges = this.edges.filter(edge => edge.fromNode.id === specificNodeId);
+        const outNodes = outEdges.map(edge => edge.toNode);
+        return [outNodes, outEdges];
+    }
+
+    getInElems(specificNodeId: id): [Node[], Edge[]]{
+        const inEdges = this.edges.filter(edge => edge.toNode.id === specificNodeId);
+        const inNodes = inEdges.map(edge => edge.fromNode);
+        return [inNodes, inEdges];
     }
 }
 
