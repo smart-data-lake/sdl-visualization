@@ -3,6 +3,7 @@
 */
 import dagre from 'dagre';
 import { ConfigData } from './ConfigData';
+import assert from 'assert';
 
 
 
@@ -254,89 +255,85 @@ export class DAGraph {
         return this.sinkNodes;
     }
 
-    getDirectDescendants(node: Node){
+    getDirectDescendants(node: Node, returnType: 'node' | 'edge' | 'all'){
         if(!node){
             throw Error("Cannot perform DFS on an undefined node")
         }
-        return this.#dfsForward(node);
+        // sanitize inputs
+        assert(['node', 'edge', 'all'].includes(returnType), `invalid value for dfs return type: ${returnType}`)
+
+        if (returnType === 'node' || returnType === 'edge'){
+            return this.#dfs(node, 'forward', returnType);
+        } else {
+            return this.#dfsAll(node, 'forward');
+        }
     }
 
-    getDirectAncestors(node: Node){
+    getDirectAncestors(node: Node, returnType: 'node' | 'edge' | 'all'){
         if(!node){
             throw Error("Cannot perform DFS on an undefined node")
         }
-        return this.#dfsBackward(node);
+        // sanitize inputs
+        assert(['node', 'edge', 'all'].includes(returnType), `invalid value for dfs return type: ${returnType}`)
+
+        if (returnType === 'node' || returnType === 'edge'){
+            return this.#dfs(node, 'backward', returnType);
+        } else {
+            return this.#dfsAll(node, 'backward');
+        }
     }
 
     /*
-        Returns an array of reachable nodes of a given node in depth-first search order 
+        Returns an array of reachable nodes or edges from/to a given node in depth-first search order 
+        Excluding the starting node
     */
-    #dfsForward(node: Node){
-        const visit = (node: Node, visited: Map<string, Node>) =>  {
-            if (!visited.has(node.id)){
-                visited.set(node.id, node);
-                const outEdges = this.edges.filter(edge => edge.fromNode.id === node.id);
-                outEdges.forEach(edge => visit(edge.toNode, visited));
+    #dfs(node: Node, direction: 'forward' | 'backward', returnType: 'node' | 'edge'): Node[] | Edge[] {
+
+        const visit = (startNode: Node, visited: Map<string, Node | Edge>) =>  {
+            if (!visited.has(startNode.id)){
+                var outEdges: Edge[];
+                if (returnType === 'node') {visited.set(node.id, node);}
+                visited.set(startNode.id, node);
+                if(direction === 'forward'){
+                    outEdges = this.edges.filter(edge => edge.fromNode.id === node.id);
+                    outEdges.forEach(edge => {if (returnType === 'edge'){visited.set(edge.id, edge)}; visit(edge.toNode, visited)});
+                } else {
+                    outEdges = this.edges.filter(edge => edge.toNode.id === node.id);
+                    outEdges.forEach(edge => {if (returnType === 'edge'){visited.set(edge.id, edge)}; visit(edge.fromNode, visited)});
+                }  
             }
         }
-        const visited: Map<string, Node> = new Map();
+        const visited = new Map();
         visit(node, visited);
+        if(returnType === 'node'){ visited.delete(node.id);}
         return Array.from(visited.values());
     }
 
-    /*
-        Returns an array of nodes from which the given node is reachable
-    */
-    #dfsBackward(node: Node){
-        const visit = (node: Node, visited: Map<string, Node>) =>  {
-            if (!visited.has(node.id)){
-                visited.set(node.id, node);
-                const outEdges = this.edges.filter(edge => edge.toNode.id === node.id);
-                outEdges.forEach(edge => visit(edge.fromNode, visited));
-            }
-        }
-        const visited: Map<string, Node> = new Map();
-        visit(node, visited);
-        return Array.from(visited.values());
-    }
-
 
     /*
-        Returns an array of nodes and an array of edges, that are reachable a given node in depth-first search order 
+        Returns an array of nodes and an array of edges, that are reachable from/to a given node in depth-first search order 
+        Excluding the starting node
     */
-        #dfsForwardWithEdges(node: Node){
+        #dfsAll(node: Node, direction: 'forward' | 'backward'): [Node[], Edge[]]{
+            // sanitize input
+            assert(['forward', 'backward'].includes(direction), `invalid value for dfs direction: ${direction}`);
+
             const visit = (node: Node, visitedNodes: Map<string, Node>, visitedEdges: Map<string, Edge>) =>  {
                 if (!visitedNodes.has(node.id)){
                     visitedNodes.set(node.id, node);
-                    const [outNodes, outEdges] = this.getOutElems(node.id);
-                    outEdges.forEach(edge => {visitedEdges.set(edge.id, edge)});
-                    outEdges.forEach(edge => visit(edge.fromNode, visitedNodes, visitedEdges));
+                    const  neighbourEdges = direction === 'forward' ? this.edges.filter(edge => edge.fromNode.id === node.id)
+                                                                    : this.edges.filter(edge => edge.toNode.id === node.id);
+                    neighbourEdges.forEach(edge => {visitedEdges.set(edge.id, edge)});
+                    neighbourEdges.forEach(edge => direction === 'forward' ? visit(edge.fromNode, visitedNodes, visitedEdges)
+                                                                           : visit(edge.fromNode, visitedNodes, visitedEdges));
                 }
             }
             const visitedNodes: Map<string, Node> = new Map();
             const visitedEdges: Map<string, Edge> = new Map();
             visit(node, visitedNodes, visitedEdges);
-            return Array.from(visited.values());
+            visitedNodes.delete(node.id);
+            return [Array.from(visitedNodes.values()), Array.from(visitedEdges.values())]
         }
-    
-        /*
-            Returns an array of nodes and an array of edges, from which the given node is reachable
-        */
-        #dfsBackwardWithEdges(node: Node){
-            const visit = (node: Node, visited: Map<string, Node>) =>  {
-                if (!visited.has(node.id)){
-                    visited.set(node.id, node);
-                    const outEdges = this.edges.filter(edge => edge.toNode.id === node.id);
-                    outEdges.forEach(edge => visit(edge.fromNode, visited));
-                }
-            }
-            const visited: Map<string, Node> = new Map();
-            visit(node, visited);
-            return Array.from(visited.values());
-        }
-
-
-
 
     /**
      * Remove elements from array that have the same specified attributes.
@@ -467,6 +464,7 @@ export class DAGraph {
     }
 
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
+    // TODO: can be oimplemented using getOu/In elements since we have the nodes and edges merged when the graph is created now.
     returnPartialGraphInputs(specificNodeId:id): [Node[], Edge[]]{
         function predecessors(nodeId: id, graph: DAGraph){
             var nodes = new Set<Node>();
