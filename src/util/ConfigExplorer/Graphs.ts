@@ -69,7 +69,7 @@ export class Node {
     }
 
     setIsCenterNode(isCenter: boolean){
-        this.isCenterNode = this.isCenterNode;
+        this.isCenterNode = isCenter;
     }
 } 
 
@@ -261,11 +261,9 @@ export class DAGraph {
     }
 
     getDirectDescendants(node: Node, returnType: 'node' | 'edge' | 'all'){
-        if(!node){
-            throw Error("Cannot perform DFS on an undefined node")
-        }
         // sanitize inputs
         assert(['node', 'edge', 'all'].includes(returnType), `invalid value for dfs return type: ${returnType}`)
+        assert(node !== undefined, "Cannot perform DFS on an undefined node");
 
         if (returnType === 'node' || returnType === 'edge'){
             return this.#dfs(node, 'forward', returnType);
@@ -275,11 +273,9 @@ export class DAGraph {
     }
 
     getDirectAncestors(node: Node, returnType: 'node' | 'edge' | 'all'){
-        if(!node){
-            throw Error("Cannot perform DFS on an undefined node")
-        }
         // sanitize inputs
         assert(['node', 'edge', 'all'].includes(returnType), `invalid value for dfs return type: ${returnType}`)
+        assert(node !== undefined, "Cannot perform DFS on an undefined node");
 
         if (returnType === 'node' || returnType === 'edge'){
             return this.#dfs(node, 'backward', returnType);
@@ -297,13 +293,13 @@ export class DAGraph {
         const visit = (startNode: Node, visited: Map<string, Node | Edge>) =>  {
             if (!visited.has(startNode.id)){
                 var outEdges: Edge[];
-                if (returnType === 'node') {visited.set(node.id, node);}
-                visited.set(startNode.id, node);
+                if (returnType === 'node') {visited.set(node.id, startNode);}
+                visited.set(startNode.id, startNode);
                 if(direction === 'forward'){
-                    outEdges = this.edges.filter(edge => edge.fromNode.id === node.id);
+                    outEdges = this.edges.filter(edge => edge.fromNode.id === startNode.id);
                     outEdges.forEach(edge => {if (returnType === 'edge'){visited.set(edge.id, edge)}; visit(edge.toNode, visited)});
                 } else {
-                    outEdges = this.edges.filter(edge => edge.toNode.id === node.id);
+                    outEdges = this.edges.filter(edge => edge.toNode.id === startNode.id);
                     outEdges.forEach(edge => {if (returnType === 'edge'){visited.set(edge.id, edge)}; visit(edge.fromNode, visited)});
                 }  
             }
@@ -311,6 +307,7 @@ export class DAGraph {
         const visited = new Map();
         visit(node, visited);
         if(returnType === 'node'){ visited.delete(node.id);}
+        console.log("dfs for ", node, ": visited: ", visited, Array.from(visited.values()))
         return Array.from(visited.values());
     }
 
@@ -323,11 +320,11 @@ export class DAGraph {
             // sanitize input
             assert(['forward', 'backward'].includes(direction), `invalid value for dfs direction: ${direction}`);
 
-            const visit = (node: Node, visitedNodes: Map<string, Node>, visitedEdges: Map<string, Edge>) =>  {
-                if (!visitedNodes.has(node.id)){
-                    visitedNodes.set(node.id, node);
-                    const  neighbourEdges = direction === 'forward' ? this.edges.filter(edge => edge.fromNode.id === node.id)
-                                                                    : this.edges.filter(edge => edge.toNode.id === node.id);
+            const visit = (startNode: Node, visitedNodes: Map<string, Node>, visitedEdges: Map<string, Edge>) =>  {
+                if (!visitedNodes.has(startNode.id)){
+                    visitedNodes.set(startNode.id, startNode);
+                    const  neighbourEdges = direction === 'forward' ? this.edges.filter(edge => edge.fromNode.id === startNode.id)
+                                                                    : this.edges.filter(edge => edge.toNode.id === startNode.id);
                     neighbourEdges.forEach(edge => {visitedEdges.set(edge.id, edge)});
                     neighbourEdges.forEach(edge => direction === 'forward' ? visit(edge.fromNode, visitedNodes, visitedEdges)
                                                                            : visit(edge.fromNode, visitedNodes, visitedEdges));
@@ -397,8 +394,9 @@ export class DAGraph {
         this.edges = newEdges;
     } 
 
-    setCenterNodeId(id: string){
-        this.centerNodeId = id;
+    setCenterNode(node: Node){
+        this.centerNodeId = node.id;
+        node.setIsCenterNode(true);
     }
 
     setLayout(layout: string){
@@ -506,8 +504,7 @@ export class DAGraph {
         }
 
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node; // this will fail if we rename action nodes as names comre from props, directly read from data
-        specificNode.isCenterNode = true;
-        this.setCenterNodeId(specificNodeId);
+        this.setCenterNode(specificNode);
         const nodes = setAsArray(union(predecessors(specificNodeId, this)[0] as Set<Node>, 
                                  successors(specificNodeId, this)[0] as Set<Node>));//merge predeccessors and successors     
         nodes.push(specificNode as Node); //add the central/origin node itself
@@ -534,8 +531,7 @@ export class DAGraph {
 
     returnDirectNeighbours(specificNodeId: id): [Node[], Edge[]]{
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
-        specificNode.isCenterNode = true;
-        this.setCenterNodeId(specificNodeId);
+        this.setCenterNode(specificNode);
         const edges = this.edges.filter(edge => edge.fromNode.id === specificNodeId || edge.toNode.id === specificNodeId);
         const nodes: Node[] = [];
         edges.filter(e => {e.fromNode.id === specificNodeId ? nodes.push(e.toNode) : 
@@ -666,6 +662,7 @@ function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean =
 //TODO: maybe refactor more code, e.g. extract nodes/edges forEach
 export function computeNodePositions(nodes: Node[], edges: Edge[], direction: string = 'TB'): Node[] {
     //instantiate dagre Graph
+    console.log("nodes and edges: ", nodes, edges);
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({});
     dagreGraph.setDefaultEdgeLabel(function() { return {}; });
@@ -680,7 +677,8 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
     edges.forEach((edge) =>{
         dagreGraph.setEdge(edge.fromNode.id, edge.toNode.id);
     });
-    dagre.layout(dagreGraph);
+    console.log(dagreGraph)
+    dagre.layout(dagreGraph); // rankdir = direction
 
     // Shift the dagre node position (anchor=center center) to the top left
     // so it matches the React Flow node anchor point (top left).
@@ -729,11 +727,13 @@ export default class DataObjectsAndActions extends DAGraph{
 export class PartialDataObjectsAndActions extends DAGraph{
     constructor(public nodes: Node[], 
                 public edges: Edge[], 
-                public layout_direction:  string = 'TB',
+                public centerNodeId: string,
+                public layoutDirection:  string = 'TB',
                 public jsonObject?: any){
-        const nodesWithPos = computeNodePositions(nodes, edges, layout_direction);
+        const nodesWithPos = computeNodePositions(nodes, edges, layoutDirection);
         super(nodesWithPos, edges, false); // don't merge actions, merging should have already been done because we call this from a full graph
         this.jsonObject = jsonObject;
+        this.setCenterNode(this.getNodeById(centerNodeId)!);
     }
 }
   
