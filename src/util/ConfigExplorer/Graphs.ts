@@ -264,7 +264,6 @@ export class DAGraph {
         // sanitize inputs
         assert(['node', 'edge', 'all'].includes(returnType), `invalid value for dfs return type: ${returnType}`)
         assert(node !== undefined, "Cannot perform DFS on an undefined node");
-
         if (returnType === 'node' || returnType === 'edge'){
             return this.#dfs(node, 'forward', returnType);
         } else {
@@ -307,7 +306,6 @@ export class DAGraph {
         const visited = new Map();
         visit(node, visited);
         if(returnType === 'node'){ visited.delete(node.id);}
-        console.log("dfs for ", node, ": visited: ", visited, Array.from(visited.values()))
         return Array.from(visited.values());
     }
 
@@ -326,7 +324,7 @@ export class DAGraph {
                     const  neighbourEdges = direction === 'forward' ? this.edges.filter(edge => edge.fromNode.id === startNode.id)
                                                                     : this.edges.filter(edge => edge.toNode.id === startNode.id);
                     neighbourEdges.forEach(edge => {visitedEdges.set(edge.id, edge)});
-                    neighbourEdges.forEach(edge => direction === 'forward' ? visit(edge.fromNode, visitedNodes, visitedEdges)
+                    neighbourEdges.forEach(edge => direction === 'forward' ? visit(edge.toNode, visitedNodes, visitedEdges)
                                                                            : visit(edge.fromNode, visitedNodes, visitedEdges));
                 }
             }
@@ -662,7 +660,6 @@ function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean =
 //TODO: maybe refactor more code, e.g. extract nodes/edges forEach
 export function computeNodePositions(nodes: Node[], edges: Edge[], direction: string = 'TB'): Node[] {
     //instantiate dagre Graph
-    console.log("nodes and edges: ", nodes, edges);
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({});
     dagreGraph.setDefaultEdgeLabel(function() { return {}; });
@@ -677,7 +674,6 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
     edges.forEach((edge) =>{
         dagreGraph.setEdge(edge.fromNode.id, edge.toNode.id);
     });
-    console.log(dagreGraph)
     dagre.layout(dagreGraph); // rankdir = direction
 
     // Shift the dagre node position (anchor=center center) to the top left
@@ -733,6 +729,7 @@ export class PartialDataObjectsAndActions extends DAGraph{
         const nodesWithPos = computeNodePositions(nodes, edges, layoutDirection);
         super(nodesWithPos, edges, false); // don't merge actions, merging should have already been done because we call this from a full graph
         this.jsonObject = jsonObject;
+        console.log("new partialDOA centerNode Id: ", centerNodeId, this.nodes);
         this.setCenterNode(this.getNodeById(centerNodeId)!);
     }
 }
