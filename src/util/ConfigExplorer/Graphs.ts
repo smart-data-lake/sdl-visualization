@@ -64,8 +64,12 @@ export class Node {
         this.nodeType = (nodeType !== undefined) ? nodeType : NodeType.CommonNode;
     }
 
-    setid(newid: string){
+    setId(newid: string){
         this.id = newid;
+    }
+
+    setIsCenterNode(isCenter: boolean){
+        this.isCenterNode = this.isCenterNode;
     }
 } 
 
@@ -145,6 +149,7 @@ export class DAGraph {
     public levels: number[];
     public sourceNodes: Node[];
     public sinkNodes: Node[];
+    public centerNodeId: string = '';
 
     constructor(nodes: Node[], edges: Edge[], mergeEdges: boolean = true){
         this.nodes = nodes; 
@@ -392,6 +397,10 @@ export class DAGraph {
         this.edges = newEdges;
     } 
 
+    setCenterNodeId(id: string){
+        this.centerNodeId = id;
+    }
+
     setLayout(layout: string){
         if(['TB', 'LR'].includes(layout)){
             const nodesWithPos = computeNodePositions(this.nodes, this.edges, layout);
@@ -498,6 +507,7 @@ export class DAGraph {
 
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node; // this will fail if we rename action nodes as names comre from props, directly read from data
         specificNode.isCenterNode = true;
+        this.setCenterNodeId(specificNodeId);
         const nodes = setAsArray(union(predecessors(specificNodeId, this)[0] as Set<Node>, 
                                  successors(specificNodeId, this)[0] as Set<Node>));//merge predeccessors and successors     
         nodes.push(specificNode as Node); //add the central/origin node itself
@@ -525,11 +535,11 @@ export class DAGraph {
     returnDirectNeighbours(specificNodeId: id): [Node[], Edge[]]{
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
         specificNode.isCenterNode = true;
+        this.setCenterNodeId(specificNodeId);
         const edges = this.edges.filter(edge => edge.fromNode.id === specificNodeId || edge.toNode.id === specificNodeId);
         const nodes: Node[] = [];
-        edges.filter(e => {e.fromNode.id === specificNodeId? 
-                                                            nodes.push(e.toNode) : 
-                                                            nodes.push(e.fromNode)});
+        edges.filter(e => {e.fromNode.id === specificNodeId ? nodes.push(e.toNode) : 
+                                                              nodes.push(e.fromNode)});
         return [nodes.concat(specificNode), edges];
     }
 
@@ -684,6 +694,7 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
     });
 
     //If there is one Central Node, then shift its position to [0, 0] and shift all nodes as well
+    // TODO: replace by if (this.centerNodeId === '')
     let centralNode = nodes.find((node) => node.isCenterNode);
     if (centralNode) {
         let shiftX = centralNode.position.x;
