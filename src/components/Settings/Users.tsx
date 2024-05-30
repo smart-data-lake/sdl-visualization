@@ -1,7 +1,7 @@
 import { Box, Select, Option, Input, Tooltip, Modal, ModalClose, ModalDialog, Typography, IconButton } from "@mui/joy";
 import "ka-table/style.css";
 import { dataTableStyleProps } from "../Common/DatatableStyle";
-import { ActionType, DataType, ITableProps, Table, useTable, useTableInstance } from "ka-table";
+import { ActionType, DataType, ITableInstance, ITableProps, Table, useTable, useTableInstance } from "ka-table";
 import { useAddUser, useFetchUsers, useRemoveUser } from "../../hooks/useFetchData";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
@@ -15,6 +15,12 @@ import { useTenant } from "../../hooks/TenantProvider";
 import { Permission } from "./model/enums";
 import { useUser } from "../../hooks/useUser";
 
+interface ITableRendererContext {
+  table: ITableInstance;
+  isAdmin: boolean;
+  currentUserId?: string;
+}
+
 const valueRenderer = () => {
   return (props) => <>{props.value}</>;
 };
@@ -27,20 +33,20 @@ const permissionDropdownRenderer = () => {
   return (props) => <PermissionDropdown {...props} />;
 };
 
-const editRemoveButtonsRenderer = ({ isAdmin }) => {
+const editRemoveButtonsRenderer = ({ isAdmin, currentUserId }: ITableRendererContext) => {
   return (props) => (
     <>
-      <EditButton disabled={!isAdmin} {...props} />
-      <RemoveButton disabled={!isAdmin} {...props} />
+      {currentUserId !== props.rowKeyValue && <EditButton disabled={!isAdmin} {...props} />}
+      {currentUserId !== props.rowKeyValue && <RemoveButton disabled={!isAdmin} {...props} />}
     </>
   );
 };
 
-const addButtonRenderer = ({ isAdmin }) => {
+const addButtonRenderer = ({ isAdmin }: ITableRendererContext) => {
   return (props) => <AddButton disabled={!isAdmin} />;
 };
 
-const saveCancelButtonsRenderer = ({ table, isAdmin }) => {
+const saveCancelButtonsRenderer = ({ table, isAdmin }: ITableRendererContext) => {
   return (props) => (
     <>
       <SaveButton disabled={!isAdmin} dispatch={table.dispatch} {...props} />
@@ -88,6 +94,7 @@ export default function Users() {
   const { mutateAsync: removeUserAsync, isLoading: isRemoving } = useRemoveUser();
   const [modalOpened, setModalOpened] = useState(false);
   const isAdmin = !!userContext?.permissions?.includes(Permission.Admin);
+  const currentUserId = userContext?.user_id;
 
   useEffect(() => {
     if (addUserError) {
@@ -122,33 +129,33 @@ export default function Users() {
     onDispatch: handleDispatch,
   });
 
-  const rendererParameters = useMemo(() => {
-    return { isAdmin: isAdmin, table: table };
-  }, [isAdmin, table]);
+  const rendererContext = useMemo(() => {
+    return { isAdmin: isAdmin, table: table, currentUserId: currentUserId } as ITableRendererContext;
+  }, [isAdmin, table, currentUserId]);
 
   const tableColumnsRenderer = useMemo(() => {
     const renderers = {};
     columns
       .filter((c) => typeof c === "object" && c.renderer)
-      .forEach((c) => (renderers[c.key] = c.renderer(rendererParameters)));
+      .forEach((c) => (renderers[c.key] = c.renderer(rendererContext)));
     return renderers;
-  }, [columns, rendererParameters]);
+  }, [columns, rendererContext]);
 
   const tableHeadColumnsRenderer = useMemo(() => {
     const renderers = {};
     columns
       .filter((c) => typeof c === "object" && c.headRenderer)
-      .forEach((c) => (renderers[c.key] = c.headRenderer(rendererParameters)));
+      .forEach((c) => (renderers[c.key] = c.headRenderer(rendererContext)));
     return renderers;
-  }, [columns, rendererParameters]);
+  }, [columns, rendererContext]);
 
   const tableEditorColumnsRenderer = useMemo(() => {
     const renderers = {};
     columns
       .filter((c) => typeof c === "object" && c.editorRenderer)
-      .forEach((c) => (renderers[c.key] = c.editorRenderer(rendererParameters)));
+      .forEach((c) => (renderers[c.key] = c.editorRenderer(rendererContext)));
     return renderers;
-  }, [columns, rendererParameters]);
+  }, [columns, rendererContext]);
 
   const tableValidationFns = useMemo(() => {
     const validationFns = {};
