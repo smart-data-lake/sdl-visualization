@@ -13,7 +13,8 @@ import { ConfigData } from "../../util/ConfigExplorer/ConfigData";
 import './ComponentsStyles.css';
 import ConfigurationTab from "./ConfigurationTab";
 import DescriptionTab from "./DescriptionTab";
-import LineageTab from "./LineageTab";
+import LineageTab from './LineageTab/LineageTab';
+import LineageTabSep from './LineageTab/LineageTabWithSeparateView'; // testing new component
 import { useFetchDataObjectSchemaIndex, useFetchDataObjectStatsIndex, useFetchDescription } from '../../hooks/useFetchData';
 import SchemaTab from './SchemaTab';
 import { getLogger } from 'react-query/types/core/logger';
@@ -88,20 +89,22 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 							</span>
 						</Tooltip>
 					</TabList>
-					<Sheet>
-						{!openLineage ?
-							(
-								<Button size="sm" onClick={() => setOpenLineage(!openLineage)}>
-									Open lineage
-									<KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
-								</Button>
-							) : (
-								<Button variant='soft' size="sm" onClick={() => setOpenLineage(!openLineage)}>
-									Close lineage
-									<KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem'}}/>
-								</Button>
-						)}
-					</Sheet>
+					{	(elementType === "dataObjects" || elementType === "actions") && 
+						(<Sheet>
+							{!openLineage ?
+								(
+									<Button size="sm" onClick={() => setOpenLineage(!openLineage)}>
+										Open lineage
+										<KeyboardDoubleArrowLeftIcon  sx={{ml: '0.5rem'}}/>
+									</Button>
+								) : (
+									<Button variant='soft' size="sm" onClick={() => setOpenLineage(!openLineage)}>
+										Close lineage
+										<KeyboardDoubleArrowRightIcon  sx={{ml: '0.5rem'}}/>
+									</Button>
+							)}
+						</Sheet>)
+					}
 				</Sheet>
 				<TabPanel value="configuration" className="content-panel" sx={{height: '100%', width: '100%', overflow: 'auto'}}>
 					<ConfigurationTab data={configObj} connection={connectionConfigObj} statsIndex={statsIndex} elementName={elementName!} elementType={elementType!} />
@@ -121,9 +124,9 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 			<>
 				<DraggableDivider id="config-lineage" cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} parentCmpRef={props.parentCmpRef} />
 				<Sheet sx={{height: '100%', minWidth: '100px'}} ref={lineageRef}>
-					<ReactFlowProvider>
-						<LineageTab configData={configData} elementName={elementName as string} elementType={elementType as string} />
-					</ReactFlowProvider>
+					{/* <ReactFlowProvider> */}
+						<LineageTabSep configData={configData} connection={connectionConfigObj} elementName={elementName as string} elementType={elementType as string} />
+					{/* </ReactFlowProvider> */}
 				</Sheet>
 			</>
 		}		

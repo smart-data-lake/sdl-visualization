@@ -1,10 +1,15 @@
 import { getPropertyByPath, isArray, onlyUnique } from "../helpers";
+import { DAGraph, DataObjectsAndActionsSep } from "./Graphs";
 
 export class ConfigData {
     public dataObjects = {};
     public actions = {};
     public connections = {};
     public global = {};
+    // TODO: can we create an empty DataObjectsAndActionsSep?
+    public fullGraph: DAGraph | undefined = undefined;
+    public dataGraph: DAGraph | undefined = undefined;
+    public actionGraph: DAGraph | undefined = undefined;
 
     constructor(data: any) {
         if (data.dataObjects && typeof data.dataObjects === 'object') {
@@ -18,7 +23,10 @@ export class ConfigData {
         }  
         if (data.global && typeof data.global === 'object') {
             this.global = data.global;
-        }             
+        }
+        this.fullGraph = new DataObjectsAndActionsSep(this);
+        this.dataGraph = this.fullGraph?.getDataGraph();
+        this.actionGraph = this.fullGraph?.getActionGraph();     
     }    
 }
 
