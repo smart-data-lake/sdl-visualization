@@ -8,3 +8,19 @@
     stroke: transparent;
     stroke-width: 40;
 }
+
+.react-flow__handle-top {
+  top: -15px;
+}
+ 
+.react-flow__handle-bottom {
+  bottom: -15px;
+}
+
+.react-flow__handle-left {
+  left: -15px;
+}
+ 
+.react-flow__handle-right {
+  right: -15px;
+}

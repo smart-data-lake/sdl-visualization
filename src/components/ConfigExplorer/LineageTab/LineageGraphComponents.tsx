@@ -25,7 +25,7 @@ import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
-import { flowProps } from './LineageTabWithSeparateView';
+import { flowProps, graphNodeProps } from './LineageTabWithSeparateView';
 import { Position } from 'react-flow-renderer';
 import { reactFlowNodeProps } from './LineageTabWithSeparateView';
 import { layout } from 'dagre';
@@ -110,16 +110,32 @@ function createConnectionChip(name: string){
 }
 
 export const CustomDataNode = ( {data} ) => {
-  const { props, label, isCenterNode, nodeType, isSink, targetPosition, sourcePosition, 
-          progress, jsonObject, expandNodeFunc 
+  // destruct data
+  const { props, label, nodeType,
+          targetPosition, sourcePosition, 
+          progress, jsonObject, isGraphFullyExpanded,
+          expandNodeFunc, graphNodeProps
   }: reactFlowNodeProps = data;
+  const {isSink,  isSource,
+         isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode} = graphNodeProps
 
+  // init state
+  // console.log("label: ", label)
+  // console.log("graph node props: ", graphNodeProps)
+  console.log("props: ", props)
   const [ showDetails, setShowDetails ] = useState(false);
-  const [ isExpanded, setIsExpanded ] = useState(false);
+  const initStateBwd = (isCenterNode || isGraphFullyExpanded) && !isSource;
+  const initStateFwd = (isCenterNode || isGraphFullyExpanded) && !isSink;
+  const [ isExpandedBackward, setIsExpandedBackward ] = useState(initStateBwd); // neighbours are shown by default when creating the subgraph of the center node
+  const [ isExpandedForward, setIsExpandedForward ] = useState(initStateFwd);
   const chartBox = useRef<HTMLDivElement>(); 
 
-  const isCenterNodeAncestor = true;
-  const isCenterNodeDescendant = true;
+  useEffect(() => {
+    setIsExpandedBackward(initStateBwd);
+    setIsExpandedForward(initStateFwd);
+
+  }, [initStateBwd, initStateFwd]);
+
   const progressColor = progress === undefined ? actionNodeStyles.progressBar.color.done : // dummy placeholder for undefined progres
                         progress < 30 ? actionNodeStyles.progressBar.color.low : 
                         progress < 70 ? actionNodeStyles.progressBar.color.medium : 
@@ -132,18 +148,24 @@ export const CustomDataNode = ( {data} ) => {
   const nodeTypeName: string = nodeType === NodeType.ActionNode  ? "actions" :
                                nodeType === NodeType.DataNode ? "dataObjects" :
                                "";
-  const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, '') // take the capital letters and the first letter of the camelCase name
-  const schemaViewerURL = 'https://smartdatalake.ch/json-schema-viewer'
+  const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, ''); // take the capital letters and the first letter of the camelCase name
+  const schemaViewerURL = 'https://smartdatalake.ch/json-schema-viewer';
   const { data: runs} = useFetchWorkflowRunsByElement(nodeTypeName, label);
   const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
   // const totalRuns = runs?.length;
 
-  // Effects
-  useEffect(() => {expandNodeFunc(label, isExpanded)}, [isExpanded]);
-
   // handlers
   const navigate = useNavigate();
   const url = useParams();
+  const handleOnExpandButtonClick = (direction) => {
+    if(direction === 'forward'){
+      setIsExpandedForward(!isExpandedForward); 
+      expandNodeFunc(label, isExpandedForward, direction);
+    } else {
+      setIsExpandedBackward(!isExpandedBackward); 
+      expandNodeFunc(label, isExpandedBackward, direction);
+    }
+  }
 
   // navigate to object and show details on label click
   const handleDetailsClick = (props: flowProps, nodeId: string, nodeType: NodeType) => {
@@ -274,7 +296,7 @@ export const CustomDataNode = ( {data} ) => {
   function showProperties(){
     return <IconButton title='Show object properties'
            size="sm" 
-           sx={{display: 'inline', float: 'right'}} onClick={() => setShowDetails(!showDetails)}>
+           sx={{display: 'inline', float: 'right'}} onClick={() => {handleDetailsClick}}>
            {/* {showDetails ?   "hide props": "show props"}   */}
            {showDetails ?  <ExpandLess />: <ExpandMore />}
            </IconButton>
@@ -284,8 +306,6 @@ export const CustomDataNode = ( {data} ) => {
   const isVerticalLayout = sourcePosition === Position.Bottom; // maybe this is a bug because the hanle is not updated in the first change;
   const handleHOffset = isVerticalLayout ? '1px' : '24px';
   const handleWOffset = isVerticalLayout ? '24px' : '1px';
-  // const sourceHandleClassName = isVerticalLayout ? 
-  // const destHandleClassName
   return (
     <div style={{ display: 'flex',
                   flexDirection: 'row', 
@@ -310,9 +330,9 @@ export const CustomDataNode = ( {data} ) => {
               style={{height: handleHOffset, width: handleWOffset, background: 0, border: 0, 
                       bottom: (isVerticalLayout ? "10px" : undefined), right: (!isVerticalLayout ? "10px" : undefined)}} 
               >
-        <IconButton onClick={() => setIsExpanded(!isExpanded)} sx={{ minHeight: 0, minWidth: 0, padding: 0}}>
-        { (!isSink && isCenterNodeAncestor) && (() => {
-                      if(isExpanded) return <IndeterminateCheckBoxOutlinedIcon style={{...expandButtonStyles}}/>
+        <IconButton onClick={() => handleOnExpandButtonClick('forward')} sx={{ minHeight: 0, minWidth: 0, padding: 0}}>
+        { (!isSink && (isCenterNodeDescendant || isCenterNode)) && (() => {
+                      if(isExpandedForward) return <IndeterminateCheckBoxOutlinedIcon style={{...expandButtonStyles}}/>
                       else return <AddBoxOutlinedIcon style={{...expandButtonStyles}} />})()
         }
         </IconButton>
@@ -342,9 +362,9 @@ export const CustomDataNode = ( {data} ) => {
               style={{height: handleHOffset, width: handleWOffset, background: 0, border: 0, 
                       top: (isVerticalLayout ? "-14px": undefined), left: (!isVerticalLayout ? "-14px": undefined)}} 
               >
-        <IconButton onClick={() => setIsExpanded(!isExpanded)} sx={{ minHeight: 0, minWidth: 0, padding: 0}}>
-        { (!isSink && isCenterNodeDescendant) && (() => {
-                      if(isExpanded) return <IndeterminateCheckBoxOutlinedIcon style={{...expandButtonStyles}}/>
+        <IconButton onClick={() => handleOnExpandButtonClick('backward')} sx={{ minHeight: 0, minWidth: 0, padding: 0}}>
+        { (!isSource && (isCenterNodeAncestor || isCenterNode)) && (() => {
+                      if(isExpandedBackward) return <IndeterminateCheckBoxOutlinedIcon style={{...expandButtonStyles}}/>
                       else return <AddBoxOutlinedIcon style={{...expandButtonStyles}} />})()
         }
         </IconButton>

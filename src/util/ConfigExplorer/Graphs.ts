@@ -723,14 +723,11 @@ export default class DataObjectsAndActions extends DAGraph{
 export class PartialDataObjectsAndActions extends DAGraph{
     constructor(public nodes: Node[], 
                 public edges: Edge[], 
-                public centerNodeId: string,
                 public layoutDirection:  string = 'TB',
                 public jsonObject?: any){
         const nodesWithPos = computeNodePositions(nodes, edges, layoutDirection);
         super(nodesWithPos, edges, false); // don't merge actions, merging should have already been done because we call this from a full graph
         this.jsonObject = jsonObject;
-        console.log("new partialDOA centerNode Id: ", centerNodeId, this.nodes);
-        this.setCenterNode(this.getNodeById(centerNodeId)!);
     }
 }
   
