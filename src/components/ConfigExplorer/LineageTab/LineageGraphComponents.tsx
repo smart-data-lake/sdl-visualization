@@ -113,16 +113,16 @@ export const CustomDataNode = ( {data} ) => {
   // destruct data
   const { props, label, nodeType,
           targetPosition, sourcePosition, 
-          progress, jsonObject, isGraphFullyExpanded,
+          progress, jsonObject, isGraphFullyExpanded, graphView,
           expandNodeFunc, graphNodeProps
   }: reactFlowNodeProps = data;
-  const {isSink,  isSource,
+  const {isSink,  isSource,  
          isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode} = graphNodeProps
 
   // init state
   // console.log("label: ", label)
   // console.log("graph node props: ", graphNodeProps)
-  console.log("props: ", props)
+  // console.log("props: ", props)
   const [ showDetails, setShowDetails ] = useState(false);
   const initStateBwd = (isCenterNode || isGraphFullyExpanded) && !isSource;
   const initStateFwd = (isCenterNode || isGraphFullyExpanded) && !isSink;
@@ -160,10 +160,10 @@ export const CustomDataNode = ( {data} ) => {
   const handleOnExpandButtonClick = (direction) => {
     if(direction === 'forward'){
       setIsExpandedForward(!isExpandedForward); 
-      expandNodeFunc(label, isExpandedForward, direction);
+      expandNodeFunc(label, isExpandedForward, direction, graphView);
     } else {
       setIsExpandedBackward(!isExpandedBackward); 
-      expandNodeFunc(label, isExpandedBackward, direction);
+      expandNodeFunc(label, isExpandedBackward, direction, graphView);
     }
   }
 

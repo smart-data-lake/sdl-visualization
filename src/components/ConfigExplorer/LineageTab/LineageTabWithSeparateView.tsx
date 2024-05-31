@@ -84,24 +84,25 @@ export interface reactFlowNodeProps {
   sourcePosition: Position
   progress: number | undefined, 
   jsonObject: any,
-  expandNodeFunc: (id: string,  isExpanded: boolean, direction: 'forward' | 'backward') => void
+  expandNodeFunc: (id: string,  isExpanded: boolean, direction: 'forward' | 'backward', graphView: 'full' | 'data' | 'action') => void
   graphNodeProps: graphNodeProps,
-  isGraphFullyExpanded: boolean
+  isGraphFullyExpanded: boolean,
+  graphView: 'full' | 'data' | 'action',
 }
 
 
-function createReactFlowNodes(//dataObjectsAndActions: DAGraph, // could be just ids
-                              selectedNodes: GraphNode[],
+function createReactFlowNodes(selectedNodes: GraphNode[],
                               direction: string = 'TB', 
                               isGraphFullyExpanded: boolean,
-                              expandNodeFunc: (id: string, isExpanded: boolean, direction: 'forward' | 'backward') => void, 
-                              props: flowProps // case distinction on full graph action graph and data graph
+                              graphView: 'full' | 'data' | 'action',
+                              expandNodeFunc: (id: string, isExpanded: boolean, direction: 'forward' | 'backward', graphView: 'full' | 'data' | 'action') => void, 
+                              props: flowProps 
                             ): ReactFlowNode[] {
+  const dataObjectsAndActions = graphView === 'action' ? props.configData?.actionGraph! :
+                                graphView === 'data' ? props.configData?.dataGraph! :
+                                props.configData?.fullGraph!;
   const isHorizontal = direction === 'LR';
-  const dataObjectsAndActions = props.configData?.fullGraph!;
   const nodes = dataObjectsAndActions.nodes?.filter(node => selectedNodes.includes(node)); // verify the usage of .includes, whether to use includes id instead
-  // use props.fullGraph instead of dataObjectsAndAction, hide elements not in dataObjectsÂndActions
-  // use all nodes but pass hidden property TODO...
   const centerNode = dataObjectsAndActions.getNodeById(dataObjectsAndActions.centerNodeId)!;
   const targetPos = isHorizontal ? Position.Left : Position.Top;
   const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
@@ -109,11 +110,11 @@ function createReactFlowNodes(//dataObjectsAndActions: DAGraph, // could be just
   const sourceNodes = dataObjectsAndActions.getSourceNodes();
   const fwdNodes = dataObjectsAndActions.getDirectDescendants(centerNode, "node") as GraphNode[];
   const bwdNodes = dataObjectsAndActions.getDirectAncestors(centerNode, "node") as GraphNode[];
-  var result: ReactFlowNode[] = []; 
 
   // If we need more information to be displayed on the node, 
   // just add more fields to the flowProps interface and access it in the custom node component.
   // The additional props can be passed in ElementDetails where the LineageTab is opened.
+  var result: ReactFlowNode[] = []; 
   nodes.forEach((node)=>{
     const dataObject = node
     const nodeType = dataObject.nodeType;
@@ -126,8 +127,6 @@ function createReactFlowNodes(//dataObjectsAndActions: DAGraph, // could be just
     // const isDirectBwdNeighbour = directBwdNodes.includes(node);
     const isCenterNodeDescendant = fwdNodes.includes(node);
     const isCenterNodeAncestor = bwdNodes.includes(node);
-    // console.log("direct fwd and bwd neigh of ", node.id, ": ", directFwdNodes, directBwdNodes);
-    // console.log("selectedNodes include ", node.id, "?  ",  selectedNodes.includes(node))
 
     const data: reactFlowNodeProps = {
       props: props,         
@@ -136,6 +135,7 @@ function createReactFlowNodes(//dataObjectsAndActions: DAGraph, // could be just
       targetPosition: targetPos,
       sourcePosition: sourcePos,
       isGraphFullyExpanded: isGraphFullyExpanded,
+      graphView: graphView,
       expandNodeFunc: expandNodeFunc,
       graphNodeProps: {
         isCenterNode: dataObject.isCenterNode, 
@@ -166,16 +166,17 @@ function createReactFlowNodes(//dataObjectsAndActions: DAGraph, // could be just
 }
 
 
-function createReactFlowEdges(//dataObjectsAndActions: DAGraph,
-                              selectedEdges: GraphEdge[],
+function createReactFlowEdges(selectedEdges: GraphEdge[],
                               props: flowProps, 
+                              graphView: 'full' | 'data' | 'action',
                               selectedEdgeId: string | undefined): ReactFlowEdge[] {
-  var result: ReactFlowEdge[] = [];
-  // use props.configdata.fullgraph instead of doa
-  const dataObjectsAndActions = props.configData?.fullGraph!;
+  const dataObjectsAndActions = graphView === 'action' ? props.configData?.actionGraph! :
+                                graphView === 'data' ? props.configData?.dataGraph! :
+                                props.configData?.fullGraph!;
   const edges = dataObjectsAndActions.edges?.filter(edge => selectedEdges.includes(edge));
   const edgeColor = selectedEdgeId ? highLightedEdgeColor : defaultEdgeColor;
 
+  var result: ReactFlowEdge[] = [];
   edges.forEach(edge => {
     const selected = selectedEdgeId === edge.id;
     const uniqueId =  edge.id;
@@ -191,7 +192,6 @@ function createReactFlowEdges(//dataObjectsAndActions: DAGraph,
       id: uniqueId, // has to be unique, linked to node ids
       source: fromNodeId,
       target: toNodeId,
-      // hidden: selectedEdges.includes(edge) ? true : false,
       markerEnd: {
         type: MarkerType.ArrowClosed,
         width: 10,
@@ -240,7 +240,7 @@ function LineageTabCore(props: flowProps) {
     setOnlyDirectNeighbours([!onlyDirectNeighbours[0], buttonMessage]);
   }
 
-  const expandNodeFunc = useCallback((id: string, isExpanded: boolean, direction: 'forward' | 'backward') => {
+  const expandNodeFunc = useCallback((id: string, isExpanded: boolean, direction: 'forward' | 'backward', graphView: 'full' | 'data' | 'action') => {
     // if expanded, show the direct out neighbours of the node with the id; if unexpanded, hide all descendants
     var graph: DAGraph;
     if (graphView === 'full'){ 
@@ -252,16 +252,15 @@ function LineageTabCore(props: flowProps) {
     } else {
       throw Error("Unknown graph view " + graphView);
     }
-    console.log("graph view: ", graphView)
+
     if(!isExpanded){ // TODO: we always fall back to full graph somehow
       console.log("expand");
       // show direct neighbouring nodes and edges, set hiddne to false
       const [neighbourNodes, neighbourEdges] = direction === 'forward' ? graph.getOutElems(id) : graph.getInElems(id);
-      console.log("neighbour nodes and edges: ", neighbourNodes, neighbourEdges);
       const neighbourNodeIds = neighbourNodes.map((n) => {return n.id});
       const neighbourEdgeIds = neighbourEdges.map((e) => {return e.id});
-      const rfNodes = createReactFlowNodes(neighbourNodes, layout, !onlyDirectNeighbours[0], expandNodeFunc, props);
-      const rfEdges = createReactFlowEdges(neighbourEdges, props, undefined);
+      const rfNodes = createReactFlowNodes(neighbourNodes, layout, !onlyDirectNeighbours[0], graphView, expandNodeFunc, props);
+      const rfEdges = createReactFlowEdges(neighbourEdges, props, graphView, undefined);
       setNodes((nds) => nds.concat(rfNodes));
       setEdges((eds) => eds.concat(rfEdges));
       // an extra layouting step might be needed here
@@ -321,10 +320,9 @@ function LineageTabCore(props: flowProps) {
     // When the layout has changed, the nodes and edges have to be recomputed
     partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout, props.configData);
-    console.log("partial graph: ", partialGraph);
     partialGraph.setCenterNode(partialGraph.getNodeById(centralNodeId)!); // how would props.configData.fullgraph know the new centralId?
-    let nodes = createReactFlowNodes(partialGraphPair[0], layout, !onlyDirectNeighbours[0], expandNodeFunc, props);
-    let edges = createReactFlowEdges(partialGraphPair[1], props, undefined);
+    let nodes = createReactFlowNodes(partialGraphPair[0], layout, !onlyDirectNeighbours[0], graphView, expandNodeFunc, props);
+    let edges = createReactFlowEdges(partialGraphPair[1], props, graphView, undefined);
     return [nodes, edges];
   }
 
