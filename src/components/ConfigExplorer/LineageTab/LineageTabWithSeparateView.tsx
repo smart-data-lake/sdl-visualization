@@ -34,6 +34,7 @@ import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
 import { DAGraph, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions } from '../../../util/ConfigExplorer/Graphs';
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
 import { LineageGraphToolbar } from './LineageGraphToolbar';
+import assert from 'assert';
 
 /*
 Global styles to be refactored
@@ -44,6 +45,10 @@ const highLightedEdgeColor = '#096bde';
 
 const defaultEdgeStrokeWidth = 3
 const highlightedEdgeStrokeWidth = 5;
+
+export type LayoutDirection = 'TB' | 'LR';
+export type ExpandDirection = 'forward' | 'backward'; 
+export type GraphView = 'full' | 'data' | 'action';
 
 
 /*
@@ -84,24 +89,25 @@ export interface reactFlowNodeProps {
   sourcePosition: Position
   progress: number | undefined, 
   jsonObject: any,
-  expandNodeFunc: (id: string,  isExpanded: boolean, direction: 'forward' | 'backward', graphView: 'full' | 'data' | 'action') => void
+  layoutDirection: LayoutDirection,
+  expandNodeFunc: (id: string,  isExpanded: boolean, direction: ExpandDirection, graphView: GraphView, layout: LayoutDirection) => void
   graphNodeProps: graphNodeProps,
   isGraphFullyExpanded: boolean,
-  graphView: 'full' | 'data' | 'action',
+  graphView: GraphView,
 }
 
 
 function createReactFlowNodes(selectedNodes: GraphNode[],
-                              direction: string = 'TB', 
+                              layoutDirection: LayoutDirection, 
                               isGraphFullyExpanded: boolean,
-                              graphView: 'full' | 'data' | 'action',
-                              expandNodeFunc: (id: string, isExpanded: boolean, direction: 'forward' | 'backward', graphView: 'full' | 'data' | 'action') => void, 
+                              graphView: GraphView,
+                              expandNodeFunc: (id: string, isExpanded: boolean, direction: ExpandDirection, graphView: GraphView, layout: LayoutDirection) => void, 
                               props: flowProps 
                             ): ReactFlowNode[] {
   const dataObjectsAndActions = graphView === 'action' ? props.configData?.actionGraph! :
                                 graphView === 'data' ? props.configData?.dataGraph! :
                                 props.configData?.fullGraph!;
-  const isHorizontal = direction === 'LR';
+  const isHorizontal = layoutDirection === 'LR';
   const nodes = dataObjectsAndActions.nodes?.filter(node => selectedNodes.includes(node)); // verify the usage of .includes, whether to use includes id instead
   const centerNode = dataObjectsAndActions.getNodeById(dataObjectsAndActions.centerNodeId)!;
   const targetPos = isHorizontal ? Position.Left : Position.Top;
@@ -135,6 +141,7 @@ function createReactFlowNodes(selectedNodes: GraphNode[],
       targetPosition: targetPos,
       sourcePosition: sourcePos,
       isGraphFullyExpanded: isGraphFullyExpanded,
+      layoutDirection: layoutDirection,
       graphView: graphView,
       expandNodeFunc: expandNodeFunc,
       graphNodeProps: {
@@ -168,7 +175,7 @@ function createReactFlowNodes(selectedNodes: GraphNode[],
 
 function createReactFlowEdges(selectedEdges: GraphEdge[],
                               props: flowProps, 
-                              graphView: 'full' | 'data' | 'action',
+                              graphView: GraphView,
                               selectedEdgeId: string | undefined): ReactFlowEdge[] {
   const dataObjectsAndActions = graphView === 'action' ? props.configData?.actionGraph! :
                                 graphView === 'data' ? props.configData?.dataGraph! :
@@ -178,16 +185,13 @@ function createReactFlowEdges(selectedEdges: GraphEdge[],
 
   var result: ReactFlowEdge[] = [];
   edges.forEach(edge => {
+    assert(!(edge.toNode.id === undefined || edge.fromNode.id === undefined), "Edge has no source or target")
     const selected = selectedEdgeId === edge.id;
     const uniqueId =  edge.id;
     const fromNodeId = edge.fromNode.id;
     const toNodeId = edge.toNode.id;
-    var newEdge = {} as ReactFlowEdge;
 
-    if (edge.toNode.id === undefined || edge.fromNode.id === undefined) {
-      throw Error("Edge has no source or target");
-    }
-    newEdge = {
+    const newEdge = {
       type: 'customEdge',
       id: uniqueId, // has to be unique, linked to node ids
       source: fromNodeId,
@@ -221,9 +225,9 @@ function LineageTabCore(props: flowProps) {
    let nodes_init: ReactFlowNode[] = [];
    let edges_init: ReactFlowEdge[] = [];
  
-   const [graphView, setGraphView] = useState('full'); // control for action/data/full graph view 
+   const [graphView, setGraphView] = useState<GraphView>('full'); // control for action/data/full graph view 
    const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
-   const [layout, setLayout] = useState('TB');
+   const [layout, setLayout] = useState<LayoutDirection>('TB');
    let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false); 
 
    const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | undefined>(undefined);
@@ -240,7 +244,10 @@ function LineageTabCore(props: flowProps) {
     setOnlyDirectNeighbours([!onlyDirectNeighbours[0], buttonMessage]);
   }
 
-  const expandNodeFunc = useCallback((id: string, isExpanded: boolean, direction: 'forward' | 'backward', graphView: 'full' | 'data' | 'action') => {
+  const expandNodeFunc = useCallback((id: string, isExpanded: boolean, 
+                                      expandDirection: ExpandDirection, 
+                                      graphView: GraphView,
+                                      layoutDirection: LayoutDirection) => {
     // if expanded, show the direct out neighbours of the node with the id; if unexpanded, hide all descendants
     var graph: DAGraph;
     if (graphView === 'full'){ 
@@ -255,11 +262,10 @@ function LineageTabCore(props: flowProps) {
 
     if(!isExpanded){ // TODO: we always fall back to full graph somehow
       console.log("expand");
-      // show direct neighbouring nodes and edges, set hiddne to false
-      const [neighbourNodes, neighbourEdges] = direction === 'forward' ? graph.getOutElems(id) : graph.getInElems(id);
+      const [neighbourNodes, neighbourEdges] = expandDirection === 'forward' ? graph.getOutElems(id) : graph.getInElems(id);
       const neighbourNodeIds = neighbourNodes.map((n) => {return n.id});
       const neighbourEdgeIds = neighbourEdges.map((e) => {return e.id});
-      const rfNodes = createReactFlowNodes(neighbourNodes, layout, !onlyDirectNeighbours[0], graphView, expandNodeFunc, props);
+      const rfNodes = createReactFlowNodes(neighbourNodes, layoutDirection, !onlyDirectNeighbours[0], graphView, expandNodeFunc, props);
       const rfEdges = createReactFlowEdges(neighbourEdges, props, graphView, undefined);
       setNodes((nds) => nds.concat(rfNodes));
       setEdges((eds) => eds.concat(rfEdges));
@@ -270,8 +276,8 @@ function LineageTabCore(props: flowProps) {
       // dfs is implemented as such that all the descendants are hidden on collapse button click. We could also dfs the currently shown node and hide them.
       // we match the reactflow edge ids against the graph edge ids, so the unique ids should be defined in a way we can link to it easily (at least for this implementation...)
       const currNode = graph.getNodeById(id);
-      const [reachableNodes, reachableEdges] = direction === 'forward' ? graph.getDirectDescendants(currNode!, 'all') as [GraphNode[], GraphEdge[]]
-                                                             : graph.getDirectAncestors(currNode!, 'all') as [GraphNode[], GraphEdge[]];
+      const [reachableNodes, reachableEdges] = expandDirection === 'forward' ? graph.getDirectDescendants(currNode!, 'all') as [GraphNode[], GraphEdge[]]
+                                                                             : graph.getDirectAncestors(currNode!, 'all') as [GraphNode[], GraphEdge[]];
       const reachableNodeIds: string[] = reachableNodes.map((node) => {return node.id});
       const reachableEdgeIds: string[] = reachableEdges.map((edge) => {return edge.id});
       setNodes((nds) => nds.filter(n => !reachableNodeIds.includes(n.id)));
