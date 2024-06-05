@@ -94,6 +94,7 @@ export interface reactFlowNodeProps {
   graphNodeProps: graphNodeProps,
   isGraphFullyExpanded: boolean,
   graphView: GraphView,
+  highlighted: boolean
 }
 
 
@@ -156,6 +157,7 @@ function createReactFlowNodes(selectedNodes: GraphNode[],
       // the following are  hard coded for testing
       progress: nodeType === NodeType.ActionNode ? Math.round(Math.random()*100): undefined, 
       jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined, 
+      highlighted: false // set by handlers in Core
     }
 
     const newNode = {
@@ -270,7 +272,7 @@ function LineageTabCore(props: flowProps) {
       let rfNodes = createReactFlowNodes(neighbourNodes, layoutDirection, !onlyDirectNeighbours[0], graphView, expandNodeFunc, props);
       let rfEdges = createReactFlowEdges(neighbourEdges, props, graphView, undefined);
       // current workaround: auto layout in setNodes
-      setEdges((eds) => {
+            setEdges((eds) => {
         rfEdges = eds.concat(rfEdges);
         return rfEdges;
       });
@@ -399,13 +401,15 @@ function LineageTabCore(props: flowProps) {
 
   function resetNodeStyles(){
     setNodes((node) => {
-      return node.map((n) =>{
-        n.style = {
-          ...n.style,
-          borderColor: defaultEdgeColor,
-          borderWidth: defaultEdgeStrokeWidth
+      return node.map((elem) =>{
+        const newElem = {
+          ...elem,
+          data: {
+            ...elem.data,
+            highlighted: false
+          }
         }
-        return n;
+        return newElem;
       })
     })
   }
@@ -416,7 +420,41 @@ function LineageTabCore(props: flowProps) {
     setNodes(nodes_init);
     setEdges(edges_init); 
     resetViewPortCentered(reactFlowInstance!);
-  }, [hidden, layout, onlyDirectNeighbours, props, graphView, url, reactFlowInstance]);
+  }, [hidden,  layout, onlyDirectNeighbours, props, graphView, url, reactFlowInstance]);
+
+  // useEffect(() => {
+  //   // workaround method to get current nodes and edges
+  //   var currRfEdges: ReactFlowEdge[] = [];
+  //   var currRfNodes: ReactFlowNode[] = [];
+
+  //   setEdges((eds) => {
+  //     currRfEdges = eds;
+  //     return currRfEdges;
+  //   }); // called after prepareGraph??
+
+  //   setNodes((nds) => {
+  //     console.log("nds: ", nds)
+  //     currRfNodes = nds;
+  //     return currRfNodes;
+  //   })
+
+  //   console.log("should be called after setNodes printing nds")
+
+  //   console.log("curr eds and nds: ", currRfEdges, currRfNodes);
+  //   if (currRfEdges.length === 0 || currRfNodes.length === 0){
+  //     [nodes_init, edges_init] = prepareAndRenderGraph();
+  //     setNodes(nodes_init);
+  //     setEdges(edges_init); 
+  //   } else {
+  //     setNodes(computeLayout(currRfNodes, currRfEdges, layout));
+  //     setEdges(currRfEdges);
+  //   }
+  //   resetViewPortCentered(reactFlowInstance!);
+  //   console.log("curr eds and nds after set: ", currRfEdges, currRfNodes);
+
+
+  // }, [layout])
+
 
   // set reactflow instance on init so that we can access the internal state of it
   const onInit = (rfi) => {
@@ -431,12 +469,14 @@ function LineageTabCore(props: flowProps) {
     setNodes((n) => {
       return n.map((elem)=>{
         if (edge.source === elem.id || edge.target === elem.id){
-          elem.style = {
-            ...elem.style, 
-            background: "#faf",
-            borderColor: highLightedEdgeColor,
-            borderWidth: highlightedEdgeStrokeWidth
+          const newElem = {
+            ...elem,
+            data: {
+              ...elem.data,
+              highlighted: true
+            }
           }
+          return newElem;
         }
         return elem;
       })
@@ -490,7 +530,7 @@ function LineageTabCore(props: flowProps) {
           defaultEdges={edges}
           defaultPosition={[0, 0]}
           onEdgeClick={onEdgeClick}
-          onPaneClick={resetEdgeStyles}
+          onPaneClick={() => {resetEdgeStyles(); resetNodeStyles();}}
           nodesConnectable={false} 
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}

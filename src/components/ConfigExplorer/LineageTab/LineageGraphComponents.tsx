@@ -31,8 +31,16 @@ import { reactFlowNodeProps } from './LineageTabWithSeparateView';
 import { layout } from 'dagre';
 
 /*
-  Styles to refactor
+  Styles to refactor (for the entire LineageTab folder)
 */
+const labelColor = '#fcae1e';
+const defaultEdgeColor = '#b1b1b7';
+const highLightedEdgeColor = '#096bde';
+const defaultNodeBorderColor = '#a9a9a9';
+
+const defaultEdgeStrokeWidth = 3
+const highlightedEdgeStrokeWidth = 5;
+
 const dataNodeStyles = {
   padding: '10px',
   border: '1px solid #ddd',
@@ -114,7 +122,7 @@ export const CustomDataNode = ( {data} ) => {
   const { props, label, nodeType,
           targetPosition, sourcePosition, 
           progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
-          expandNodeFunc, graphNodeProps
+          expandNodeFunc, graphNodeProps, highlighted
   }: reactFlowNodeProps = data;
   const {isSink,  isSource,  
          isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode} = graphNodeProps
@@ -306,6 +314,7 @@ export const CustomDataNode = ( {data} ) => {
   const isVerticalLayout = sourcePosition === Position.Bottom; // maybe this is a bug because the hanle is not updated in the first change;
   const handleHOffset = isVerticalLayout ? '1px' : '24px';
   const handleWOffset = isVerticalLayout ? '24px' : '1px';
+
   return (
     <div style={{ display: 'flex',
                   flexDirection: 'row', 
@@ -315,7 +324,7 @@ export const CustomDataNode = ( {data} ) => {
       ref={chartBox}
       sx={{
         padding: '10px',
-        border: '3px solid #a9a9a9',
+        border: ` ${highlighted ? highlightedEdgeStrokeWidth : defaultEdgeStrokeWidth}px solid ${highlighted ? highLightedEdgeColor : defaultNodeBorderColor}`,
         ...(nodeType === NodeType.ActionNode && {borderRadius: '20px',}),
         minWidth: '200px',
         maxWidth: '200px',
