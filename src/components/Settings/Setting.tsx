@@ -8,10 +8,10 @@ import {
   colors,
 } from "@mui/joy";
 import PageHeader from "../../layouts/PageHeader";
-import { Link, Route, Routes, useMatch } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useMatch } from "react-router-dom";
 import Users from "./Users";
 
-const settingMenuItems = [{ title: "Users", path: "users/" }];
+const settingMenuItems = [{ title: "User Management", path: "users" }];
 
 const NavLink = ({ to, title }) => {
   const activated = useMatch(`settings/${to}`);
@@ -56,6 +56,7 @@ export default function Setting() {
           <Grid xs={10}>
             <Routes>
               <Route path="users" element={<Users />} />
+              <Route path="*" element={<Navigate to="users" replace={true} />} />
             </Routes>
           </Grid>
         </Grid>
