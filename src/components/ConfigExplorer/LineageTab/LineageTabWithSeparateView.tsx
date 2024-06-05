@@ -23,7 +23,7 @@ import ReactFlow, {
   Node as ReactFlowNode
 } from 'react-flow-renderer';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ReactFlowInstance } from 'reactflow';
+import { ReactFlowInstance, useReactFlow } from 'reactflow';
 
 // mui imports
 import Box from '@mui/material/Box';
@@ -31,7 +31,7 @@ import Box from '@mui/material/Box';
 // local imports
 import { ReactFlowProvider } from 'reactflow';
 import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
-import { DAGraph, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions } from '../../../util/ConfigExplorer/Graphs';
+import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions } from '../../../util/ConfigExplorer/Graphs';
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
 import { LineageGraphToolbar } from './LineageGraphToolbar';
 import assert from 'assert';
@@ -161,6 +161,7 @@ function createReactFlowNodes(selectedNodes: GraphNode[],
     const newNode = {
       id: dataObject.id,
       type: 'customDataNode',   // should match the name defined in custom node types
+      // isCenterNode: dataObject.isCenterNode,
       position: {x: dataObject.position.x, y: dataObject.position.y},
       targetPosition: targetPos, // required for the node positions to actually change internally
       sourcePosition: sourcePos,
@@ -230,10 +231,13 @@ function LineageTabCore(props: flowProps) {
    const [layout, setLayout] = useState<LayoutDirection>('TB');
    let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false); 
 
-   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | undefined>(undefined);
+   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | undefined>(undefined); // can this be replaced by useReactFlow?
+   const reactFlow = useReactFlow();
   
    const [nodes, setNodes] = useState<ReactFlowNode<any>[]>([]);
    const [edges, setEdges] = useState<ReactFlowEdge<any>[]>([]);
+  //  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  // const [edges, setEdges, onEdgesChange] = useEdgesState([]);
  
    const navigate = useNavigate();            // handlers for navigating dataObjects and actions
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
@@ -260,16 +264,37 @@ function LineageTabCore(props: flowProps) {
       throw Error("Unknown graph view " + graphView);
     }
 
-    if(!isExpanded){ // TODO: we always fall back to full graph somehow
+    if(!isExpanded){
       console.log("expand");
-      const [neighbourNodes, neighbourEdges] = expandDirection === 'forward' ? graph.getOutElems(id) : graph.getInElems(id);
-      const neighbourNodeIds = neighbourNodes.map((n) => {return n.id});
-      const neighbourEdgeIds = neighbourEdges.map((e) => {return e.id});
-      const rfNodes = createReactFlowNodes(neighbourNodes, layoutDirection, !onlyDirectNeighbours[0], graphView, expandNodeFunc, props);
-      const rfEdges = createReactFlowEdges(neighbourEdges, props, graphView, undefined);
-      setNodes((nds) => nds.concat(rfNodes));
-      setEdges((eds) => eds.concat(rfEdges));
-      // an extra layouting step might be needed here
+      let [neighbourNodes, neighbourEdges] = expandDirection === 'forward' ? graph.getOutElems(id) : graph.getInElems(id); // all positions are 0,0 here
+      let rfNodes = createReactFlowNodes(neighbourNodes, layoutDirection, !onlyDirectNeighbours[0], graphView, expandNodeFunc, props);
+      let rfEdges = createReactFlowEdges(neighbourEdges, props, graphView, undefined);
+      // current workaround: auto layout in setNodes
+      setEdges((eds) => {
+        rfEdges = eds.concat(rfEdges);
+        return rfEdges;
+      });
+      setNodes((nds) => {
+        rfNodes = computeLayout(nds.concat(rfNodes), rfEdges, layoutDirection);
+        return rfNodes;
+      })
+
+
+      // test current nodes
+      // setNodes((nds) => {
+      //   console.log("current nodes: ", nds);
+      //   return nds;
+      // })
+      // console.log("if curr nodes is not empty then getNodes on rfi should not be empty");
+      // console.log(reactFlow.getNodes()); // is this empty because we use an uncontrolled flow, and not useNodesState(...)?
+      // setNodes((nds) => nds.concat(rfNodes));
+      // setEdges((eds) => eds.concat(rfEdges));
+      // setNodes((nds) => {
+      //   console.log("current nodes after set: ", nds);
+      //   return nds;
+      // })
+      
+      
     } else {
       console.log("hide");
       // hide all reachable nodes and edges
@@ -372,6 +397,19 @@ function LineageTabCore(props: flowProps) {
     })
   }
 
+  function resetNodeStyles(){
+    setNodes((node) => {
+      return node.map((n) =>{
+        n.style = {
+          ...n.style,
+          borderColor: defaultEdgeColor,
+          borderWidth: defaultEdgeStrokeWidth
+        }
+        return n;
+      })
+    })
+  }
+
   // defines the conditions to (re-)render the lineage graph
   useEffect(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
@@ -385,8 +423,24 @@ function LineageTabCore(props: flowProps) {
     setReactFlowInstance(rfi);
   };
 
-  const onEdgeClick = (_event, edge) => {
+  // TODO: don't reset the moved edges on click
+  const onEdgeClick = (_event, edge: ReactFlowEdge) => {
+    // highlight edge and src, target nodes' border
     resetEdgeStyles();
+    resetNodeStyles();
+    setNodes((n) => {
+      return n.map((elem)=>{
+        if (edge.source === elem.id || edge.target === elem.id){
+          elem.style = {
+            ...elem.style, 
+            background: "#faf",
+            borderColor: highLightedEdgeColor,
+            borderWidth: highlightedEdgeStrokeWidth
+          }
+        }
+        return elem;
+      })
+    })
     setEdges((e) =>{
       return e.map((elem) =>{
         if(elem.id === edge.id){

@@ -137,3 +137,11 @@ export function formatFileSize(size: number){
   export function isArray(value) {
     return typeof value == 'object' && Array.isArray(value);
   }
+
+
+  /**
+   * check if value is an array of type T
+   */
+  export function isArrayOfT<T>(arr: any[], isType: (obj: any) => boolean): boolean{
+    return Array.isArray(arr) && arr.every(isType);
+  }
