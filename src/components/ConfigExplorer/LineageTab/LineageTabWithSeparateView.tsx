@@ -66,7 +66,6 @@ const edgeTypes = {
 export interface flowProps {
   elementName: string;
   elementType: string; // we have either dataObjects or actions now
-  connection: any;
   configData?: ConfigData;
   runContext?: boolean;
 }

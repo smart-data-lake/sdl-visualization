@@ -119,7 +119,7 @@ export class ActionObject extends Node {
         if (this.jsonObject){
             return this.jsonObject.type;
         } else {
-            console.warn('Cannot read action type, ActionObject does not have a jsonObject. Returning AnyType');
+            //console.warn('Cannot read action type, ActionObject does not have a jsonObject. Returning AnyType');
             return 'AnyType';
         }
     }

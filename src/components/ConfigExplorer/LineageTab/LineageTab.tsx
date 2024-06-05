@@ -1,24 +1,15 @@
-import { useState, useCallback, useEffect, useRef} from 'react';
-import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge, MarkerType, isNode, Position } from 'react-flow-renderer';
-import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions, DataObjectsAndActionsSep } from '../../../util/ConfigExplorer/Graphs';
-import { useNavigate } from "react-router-dom";
-import '../ComponentsStyles.css';
-import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
-import AlignHorizontalLeftIcon from '@mui/icons-material/AlignHorizontalLeft';
-import AlignVerticalTopIcon from '@mui/icons-material/AlignVerticalTop';
-import { useParams } from 'react-router-dom';
-import OpenWithIcon from '@mui/icons-material/OpenWith';
-import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
-import DownloadLineageButton from './LineageGraphToolbar';
-import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
-import { Box, IconButton } from '@mui/joy';
 import { AlignVerticalTop } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
+import { Box, IconButton } from '@mui/joy';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import ReactFlow, { Background, Controls, Edge, MarkerType, Node, Position, applyEdgeChanges, applyNodeChanges } from 'react-flow-renderer';
+import { useNavigate, useParams } from "react-router-dom";
+import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
+import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions } from '../../../util/ConfigExplorer/Graphs';
+import '../ComponentsStyles.css';
 
-import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
-import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
-import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { ReactFlowProvider } from 'reactflow';
+import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 
 // accessed as ag attributes
 interface flowProps {
@@ -66,7 +57,7 @@ function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string 
         style: {background: dataObject.backgroundColor},
         targetPosition: isHorizontal ? Position.Left : Position.Top,
         sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
-        type: 'custom',
+        type: 'default',
       };
 
     } else {
@@ -89,10 +80,7 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
     const selected = selectedEdgeId === action.id;
     var newEdge = {} as Edge;
 
-    console.log(edge.toNode.id + " " + edge.fromNode.id);
-
     if (edge.toNode.id === undefined || edge.fromNode.id === undefined) {
-      console.log(edge.source);
       throw Error("Edge has no source or target");
     }
 
@@ -130,17 +118,14 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
 function LineageTab(props: flowProps) {
   
   // initialization 
-  console.log("call LineageTab");
   const url = useParams();
   const doa = props.graph ? props.graph : new DataObjectsAndActions(props.configData); 
 
   let nodes_init: Node[] = [];
   let edges_init: Edge[] = [];
 
-  const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
   const [layout, setLayout] = useState('TB');
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>(''); // wird verschwinden mit anderer Sicht
-  let [hidden, setHidden] = useState(useParams().elementType === 'dataObjects' ? true : false); 
  
   let initial_render = prepareAndRenderGraph();
   const [nodes, setNodes] = useState(initial_render[0]);
@@ -151,37 +136,15 @@ function LineageTab(props: flowProps) {
 
 
   // helper functions
-  function expandGraph(): void {
-    let buttonMessage = onlyDirectNeighbours[0] ? 'Compress Graph' : 'Expand Graph';
-    setOnlyDirectNeighbours([!onlyDirectNeighbours[0], buttonMessage]);
-  }
-
   function prepareAndRenderGraph(): [Node[], Edge[]] {
-    var partialGraphPair: [GraphNode[],GraphEdge[]] = [[],[]];
-
-    if (props.elementType==='dataObjects'){ //only a partial graph
-      partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(props.elementName) : doa.returnPartialGraphInputs(props.elementName);
-    }
-    else if(props.elementType==='actions'){
-      partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighboursFromEdge(props.elementName) : doa.returnPartialGraphInputsFromEdge(props.elementName);
-    } else {
-      throw Error("Unknown type" + props.elementType)
-    }
-
-    const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout);
-    let nodes = createReactFlowNodes(partialGraph, layout);
-    let edges = createReactFlowEdges(partialGraph, selectedEdgeId);
-
-    
+    // fixed ActionGraph for now
+    let actionGraph = doa.getActionGraph();
+    actionGraph.setLayout(layout);
+    let nodes = createReactFlowNodes(actionGraph, layout);
+    let edges = createReactFlowEdges(actionGraph, selectedEdgeId);
+   
     return [nodes, edges];
   }
-
-  function showLabels(edges: Edge[]) {
-    return edges.map(e => {
-      e.label = (hidden ? '' : e.data.label_copy);
-      return e;
-    })
-  };
 
   function clickOnNode(node: flowNodeWithString){
     if (props.configData) {
@@ -205,10 +168,7 @@ function LineageTab(props: flowProps) {
     [nodes_init, edges_init] = prepareAndRenderGraph();
     setNodes(nodes_init);
     setEdges(edges_init); // set edge visibility
-    setEdges(             // set edge label visibility
-      (eds) => showLabels(eds)
-    );
-  }, [hidden, layout, onlyDirectNeighbours, props]);
+  }, [layout, props]);
 
   //Nodes and edges can be moved. Used "any" type as first, non-clean implementation. 
   const onNodesChange = useCallback(
@@ -244,7 +204,6 @@ function LineageTab(props: flowProps) {
         nodesConnectable={false} //prevents adding new edges
       >
         <Background/>
-        <MiniMap />
         <Controls />
         <Box sx={{position: 'absolute', left: 9, bottom: 135, display: 'flex', flexDirection: 'column-reverse'}}>
 
@@ -257,25 +216,6 @@ function LineageTab(props: flowProps) {
           </IconButton>
         </div>
 
-        <div title='Display / Hide action IDs' style={{ zIndex: 4, cursor: 'pointer' }}> 
-          <IconButton 
-            color={hidden ? 'neutral' : 'primary'}
-            onClick={() => setHidden(!hidden)}>
-            <RocketLaunchOutlined />
-          </IconButton>
-        </div>
-
-        {props.configData && <div title={onlyDirectNeighbours[1] as string} style={{  zIndex: 4, cursor: 'pointer' }}>
-          <IconButton 
-            color='neutral'
-            onClick={expandGraph}>
-            {onlyDirectNeighbours[0] ? <OpenWithIcon/> : <CloseFullscreenIcon/>}
-          </IconButton>
-        </div>}
-
-        <div title='Download image as PNG file' style={{ zIndex: 4, cursor: 'pointer' }}>
-          <DownloadLineageButton />
-        </div>
         </Box>
       </ReactFlow>
       </ReactFlowProvider>
