@@ -14,6 +14,8 @@ import { closeRowEditors, deleteRow, openRowEditors, saveNewRow, saveRowEditors 
 import { useTenant } from "../../hooks/TenantProvider";
 import { Permission } from "./model/enums";
 import { useUser } from "../../hooks/useUser";
+import IconButtonWithTooltip from "../Common/IconButtonWithTooltip";
+import { NO_PERMISSION_ACTION_BUTTON } from "../../util/constants/message.constant";
 
 interface ITableRendererContext {
   table: ITableInstance;
@@ -226,9 +228,14 @@ export default function Users() {
 const AddButton = ({ disabled }) => {
   const table = useTableInstance();
   return (
-    <IconButton disabled={disabled} size="sm" onClick={() => table.showNewRow()}>
-      <AddCircleOutlineOutlinedIcon />
-    </IconButton>
+    <IconButtonWithTooltip
+      icon={AddCircleOutlineOutlinedIcon}
+      disabled={disabled}
+      onClick={() => table.showNewRow()}
+      showTooltip={disabled}
+      size="sm"
+      tooltipMessage={NO_PERMISSION_ACTION_BUTTON}
+    />
   );
 };
 
@@ -236,9 +243,8 @@ const SaveButton = ({ dispatch, rowKeyValue, disabled }) => {
   const table = useTableInstance();
   const isNewRow = !table.props.data?.some((user) => user["user_id"] === rowKeyValue);
   return (
-    <IconButton
-      size="sm"
-      color="success"
+    <IconButtonWithTooltip
+      icon={SaveOutlinedIcon}
       disabled={disabled}
       onClick={() =>
         dispatch(
@@ -251,9 +257,11 @@ const SaveButton = ({ dispatch, rowKeyValue, disabled }) => {
               })
         )
       }
-    >
-      <SaveOutlinedIcon />
-    </IconButton>
+      showTooltip={disabled}
+      size="sm"
+      color="success"
+      tooltipMessage={NO_PERMISSION_ACTION_BUTTON}
+    />
   );
 };
 
@@ -261,30 +269,41 @@ const CancelButton = ({ dispatch, rowKeyValue, disabled }) => {
   const table = useTableInstance();
   const isNewRow = !table.props.data?.some((user) => user["user_id"] === rowKeyValue);
   return (
-    <IconButton
-      size="sm"
-      color="danger"
+    <IconButtonWithTooltip
+      icon={CancelOutlinedIcon}
       disabled={disabled}
       onClick={() => (isNewRow ? table.hideNewRow() : dispatch(closeRowEditors(rowKeyValue)))}
-    >
-      <CancelOutlinedIcon />
-    </IconButton>
+      showTooltip={disabled}
+      size="sm"
+      color="danger"
+      tooltipMessage={NO_PERMISSION_ACTION_BUTTON}
+    />
   );
 };
 
 const EditButton = ({ rowKeyValue, dispatch, disabled }) => {
   return (
-    <IconButton size="sm" disabled={disabled} onClick={() => dispatch(openRowEditors(rowKeyValue))}>
-      <EditOutlinedIcon />
-    </IconButton>
+    <IconButtonWithTooltip
+      icon={EditOutlinedIcon}
+      disabled={disabled}
+      onClick={() => dispatch(openRowEditors(rowKeyValue))}
+      showTooltip={disabled}
+      size="sm"
+      tooltipMessage={NO_PERMISSION_ACTION_BUTTON}
+    />
   );
 };
 
 const RemoveButton = ({ rowKeyValue, dispatch, disabled }) => {
   return (
-    <IconButton disabled={disabled} size="sm" onClick={() => dispatch(deleteRow(rowKeyValue))}>
-      <DeleteOutlinedIcon />
-    </IconButton>
+    <IconButtonWithTooltip
+      icon={DeleteOutlinedIcon}
+      disabled={disabled}
+      onClick={() => dispatch(deleteRow(rowKeyValue))}
+      showTooltip={disabled}
+      size="sm"
+      tooltipMessage={NO_PERMISSION_ACTION_BUTTON}
+    />
   );
 };
 
