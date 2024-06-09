@@ -316,9 +316,7 @@ export const CustomDataNode = ( {data} ) => {
   const handleWOffset = isVerticalLayout ? '24px' : '1px';
 
   return (
-    <div style={{ display: 'flex',
-                  flexDirection: 'row', 
-               }}>
+    <>
       <Box 
       zIndex={4} 
       ref={chartBox}
@@ -379,7 +377,7 @@ export const CustomDataNode = ( {data} ) => {
         </IconButton>
       </Handle>
       </Box>
-    </div>
+    </>
   );
 };
 

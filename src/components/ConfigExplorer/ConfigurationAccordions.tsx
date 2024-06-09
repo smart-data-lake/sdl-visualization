@@ -39,7 +39,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
         <tr>
           <td>{foreignKey.name}</td>
           <td>{(foreignKey.db || props.connectionDb || "<db?>") + "." + foreignKey.name}</td>
-          <td><Stack spacing={0.5} direction="row">{Object.entries(foreignKey.columns).map(([k,v]) => createSimpleChip(k+" -> "+v))}</Stack></td>
+          <td><Stack spacing={0.5} direction="row">{Object.entries(foreignKey.columns).map(([k,v], idx) => createSimpleChip(k+" -> "+v, idx))}</Stack></td>
         </tr>
       )
 
@@ -77,7 +77,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   function transformerAccordion(){
     let elements = getTransformers(props.data);
     if (elements && elements.length>0){
-      let cmps = elements.map((element,idx) => createPropertiesComponent({obj: element, colHeader: (idx+1).toString()}));
+      let cmps = elements.map((element,idx) => createPropertiesComponent({obj: element, colHeader: (idx+1).toString(), key: idx}));
       accordionSections.set('transformers', ['Transformers', <Stack sx={{overflow: 'auto'}} spacing={1}>{cmps}</Stack>]);
     }
   }
