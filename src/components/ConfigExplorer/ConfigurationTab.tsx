@@ -43,9 +43,9 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
       <Box sx={{flex: 1, textAlign: 'right'}}>Outputs</Box>
     </Box>  
     <Box sx={{display: 'flex'}}>    
-      <Stack sx={{flex: 1, height: '100%', alignSelf: 'center', marginRight: '15px'}} spacing={1}>{inputs.map(name => createDataObjectChip(name))}</Stack>
+      <Stack sx={{flex: 1, height: '100%', alignSelf: 'center', marginRight: '15px'}} spacing={1}>{inputs.map((name,idx) => createDataObjectChip(name,'md',{},idx))}</Stack>
       <Stack sx={{flex: 1, height: '100%', alignItems: 'end', alignSelf: 'center', marginLeft: '15px'}} spacing={1}>
-        {outputs.map(name => createDataObjectChip(name))}
+        {outputs.map((name,idx) => createDataObjectChip(name,'md',{},idx))}
       </Stack>
     </Box>
   </Box>
@@ -63,9 +63,9 @@ export function createSearchChip(attr: string, value: string, route: string, ico
   }
 }
 
-export function createDataObjectChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
+export function createDataObjectChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}, key?: any){
   return(
-    <Link to={"/config/dataObjects/"+name}>
+    <Link to={"/config/dataObjects/"+name} key={key}>
       <Chip key={"dataObjects/"+name} color="primary" startDecorator={<TableViewTwoTone />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
@@ -91,8 +91,8 @@ export function createFeedChip(feed: string, elementType: string, size: ('sm' | 
   return createSearchChip("metadata.feed", feed, elementType, <AltRouteIcon />, "success", size, sx);
 }
 
-export function createSimpleChip(name: string) {
-  return <Chip size="sm">{name}</Chip>
+export function createSimpleChip(name: string, key?: any) {
+  return <Chip key={key} size="sm">{name}</Chip>
 }
 
 export default function ConfigurationTab(props: ElementProps) {
@@ -120,7 +120,7 @@ export default function ConfigurationTab(props: ElementProps) {
   //attributes to be displayed at the top of the page
   let topAttributes: {key: string, func: (x:any) => any}[] = [
     {key: "path", func: (x: any) => x},
-    {key: "partitions", func: (cols: any) => <Stack spacing={0.5} direction="row">{(cols as string[]).map(col => createSimpleChip(col))}</Stack>}, 
+    {key: "partitions", func: (cols: any) => <Stack spacing={0.5} direction="row">{(cols as string[]).map((col,idx) => createSimpleChip(col,idx))}</Stack>}, 
     {key: "table", func: (tbl: any) => (tbl.db || (props.connection && props.connection.db) || "<db?>") + "." + tbl.name},
     {key: "table.primaryKey", func: (cols: any) => <Stack spacing={0.5} direction="row">{(cols as string[]).map(col => createSimpleChip(col))}</Stack>}, 
     {key: "db", func: (x: any) => x},

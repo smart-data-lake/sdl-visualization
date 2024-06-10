@@ -21,8 +21,8 @@ const BasicBreadcrumbs = () => {
         }
     }
 
-    function getItem(str: string, doCapitalize: boolean) {
-      return <Typography fontSize="inherit">{(doCapitalize ? capitalize(str) : str)}</Typography>
+    function getItem(str: string, doCapitalize: boolean, key: any) {
+      return <Typography key={key} fontSize="inherit">{(doCapitalize ? capitalize(str) : str)}</Typography>
     }
 
     return (
@@ -32,7 +32,7 @@ const BasicBreadcrumbs = () => {
         >
             {links.map((item, idx) => 
                 // create link for elements except the last
-                (idx < links.length -1 ? <Link onClick={() => handleClick(item)} key={item} sx={{color: 'white'}}>{getItem(item, idx == 0)}</Link> : getItem(item, idx == 0))
+                (idx < links.length -1 ? <Link onClick={() => handleClick(item)} key={item} sx={{color: 'white'}}>{getItem(item, idx == 0, idx)}</Link> : getItem(item, idx == 0, idx))
             )}
         </Breadcrumbs>
     );
