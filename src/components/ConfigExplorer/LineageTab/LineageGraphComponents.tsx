@@ -122,13 +122,14 @@ export const CustomDataNode = ( {data} ) => {
   const { props, label, nodeType,
           targetPosition, sourcePosition, 
           progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
+          numBwdExpandedEdges, numFwdExpandedEdges,
           expandNodeFunc, graphNodeProps, highlighted
   }: reactFlowNodeProps = data;
   const {isSink,  isSource,  
-         isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode} = graphNodeProps
+         isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode
+  }: graphNodeProps = graphNodeProps
 
   // init state
-  // console.log("label: ", label)
   // console.log("graph node props: ", graphNodeProps)
   // console.log("props: ", props)
   const [ showDetails, setShowDetails ] = useState(false);
@@ -149,8 +150,7 @@ export const CustomDataNode = ( {data} ) => {
                         progress < 70 ? actionNodeStyles.progressBar.color.medium : 
                         progress < 100 ? actionNodeStyles.progressBar.color.high:
                         actionNodeStyles.progressBar.color.done;
-  const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; //'linear-gradient(to right bottom, #430089, #82ffa1)'
-
+  const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; 
 
   const nodeSubTypeName: string = jsonObject !== undefined ? jsonObject.type : label;
   const nodeTypeName: string = nodeType === NodeType.ActionNode  ? "actions" :
@@ -160,7 +160,6 @@ export const CustomDataNode = ( {data} ) => {
   const schemaViewerURL = 'https://smartdatalake.ch/json-schema-viewer';
   const { data: runs} = useFetchWorkflowRunsByElement(nodeTypeName, label);
   const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
-  // const totalRuns = runs?.length;
 
   // handlers
   const navigate = useNavigate();

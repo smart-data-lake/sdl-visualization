@@ -93,7 +93,9 @@ export interface reactFlowNodeProps {
   graphNodeProps: graphNodeProps,
   isGraphFullyExpanded: boolean,
   graphView: GraphView,
-  highlighted: boolean
+  highlighted: boolean,
+  numFwdExpandedEdges: number, // tracking number of active fwd and bwd edges to expand button changes
+  numBwdExpandedEdges: number   
 }
 
 
@@ -120,6 +122,9 @@ function createReactFlowNodes(selectedNodes: GraphNode[],
   // If we need more information to be displayed on the node, 
   // just add more fields to the flowProps interface and access it in the custom node component.
   // The additional props can be passed in ElementDetails where the LineageTab is opened.
+
+  // TODO: initialize neighbour node/full graph in/out active degrees 
+  // Because we don't recreate the reactflow nodes and edges, the created elements are the one that should be visible
   var result: ReactFlowNode[] = []; 
   nodes.forEach((node)=>{
     const dataObject = node
@@ -153,6 +158,8 @@ function createReactFlowNodes(selectedNodes: GraphNode[],
         isCenterNodeDescendant: isCenterNodeDescendant,
         isCenterNodeAncestor: isCenterNodeAncestor,
       },
+      numBwdExpandedEdges: directBwdNodes.length,
+      numFwdExpandedEdges: directFwdNodes.length,
       // the following are  hard coded for testing
       progress: nodeType === NodeType.ActionNode ? Math.round(Math.random()*100): undefined, 
       jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined, 
@@ -162,7 +169,6 @@ function createReactFlowNodes(selectedNodes: GraphNode[],
     const newNode = {
       id: dataObject.id,
       type: 'customDataNode',   // should match the name defined in custom node types
-      // isCenterNode: dataObject.isCenterNode,
       position: {x: dataObject.position.x, y: dataObject.position.y},
       targetPosition: targetPos, // required for the node positions to actually change internally
       sourcePosition: sourcePos,
@@ -271,30 +277,18 @@ function LineageTabCore(props: flowProps) {
       let rfNodes = createReactFlowNodes(neighbourNodes, layoutDirection, !onlyDirectNeighbours[0], graphView, expandNodeFunc, props);
       let rfEdges = createReactFlowEdges(neighbourEdges, props, graphView, undefined);
       // current workaround: auto layout in setNodes
-            setEdges((eds) => {
+      // TODO: update number of in/out active edges currNode.activeOut += neighburNodes.length
+      setEdges((eds) => {
+        console.log("eds: ", eds)
         rfEdges = eds.concat(rfEdges);
         return rfEdges;
       });
       setNodes((nds) => {
+        console.log("nds: ", nds)
         rfNodes = computeLayout(nds.concat(rfNodes), rfEdges, layoutDirection);
         return rfNodes;
-      })
-
-
-      // test current nodes
-      // setNodes((nds) => {
-      //   console.log("current nodes: ", nds);
-      //   return nds;
-      // })
-      // console.log("if curr nodes is not empty then getNodes on rfi should not be empty");
-      // console.log(reactFlow.getNodes()); // is this empty because we use an uncontrolled flow, and not useNodesState(...)?
-      // setNodes((nds) => nds.concat(rfNodes));
-      // setEdges((eds) => eds.concat(rfEdges));
-      // setNodes((nds) => {
-      //   console.log("current nodes after set: ", nds);
-      //   return nds;
-      // })
-      
+      }) // this potentially creates duplicate nodes when we remove an edge from a node that has open in/outgoing neighbours
+    
       
     } else {
       console.log("hide");
@@ -306,9 +300,9 @@ function LineageTabCore(props: flowProps) {
                                                                              : graph.getDirectAncestors(currNode!, 'all') as [GraphNode[], GraphEdge[]];
       const reachableNodeIds: string[] = reachableNodes.map((node) => {return node.id});
       const reachableEdgeIds: string[] = reachableEdges.map((edge) => {return edge.id});
+      // TODO: update number of in/out aactive edges currNode.activeIn/out -= ..., if currNode.activeIn/Out > 0, do not filter
       setNodes((nds) => nds.filter(n => !reachableNodeIds.includes(n.id)));
       setEdges((eds) => eds.filter(e => !reachableEdgeIds.includes(e.id)));
-      // an extra layouting step might be needed here
     }
   }, [])
 
@@ -371,7 +365,7 @@ function LineageTabCore(props: flowProps) {
   function resetViewPortCentered(rfi: ReactFlowInstance | null): void {
     if (rfi && nodes?.length) {
       const filteredCenterNode = nodes.filter(node => node.data.graphNodeProps.isCenterNode);
-      const n = rfi.getNode(filteredCenterNode[0].id)
+      const n = rfi.getNode(filteredCenterNode[0].id);
       const width = n?.width!;
       const height = n?.height!;
       rfi.setViewport({x: n?.positionAbsolute?.x! + width, y: n?.positionAbsolute?.y! + height, zoom: rfi?.getZoom() || 1})

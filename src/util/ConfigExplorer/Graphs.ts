@@ -8,7 +8,7 @@ import { ConfigData } from './ConfigData';
 import assert from 'assert';
 
 import {Node as ReactFlowNode, Edge as ReactFlowEdge} from 'react-flow-renderer'
-import { isArray, isArrayOfT } from '../helpers';
+import { removeDuplicatesFromObjArrayOnAttributes } from '../helpers';
 
 
 
@@ -165,8 +165,8 @@ export class DAGraph {
         this.sinkNodes = this.#computeSinkNodes();
         if (mergeEdges){
             this.#mergeCommonActionEdges(); 
-            this.nodes = this.removeDuplicatesFromObjArrayOnAttributes(this.nodes, ["id"]);
-            this.edges = this.removeDuplicatesFromObjArrayOnAttributes(this.edges, ["id"])
+            this.nodes = removeDuplicatesFromObjArrayOnAttributes(this.nodes, ["id"]);
+            this.edges = removeDuplicatesFromObjArrayOnAttributes(this.edges, ["id"])
         }
     }
 
@@ -340,25 +340,6 @@ export class DAGraph {
         return [Array.from(visitedNodes.values()), Array.from(visitedEdges.values())]
     }
 
-    /**
-     * Remove elements from array that have the same specified attributes.
-     * 
-     * @param {T} arr - The array we want to filter
-     * @param {string[]} attr - An array of attributes we want to filter on. If undefined, this function returns the unmodified input array.
-     * 
-     * @returns {T} The filtered array
-     */
-    removeDuplicatesFromObjArrayOnAttributes<T>(arr: T[], attr: string[] | undefined){ 
-        if (attr !== undefined){
-            if (attr!.length === 0){
-                return [...new Map(arr.map(v => [JSON.stringify(v), v])).values()];
-            } else {
-                return arr.filter((v,i,a) => a.findIndex(v2 => attr.every(k => v2[k] === v[k])) === i)
-            }
-        } else {
-            return arr;
-        }
-    }
 
 
     /*
