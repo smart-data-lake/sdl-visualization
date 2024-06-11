@@ -110,7 +110,7 @@ function createReactFlowNodes(selectedNodes: GraphNode[],
                                 graphView === 'data' ? props.configData?.dataGraph! :
                                 props.configData?.fullGraph!;
   const isHorizontal = layoutDirection === 'LR';
-  const nodes = dataObjectsAndActions.nodes?.filter(node => selectedNodes.includes(node)); // verify the usage of .includes, whether to use includes id instead
+  // const nodes = dataObjectsAndActions.nodes?.filter(node => selectedNodes.includes(node)); // verify the usage of .includes, whether to use includes id instead
   const centerNode = dataObjectsAndActions.getNodeById(dataObjectsAndActions.centerNodeId)!;
   const targetPos = isHorizontal ? Position.Left : Position.Top;
   const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
@@ -126,7 +126,7 @@ function createReactFlowNodes(selectedNodes: GraphNode[],
   // TODO: initialize neighbour node/full graph in/out active degrees 
   // Because we don't recreate the reactflow nodes and edges, the created elements are the one that should be visible
   var result: ReactFlowNode[] = []; 
-  nodes.forEach((node)=>{
+  selectedNodes.forEach((node)=>{
     const dataObject = node
     const nodeType = dataObject.nodeType;
     const [directFwdNodes, ] = dataObjectsAndActions.getOutElems(node.id);
@@ -273,11 +273,15 @@ function LineageTabCore(props: flowProps) {
 
     if(!isExpanded){
       console.log("expand");
+      console.log("expand dir: ", expandDirection)
+      console.log("rsgeo config endpoints: ", graph.edges.filter(e => e.fromNode.id === "rsgeo-config" || e.toNode.id === "rsgeo-config"));
       let [neighbourNodes, neighbourEdges] = expandDirection === 'forward' ? graph.getOutElems(id) : graph.getInElems(id); // all positions are 0,0 here
+      console.log("filtered neighbour nodes for ", id, ":", neighbourNodes)
       let rfNodes = createReactFlowNodes(neighbourNodes, layoutDirection, !onlyDirectNeighbours[0], graphView, expandNodeFunc, props);
       let rfEdges = createReactFlowEdges(neighbourEdges, props, graphView, undefined);
       // current workaround: auto layout in setNodes
       // TODO: update number of in/out active edges currNode.activeOut += neighburNodes.length
+      console.log("created rfNodes: ", rfNodes, "rfEdges: ", rfEdges);
       setEdges((eds) => {
         rfEdges = Array.from(new Set([...eds, ...rfEdges]));
         return rfEdges;
