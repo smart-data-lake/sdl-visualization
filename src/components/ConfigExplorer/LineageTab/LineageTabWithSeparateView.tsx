@@ -279,15 +279,14 @@ function LineageTabCore(props: flowProps) {
       // current workaround: auto layout in setNodes
       // TODO: update number of in/out active edges currNode.activeOut += neighburNodes.length
       setEdges((eds) => {
-        console.log("eds: ", eds)
-        rfEdges = eds.concat(rfEdges);
+        rfEdges = Array.from(new Set([...eds, ...rfEdges]));
         return rfEdges;
       });
       setNodes((nds) => {
-        console.log("nds: ", nds)
-        rfNodes = computeLayout(nds.concat(rfNodes), rfEdges, layoutDirection);
+        rfNodes = computeLayout(nds.concat(rfNodes), rfEdges, layoutDirection); 
+        rfNodes = Array.from(new Set([...rfNodes])); // prevent adding the nodes twice in strict mode, will be changed
         return rfNodes;
-      }) // this potentially creates duplicate nodes when we remove an edge from a node that has open in/outgoing neighbours
+      })
     
       
     } else {
@@ -300,6 +299,7 @@ function LineageTabCore(props: flowProps) {
                                                                              : graph.getDirectAncestors(currNode!, 'all') as [GraphNode[], GraphEdge[]];
       const reachableNodeIds: string[] = reachableNodes.map((node) => {return node.id});
       const reachableEdgeIds: string[] = reachableEdges.map((edge) => {return edge.id});
+      console.log("reachable node ids: ", reachableNodes);
       // TODO: update number of in/out aactive edges currNode.activeIn/out -= ..., if currNode.activeIn/Out > 0, do not filter
       setNodes((nds) => nds.filter(n => !reachableNodeIds.includes(n.id)));
       setEdges((eds) => eds.filter(e => !reachableEdgeIds.includes(e.id)));
