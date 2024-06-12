@@ -14,16 +14,20 @@
 */
 
 // react component imports
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
   MarkerType, Position,
   Edge as ReactFlowEdge,
-  Node as ReactFlowNode
-} from 'react-flow-renderer';
+  Node as ReactFlowNode,
+  useEdgesState,
+  useNodesState
+} from 'reactflow';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ReactFlowInstance, useReactFlow } from 'reactflow';
+// default styling
+import 'reactflow/dist/style.css';
 
 // mui imports
 import Box from '@mui/material/Box';
@@ -238,13 +242,14 @@ function LineageTabCore(props: flowProps) {
    const [layout, setLayout] = useState<LayoutDirection>('TB');
    let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false); 
 
-   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | undefined>(undefined); // can this be replaced by useReactFlow?
+   //const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | undefined>(undefined); // can this be replaced by useReactFlow?
    const reactFlow = useReactFlow();
+   const [reactFlowKey, setReactFlowKey] = useState(1);
   
-   const [nodes, setNodes] = useState<ReactFlowNode<any>[]>([]);
-   const [edges, setEdges] = useState<ReactFlowEdge<any>[]>([]);
-  //  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  // const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+   //const [nodes, setNodes] = useState<ReactFlowNode<any>[]>([]);
+   //const [edges, setEdges] = useState<ReactFlowEdge<any>[]>([]);
+   //const [nodes, setNodes, onNodesChange] = useNodesState([]);
+   //const [edges, setEdges, onEdgesChange] = useEdgesState([]);
  
    const navigate = useNavigate();            // handlers for navigating dataObjects and actions
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
@@ -273,20 +278,16 @@ function LineageTabCore(props: flowProps) {
 
     if(!isExpanded){
       console.log("expand");
-      console.log("expand dir: ", expandDirection)
-      console.log("rsgeo config endpoints: ", graph.edges.filter(e => e.fromNode.id === "rsgeo-config" || e.toNode.id === "rsgeo-config"));
       let [neighbourNodes, neighbourEdges] = expandDirection === 'forward' ? graph.getOutElems(id) : graph.getInElems(id); // all positions are 0,0 here
-      console.log("filtered neighbour nodes for ", id, ":", neighbourNodes)
       let rfNodes = createReactFlowNodes(neighbourNodes, layoutDirection, !onlyDirectNeighbours[0], graphView, expandNodeFunc, props);
       let rfEdges = createReactFlowEdges(neighbourEdges, props, graphView, undefined);
       // current workaround: auto layout in setNodes
       // TODO: update number of in/out active edges currNode.activeOut += neighburNodes.length
-      console.log("created rfNodes: ", rfNodes, "rfEdges: ", rfEdges);
-      setEdges((eds) => {
+      reactFlow.setEdges((eds) => {
         rfEdges = Array.from(new Set([...eds, ...rfEdges]));
         return rfEdges;
       });
-      setNodes((nds) => {
+      reactFlow.setNodes((nds) => {
         rfNodes = computeLayout(nds.concat(rfNodes), rfEdges, layoutDirection); 
         rfNodes = Array.from(new Set([...rfNodes])); // prevent adding the nodes twice in strict mode, will be changed
         return rfNodes;
@@ -303,10 +304,9 @@ function LineageTabCore(props: flowProps) {
                                                                              : graph.getDirectAncestors(currNode!, 'all') as [GraphNode[], GraphEdge[]];
       const reachableNodeIds: string[] = reachableNodes.map((node) => {return node.id});
       const reachableEdgeIds: string[] = reachableEdges.map((edge) => {return edge.id});
-      console.log("reachable node ids: ", reachableNodes);
       // TODO: update number of in/out aactive edges currNode.activeIn/out -= ..., if currNode.activeIn/Out > 0, do not filter
-      setNodes((nds) => nds.filter(n => !reachableNodeIds.includes(n.id)));
-      setEdges((eds) => eds.filter(e => !reachableEdgeIds.includes(e.id)));
+      reactFlow.setNodes((nds) => nds.filter(n => !reachableNodeIds.includes(n.id)));
+      reactFlow.setEdges((eds) => eds.filter(e => !reachableEdgeIds.includes(e.id)));
     }
   }, [])
 
@@ -357,28 +357,24 @@ function LineageTabCore(props: flowProps) {
   }
 
   // reset view port to the center of the lineage graph
-  function resetViewPort(rfi: ReactFlowInstance | null): void {
+  function resetViewPort(): void {
     const filteredCenterNode = nodes.filter(node => node.data.graphNodeProps.isCenterNode);
-    if (rfi && nodes?.length) {
-      const n = rfi.getNode(filteredCenterNode[0].id)
-      rfi.fitView({ nodes: [n as ReactFlowNode], duration: 400 });
-    }
+    const n = reactFlow.getNode(filteredCenterNode[0].id)
+    reactFlow.fitView({ nodes: [n as ReactFlowNode], duration: 400 });
   }
 
   // reset the view port with the center node in the center
-  function resetViewPortCentered(rfi: ReactFlowInstance | null): void {
-    if (rfi && nodes?.length) {
-      const filteredCenterNode = nodes.filter(node => node.data.graphNodeProps.isCenterNode);
-      const n = rfi.getNode(filteredCenterNode[0].id);
-      const width = n?.width!;
-      const height = n?.height!;
-      rfi.setViewport({x: n?.positionAbsolute?.x! + width, y: n?.positionAbsolute?.y! + height, zoom: rfi?.getZoom() || 1})
-    }
+  function resetViewPortCentered(): void {
+    const filteredCenterNode = nodes.filter(node => node.data.graphNodeProps.isCenterNode);
+    const n = reactFlow.getNode(filteredCenterNode[0].id);
+    const width = n?.width!;
+    const height = n?.height!;
+    reactFlow.setViewport({x: n?.positionAbsolute?.x! + width, y: n?.positionAbsolute?.y! + height, zoom: reactFlow?.getZoom() || 1})
   }
 
   // reset node styles on pane click
   function resetEdgeStyles(){
-    setEdges((edge) => {
+    reactFlow.setEdges((edge) => {
       return edge.map((e) =>{
         e.style = {
           ...e.style,
@@ -397,7 +393,7 @@ function LineageTabCore(props: flowProps) {
   }
 
   function resetNodeStyles(){
-    setNodes((node) => {
+    reactFlow.setNodes((node) => {
       return node.map((elem) =>{
         const newElem = {
           ...elem,
@@ -412,58 +408,33 @@ function LineageTabCore(props: flowProps) {
   }
 
   // defines the conditions to (re-)render the lineage graph
-  useEffect(() =>{
+  const [nodes,edges] = useMemo(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
-    setNodes(nodes_init);
-    setEdges(edges_init); 
-    resetViewPortCentered(reactFlowInstance!);
-  }, [hidden,  layout, onlyDirectNeighbours, props, graphView, url, reactFlowInstance]);
+    setReactFlowKey(reactFlowKey+1); // change key to re-create react flow component (and initialize it through default nodes)
+    console.log("initialize flow");
+    return [nodes_init, edges_init];
+  }, [hidden, onlyDirectNeighbours, props, graphView, url, layout]);
 
+  // reset viewport for init elems
+  useEffect(() => {
+    resetViewPortCentered();
+  }, [nodes_init, edges_init]);
+
+  // keep current graph state on layout
   // useEffect(() => {
-  //   // workaround method to get current nodes and edges
-  //   var currRfEdges: ReactFlowEdge[] = [];
-  //   var currRfNodes: ReactFlowNode[] = [];
-
-  //   setEdges((eds) => {
-  //     currRfEdges = eds;
-  //     return currRfEdges;
-  //   }); // called after prepareGraph??
-
-  //   setNodes((nds) => {
-  //     console.log("nds: ", nds)
-  //     currRfNodes = nds;
-  //     return currRfNodes;
-  //   })
-
-  //   console.log("should be called after setNodes printing nds")
-
-  //   console.log("curr eds and nds: ", currRfEdges, currRfNodes);
-  //   if (currRfEdges.length === 0 || currRfNodes.length === 0){
-  //     [nodes_init, edges_init] = prepareAndRenderGraph();
-  //     setNodes(nodes_init);
-  //     setEdges(edges_init); 
-  //   } else {
-  //     setNodes(computeLayout(currRfNodes, currRfEdges, layout));
-  //     setEdges(currRfEdges);
-  //   }
-  //   resetViewPortCentered(reactFlowInstance!);
-  //   console.log("curr eds and nds after set: ", currRfEdges, currRfNodes);
-
-
+  //   let currRfNodes = reactFlow.getNodes();
+  //   let currRfEdges = reactFlow.getEdges();
+  //   currRfNodes = computeLayout(currRfNodes, currRfEdges, layout);
+  //   reactFlow.setNodes(currRfNodes);
+  //   reactFlow.setEdges(currRfEdges);
   // }, [layout])
-
-
-  // set reactflow instance on init so that we can access the internal state of it
-  const onInit = (rfi) => {
-    setReactFlowInstance(rfi);
-  };
 
   // TODO: don't reset the moved edges on click
   const onEdgeClick = (_event, edge: ReactFlowEdge) => {
     // highlight edge and src, target nodes' border
     resetEdgeStyles();
     resetNodeStyles();
-    setNodes((n) => {
+    reactFlow.setNodes((n) => {
       return n.map((elem)=>{
         if (edge.source === elem.id || edge.target === elem.id){
           const newElem = {
@@ -478,7 +449,7 @@ function LineageTabCore(props: flowProps) {
         return elem;
       })
     })
-    setEdges((e) =>{
+    reactFlow.setEdges((e) =>{
       return e.map((elem) =>{
         if(elem.id === edge.id){
           elem.style = {
@@ -499,16 +470,11 @@ function LineageTabCore(props: flowProps) {
   }
 
   const handleCenterFocus = () => {
-    if(reactFlowInstance){
-      resetViewPortCentered(reactFlowInstance);
-    }
-
+      resetViewPortCentered();
   }
 
   const handleResetViewPort = () => {
-    if(reactFlowInstance){
-      resetViewPort(reactFlowInstance);
-    }
+    resetViewPort();
   }
 
 
@@ -522,10 +488,10 @@ function LineageTabCore(props: flowProps) {
       }}
       >
         <ReactFlow
-          onInit={onInit}
+          key={reactFlowKey}
           defaultNodes={nodes}
           defaultEdges={edges}
-          defaultPosition={[0, 0]}
+          defaultViewport={{x:0, y:0, zoom:1}}
           onEdgeClick={onEdgeClick}
           onPaneClick={() => {resetEdgeStyles(); resetNodeStyles();}}
           nodesConnectable={false} 
@@ -535,9 +501,9 @@ function LineageTabCore(props: flowProps) {
           minZoom={0.02}
           maxZoom={3}
         >
-          <Background/>
           {/* <MiniMap/>  */}
           <Controls />
+          <Background/> {/* Background macht fehler "<pattern> attribute x: Expected length, "NaN"!*/}
         </ReactFlow>
           <LineageGraphToolbar
           isPropsConfigDefined={props.configData !== undefined}
@@ -552,7 +518,6 @@ function LineageTabCore(props: flowProps) {
           setGraphView={setGraphView}
           handleOnClickResetViewport={handleResetViewPort}
           handleOnClickCenterFocus={handleCenterFocus}
-          reactFlowInstance={reactFlowInstance}
         />
     </Box>
      

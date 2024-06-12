@@ -6,7 +6,7 @@ import TabList from '@mui/joy/TabList';
 import TabPanel from '@mui/joy/TabPanel';
 import Tabs from '@mui/joy/Tabs';
 import React from 'react';
-import { ReactFlowProvider } from "react-flow-renderer";
+import { ReactFlowProvider } from "reactflow";
 import { useNavigate, useParams } from "react-router-dom";
 import DraggableDivider from "../../layouts/DraggableDivider";
 import { ConfigData } from "../../util/ConfigExplorer/ConfigData";

@@ -7,7 +7,7 @@ import { hierarchy, tree } from 'd3-hierarchy';
 import { ConfigData } from './ConfigData';
 import assert from 'assert';
 
-import {Node as ReactFlowNode, Edge as ReactFlowEdge} from 'react-flow-renderer'
+import {Node as ReactFlowNode, Edge as ReactFlowEdge} from 'reactflow'
 import { removeDuplicatesFromObjArrayOnAttributes } from '../helpers';
 
 

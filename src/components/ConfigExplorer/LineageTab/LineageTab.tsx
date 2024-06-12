@@ -2,7 +2,7 @@ import { AlignVerticalTop } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import { Box, IconButton } from '@mui/joy';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import ReactFlow, { Background, Controls, Edge, MarkerType, Node, Position, applyEdgeChanges, applyNodeChanges } from 'react-flow-renderer';
+import ReactFlow, { Background, Controls, Edge, MarkerType, Node, Position, applyEdgeChanges, applyNodeChanges } from 'reactflow';
 import { useNavigate, useParams } from "react-router-dom";
 import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
 import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions } from '../../../util/ConfigExplorer/Graphs';
@@ -196,7 +196,7 @@ function LineageTab(props: flowProps) {
       <ReactFlow 
         nodes={nodes}
         edges={edges}
-        defaultPosition={[0,0]} 
+        defaultViewport={{x:0, y:0, zoom:1}} 
         onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
         onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
         onNodesChange={onNodesChange}

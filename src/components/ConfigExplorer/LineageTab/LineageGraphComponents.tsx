@@ -26,7 +26,7 @@ import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
 import { flowProps, graphNodeProps } from './LineageTabWithSeparateView';
-import { Position } from 'react-flow-renderer';
+import { Position } from 'reactflow';
 import { reactFlowNodeProps } from './LineageTabWithSeparateView';
 import { layout } from 'dagre';
 
@@ -396,7 +396,7 @@ export const CustomEdge = ({
     targetX,
     targetY,
     targetPosition,
-    borderRadius: 10
+    borderRadius: 10,
   });
 
   // maybe use BaseEdge...

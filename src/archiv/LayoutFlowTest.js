@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import ReactFlow, { addEdge, ConnectionLineType, useNodesState, useEdgesState } from 'react-flow-renderer';
+import ReactFlow, { addEdge, ConnectionLineType, useNodesState, useEdgesState } from 'reactflow';
 import dagre from 'dagre';
 
 const position = { x: 0, y: 0 };
