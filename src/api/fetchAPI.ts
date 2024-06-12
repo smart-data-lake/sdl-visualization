@@ -15,6 +15,7 @@ export interface fetchAPI {
     getWorkflowRunsByDataObject: (name: string) => Promise<any>;
     getUsers: (tenant: string) => Promise<any>;
     addUser: (tenant: string, email: string, access: string) => Promise<any>;
+    removeUser: (tenant: string, email: string) => Promise<any>;
     getTenants: () => Promise<string[]>
     clearCache: () => void;
 }

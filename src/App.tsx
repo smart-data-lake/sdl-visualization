@@ -16,6 +16,7 @@ import { Amplify, Auth } from 'aws-amplify';
 import { amplifyTheme } from './theme';
 import Setting from './components/Settings/Setting';
 import ErrorBoundary from './layouts/ErrorBoundary';
+import { UserProvider } from "./hooks/useUser";
 
 /**
  * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
@@ -60,7 +61,13 @@ export default function App() {
   return (
     <ThemeProvider theme={amplifyTheme}>
       {!manifest?.auth && <MainContent />}
-      {manifest?.auth && <Authenticator.Provider><MainContent /></Authenticator.Provider>}
+      {manifest?.auth && (
+        <Authenticator.Provider>
+          <UserProvider>
+            <MainContent />
+          </UserProvider>
+        </Authenticator.Provider>
+      )}
     </ThemeProvider>
   );
 }
