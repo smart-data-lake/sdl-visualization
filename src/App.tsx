@@ -16,6 +16,7 @@ import { Amplify, Auth } from 'aws-amplify';
 import { amplifyTheme } from './theme';
 import Setting from './components/Settings/Setting';
 import ErrorBoundary from './layouts/ErrorBoundary';
+import { WorkspaceProvider } from './hooks/useWorkspace';
 
 /**
  * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
@@ -24,11 +25,11 @@ import ErrorBoundary from './layouts/ErrorBoundary';
 export default function App() {
   
   const {data: manifest} = useManifest();
-  const {data: configData, isLoading} = useConfig(manifest);
+  const {data: configData} = useConfig(manifest);
   
   const root = () => (
     <Routes>
-      <Route element={<RootLayout isLoading={isLoading}/>}>
+      <Route element={<RootLayout />}>
         <Route index element={<Home/>}/>
         <Route path='workflows/' element={<Workflows/>} errorElement={<ErrorBoundary/>}/>
         <Route path='workflows/:flowId' element={<WorkflowHistory/>} errorElement={<ErrorBoundary/>}/>
@@ -38,7 +39,7 @@ export default function App() {
         <Route path='settings/*' element={<Setting />}/>
       </Route>
     </Routes>
-  )
+  );
 
   const router = () => createHashRouter([
     { path: "*", Component: root },    
@@ -51,11 +52,13 @@ export default function App() {
   }, [manifest])
 
   const MainContent = () => (
-    <CssVarsProvider>
-      <CssBaseline />
-      <RouterProvider router={router()}/>
-    </CssVarsProvider>
-  )
+    <WorkspaceProvider>
+      <CssVarsProvider>
+        <CssBaseline />
+        <RouterProvider router={router()} />
+      </CssVarsProvider>
+    </WorkspaceProvider>
+  );
 
   return (
     <ThemeProvider theme={amplifyTheme}>

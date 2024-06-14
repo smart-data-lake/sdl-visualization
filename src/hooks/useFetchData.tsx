@@ -3,8 +3,7 @@ import { getConfiguredFetcher } from "../api/Fetcher";
 import { fetchAPI } from "../api/fetchAPI";
 import { getUrlContent } from "../util/ConfigExplorer/HoconParser";
 import { formatFileSize } from "../util/helpers";
-import { useTenant } from "./TenantProvider";
-
+import { useWorkspace } from "./useWorkspace";
 
 // lazy initialized
 var _fetcher: fetchAPI;
@@ -17,27 +16,46 @@ export function fetcher() {
  * React Query wrapper for fetching data
  **/
 
-
 /**** Workflows  ****/
 export const useFetchWorkflows = () => {
-    const {tenant} = useTenant();
-    return useQuery({queryKey: ['workflows', tenant], queryFn: () => fetcher().getWorkflows(tenant), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
-}
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["workflows", tenant, repo, env],
+    queryFn: () => fetcher().getWorkflows(tenant, repo, env),
+    enabled: !!tenant && !!repo && !!env,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+};
 
 export const useFetchWorkflowRuns = (workflow: string) => {
-    const {tenant} = useTenant();
-    return useQuery({queryKey: ['workflow',workflow, tenant], queryFn: () => fetcher().getWorkflowRuns(tenant, workflow), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
-}
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["workflow", workflow, tenant, repo, env],
+    queryFn: () => fetcher().getWorkflowRuns(tenant, repo, env, workflow),
+    enabled: !!tenant && !!repo && !!env,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+};
+
 export const useFetchWorkflowRunsByElement = (elementType: string, elementName: string) => {
   var queryFn = () => Promise.resolve(undefined as any[]|undefined);
   if (elementType === "dataObjects") queryFn = () => fetcher().getWorkflowRunsByDataObject(elementName)
   if (elementType === "actions") queryFn = () => fetcher().getWorkflowRunsByAction(elementName)
   return useQuery({ queryKey: ['workflowRunByAction', elementType, elementName], queryFn: queryFn, retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
 }
-export const useFetchRun = (name: string, runId: number, attemptId: number) => {
-    const {tenant} = useTenant();
-    return useQuery({queryKey: ['run',name,runId,attemptId, tenant], queryFn: () => fetcher().getRun({tenant, name, runId, attemptId}), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
-}
+
+export const useFetchRun = (application: string, runId: number, attemptId: number) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["run", tenant, repo, env, application, runId, attemptId],
+    queryFn: () => fetcher().getRun({ tenant, repo, env, application, runId, attemptId }),
+    enabled: !!tenant && !!repo && !!env,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+};
 
 /**** index files  ****/
 export interface TsIndexEntry {
@@ -150,17 +168,42 @@ export const useFetchDescription = (elementType: string|undefined, elementName: 
 }
 
 export const useFetchUsers = () => {
-    const {tenant} = useTenant();
-    return useQuery({queryKey: ['users', tenant], queryFn: () => fetcher().getUsers(tenant)})
-}
+  const { tenant } = useWorkspace();
+  return useQuery({ queryKey: ["users", tenant], queryFn: () => fetcher().getUsers(tenant) });
+};
 
 export const useAddUser = () => {
-    const {tenant} = useTenant();
-    return useMutation(({email, access}: any) => fetcher().addUser(tenant,email,access));
-}
+  const { tenant } = useWorkspace();
+  return useMutation(({ email, access }: any) => fetcher().addUser(tenant, email, access));
+};
 
 export const useFetchTenants = () => {
-    return useQuery({queryKey: ['tenants'], queryFn: () => fetcher().getTenants(), retry: false, staleTime: 1000 * 60 * 60 * 24}) //24h
-}
+  return useQuery({
+    queryKey: ["tenants"],
+    queryFn: () => fetcher().getTenants(),
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+};
+
+export const useFetchRepos = (tenant: string) => {
+  return useQuery({
+    queryKey: ["repo", tenant],
+    queryFn: () => fetcher().getRepos(tenant),
+    retry: false,
+    enabled: !!tenant,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+};
+
+export const useFetchEnvs = (tenant: string, repo: string) => {
+  return useQuery({
+    queryKey: ["envs", tenant, repo],
+    queryFn: () => fetcher().getEnvs(tenant, repo),
+    retry: false,
+    enabled: !!tenant && !!repo,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+};
 
 export default useFetchWorkflows;

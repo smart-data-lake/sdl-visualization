@@ -34,15 +34,15 @@ export class fetchAPI_rest implements fetchAPI {
         }
     }
 
-    getWorkflows = (tenant: string) => {
-        return this.fetch(`${this.url}/workflows?tenantName=${tenant}`)
+    getWorkflows = (tenant: string, repo: string, env: string) => {
+        return this.fetch(`${this.url}/workflows?tenant=${tenant}&repo=${repo}&env=${env}`)
             .catch(() => {
                 return [];
             });
     };  
 
-    getWorkflowRuns = (tenant: string, name: string) => {
-        return this.fetch(`${this.url}/workflow?name=${name}&tenantName=${tenant}`);
+    getWorkflowRuns = (tenant: string, repo: string, env: string, application: string) => {
+        return this.fetch(`${this.url}/workflow?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}`);
     };
     
     getWorkflowRunsByAction = (name: string) => {
@@ -55,26 +55,36 @@ export class fetchAPI_rest implements fetchAPI {
         return Promise.resolve([])
     };        
     
-    getRun = async (args: { tenant: string, name: string; runId: number; attemptId: number }) => {
-        return fetch(`${this.url}/run?name=${args.name}&runId=${args.runId}&attemptId=${args.attemptId}&tenantName=${args.tenant}`, await this.getRequestInfo())
+    getRun = async (args: { tenant: string, repo: string, env: string, application: string; runId: number; attemptId: number }) => {
+        return fetch(`${this.url}/state?tenant=${args.tenant}&repo=${args.repo}&env=${args.env}&application=${args.application}&runId=${args.runId}&attemptId=${args.attemptId}`, await this.getRequestInfo())
         .then((res) => res.json());
     };
 
     clearCache = () => undefined    
 
     getUsers = async (tenant: string) => {
-        return fetch(`${this.url}/users/${tenant}`, await this.getRequestInfo())
+        return fetch(`${this.url}/users?tenant=${tenant}`, await this.getRequestInfo())
         .then((res) => res.json());
     }
 
     addUser = async (tenant: string, email: string, access: string) => {
         const requestInfo = await this.getRequestInfo('POST', {'Content-Type': 'application/json'});
         requestInfo.body = JSON.stringify({email, access});
-        return fetch(`${this.url}/users/${tenant}`, requestInfo)
+        return fetch(`${this.url}/users?tenant=${tenant}`, requestInfo)
     }
 
-    async getTenants() {
+    getTenants = async () => {
         return fetch(`${this.url}/tenants`, await this.getRequestInfo())
+        .then((res) => res.json());
+    }
+
+    getRepos = async (tenant: string) => {
+        return fetch(`${this.url}/repo?tenant=${tenant}`, await this.getRequestInfo())
+        .then((res) => res.json());
+    }
+
+    getEnvs = async (tenant: string, repo: string) => {
+        return fetch(`${this.url}/envs?tenant=${tenant}&repo=${repo}`, await this.getRequestInfo())
         .then((res) => res.json());
     }
 }

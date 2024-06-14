@@ -8,7 +8,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     constructor(path: string) {
         if (path) this.statePath = path;
     }
-    
+
     getUsers(tenant: string) {
         return new Promise((r) => r([]));
     };
@@ -66,7 +66,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         }, {});
     }
 
-    getWorkflows = async (tenant: string) => {
+    getWorkflows = async (tenant: string, repo: string, env: string) => {
         return this.reuseIndex()
         .then(data => {
             const workflows = this.groupByWorkflowName(data);
@@ -87,11 +87,11 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     };
     
     
-    getWorkflowRuns = async (tenant: string, name: string) => {
+    getWorkflowRuns = async (tenant: string, repo: string, env: string, application: string) => {
         return this.reuseIndex()
         .then(data => {
             const runs = data
-            .filter(run => run.name === name)
+            .filter(run => run.name === application)
             .sort(compareFunc('attemptStartTime'));
             return runs
         })
@@ -118,11 +118,11 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         })
     };    
     
-    getRun = async (args: {tenant: string, name: string, runId: number, attemptId: number}) => {            
+    getRun = async (args: {tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number}) => {            
         return this.reuseIndex()
-        .then(data => data.filter(run => (run.name === args.name && run.runId === args.runId && run.attemptId === args.attemptId))[0])
+        .then(data => data.filter(run => (run.name === args.application && run.runId === args.runId && run.attemptId === args.attemptId))[0])
         .then(val => { 
-            if (!val) console.log("getRun not found", args.name, args.runId, args.attemptId);
+            if (!val) console.log("getRun not found", args.application, args.runId, args.attemptId);
             return fetch(this.statePath + '/' + val.path)
                     .then(res => res.json())
         })        
@@ -137,6 +137,14 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     }
 
     getTenants() {
-        return new Promise<string[]>(r => r([]))
+        return new Promise<string[]>(r => r(["PrivateTenant"]))
+    }
+
+    getRepos(tenant: string): Promise<any[]> {
+        return new Promise((r) => r(["PrivateRepo"]));
+    }
+  
+    getEnvs(tenant: string, repo: string): Promise<any[]> {
+        return new Promise((r) => r(["PrivateEnv"]));
     }
 }
