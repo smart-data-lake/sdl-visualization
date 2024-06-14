@@ -7,7 +7,7 @@ import { hierarchy, tree } from 'd3-hierarchy';
 import { ConfigData } from './ConfigData';
 import assert from 'assert';
 
-import {Node as ReactFlowNode, Edge as ReactFlowEdge} from 'reactflow'
+import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from 'reactflow'
 import { removeDuplicatesFromObjArrayOnAttributes } from '../helpers';
 
 
@@ -543,6 +543,149 @@ export class DAGraph {
     }
 }
 
+/*
+    Helper functions
+*/
+function getFwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEdge[]{
+    return edges.filter(e => e.source === node.data.label);
+}
+
+function getBwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEdge[]{
+    return edges.filter(e => e.target === node.data.label)
+}
+
+export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward', rfi: ReactFlowInstance): [string[], string[]] {
+
+    const nodes = rfi.getNodes();
+    const edges = rfi.getEdges();
+    const nodeIds: Set<string> = new Set();
+    const edgeIds: Set<string> = new Set();
+    const isFwd = direction === 'forward';
+
+    const visit = (currNode: ReactFlowNode) => {
+        const outEdges = isFwd ? getFwdRfEdges(currNode, edges) :  getBwdRfEdges(currNode, edges);
+
+        outEdges.forEach(edge => {
+            edgeIds.add(edge.id)
+
+            if(isFwd){
+                currNode.data.numFwdActiveEdges -= 1;
+
+                // sanity check
+                if(currNode.data.numFwdActiveEdges < 0){
+                    console.log("FWD WARNING: node ", currNode.id, " has NEGATIVE numFwdActiveEdges: ", currNode.data.numFwdActiveEdges);
+                }
+                const nextNodeId = edge.target;
+                const nextNode = rfi.getNode(nextNodeId)!;
+                nextNode.data.numBwdActiveEdges -= 1;
+
+                if( nextNode.data.numBwdActiveEdges === 0){
+                    nodeIds.add(nextNodeId);
+                    visit(nextNode);
+                }
+            } else {
+                currNode.data.numBwdActiveEdges -= 1;
+
+                // sanity check
+                if(currNode.data.numBwdActiveEdges < 0){
+                    console.log("BWD WARNING: node ", currNode.id, " has NEGATIVE numBwdActiveEdges: ", currNode.data.numBwdActiveEdges);
+                }
+                const nextNodeId = edge.source;
+                const nextNode = rfi.getNode(nextNodeId)!;
+                nextNode.data.numFwdActiveEdges -= 1;
+                if( nextNode.data.numFwdActiveEdges === 0){
+                    nodeIds.add(nextNodeId);
+                    visit(nextNode);
+                }
+            }
+        })
+    }
+
+    visit(node);
+    return [Array.from(nodeIds), Array.from(edgeIds)]
+
+}
+
+/**
+ *  @deprecated
+ */
+export function bfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward', rfi: ReactFlowInstance): [string[], string[]]{
+    // returns an array of node ids and and array of edge ids that should be hidden
+    const nodes = rfi.getNodes();
+    const edges = rfi.getEdges();
+    const nodeIds: Set<string> = new Set();
+    const edgeIds: Set<string> = new Set();
+    const isFwd = direction === 'forward';
+    
+    // get num fwd and bwd edges of all nodes in the expanded subgraph
+    // defer visiting the node (i.e. modifying the number of active edges) until all fwd/bwd edges have been traversed
+    // hence we do not modify the active edges num of a node that can be reached from mutually unreachable nodes
+    const visitedNodes = {};
+    edges.forEach(edge => {
+        const srcNodeId = edge.source;
+        const tgtNodeId = edge.target;
+
+        if( visitedNodes[srcNodeId] === undefined){
+            visitedNodes[srcNodeId] = {
+                fwdEdgesToVisit: 1, 
+                bwdEdgesToVisit: 0 
+            };
+        } else {
+            visitedNodes[srcNodeId].fwdEdgesToVisit += 1;
+        }
+
+        if( visitedNodes[tgtNodeId] === undefined){
+            visitedNodes[tgtNodeId] = {
+                fwdEdgesToVisit: 0, 
+                bwdEdgesToVisit: 1 
+            };
+        } else {
+            visitedNodes[tgtNodeId].bwdEdgesToVisit += 1;
+        }
+    });
+
+    const visit = (currNode: ReactFlowNode) => {
+        const outEdges = isFwd ? getFwdRfEdges(currNode, edges) :  getBwdRfEdges(currNode, edges);
+
+        // the node can be removed if there are no relevant active edges connecting it
+        // dec. num active edges
+        outEdges.forEach(edge => {
+            // mark edge as hidden
+            edgeIds.add(edge.id);
+            if (isFwd){
+                currNode.data.numFwdActiveEdges -= 1;
+                visitedNodes[edge.target].bwdEdgesToVisit -= 1;
+                rfi.getNode(edge.target)!.data.numBwdActiveEdges -= 1;
+            } else {
+                currNode.data.numBwdActiveEdges -= 1;
+                visitedNodes[edge.source].fwdEdgesToVisit -= 1;
+                rfi.getNode(edge.source)!.data.numFwdActiveEdges -= 1;
+            }
+        });
+
+        // mark node as hidden if all reachable paths have been visited and there are no active edges (inEdges if bwd, outEdges if fwd)
+        outEdges.forEach(edge => {
+            var nextNode: ReactFlowNode;
+            if (isFwd){
+                nextNode = rfi.getNode(edge.target)!;
+                if(nextNode.data.numBwdActiveEdges === 0 && visitedNodes[nextNode.id].bwdEdgesToVisit === 0){
+                    nodeIds.add(nextNode.id);
+                    visit(nextNode);
+                }
+            } else {
+                nextNode = rfi.getNode(edge.source)!;  
+                if(nextNode.data.numFwdActiveEdges === 0 && visitedNodes[nextNode.id].fwdEdgesToVisit === 0){
+                    nodeIds.add(nextNode.id);
+                    visit(nextNode);
+                }
+            }
+        })
+    }
+
+    visit(node);
+    return [Array.from(nodeIds), Array.from(edgeIds)]
+}
+
 function getDataObjects(dataObjectsJSON: any): DataObject[]{
     var result: DataObject[] = [];
     const allDataObjects = Object.keys(dataObjectsJSON);
@@ -722,11 +865,6 @@ export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], di
         dagreGraph.setNode(node.id, {width: nodeWidth, height: nodeHeight});
     });
     edges.forEach((edge) =>{
-        // if (isRfn){
-        //     dagreGraph.setEdge(edge.source, edge.target);
-        // } else {
-        //     dagreGraph.setEdge(edge.fromNode.id, edge.toNode.id);
-        // }
         dagreGraph.setEdge(edge.source, edge.target);
         
     });

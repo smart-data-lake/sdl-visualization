@@ -122,7 +122,7 @@ export const CustomDataNode = ( {data} ) => {
   const { props, label, nodeType,
           targetPosition, sourcePosition, 
           progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
-          numBwdExpandedEdges, numFwdExpandedEdges,
+          numBwdActiveEdges, numFwdActiveEdges,
           expandNodeFunc, graphNodeProps, highlighted
   }: reactFlowNodeProps = data;
   const {isSink,  isSource,  
@@ -130,8 +130,6 @@ export const CustomDataNode = ( {data} ) => {
   }: graphNodeProps = graphNodeProps
 
   // init state
-  // console.log("graph node props: ", graphNodeProps)
-  // console.log("props: ", props)
   const [ showDetails, setShowDetails ] = useState(false);
   const initStateBwd = (isCenterNode || isGraphFullyExpanded) && !isSource;
   const initStateFwd = (isCenterNode || isGraphFullyExpanded) && !isSink;
