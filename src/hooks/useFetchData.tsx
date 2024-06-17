@@ -22,7 +22,6 @@ export const useFetchWorkflows = () => {
   return useQuery({
     queryKey: ["workflows", tenant, repo, env],
     queryFn: () => fetcher().getWorkflows(tenant, repo, env),
-    enabled: !!tenant && !!repo && !!env,
     retry: false,
     staleTime: 1000 * 60 * 60 * 24,
   }); //24h
@@ -33,7 +32,6 @@ export const useFetchWorkflowRuns = (workflow: string) => {
   return useQuery({
     queryKey: ["workflow", workflow, tenant, repo, env],
     queryFn: () => fetcher().getWorkflowRuns(tenant, repo, env, workflow),
-    enabled: !!tenant && !!repo && !!env,
     retry: false,
     staleTime: 1000 * 60 * 60 * 24,
   }); //24h
@@ -51,7 +49,6 @@ export const useFetchRun = (application: string, runId: number, attemptId: numbe
   return useQuery({
     queryKey: ["run", tenant, repo, env, application, runId, attemptId],
     queryFn: () => fetcher().getRun({ tenant, repo, env, application, runId, attemptId }),
-    enabled: !!tenant && !!repo && !!env,
     retry: false,
     staleTime: 1000 * 60 * 60 * 24,
   }); //24h

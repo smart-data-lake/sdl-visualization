@@ -137,14 +137,14 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     }
 
     getTenants() {
-        return new Promise<string[]>(r => r(["PrivateTenant"]))
+        return new Promise<string[]>(r => r([]))
     }
 
     getRepos(tenant: string): Promise<any[]> {
-        return new Promise((r) => r(["PrivateRepo"]));
+        return new Promise((r) => r([]));
     }
   
     getEnvs(tenant: string, repo: string): Promise<any[]> {
-        return new Promise((r) => r(["PrivateEnv"]));
+        return new Promise((r) => r([]));
     }
 }

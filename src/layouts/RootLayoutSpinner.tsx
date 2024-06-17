@@ -31,12 +31,11 @@ function WorkspaceSpinner({ children }) {
   const isLoading = isFetchingTenants || isFetchingRepos || isFetchingEnvs;
   const displaySpinner = user && (!workspaceAvailable || isLoading);
 
-  return (
-    <>
-      {displaySpinner && <Spinner />}
-      {!displaySpinner && children}
-    </>
-  );
+  if (displaySpinner) {
+    return <Spinner />;
+  }
+
+  return <>{children}</>;
 }
 
 function RootLayoutSpinner({ children }) {
