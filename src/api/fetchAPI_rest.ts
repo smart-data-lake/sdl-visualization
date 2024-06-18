@@ -77,15 +77,27 @@ export class fetchAPI_rest implements fetchAPI {
     clearCache = () => undefined    
 
     getUsers = async (tenant: string) => {
-        return fetch(`${this.url}/users?tenant=${tenant}`, await this.getRequestInfo())
-        .then((res) => res.json());
-    }
-
+        const response = await fetch(`${this.url}/users?tenant=${tenant}`, await this.getRequestInfo());
+        return await response.json();
+    };
+    
     addUser = async (tenant: string, email: string, access: string) => {
-        const requestInfo = await this.getRequestInfo('POST', {'Content-Type': 'application/json'});
-        requestInfo.body = JSON.stringify({email, access});
-        return fetch(`${this.url}/users?tenant=${tenant}`, requestInfo)
-    }
+        const requestInfo = await this.getRequestInfo("POST", { "Content-Type": "application/json" });
+        requestInfo.body = JSON.stringify({ email, access });
+        const response = await fetch(`${this.url}/users?tenant=${tenant}`, requestInfo);
+        const responseBody = await response.json();
+        if (!response.ok) {
+            throw new Error(responseBody["detail"]);
+        }
+        return responseBody;
+    };
+    
+    removeUser = async (tenant: string, email: string) => {
+        return await fetch(
+            `${this.url}/users?tenant=${tenant}&email=${email}`,
+            await this.getRequestInfo("DELETE", { "Content-Type": "application/json" })
+        );
+    };
 
     getTenants = async () => {
         return fetch(`${this.url}/tenants`, await this.getRequestInfo())

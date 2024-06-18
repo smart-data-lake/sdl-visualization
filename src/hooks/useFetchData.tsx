@@ -176,7 +176,12 @@ export const useFetchUsers = () => {
 export const useAddUser = () => {
   const { tenant } = useWorkspace();
   return useMutation(({ email, access }: any) => fetcher().addUser(tenant, email, access));
-};
+}
+
+export const useRemoveUser = () => {
+  const { tenant } = useWorkspace();
+  return useMutation(({ email }: any) => fetcher().removeUser(tenant, email));
+}
 
 export const useFetchTenants = () => {
   const { authStatus } = useAuthenticator();

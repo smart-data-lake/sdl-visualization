@@ -192,6 +192,10 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         return new Promise((r) => r({}));
     }
 
+    removeUser(tenant: string, email: string) {
+        return new Promise((r) => r({}));
+    }
+
     getTenants() {
         return new Promise<string[]>(r => r([]))
     }

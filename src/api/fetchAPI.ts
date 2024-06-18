@@ -18,6 +18,7 @@ export interface fetchAPI {
     getConfig: (tenant: string, repo: string, env: string, version: string) => Promise<{config: ConfigData}>;
     getUsers: (tenant: string) => Promise<any>;
     addUser: (tenant: string, email: string, access: string) => Promise<any>;
+    removeUser: (tenant: string, email: string) => Promise<any>;
     getTenants: () => Promise<string[]>
     getRepos: (tenant: string) => Promise<any[]>
     getEnvs: (tenant: string, repo: string) => Promise<any[]>
