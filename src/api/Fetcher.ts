@@ -17,12 +17,19 @@ const fetchAPITypes = {
      */
 }
 
-function getFetcherClass(name: string) : new (configString: string) => fetchAPI {
+// lazy initialized
+var _fetcher: fetchAPI;
+export function fetcher() {
+  if (!_fetcher) _fetcher = getConfiguredFetcher();
+  return _fetcher;
+}
+
+function getFetcherClass(name: string) : new (configString: string, baseUrl?: string, env?: string) => fetchAPI {
     return fetchAPITypes[name];
 }
 
-export function getConfiguredFetcher() {
+function getConfiguredFetcher() {
     const manifest = getPersistedManifest();
     const [fetchType, ...rest] = manifest.backendConfig.split(';');
-    return new (getFetcherClass(fetchType))(rest.join(';'));
+    return new (getFetcherClass(fetchType))(rest.join(';'), manifest.baseUrl, manifest.env);
 }

@@ -6,7 +6,6 @@ import Home from './components/HomeMenu/Home';
 import Run from './components/WorkflowsExplorer/Run/Run';
 import WorkflowHistory from './components/WorkflowsExplorer/WorkflowHistory';
 import Workflows from './components/WorkflowsExplorer/Workflows';
-import { useConfig } from './hooks/useConfig';
 import { useManifest } from './hooks/useManifest';
 import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
@@ -25,7 +24,6 @@ import { WorkspaceProvider } from './hooks/useWorkspace';
 export default function App() {
   
   const {data: manifest} = useManifest();
-  const {data: configData} = useConfig(manifest);
   
   const root = () => (
     <Routes>
@@ -35,7 +33,7 @@ export default function App() {
         <Route path='workflows/:flowId' element={<WorkflowHistory/>} errorElement={<ErrorBoundary/>}/>
         <Route path='workflows/:flowId/:runNumber/:taskId/:tab?/:stepName?' element={<Run/>} errorElement={<ErrorBoundary/>}/>
         <Route path='workflows/*' element={<NotFound/>}/>
-        <Route path='config/*' element={<ConfigExplorer configData={configData}/>}/>
+        <Route path='config/*' element={<ConfigExplorer />} errorElement={<ErrorBoundary/>}/>
         <Route path='settings/*' element={<Setting />}/>
       </Route>
     </Routes>

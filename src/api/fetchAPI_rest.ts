@@ -1,11 +1,16 @@
 import { Auth } from "aws-amplify";
 import { fetchAPI } from "./fetchAPI";
+import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 
 export class fetchAPI_rest implements fetchAPI {
     url: string;
+    baseUrl: string | undefined;
+    env: string | undefined;
 
-    constructor(url: string) {
+    constructor(url: string, baseUrl: string | undefined, env: string | undefined) {
         this.url = url;
+        this.baseUrl = baseUrl;
+        this.env = env;
     }
 
     private async fetch(url: string) {
@@ -58,6 +63,15 @@ export class fetchAPI_rest implements fetchAPI {
     getRun = async (args: { tenant: string, repo: string, env: string, application: string; runId: number; attemptId: number }) => {
         return fetch(`${this.url}/state?tenant=${args.tenant}&repo=${args.repo}&env=${args.env}&application=${args.application}&runId=${args.runId}&attemptId=${args.attemptId}`, await this.getRequestInfo())
         .then((res) => res.json());
+    };
+
+    getConfig = async (tenant: string, repo: string, env: string, version: string) => {
+        return fetch(
+            `${this.url}/config?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`,
+            await this.getRequestInfo()
+        )
+        .then((res) => res.json())
+        .then((parsedJson) => ({ ...parsedJson, config: new ConfigData(parsedJson?.config ?? {}) }));
     };
 
     clearCache = () => undefined    

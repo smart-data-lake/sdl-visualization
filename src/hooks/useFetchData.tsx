@@ -1,16 +1,9 @@
 import { useMutation, useQuery } from "react-query";
-import { getConfiguredFetcher } from "../api/Fetcher";
-import { fetchAPI } from "../api/fetchAPI";
 import { getUrlContent } from "../util/ConfigExplorer/HoconParser";
 import { formatFileSize } from "../util/helpers";
 import { useWorkspace } from "./useWorkspace";
-
-// lazy initialized
-var _fetcher: fetchAPI;
-export function fetcher() {
-  if (!_fetcher) _fetcher = getConfiguredFetcher();
-  return _fetcher;
-}
+import { fetcher } from "../api/Fetcher";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 
 /**
  * React Query wrapper for fetching data
@@ -53,6 +46,17 @@ export const useFetchRun = (application: string, runId: number, attemptId: numbe
     staleTime: 1000 * 60 * 60 * 24,
   }); //24h
 };
+
+/**** Config ****/
+export function useFetchConfig(version: string = "1") {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["config", tenant, repo, env, version],
+    queryFn: () => fetcher().getConfig(tenant, repo, env, version),
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+}
 
 /**** index files  ****/
 export interface TsIndexEntry {
@@ -175,30 +179,34 @@ export const useAddUser = () => {
 };
 
 export const useFetchTenants = () => {
+  const { authStatus } = useAuthenticator();
   return useQuery({
     queryKey: ["tenants"],
     queryFn: () => fetcher().getTenants(),
+    enabled: authStatus === "authenticated",
     retry: false,
     staleTime: 1000 * 60 * 60 * 24,
   }); //24h
 };
 
 export const useFetchRepos = (tenant: string) => {
+  const { authStatus } = useAuthenticator();
   return useQuery({
     queryKey: ["repo", tenant],
     queryFn: () => fetcher().getRepos(tenant),
     retry: false,
-    enabled: !!tenant,
+    enabled: authStatus === "authenticated" && !!tenant,
     staleTime: 1000 * 60 * 60 * 24,
   }); //24h
 };
 
 export const useFetchEnvs = (tenant: string, repo: string) => {
+  const { authStatus } = useAuthenticator();
   return useQuery({
     queryKey: ["envs", tenant, repo],
     queryFn: () => fetcher().getEnvs(tenant, repo),
     retry: false,
-    enabled: !!tenant && !!repo,
+    enabled: authStatus === "authenticated" && !!tenant && !!repo,
     staleTime: 1000 * 60 * 60 * 24,
   }); //24h
 };

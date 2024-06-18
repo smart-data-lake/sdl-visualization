@@ -1,3 +1,5 @@
+import { ConfigData } from "../util/ConfigExplorer/ConfigData";
+
 /**
  * The fetchApi interface is the skeletton for any API implementation. It methods must be implemented to create entry points for the 3 main data sources used by the UI.
  * The methods are the following:
@@ -13,6 +15,7 @@ export interface fetchAPI {
     getWorkflowRunsByAction: (name: string) => Promise<any>;
     getRun: (args: {tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number}) => Promise<any>;
     getWorkflowRunsByDataObject: (name: string) => Promise<any>;
+    getConfig: (tenant: string, repo: string, env: string, version: string) => Promise<{config: ConfigData}>;
     getUsers: (tenant: string) => Promise<any>;
     addUser: (tenant: string, email: string, access: string) => Promise<any>;
     getTenants: () => Promise<string[]>

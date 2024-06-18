@@ -1,12 +1,18 @@
+import { ConfigData } from "../util/ConfigExplorer/ConfigData";
+import { getUrlContent, listConfigFiles, parseTextStrict, readConfigIndexFile } from "../util/ConfigExplorer/HoconParser";
 import { compareFunc, onlyUnique } from "../util/helpers";
 import { fetchAPI } from "./fetchAPI";
 
 export class fetchAPI_local_statefiles implements fetchAPI {
     
     statePath: string = "./state";
+    baseUrl: string | undefined;
+    env: string | undefined;
 
-    constructor(path: string) {
+    constructor(path: string, baseUrl: string | undefined, env: string | undefined) {
         if (path) this.statePath = path;
+        this.baseUrl = baseUrl;
+        this.env = env;
     }
 
     getUsers(tenant: string) {
@@ -127,6 +133,56 @@ export class fetchAPI_local_statefiles implements fetchAPI {
                     .then(res => res.json())
         })        
     };
+
+    getConfig(tenant: string, repo: string, env: string, version: string): Promise<{config: ConfigData}> {
+        const baseUrl = this.baseUrl ?? "./";
+        const exportedConfigUrl = baseUrl + "exportedConfig.json";
+        const configUrl = baseUrl + "config";
+        const envConfigUrl = baseUrl + "envConfig";
+    
+        // a) search for exported config in json format
+        return getUrlContent(exportedConfigUrl)
+          .then((jsonStr) => JSON.parse(jsonStr))
+          .catch((err) => {
+            console.log(
+              "Could not get exported config in json format " +
+                exportedConfigUrl +
+                ", will try listing hocon config files. (" +
+                err +
+                ")"
+            );
+            // b) parse config from Hocon Files
+            console.log("reading config from url " + configUrl);
+            // b1) get config file list by listing config directory
+            return listConfigFiles(configUrl, "/")
+              .catch((err) => {
+                // b2) read config file list from static index.json
+                console.log("Could not list files in URL " + configUrl + ", will try reading index file. (" + err + ")");
+                return readConfigIndexFile(configUrl);
+              })
+              .then((files) => {
+                // prepend config directory to files to create relative Url
+                const filesRelUrl = files.map((f) => configUrl + "/" + f);
+                // add environment config file if existing
+                if (this.env) {
+                  const envConfigRelUrl = envConfigUrl + "/" + this.env + ".conf";
+                  // make sure envConfig Url exists
+                  return getUrlContent(envConfigRelUrl).then((_) => {
+                    filesRelUrl.push(envConfigRelUrl);
+                    return filesRelUrl;
+                  });
+                } else {
+                  return filesRelUrl;
+                }
+              })
+              .then((files) => {
+                console.log("config files to read", files);
+                const includeText = files.map((f) => `include "${window.location.origin}/${f}"`).join("\n");
+                return parseTextStrict(includeText);
+              });
+          })
+          .then((parsedConfig) => ({ config: new ConfigData(parsedConfig) }));
+    }
 
     clearCache = () => {
         this._index = undefined;

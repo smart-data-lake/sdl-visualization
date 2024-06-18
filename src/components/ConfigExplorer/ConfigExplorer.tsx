@@ -1,16 +1,16 @@
-import { Sheet } from '@mui/joy';
+import { CircularProgress, Sheet } from '@mui/joy';
 import { useMemo, useRef, useState } from 'react';
 import { Route, Routes } from "react-router-dom";
 import DraggableDivider from '../../layouts/DraggableDivider';
 import PageHeader from '../../layouts/PageHeader';
-import { ConfigData, ConfigDataLists, InitialConfigDataLists, emptyConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
+import { ConfigDataLists, InitialConfigDataLists, emptyConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
 import './App.css';
 import ElementDetails from './ElementDetails';
 import ElementList from './ElementList';
 import ElementTable from './ElementTable';
 import GlobalConfigView from './GlobalConfigView';
 import ErrorBoundary from '../../layouts/ErrorBoundary';
-
+import { useFetchConfig } from '../../hooks/useFetchData';
 
 interface SearchFilterDef {
 	text: string;
@@ -33,11 +33,12 @@ export function applyFilter(configDataLists: InitialConfigDataLists, filter: Sea
     }	
 }
 
-function ConfigExplorer(props: { configData?: ConfigData }) {
-	const { configData } = props;
+function ConfigExplorer() {
+	const { data, isFetching } = useFetchConfig();
 	const listRef = useRef<HTMLDivElement>(null);
 	const parentRef = useRef<HTMLDivElement>(null);  
 	const [filter, setFilter] = useState<SearchFilterDef>();
+	const configData = data?.config;
 
 	const configDataLists = useMemo(() => {
 		if (configData) {
@@ -56,16 +57,22 @@ function ConfigExplorer(props: { configData?: ConfigData }) {
 	}, [filter, configDataLists]);
 
 	return (
-		<Sheet sx={{ display: 'flex', width: '100%', height: '100%', p: '0.1rem 1rem', flexDirection: 'column' }}>
+		<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>
 			<PageHeader title={'Configuration'} noBack={true} />
 			<Sheet sx={{ display: 'flex', width: '100%', flex: 1, minHeight: 0 }} ref={parentRef}>
-				<ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
-				<DraggableDivider id="config-elementlist" cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
-				<Routes>
-					<Route path=":elementType" element={<ElementTable dataLists={filteredConfigDataLists!} />} errorElement={<ErrorBoundary/>} />
-					<Route path=":elementType/:elementName/:tab?" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} errorElement={<ErrorBoundary/>} />
-					<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} errorElement={<ErrorBoundary/>} />
-				</Routes>
+			{!configData || isFetching ? (
+          <CircularProgress />
+        ) : ( 
+					<>
+						<ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
+						<DraggableDivider id="config-elementlist" cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
+						<Routes>
+							<Route path=":elementType" element={<ElementTable dataLists={filteredConfigDataLists!} />} errorElement={<ErrorBoundary/>} />
+							<Route path=":elementType/:elementName/:tab?" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} errorElement={<ErrorBoundary/>} />
+							<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} errorElement={<ErrorBoundary/>} />
+						</Routes>
+					</>
+        )}
 			</Sheet>
 		</Sheet>
 	);

@@ -2,7 +2,6 @@ import { Box, CircularProgress } from "@mui/joy";
 import { useWorkspace } from "../hooks/useWorkspace";
 import { useFetchEnvs, useFetchRepos, useFetchTenants } from "../hooks/useFetchData";
 import { useManifest } from "../hooks/useManifest";
-import { useConfig } from "../hooks/useConfig";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 
 function Spinner() {
@@ -40,9 +39,8 @@ function WorkspaceSpinner({ children }) {
 
 function RootLayoutSpinner({ children }) {
   const { data: manifest, isFetching: isLoadingManifest } = useManifest();
-  const { isFetching: isLoadingConfigData } = useConfig(manifest);
 
-  if (isLoadingManifest || isLoadingConfigData) {
+  if (isLoadingManifest) {
     return <Spinner />;
   }
 
