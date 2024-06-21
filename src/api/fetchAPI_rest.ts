@@ -15,20 +15,24 @@ export class fetchAPI_rest implements fetchAPI {
     }
 
     private async fetch(url: string) {
-        return fetch(url, await this.getRequestInfo())
-            .then((res) => res.json())
-            .then((runs) =>
-            runs.map((run) => {
-                // convert date strings to date
-                run.runStartTime = new Date(run.runStartTime);
-                run.attemptStartTime = new Date(run.attemptStartTime);
-                run.attemptStartTimeMillis = new Date(run.attemptStartTime).getTime(); // needed for HistorBarChart
-                run.runEndTime = new Date(run.runEndTime);
-                run.duration =
-                run.runEndTime.getTime() - run.attemptStartTime.getTime();
-                return run;
-            })
-            );
+        const res = await fetch(url, await this.getRequestInfo());
+        if (res.ok) {
+            return await res.json();
+        }
+        throw new Error(await res.text());
+    }
+
+    private processRuns(runs) {
+        return runs.map((run) => {
+            // convert date strings to date
+            run.runStartTime = new Date(run.runStartTime);
+            run.attemptStartTime = new Date(run.attemptStartTime);
+            run.attemptStartTimeMillis = new Date(run.attemptStartTime).getTime(); // needed for HistorBarChart
+            run.runEndTime = new Date(run.runEndTime);
+            run.duration =
+            run.runEndTime.getTime() - run.attemptStartTime.getTime();
+            return run;
+        });
     }
 
     private async getRequestInfo(method: string = 'GET', headers?: any): Promise<RequestInit> {
@@ -42,13 +46,15 @@ export class fetchAPI_rest implements fetchAPI {
 
     getWorkflows = (tenant: string, repo: string, env: string) => {
         return this.fetch(`${this.url}/workflows?tenant=${tenant}&repo=${repo}&env=${env}`)
-            .catch(() => {
-                return [];
-            });
+        .then(runs => this.processRuns(runs))
+        .catch(() => {
+            return [];
+        });
     };  
 
     getWorkflowRuns = (tenant: string, repo: string, env: string, application: string) => {
-        return this.fetch(`${this.url}/workflow?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}`);
+        return this.fetch(`${this.url}/workflow?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}`)
+        .then(runs => this.processRuns(runs));
     };
     
     getWorkflowRunsByAction = (name: string) => {
@@ -67,45 +73,45 @@ export class fetchAPI_rest implements fetchAPI {
     };
 
     getConfig = async (tenant: string, repo: string, env: string, version: string) => {
-        return fetch(
-            `${this.url}/config?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`,
-            await this.getRequestInfo()
-        )
-        .then((res) => res.json())
-        .then((parsedJson) => new ConfigData(parsedJson?.config ?? {}));
+        return this.fetch(`${this.url}/config?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`)
+        .then((parsedJson) => new ConfigData(parsedJson?.config ?? {}))
+        .catch((error) => {
+            console.log(error);
+            return new ConfigData({});
+        });
     };
 
     getTstampEntries = async (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> => {
-        return fetch(
-            `${this.url}/dataobject/${subtype}/${elementName}/tstamps?tenant=${tenant}&repo=${repo}&env=${env}`,
-            await this.getRequestInfo()
-        )
-        .then((res) => res.json())
+        return this.fetch(`${this.url}/dataobject/${subtype}/${elementName}/tstamps?tenant=${tenant}&repo=${repo}&env=${env}`)
         .then((parsedJson) =>
             parsedJson.map(
                 (ts: number) =>
-                ({ key: `${elementName}.${subtype}.${ts}`, elementName: elementName, tstamp: new Date(ts) } as TstampEntry)
+                    ({ key: `${elementName}.${subtype}.${ts}`, elementName: elementName, tstamp: new Date(ts) } as TstampEntry)
             )
-        );
+        )
+        .catch((error) => {
+            console.log(error);
+            return undefined;
+        });
     }
 
     getSchema = async (schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => {
         if (!schemaTstampEntry?.elementName || !schemaTstampEntry?.tstamp) return Promise.resolve(undefined);
-        return fetch(
-            `${this.url}/dataobject/schema/${schemaTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${schemaTstampEntry.tstamp.getTime()}`,
-            await this.getRequestInfo()
-        )
-        .then((res) => res.json());
+        return this.fetch(`${this.url}/dataobject/schema/${schemaTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${schemaTstampEntry.tstamp.getTime()}`)
+        .catch((error) => {
+            console.log(error);
+            return undefined;
+        });
     }
 
     getStats = async (statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => {
         if (!statsTstampEntry?.elementName || !statsTstampEntry?.tstamp) return Promise.resolve(undefined);
-        return fetch(
-            `${this.url}/dataobject/stats/${statsTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${statsTstampEntry.tstamp.getTime()}`,
-            await this.getRequestInfo()
-        )
-        .then((res) => res.json())
-        .then((parsedJson) => parsedJson.stats);
+        return this.fetch(`${this.url}/dataobject/stats/${statsTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${statsTstampEntry.tstamp.getTime()}`)
+        .then((parsedJson) => parsedJson.stats)
+        .catch((error) => {
+            console.log(error);
+            return undefined;
+        });
     }
 
     clearCache = () => undefined    
