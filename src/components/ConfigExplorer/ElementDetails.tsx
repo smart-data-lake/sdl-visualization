@@ -1,23 +1,20 @@
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
-import { Box, Button, Sheet, Tooltip, Typography } from "@mui/joy";
+import { Box, Button, Sheet, Tooltip } from "@mui/joy";
 import Tab from '@mui/joy/Tab';
 import TabList from '@mui/joy/TabList';
 import TabPanel from '@mui/joy/TabPanel';
 import Tabs from '@mui/joy/Tabs';
 import React from 'react';
-import { ReactFlowProvider } from "react-flow-renderer";
 import { useNavigate, useParams } from "react-router-dom";
 import DraggableDivider from "../../layouts/DraggableDivider";
 import { ConfigData } from "../../util/ConfigExplorer/ConfigData";
 import './ComponentsStyles.css';
 import ConfigurationTab from "./ConfigurationTab";
 import DescriptionTab from "./DescriptionTab";
-import LineageTab from './LineageTab/LineageTab';
 import LineageTabSep from './LineageTab/LineageTabWithSeparateView'; // testing new component
-import { useFetchDataObjectSchemaIndex, useFetchDataObjectStatsIndex, useFetchDescription } from '../../hooks/useFetchData';
+import { useFetchDataObjectSchemaEntries, useFetchDataObjectStatsEntries, useFetchDescription } from '../../hooks/useFetchData';
 import SchemaTab from './SchemaTab';
-import { getLogger } from 'react-query/types/core/logger';
 
 
 export function getMissingDescriptionFileCmp(elementType: string, elementName: string) {
@@ -68,8 +65,8 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
   const setSelectedTab = (v: any) => (tab ? navigateRel(`../${v}`) : navigateRel(`${v}`));
 
   const { data: description, isLoading: descriptionIsLoading } = useFetchDescription(elementType, elementName);
-  const { data: schemaIndex, isLoading: schemaIndexIsLoading } = useFetchDataObjectSchemaIndex(elementType, elementName);
-  const { data: statsIndex } = useFetchDataObjectStatsIndex(elementType, elementName);
+  const { data: schemaEntries, isLoading: schemaEntriesLoading } = useFetchDataObjectSchemaEntries(elementType, elementName);
+  const { data: statsEntries } = useFetchDataObjectStatsEntries(elementType, elementName);
 
   return (
 	<>
@@ -83,9 +80,9 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 								<Tab value="description" disabled={!description}>Description</Tab>
 							</span>
 						</Tooltip>
-						<Tooltip arrow variant="soft" title={(schemaIndexIsLoading ? "Loading" : (!schemaIndex ? getMissingSchemaFileCmp(elementType!, elementName!) : null))} enterDelay={500} enterNextDelay={500} placement='bottom-start'>
+						<Tooltip arrow variant="soft" title={(schemaEntriesLoading ? "Loading" : (!schemaEntries ? getMissingSchemaFileCmp(elementType!, elementName!) : null))} enterDelay={500} enterNextDelay={500} placement='bottom-start'>
 							<span>
-								{elementType === "dataObjects" && <Tab value="schema" disabled={!schemaIndex}>Schema</Tab>}
+								{elementType === "dataObjects" && <Tab value="schema" disabled={!schemaEntries}>Schema</Tab>}
 							</span>
 						</Tooltip>
 					</TabList>
@@ -107,7 +104,7 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 					}
 				</Sheet>
 				<TabPanel value="configuration" className="content-panel" sx={{height: '100%', width: '100%', overflow: 'auto'}}>
-					<ConfigurationTab data={configObj} connection={connectionConfigObj} statsIndex={statsIndex} elementName={elementName!} elementType={elementType!} />
+					<ConfigurationTab data={configObj} connection={connectionConfigObj} statsEntries={statsEntries} elementName={elementName!} elementType={elementType!} />
 				</TabPanel>
 				<TabPanel value="description" className="content-panel" sx={{height: '100%', width: '100%', overflow: 'auto'}}>
 					<DescriptionTab data={description!} elementName={elementName!} elementType={elementType!}/>
@@ -115,7 +112,7 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 				{elementType === "dataObjects" && 
 				// key is needed to force rerender of DataTable in SchemaTab, otherwise column changes might not be reflected.
 				<TabPanel key={elementName} value="schema" className="content-panel" sx={{height: '100%', width: '100%', overflow: 'auto'}}>
-					<SchemaTab columnDescriptions={configObj?._columnDescriptions} schemaIndex={schemaIndex} statsIndex={statsIndex} elementName={elementName!} elementType={elementType!}/>
+					<SchemaTab columnDescriptions={configObj?._columnDescriptions} schemaEntries={schemaEntries} statsEntries={statsEntries} elementName={elementName!} elementType={elementType!}/>
 				</TabPanel>}
 			</Tabs>
 		</Sheet>

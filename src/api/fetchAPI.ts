@@ -1,3 +1,4 @@
+import { SchemaData, Stats, TstampEntry } from "../types";
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 
 /**
@@ -15,7 +16,10 @@ export interface fetchAPI {
     getWorkflowRunsByAction: (name: string) => Promise<any>;
     getRun: (args: {tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number}) => Promise<any>;
     getWorkflowRunsByDataObject: (name: string) => Promise<any>;
-    getConfig: (tenant: string, repo: string, env: string, version: string) => Promise<{config: ConfigData}>;
+    getConfig: (tenant: string, repo: string, env: string, version: string) => Promise<{ config: ConfigData }>;
+    getTstampEntries: (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string) => Promise<TstampEntry[] | undefined>;
+    getSchema(schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<SchemaData | undefined>;
+    getStats(statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<Stats  | undefined>;
     getUsers: (tenant: string) => Promise<any>;
     addUser: (tenant: string, email: string, access: string) => Promise<any>;
     removeUser: (tenant: string, email: string) => Promise<any>;

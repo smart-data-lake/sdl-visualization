@@ -1,6 +1,7 @@
+import { SchemaData, Stats, TstampEntry } from "../types";
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { getUrlContent, listConfigFiles, parseTextStrict, readConfigIndexFile } from "../util/ConfigExplorer/HoconParser";
-import { compareFunc, onlyUnique } from "../util/helpers";
+import { compareFunc, formatFileSize, onlyUnique } from "../util/helpers";
 import { fetchAPI } from "./fetchAPI";
 
 export class fetchAPI_local_statefiles implements fetchAPI {
@@ -182,6 +183,53 @@ export class fetchAPI_local_statefiles implements fetchAPI {
               });
           })
           .then((parsedConfig) => ({ config: new ConfigData(parsedConfig) }));
+    }
+
+    getTstampFromFilename(filename: string): Date {
+        const matches = filename.match(/\.([0-9]+)\./);
+        if (!matches || matches.length < 2) {
+            throw new Error("Cannot parse timestamp from filename " + filename);
+        }
+        return new Date(parseInt(matches[1]) * 1000);
+    }
+
+    getTstampEntries(type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> {
+        const filename = `/${type}/${elementName}.${subtype}.index`;
+        console.log("fetching file " + filename);
+        return getUrlContent(filename)
+            .then((content: string) =>
+                content
+                .split(/\r?\n/)
+                .filter((e) => e.length > 0)
+                .map((e) => {
+                    return { key: e, elementName: elementName, tstamp: this.getTstampFromFilename(e) } as TstampEntry;
+                })
+                .reverse()
+            )
+            .catch((error) => { console.log(error, filename); return undefined; });
+    }
+
+    getSchema(schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) {
+        if (!schemaTstampEntry?.key) return Promise.resolve(undefined);
+        const filename = "/schema/" + schemaTstampEntry!.key; //file must be in public/schema folder
+        return getUrlContent(filename)
+            .then((str) => JSON.parse(str) as SchemaData)
+            .catch((error) => { console.log(error); return undefined; });
+    }
+
+    getStats(statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) {
+        if (!statsTstampEntry?.key) return Promise.resolve(undefined);
+        const filename = "/schema/"+ statsTstampEntry!.key; //file must be in public/schema folder
+        return getUrlContent(filename)
+            .then((str) => {
+                const obj = JSON.parse(str)
+                Object.keys(obj).forEach((key) => {
+                    if (key.endsWith("At") && typeof obj[key] === "number") obj[key] = new Date(obj[key]);
+                    if (key.endsWith("InBytes") && typeof obj[key] === "number") obj[key] = formatFileSize(obj[key]!);
+                })
+                return obj as Stats;
+            })
+            .catch((error) => { console.log(error); return undefined; });
     }
 
     clearCache = () => {

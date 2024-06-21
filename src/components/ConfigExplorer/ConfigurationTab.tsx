@@ -8,20 +8,20 @@ import Option from '@mui/joy/Option';
 import 'github-markdown-css/github-markdown.css';
 import { useEffect, useState } from 'react';
 import { Link } from "react-router-dom";
-import { Stats, TsIndexEntry, useFetchDataObjectStats, useFetchWorkflowRunsByElement } from '../../hooks/useFetchData';
+import { useFetchDataObjectStats, useFetchWorkflowRunsByElement } from '../../hooks/useFetchData';
 import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
 import { getPropertyByPath } from '../../util/helpers';
 import './ComponentsStyles.css';
 import ConfigurationAccordions from './ConfigurationAccordions';
 import MarkdownComponent from './MarkdownComponent';
 import { createPropertiesComponent } from './PropertiesComponent';
-import { cellIconRenderer } from './DataTable';
 import { getIcon } from '../../util/WorkflowsExplorer/StatusInfo';
+import { Stats, TstampEntry } from '../../types';
 
 interface ElementProps {
   data: any; // config of object to display
   connection?: any; // connection config of object to display  
-  statsIndex?: TsIndexEntry[]; // index of available statistics files, ordered from youngest to oldest
+  statsEntries?: TstampEntry[]; // list of available statistics entries, ordered from youngest to oldest
   elementName: string;
   elementType: string;
 }
@@ -98,16 +98,16 @@ export function createSimpleChip(name: string) {
 export default function ConfigurationTab(props: ElementProps) {
 
   // store the current stats entry to display
-  const [statsEntry, setStatsEntry] = useState<TsIndexEntry>();
+  const [statsEntry, setStatsEntry] = useState<TstampEntry>();
 
   // initialize stats entry if not yet set
   useEffect(() => {
-    if (statsEntry && !props.statsIndex) {
+    if (statsEntry && !props.statsEntries) {
       setStatsEntry(undefined);
-    } else if (props.statsIndex && (!statsEntry  || (statsEntry && props.statsIndex && props.statsIndex.findIndex((e) => e.filename == statsEntry.filename) < 0))) {
-      setStatsEntry(props.statsIndex[0]);
+    } else if (props.statsEntries && (!statsEntry  || (statsEntry && props.statsEntries && props.statsEntries.findIndex((e) => e.key == statsEntry.key) < 0))) {
+      setStatsEntry(props.statsEntries[0]);
     }
-  }, [props.statsIndex]);
+  }, [props.statsEntries]);
 
 	const { data: stats } = useFetchDataObjectStats(statsEntry);
 
@@ -165,8 +165,8 @@ export default function ConfigurationTab(props: ElementProps) {
     const statsPrep = {...stats};
     if (Object.keys(statsPrep).length > 0) {    
       statsPrep['Exported at'] = (
-        <Select variant="plain" size='sm' value={statsEntry?.filename} onChange={(ev, value) => setStatsEntry(props.statsIndex?.find((e) => e.filename === value))}>
-          {props.statsIndex?.map((e) => <Option key={e.filename} value={e.filename}>{formatTimestamp(e.ts)}</Option>)}
+        <Select variant="plain" size='sm' value={statsEntry?.key} onChange={(ev, value) => setStatsEntry(props.statsEntries?.find((e) => e.key === value))}>
+          {props.statsEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTimestamp(e.tstamp)}</Option>)}
         </Select>      
       )
     }

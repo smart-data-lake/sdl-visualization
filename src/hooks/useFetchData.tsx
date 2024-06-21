@@ -1,9 +1,9 @@
 import { useMutation, useQuery } from "react-query";
 import { getUrlContent } from "../util/ConfigExplorer/HoconParser";
-import { formatFileSize } from "../util/helpers";
 import { useWorkspace } from "./useWorkspace";
 import { fetcher } from "../api/Fetcher";
 import { useAuthenticator } from "@aws-amplify/ui-react";
+import { TstampEntry } from "../types";
 
 /**
  * React Query wrapper for fetching data
@@ -58,105 +58,69 @@ export function useFetchConfig(version: string = "1") {
   }); //24h
 }
 
-/**** index files  ****/
-export interface TsIndexEntry {
-  filename: string;
-  ts: Date;
+/**** DataObject schema entries with tstamp  ****/
+function getSchemaEntries(
+  elementType: string | undefined,
+  elementName: string | undefined,
+  tenant: string,
+  repo: string,
+  env: string
+): Promise<TstampEntry[] | undefined> {
+  if (elementType != "dataObjects" || !elementType || !elementName) return Promise.resolve(undefined); // Schemas only exists for data objects
+  return fetcher().getTstampEntries("schema", "schema", elementName, tenant, repo, env);
 }
-function getTsFromIndexFilename(statsFile: string): Date {
-  const matches = statsFile.match(/\.([0-9]+)\./);
-  if (!matches || matches.length < 2) throw new Error("Cannot parse timestamp from filename "+statsFile)
-  return new Date(parseInt(matches[1]) * 1000);
-}
-function getTsIndex(type: string, subtype: string, elementName: string): Promise<TsIndexEntry[] | undefined> {
-	const filename = `/${type}/${elementName}.${subtype}.index`;
-  console.log("fetching file " + filename);
-	return getUrlContent(filename)
-	.then((content: string) => 
-    content.split(/\r?\n/)
-    .filter((e) => e.length > 0)
-    .map((e) => {return {filename: e, ts: getTsFromIndexFilename(e)}})
-    .reverse()
-  )
-	.catch((error) => {console.log(error, filename); return undefined});
-}
-
-
-/**** DataObject schema index  ****/
-function getSchemaIndex(elementType: string|undefined, elementName: string|undefined): Promise<TsIndexEntry[] | undefined> {
-	if (elementType != 'dataObjects' || !elementType || !elementName) return Promise.resolve(undefined); // Schemas only exists for data objects
-  return getTsIndex('schema', 'schema', elementName);
-}
-export const useFetchDataObjectSchemaIndex = (elementType: string|undefined, elementName: string|undefined) => {
-  return useQuery({ queryKey: ['schemaIndex', elementType, elementName], queryFn: () => getSchemaIndex(elementType, elementName), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
-}
+export const useFetchDataObjectSchemaEntries = (elementType: string | undefined, elementName: string | undefined) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["schemaEntries", elementType, elementName, tenant, repo, env],
+    queryFn: () => getSchemaEntries(elementType, elementName, tenant, repo, env),
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+};
 
 /**** DataObject schema data ****/
-export interface SchemaColumn {
-  name : string;
-  dataType: string|SchemaArrayType|SchemaStructType;
-  nullable?: boolean;
-}
-export interface SchemaArrayType {
-  dataType: 'array';
-  elementType: string|SchemaArrayType|SchemaStructType;
-}
-export interface SchemaStructType {
-  dataType: 'struct';
-  fields: SchemaColumn[];
-}
-export interface SchemaData{
-  info?: string;
-  schema?: SchemaColumn[];
-}
-function getSchema(schemaFile: string | undefined): Promise<SchemaData | undefined> {
-  if (!schemaFile) return Promise.resolve(undefined);
-	const filename = "/schema/"+ schemaFile; //file must be in public/schema folder
-	return getUrlContent(filename)
-  .then((str) => JSON.parse(str) as SchemaData)
-	.catch((error) => {console.log(error); return undefined})
-}
-export const useFetchDataObjectSchema = (schemaEntry: TsIndexEntry|undefined) => {
-  return useQuery({ queryKey: ['schema',schemaEntry?.filename], queryFn: () => getSchema(schemaEntry?.filename), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
-}
+export const useFetchDataObjectSchema = (schemaEntry: TstampEntry | undefined) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["schema", schemaEntry, tenant, repo, env],
+    queryFn: () => fetcher().getSchema(schemaEntry, tenant, repo, env),
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+};
 
-/**** DataObject statistics index  ****/
-function getStatsIndex(elementType: string|undefined, elementName: string|undefined): Promise<TsIndexEntry[] | undefined> {
-	if (elementType != 'dataObjects' || !elementType || !elementName) return Promise.resolve(undefined); // Statistics only exists for data objects
-  return getTsIndex('schema', 'stats', elementName);
+/**** DataObject statistics entries with tstamp  ****/
+function getStatsEntries(
+  elementType: string | undefined,
+  elementName: string | undefined,
+  tenant: string,
+  repo: string,
+  env: string
+): Promise<TstampEntry[] | undefined> {
+  if (elementType != "dataObjects" || !elementType || !elementName) return Promise.resolve(undefined); // Statistics only exists for data objects
+  return fetcher().getTstampEntries("schema", "stats", elementName, tenant, repo, env);
 }
-export const useFetchDataObjectStatsIndex = (elementType: string|undefined, elementName: string|undefined) => {
-  return useQuery({ queryKey: ['statsIndex', elementType, elementName], queryFn: () => getStatsIndex(elementType, elementName), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
-}
+export const useFetchDataObjectStatsEntries = (elementType: string | undefined, elementName: string | undefined) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["statsEntries", elementType, elementName, tenant, repo, env],
+    queryFn: () => getStatsEntries(elementType, elementName, tenant, repo, env),
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+};
 
 /**** DataObject statistics data  ****/
-export interface Stats {
-  numFiles? : number;
-  numRows? : number;
-  numPartitions? : number;
-  tableSizeInBytes?: string;
-  columns?: {};
-  sizeInBytes?: string;
-  createdAt?: Date;
-  lastModifiedAt?: Date;
-}
-function getStats(statsFile: string | undefined): Promise<Stats | undefined> {
-  if (!statsFile) return Promise.resolve(undefined);
-	const filename = "/schema/"+ statsFile; //file must be in public/schema folder
-	return getUrlContent(filename)
-  .then((str) => {
-    const obj = JSON.parse(str)
-    Object.keys(obj).forEach((key) => {
-      if (key.endsWith("At") && typeof obj[key] === "number") obj[key] = new Date(obj[key]);
-      if (key.endsWith("InBytes") && typeof obj[key] === "number") obj[key] = formatFileSize(obj[key]!);
-    })
-    return obj as Stats;
-  })
-	.catch((error) => {console.log(error); return undefined})
-}
-export const useFetchDataObjectStats = (statsEntry: TsIndexEntry|undefined) => {
-  return useQuery({ queryKey: ['stats',statsEntry?.filename], queryFn: () => getStats(statsEntry?.filename), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
-}
+export const useFetchDataObjectStats = (statsEntry: TstampEntry | undefined) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["stats", statsEntry, tenant, repo, env],
+    queryFn: () => fetcher().getStats(statsEntry, tenant, repo, env),
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+};
 
 /**** Element description markdown files ****/
 function getDescription(elementType: string, elementName: string) {

@@ -1,6 +1,7 @@
 import { Auth } from "aws-amplify";
 import { fetchAPI } from "./fetchAPI";
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
+import { TstampEntry } from "../types";
 
 export class fetchAPI_rest implements fetchAPI {
     url: string;
@@ -73,6 +74,39 @@ export class fetchAPI_rest implements fetchAPI {
         .then((res) => res.json())
         .then((parsedJson) => ({ ...parsedJson, config: new ConfigData(parsedJson?.config ?? {}) }));
     };
+
+    getTstampEntries = async (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> => {
+        return fetch(
+            `${this.url}/dataobject/${subtype}/${elementName}/tstamps?tenant=${tenant}&repo=${repo}&env=${env}`,
+            await this.getRequestInfo()
+        )
+        .then((res) => res.json())
+        .then((parsedJson) =>
+            parsedJson.map(
+                (ts: number) =>
+                ({ key: `${elementName}.${subtype}.${ts}`, elementName: elementName, tstamp: new Date(ts) } as TstampEntry)
+            )
+        );
+    }
+
+    getSchema = async (schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => {
+        if (!schemaTstampEntry?.elementName || !schemaTstampEntry?.tstamp) return Promise.resolve(undefined);
+        return fetch(
+            `${this.url}/dataobject/schema/${schemaTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${schemaTstampEntry.tstamp.getTime()}`,
+            await this.getRequestInfo()
+        )
+        .then((res) => res.json());
+    }
+
+    getStats = async (statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => {
+        if (!statsTstampEntry?.elementName || !statsTstampEntry?.tstamp) return Promise.resolve(undefined);
+        return fetch(
+            `${this.url}/dataobject/stats/${statsTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${statsTstampEntry.tstamp.getTime()}`,
+            await this.getRequestInfo()
+        )
+        .then((res) => res.json())
+        .then((parsedJson) => parsedJson.stats);
+    }
 
     clearCache = () => undefined    
 
