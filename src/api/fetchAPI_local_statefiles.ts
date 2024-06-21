@@ -135,7 +135,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         })        
     };
 
-    getConfig(tenant: string, repo: string, env: string, version: string): Promise<{config: ConfigData}> {
+    getConfig(tenant: string, repo: string, env: string, version: string): Promise<ConfigData> {
         const baseUrl = this.baseUrl ?? "./";
         const exportedConfigUrl = baseUrl + "exportedConfig.json";
         const configUrl = baseUrl + "config";
@@ -182,7 +182,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
                 return parseTextStrict(includeText);
               });
           })
-          .then((parsedConfig) => ({ config: new ConfigData(parsedConfig) }));
+          .then(parsedConfig => new ConfigData(parsedConfig))
     }
 
     getTstampFromFilename(filename: string): Date {

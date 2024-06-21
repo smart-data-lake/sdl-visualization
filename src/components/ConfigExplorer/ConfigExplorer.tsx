@@ -34,11 +34,10 @@ export function applyFilter(configDataLists: InitialConfigDataLists, filter: Sea
 }
 
 function ConfigExplorer() {
-	const { data, isFetching } = useFetchConfig();
+	const { data: configData, isFetching } = useFetchConfig();
 	const listRef = useRef<HTMLDivElement>(null);
 	const parentRef = useRef<HTMLDivElement>(null);  
 	const [filter, setFilter] = useState<SearchFilterDef>();
-	const configData = data?.config;
 
 	const configDataLists = useMemo(() => {
 		if (configData) {

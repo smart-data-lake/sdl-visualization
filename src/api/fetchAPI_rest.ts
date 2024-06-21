@@ -72,7 +72,7 @@ export class fetchAPI_rest implements fetchAPI {
             await this.getRequestInfo()
         )
         .then((res) => res.json())
-        .then((parsedJson) => ({ ...parsedJson, config: new ConfigData(parsedJson?.config ?? {}) }));
+        .then((parsedJson) => new ConfigData(parsedJson?.config ?? {}));
     };
 
     getTstampEntries = async (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> => {
