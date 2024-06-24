@@ -11,11 +11,11 @@ import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { useQueryClient } from "react-query";
 import { closeRowEditors, deleteRow, openRowEditors, saveNewRow, saveRowEditors } from "ka-table/actionCreators";
-import { useTenant } from "../../hooks/TenantProvider";
 import { Permission } from "./model/enums";
 import { useUser } from "../../hooks/useUser";
 import IconButtonWithTooltip from "../Common/IconButtonWithTooltip";
 import { NO_PERMISSION_ACTION_BUTTON } from "../../util/constants/message.constant";
+import { useWorkspace } from "../../hooks/useWorkspace";
 
 interface ITableRendererContext {
   table: ITableInstance;
@@ -89,7 +89,7 @@ const columns: any[] = [
 
 export default function Users() {
   const queryClient = useQueryClient();
-  const { tenant } = useTenant();
+  const { tenant } = useWorkspace();
   const userContext = useUser();
   const { data, isFetching } = useFetchUsers();
   const { mutateAsync: addUserAsync, isLoading: isAdding, error: addUserError } = useAddUser();

@@ -1,6 +1,5 @@
 import { Box, CircularProgress, FormControl, FormLabel, Select, Sheet, Tooltip, Typography } from '@mui/joy';
 import { useEffect, useMemo, useState } from 'react';
-import { SchemaColumn, TsIndexEntry, useFetchDataObjectSchema, useFetchDataObjectStats } from '../../hooks/useFetchData';
 import DataTable, { nestedPropertyRenderer } from './DataTable';
 import { compareFunc, getPropertyByPath, onlyUnique } from '../../util/helpers';
 import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
@@ -8,6 +7,8 @@ import Option from '@mui/joy/Option';
 import { OverflowTooltip } from './OverflowTooltip';
 import { getMissingSchemaFileCmp } from './ElementDetails';
 import InfoBox from './InfoBox';
+import { useFetchDataObjectSchema, useFetchDataObjectStats } from '../../hooks/useFetchData';
+import { SchemaColumn, TstampEntry } from '../../types';
 
 /**
  * Table cell renderer calculating a percentage value against a given base value
@@ -49,33 +50,33 @@ export function tooltipCellRenderer() {
   }
 }
 
-export default function SchemaTab(props: {elementType: string, elementName: string, schemaIndex: TsIndexEntry[] | undefined, statsIndex: TsIndexEntry[] | undefined, columnDescriptions: object|undefined}){
+export default function SchemaTab(props: {elementType: string, elementName: string, schemaEntries: TstampEntry[] | undefined, statsEntries: TstampEntry[] | undefined, columnDescriptions: object|undefined}){
 
   // store the current schema entry to display
-  const [schemaEntry, setSchemaEntry] = useState<TsIndexEntry>();
+  const [schemaEntry, setSchemaEntry] = useState<TstampEntry>();
 
   // initialize schema entry if not yet set
   useEffect(() => {
-    if (schemaEntry && !props.schemaIndex) {
+    if (schemaEntry && !props.schemaEntries) {
       setSchemaEntry(undefined);
-    } else if (props.schemaIndex && (!schemaEntry  || (schemaEntry && props.schemaIndex && props.schemaIndex.findIndex((e) => e.filename == schemaEntry.filename) < 0))) {
-      setSchemaEntry(props.schemaIndex[0]);
+    } else if (props.schemaEntries && (!schemaEntry  || (schemaEntry && props.schemaEntries && props.schemaEntries.findIndex((e) => e.key == schemaEntry.key) < 0))) {
+      setSchemaEntry(props.schemaEntries[0]);
     }
-  }, [props.schemaIndex]);
+  }, [props.schemaEntries]);
   const { data: schema, isLoading: schemaIsLoading } = useFetchDataObjectSchema(schemaEntry);
 
   // store the current stats entry to display
-  const [statsEntry, setStatsEntry] = useState<TsIndexEntry>();
+  const [statsEntry, setStatsEntry] = useState<TstampEntry>();
 
   // initialize stats entry if not yet set
   useEffect(() => {
-    if (statsEntry && !props.statsIndex) {
+    if (statsEntry && !props.statsEntries) {
       setStatsEntry(undefined);
-    } else if (props.statsIndex && (!statsEntry  || (statsEntry && props.statsIndex && props.statsIndex.findIndex((e) => e.filename == statsEntry.filename) < 0))) {
-      setStatsEntry(props.statsIndex[0]);
+    } else if (props.statsEntries && (!statsEntry  || (statsEntry && props.statsEntries && props.statsEntries.findIndex((e) => e.key == statsEntry.key) < 0))) {
+      setStatsEntry(props.statsEntries[0]);
     }
-  }, [props.statsIndex]);
-  const { data: stats, isLoading: statsIsLoading } = useFetchDataObjectStats(statsEntry);
+  }, [props.statsEntries]);
+  const { data: stats } = useFetchDataObjectStats(statsEntry);
 
   // convert schema to rows for DataTable
   // rows must be numbered and reference parent row Id for nested data types.
@@ -224,21 +225,21 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
   return !schemaIsLoading ? (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem', gap: '1rem', width: '100%', height: '100%' }}>
       <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem'}}>
-        {props.schemaIndex && <FormControl>
+        {props.schemaEntries && <FormControl>
           <FormLabel>Schema exported at</FormLabel>
-          <Select size='sm' value={schemaEntry?.filename} onChange={(ev, value) => setSchemaEntry(props.schemaIndex?.find((e) => e.filename === value))}>
-            {props.schemaIndex?.map((e) => <Option key={e.filename} value={e.filename}>{formatTimestamp(e.ts)}</Option>)}
+          <Select size='sm' value={schemaEntry?.key} onChange={(ev, value) => setSchemaEntry(props.schemaEntries?.find((e) => e.key === value))}>
+            {props.schemaEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTimestamp(e.tstamp)}</Option>)}
           </Select>      
         </FormControl>}
-        {props.statsIndex && <FormControl>
+        {props.statsEntries && <FormControl>
           <FormLabel>Statistics exported at</FormLabel>
-          <Select size='sm' value={statsEntry?.filename} onChange={(ev, value) => setStatsEntry(props.statsIndex?.find((e) => e.filename === value))}>
-            {props.statsIndex?.map((e) => <Option key={e.filename} value={e.filename}>{formatTimestamp(e.ts)}</Option>)}
+          <Select size='sm' value={statsEntry?.key} onChange={(ev, value) => setStatsEntry(props.statsEntries?.find((e) => e.key === value))}>
+            {props.statsEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTimestamp(e.tstamp)}</Option>)}
           </Select>      
         </FormControl>}      
       </Box>
       {info && <InfoBox info={info}/>}
-      {schemaRows && columns && <DataTable key={schemaEntry?.filename+'/'+statsEntry?.filename} data={schemaRows} columns={columns} keyAttr="id" treeGroupKeyAttr={'parentId'}/>}
+      {schemaRows && columns && <DataTable key={schemaEntry?.key+'/'+statsEntry?.key} data={schemaRows} columns={columns} keyAttr="id" treeGroupKeyAttr={'parentId'}/>}
     </Sheet>
   ) : <CircularProgress/>
 }

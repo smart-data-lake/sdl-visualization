@@ -1,8 +1,6 @@
 import CloseIcon from '@mui/icons-material/Close';
 import { Box, IconButton, Sheet, Typography } from "@mui/joy";
 import { useNavigate, useParams } from "react-router-dom";
-import { useConfig } from "../../../hooks/useConfig";
-import { useManifest } from "../../../hooks/useManifest";
 import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import { createDataObjectChip } from '../../ConfigExplorer/ConfigurationTab';

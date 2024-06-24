@@ -3,7 +3,7 @@ import { Box, CircularProgress, IconButton, Sheet, Tooltip, Typography } from "@
 import { SortDirection } from 'ka-table';
 import { useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { fetcher, useFetchWorkflowRuns } from "../../hooks/useFetchData";
+import { useFetchWorkflowRuns } from "../../hooks/useFetchData";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
 import { Filter, checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
@@ -11,6 +11,7 @@ import { createFeedChip } from "../ConfigExplorer/ConfigurationTab";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
 import HistoryBarChart from "./HistoryChart/HistoryBarChart";
 import ToolBar from "./ToolBar/ToolBar";
+import { fetcher } from "../../api/Fetcher";
 
 
 export type FilterParams = {

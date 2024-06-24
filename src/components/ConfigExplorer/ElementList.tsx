@@ -197,7 +197,7 @@ export default function ElementList(props: ElementListProps) {
   }
 
   return (
-    <Box sx={{minWidth: '100px', maxWidth: '500px', height: '100%', pt:'1rem', overflowY: 'auto'}} ref={props.mainRef}>
+    <Box sx={{minWidth: '100px', maxWidth: '500px', height: '100%', overflowY: 'auto'}} ref={props.mainRef}>
       <Tooltip arrow title={`Search text for type=${elementSearchType} not valid: ${elementSearchTextErr}`} placement='bottom' color="danger" open={(elementSearchTextErr ? true : false)} variant="soft">
       <Input
         placeholder="Search element"
