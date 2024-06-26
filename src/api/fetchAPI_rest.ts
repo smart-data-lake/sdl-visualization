@@ -28,9 +28,8 @@ export class fetchAPI_rest implements fetchAPI {
             run.runStartTime = new Date(run.runStartTime);
             run.attemptStartTime = new Date(run.attemptStartTime);
             run.attemptStartTimeMillis = new Date(run.attemptStartTime).getTime(); // needed for HistorBarChart
+            run.lastAttemptStartTime = new Date(run.lastAttemptStartTime);
             run.runEndTime = new Date(run.runEndTime);
-            run.duration =
-            run.runEndTime.getTime() - run.attemptStartTime.getTime();
             return run;
         });
     }
