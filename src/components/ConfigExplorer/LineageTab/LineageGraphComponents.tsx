@@ -259,7 +259,7 @@ export const CustomDataNode = ( {data} ) => {
   }
 
   function showObjectName(){
-    return <Tooltip title={`${label}: view details`} placement='right'>
+    return <Tooltip title={`${label}: view details`} arrow>
               <Typography level="body-lg" 
                           sx={{ 
                             fontWeight: 'bold', 
