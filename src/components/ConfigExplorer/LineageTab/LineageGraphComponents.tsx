@@ -28,7 +28,6 @@ import './LineageTab.css';
 import { flowProps, graphNodeProps } from './LineageTabWithSeparateView';
 import { Position } from 'reactflow';
 import { reactFlowNodeProps } from './LineageTabWithSeparateView';
-import { layout } from 'dagre';
 
 /*
   Styles to refactor (for the entire LineageTab folder)
@@ -260,7 +259,7 @@ export const CustomDataNode = ( {data} ) => {
   }
 
   function showObjectName(){
-    return <Tooltip title={`${label}: view details`}>
+    return <Tooltip title={`${label}: view details`} placement='right'>
               <Typography level="body-lg" 
                           sx={{ 
                             fontWeight: 'bold', 

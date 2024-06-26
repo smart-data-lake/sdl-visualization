@@ -555,8 +555,6 @@ function getBwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEd
 }
 
 export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward', rfi: ReactFlowInstance): [string[], string[]] {
-
-    const nodes = rfi.getNodes();
     const edges = rfi.getEdges();
     const nodeIds: Set<string> = new Set();
     const edgeIds: Set<string> = new Set();
@@ -775,7 +773,6 @@ function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean =
                 });
             });
         }
-        
     });
 
     if(getAll){
@@ -789,9 +786,6 @@ function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean =
 //TODO: maybe refactor more code, e.g. extract nodes/edges forEach
 // input types for nodes and edges are maybe too restrictive, only requires edge.id and node.width, height, positions and isCenterNode attributes
 export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'TB'): Node[] {
-    // dummy reactflow typecheck
-    // const isRfn = x => "type" in x;
-    // const isRfArray = isArrayOfT(nodes, isRfn);
 
     //instantiate dagre Graph
     const dagreGraph = new dagre.graphlib.Graph();
@@ -806,13 +800,7 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
         dagreGraph.setNode(node.id, {width: node.width, height: node.height});
     });
     edges.forEach((edge) =>{
-        // if (isRfn){
-        //     dagreGraph.setEdge(edge.source, edge.target);
-        // } else {
-        //     dagreGraph.setEdge(edge.fromNode.id, edge.toNode.id);
-        // }
         dagreGraph.setEdge(edge.fromNode.id, edge.toNode.id);
-        
     });
     dagre.layout(dagreGraph); 
 

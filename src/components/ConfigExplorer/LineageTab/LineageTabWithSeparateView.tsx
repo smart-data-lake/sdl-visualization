@@ -130,7 +130,6 @@ function createReactFlowNodes(selectedNodes: GraphNode[],
   const [centerNodeDirectBwdNodes, ] = dataObjectsAndActions.getInElems(centerNode.id);
   const [reachableNodes, reachableEdges] = [[...fwdNodes, ...bwdNodes], [...fwdEdges, ...bwdEdges]];
   const reachableSubGraph = new PartialDataObjectsAndActions(reachableNodes, reachableEdges, layoutDirection);
-  console.log("reachable subgraph: ", reachableSubGraph)
 
   // If we need more information to be displayed on the node, 
   // just add more fields to the flowProps interface and access it in the custom node component.
@@ -315,11 +314,9 @@ function LineageTabCore(props: flowProps) {
       rfEdges.forEach(rfEdge => {
         if (isFwd) {
           const currNode = reactFlow.getNode(rfEdge.target)!;
-          console.log("currNode before cond update: ", rfEdge.target, currNode, currRfNodes);
           if(currNode !== undefined && currRfNodeIds.includes(currNode.id)){
             currNode.data.numBwdActiveEdges += 1;
           } 
-          console.log("currNode after update: ", rfEdge.target, currNode, currRfNodes);
         } else {
           const currNode = reactFlow.getNode(rfEdge.source)!;
           if(currNode !== undefined && currRfNodeIds.includes(currNode.id)){
@@ -347,7 +344,6 @@ function LineageTabCore(props: flowProps) {
     } else {
       console.log("hide");
       const [nodesIdsToRemove, edgesIdsToRemove] = dfsRemoveRfElems(currRfNode, expandDirection, reactFlow);
-      console.log("nodes and edges to remove: ", nodesIdsToRemove, edgesIdsToRemove)
       reactFlow.setEdges((eds) => eds.filter(e => !edgesIdsToRemove.includes(e.id)));
       reactFlow.setNodes((nds) => { 
         let rfNodes = nds.filter(n => !nodesIdsToRemove.includes(n.id)); 
@@ -364,9 +360,6 @@ function LineageTabCore(props: flowProps) {
     var centralNodeId: string = props.elementName;
 
     // get the right central node for the graph
-    // design choice (currently 2 is implemented):
-    // 1. center the graph globally when we change the graph view while veiwing a node of different type
-    // 2. center the graph to the direct neighbour when we change the graph view while viewing a node of different type
     if (graphView === 'full'){ 
       doa = props.configData!.fullGraph!;
     } else if (graphView === 'data'){
@@ -374,16 +367,16 @@ function LineageTabCore(props: flowProps) {
       if(props.elementType === 'actions'){ 
         // switch to data graph when an action is selected -> navigate to first direct neighbour
         const [neighours, ] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
-        navigate(`/config/dataObjects/${neighours[0].id}`);
-        return [[],[]];
+        centralNodeId = neighours[0].id;
+        navigate(`/config/dataObjects/${centralNodeId}`);
       }
     } else if (graphView === 'action'){
       doa = props.configData!.actionGraph!;
       if (props.elementType === 'dataObjects'){ 
         // switch to action graph when a data object is selected -> navigate to first direct neighbour
         const [neighours, ] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
-        navigate(`/config/actions/${neighours[0].id}`);
-        return [[],[]];
+        centralNodeId = neighours[0].id;
+        navigate(`/config/actions/${centralNodeId}`);
       }
     } else {
       throw Error("Unknown graph view " + graphView);
@@ -396,22 +389,24 @@ function LineageTabCore(props: flowProps) {
     doa.setCenterNode(doa.getNodeById(centralNodeId)!);
 
     // When the layout has changed, the nodes and edges have to be recomputed
-    partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
+    partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId); 
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout, props.configData);
     partialGraph.setCenterNode(partialGraph.getNodeById(centralNodeId)!); // how would props.configData.fullgraph know the new centralId?
-    let nodes = createReactFlowNodes(partialGraphPair[0], 
-                                     layout, 
-                                     !onlyDirectNeighbours[0], 
-                                     false,
-                                     undefined,
-                                     graphView, 
-                                     expandNodeFunc, 
-                                     props);
-    let edges = createReactFlowEdges(partialGraphPair[1],
-                                     props, 
-                                     graphView, 
-                                     undefined);
-      return [nodes, edges];
+    let newNodes = createReactFlowNodes(partialGraphPair[0], 
+                                    layout, 
+                                    !onlyDirectNeighbours[0], 
+                                    false,
+                                    undefined,
+                                    graphView, 
+                                    expandNodeFunc, 
+                                    props);
+    let newEdges = createReactFlowEdges(partialGraphPair[1],
+                                    props, 
+                                    graphView, 
+                                    undefined);
+    
+    return [newNodes, newEdges];
+
   }
 
   // reset view port to the center of the lineage graph
@@ -470,7 +465,6 @@ function LineageTabCore(props: flowProps) {
     [nodes_init, edges_init] = prepareAndRenderGraph();
     nodes_init = computeLayout(nodes_init, edges_init, layout);
     setReactFlowKey(reactFlowKey+1); // change key to re-create react flow component (and initialize it through default nodes)
-    console.log("initialize flow");
     return [nodes_init, edges_init];
   }, [hidden, onlyDirectNeighbours, props, graphView, url, layout]);
 
@@ -479,14 +473,32 @@ function LineageTabCore(props: flowProps) {
     resetViewPortCentered();
   }, [nodes_init, edges_init]);
 
+
   // keep current graph state on layout
   // useEffect(() => {
-  //   [nodes_init, edges_init] = prepareAndRenderGraph(true);
-  // }, [layout])
+  //   const newLayoutDirection = layout === 'TB' ? { source: Position.Bottom, target: Position.Top } 
+  //                                              : { source: Position.Right, target: Position.Left };
+  //   const updatedNodes = computeLayout(reactFlow.getNodes(), reactFlow.getEdges(), layout).map(node => ({
+  //     ...node,
+  //     data: { ...node.data, 
+  //             layoutDirection: layout,
+  //             sourcePosition: newLayoutDirection.source,
+  //             targetPosition: newLayoutDirection.target,
+  //           },
+  //   }));
+  //   const updatedEdges = reactFlow.getEdges().map(edge => ({
+  //     ...edge,
+  //     source: edge.source,
+  //     target: edge.target
+  //   }));
+  //   updatedEdges.forEach(e => console.log(e.sourceHandle, e.targetHandle))
+  //   reactFlow.setNodes(updatedNodes);
+  //   reactFlow.setEdges(updatedEdges);
 
-  // TODO: don't reset the moved edges on click
+  // }, [layout]);
+
+  // highlight edge and src, target nodes' border
   const onEdgeClick = (_event, edge: ReactFlowEdge) => {
-    // highlight edge and src, target nodes' border
     resetEdgeStyles();
     resetNodeStyles();
     reactFlow.setNodes((n) => {
@@ -553,6 +565,7 @@ function LineageTabCore(props: flowProps) {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
+          connectOnClick={false}
           minZoom={0.02}
           maxZoom={3}
         >
