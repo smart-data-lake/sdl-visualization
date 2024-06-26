@@ -6,7 +6,7 @@
     -adjust between node distance (max width and text-overflow)
     -sohuld be able to show all nodes of the same type (generic function in Graph.ts)
 */
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
 import { EdgeProps, Handle, getSmoothStepPath } from 'reactflow';
 
@@ -18,12 +18,27 @@ import { Chip, Divider, IconButton, Tooltip } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
+import IndeterminateCheckBoxOutlinedIcon from '@mui/icons-material/IndeterminateCheckBoxOutlined';
+import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
 
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
-import { flowProps } from './LineageTabWithSeparateView';
+import { flowProps, graphNodeProps } from './LineageTabWithSeparateView';
+import { Position } from 'reactflow';
+import { reactFlowNodeProps } from './LineageTabWithSeparateView';
+
+/*
+  Styles to refactor (for the entire LineageTab folder)
+*/
+const labelColor = '#fcae1e';
+const defaultEdgeColor = '#b1b1b7';
+const highLightedEdgeColor = '#096bde';
+const defaultNodeBorderColor = '#a9a9a9';
+
+const defaultEdgeStrokeWidth = 3
+const highlightedEdgeStrokeWidth = 5;
 
 const dataNodeStyles = {
   padding: '10px',
@@ -48,6 +63,10 @@ const actionNodeStyles = {
     }
   },
 };
+
+const expandButtonStyles = {
+  background: '#fff',
+}
 
 const nodeColors = {
   centralNode: '#addbff',
@@ -98,31 +117,59 @@ function createConnectionChip(name: string){
 }
 
 export const CustomDataNode = ( {data} ) => {
-  const { props, label, isCenterNode, nodeType, targetPosition, sourcePosition, 
-          progress, jsonObject
-  } = data;
+  // destruct data
+  const { props, label, nodeType,
+          targetPosition, sourcePosition, 
+          progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
+          numBwdActiveEdges, numFwdActiveEdges,
+          expandNodeFunc, graphNodeProps, highlighted
+  }: reactFlowNodeProps = data;
+  const {isSink,  isSource,  
+         isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode
+  }: graphNodeProps = graphNodeProps
 
+  // init state
   const [ showDetails, setShowDetails ] = useState(false);
+  const initStateBwd = (isCenterNode || isGraphFullyExpanded) && !isSource;
+  const initStateFwd = (isCenterNode || isGraphFullyExpanded) && !isSink;
+  const [ isExpandedBackward, setIsExpandedBackward ] = useState(initStateBwd); // neighbours are shown by default when creating the subgraph of the center node
+  const [ isExpandedForward, setIsExpandedForward ] = useState(initStateFwd);
   const chartBox = useRef<HTMLDivElement>(); 
-  const progressColor = progress < 30 ? actionNodeStyles.progressBar.color.low : 
-                progress < 70 ? actionNodeStyles.progressBar.color.medium : 
-                progress < 100 ? actionNodeStyles.progressBar.color.high:
-                actionNodeStyles.progressBar.color.done;
-  const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; //'linear-gradient(to right bottom, #430089, #82ffa1)'
+
+  useEffect(() => {
+    setIsExpandedBackward(initStateBwd);
+    setIsExpandedForward(initStateFwd);
+
+  }, [initStateBwd, initStateFwd]);
+
+  const progressColor = progress === undefined ? actionNodeStyles.progressBar.color.done : // dummy placeholder for undefined progres
+                        progress < 30 ? actionNodeStyles.progressBar.color.low : 
+                        progress < 70 ? actionNodeStyles.progressBar.color.medium : 
+                        progress < 100 ? actionNodeStyles.progressBar.color.high:
+                        actionNodeStyles.progressBar.color.done;
+  const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; 
 
   const nodeSubTypeName: string = jsonObject !== undefined ? jsonObject.type : label;
   const nodeTypeName: string = nodeType === NodeType.ActionNode  ? "actions" :
                                nodeType === NodeType.DataNode ? "dataObjects" :
                                "";
-  const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, '') // take the capital letters and the first letter of the camelCase name
-  const schemaViewerURL = 'https://smartdatalake.ch/json-schema-viewer'
+  const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, ''); // take the capital letters and the first letter of the camelCase name
+  const schemaViewerURL = 'https://smartdatalake.ch/json-schema-viewer';
   const { data: runs} = useFetchWorkflowRunsByElement(nodeTypeName, label);
   const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
-  // const totalRuns = runs?.length;
 
   // handlers
   const navigate = useNavigate();
   const url = useParams();
+  const handleOnExpandButtonClick = (direction) => {
+    if(direction === 'forward'){
+      setIsExpandedForward(!isExpandedForward); 
+      expandNodeFunc(label, isExpandedForward, direction, graphView, layoutDirection);
+    } else {
+      setIsExpandedBackward(!isExpandedBackward); 
+      expandNodeFunc(label, isExpandedBackward, direction, graphView, layoutDirection);
+    }
+  }
 
   // navigate to object and show details on label click
   const handleDetailsClick = (props: flowProps, nodeId: string, nodeType: NodeType) => {
@@ -212,7 +259,7 @@ export const CustomDataNode = ( {data} ) => {
   }
 
   function showObjectName(){
-    return <Tooltip title={`${label}: view details`}>
+    return <Tooltip title={`${label}: view details`} arrow>
               <Typography level="body-lg" 
                           sx={{ 
                             fontWeight: 'bold', 
@@ -248,22 +295,30 @@ export const CustomDataNode = ( {data} ) => {
             </>
   }
 
+  //test
+  const expand = true;
   function showProperties(){
     return <IconButton title='Show object properties'
            size="sm" 
-           sx={{display: 'inline', float: 'right'}} onClick={() => setShowDetails(!showDetails)}>
+           sx={{display: 'inline', float: 'right'}} onClick={() => {handleDetailsClick}}>
            {/* {showDetails ?   "hide props": "show props"}   */}
            {showDetails ?  <ExpandLess />: <ExpandMore />}
            </IconButton>
   }
 
+  // the offset is symmetric
+  const isVerticalLayout = sourcePosition === Position.Bottom; // maybe this is a bug because the hanle is not updated in the first change;
+  const handleHOffset = isVerticalLayout ? '1px' : '24px';
+  const handleWOffset = isVerticalLayout ? '24px' : '1px';
+
   return (
-    <Box 
+    <>
+      <Box 
       zIndex={4} 
       ref={chartBox}
       sx={{
         padding: '10px',
-        border: '3px solid #a9a9a9',
+        border: ` ${highlighted ? highlightedEdgeStrokeWidth : defaultEdgeStrokeWidth}px solid ${highlighted ? highLightedEdgeColor : defaultNodeBorderColor}`,
         ...(nodeType === NodeType.ActionNode && {borderRadius: '20px',}),
         minWidth: '200px',
         maxWidth: '200px',
@@ -271,12 +326,20 @@ export const CustomDataNode = ( {data} ) => {
         maxHeight: '95px',
         position: 'relative',
         bgcolor: bgcolor,
-        overflow: 'hidden',
         textOverflow: 'ellipsis',
-        flexDirection: 'row'
       }}
     >
-      <Handle type="source" position={sourcePosition} id={`${label}`}/>
+      <Handle type="source" position={sourcePosition} id={`${label}`} 
+              style={{height: handleHOffset, width: handleWOffset, background: 0, border: 0, 
+                      bottom: (isVerticalLayout ? "10px" : undefined), right: (!isVerticalLayout ? "10px" : undefined)}} 
+              >
+        <IconButton onClick={() => handleOnExpandButtonClick('forward')} sx={{ minHeight: 0, minWidth: 0, padding: 0}}>
+        { (!isSink && (isCenterNodeDescendant || isCenterNode)) && (() => {
+                      if(isExpandedForward) return <IndeterminateCheckBoxOutlinedIcon style={{...expandButtonStyles}}/>
+                      else return <AddBoxOutlinedIcon style={{...expandButtonStyles}} />})()
+        }
+        </IconButton>
+      </Handle>
 
       <div>
         {showObjectTitle()}
@@ -298,8 +361,19 @@ export const CustomDataNode = ( {data} ) => {
         )
       */}
         
-      <Handle type="target" position={targetPosition} id={`${label}`}/>
-    </Box>
+      <Handle type="target" position={targetPosition} id={`${label}`} 
+              style={{height: handleHOffset, width: handleWOffset, background: 0, border: 0, 
+                      top: (isVerticalLayout ? "-14px": undefined), left: (!isVerticalLayout ? "-14px": undefined)}} 
+              >
+        <IconButton onClick={() => handleOnExpandButtonClick('backward')} sx={{ minHeight: 0, minWidth: 0, padding: 0}}>
+        { (!isSource && (isCenterNodeAncestor || isCenterNode)) && (() => {
+                      if(isExpandedBackward) return <IndeterminateCheckBoxOutlinedIcon style={{...expandButtonStyles}}/>
+                      else return <AddBoxOutlinedIcon style={{...expandButtonStyles}} />})()
+        }
+        </IconButton>
+      </Handle>
+      </Box>
+    </>
   );
 };
 
@@ -319,7 +393,7 @@ export const CustomEdge = ({
     targetX,
     targetY,
     targetPosition,
-    borderRadius: 10
+    borderRadius: 10,
   });
 
   // maybe use BaseEdge...

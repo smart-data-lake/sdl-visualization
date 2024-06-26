@@ -51,7 +51,6 @@
     "react-bootstrap": "^2.10.2",
     "react-custom-scrollbars-2": "^4.4.0",
     "react-dom": "^18.2.0",
-    "react-flow-renderer": "^10.3.10",
     "react-markdown": "^8.0.3",
     "react-query": "^3.39.3",
     "react-query-devtools": "^2.6.3",

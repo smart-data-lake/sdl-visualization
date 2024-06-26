@@ -14,28 +14,31 @@
 */
 
 // react component imports
-import { useState, useCallback, useEffect, useRef, useMemo} from 'react';
-import ReactFlow, {Background, MiniMap, Controls, Node as ReactFlowNode, Edge as ReactFlowEdge,
-   MarkerType, Position, updateEdge } from 'react-flow-renderer';
-import { useParams } from 'react-router-dom';
-import { useNavigate } from "react-router-dom";
-import { Panel, useViewport, useNodesState, useEdgesState, ReactFlowInstance, NodeChange } from 'reactflow';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ReactFlow, {
+  Background,
+  Controls,
+  MarkerType, Position,
+  Edge as ReactFlowEdge,
+  Node as ReactFlowNode,
+  useEdgesState,
+  useNodesState
+} from 'reactflow';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ReactFlowInstance, useReactFlow } from 'reactflow';
+// default styling
+import 'reactflow/dist/style.css';
 
 // mui imports
 import Box from '@mui/material/Box';
 
 // local imports
-import {DAGraph, PartialDataObjectsAndActions, DataObjectsAndActionsSep } from '../../../util/ConfigExplorer/Graphs';
+import { ReactFlowProvider } from 'reactflow';
 import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
-import { Node as GraphNode } from '../../../util/ConfigExplorer/Graphs';
-import { Edge as GraphEdge } from '../../../util/ConfigExplorer/Graphs';
-import { NodeType } from '../../../util/ConfigExplorer/Graphs';
-import {CustomDataNode, CustomEdge} from './LineageGraphComponents';
-import { ReactFlowProvider, useReactFlow } from 'reactflow';
-import {DraggableLineageGraphToolbar, LineageGraphToolbar} from './LineageGraphToolbar';
-
-// TODO: add onHover references
-// TODO: implement a nodeFactory? 
+import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions,  dfsRemoveRfElems } from '../../../util/ConfigExplorer/Graphs';
+import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
+import { LineageGraphToolbar } from './LineageGraphToolbar';
+import assert from 'assert';
 
 /*
 Global styles to be refactored
@@ -46,6 +49,10 @@ const highLightedEdgeColor = '#096bde';
 
 const defaultEdgeStrokeWidth = 3
 const highlightedEdgeStrokeWidth = 5;
+
+export type LayoutDirection = 'TB' | 'LR';
+export type ExpandDirection = 'forward' | 'backward'; 
+export type GraphView = 'full' | 'data' | 'action';
 
 
 /*
@@ -67,60 +74,148 @@ export interface flowProps {
   runContext?: boolean;
 }
 
+export interface graphNodeProps {
+  isSink: boolean,
+  isSource: boolean,
+  isCenterNode: boolean,
+  // isCenterNodeDirectFwdNeighbour: boolean,
+  // isCenterNodeDirectBwdNeighbour: boolean,
+  isCenterNodeDescendant: boolean,
+  isCenterNodeAncestor: boolean
+}
 
-function createReactFlowNodes(dataObjectsAndActions: DAGraph, direction: string = 'TB', props: flowProps): ReactFlowNode[] {
-  const isHorizontal = direction === 'LR';
-  const nodes = dataObjectsAndActions.nodes;
+export interface reactFlowNodeProps {
+  props: flowProps,         
+  label: string, 
+  nodeType: NodeType,
+  targetPosition: Position,
+  sourcePosition: Position
+  progress: number | undefined, 
+  jsonObject: any,
+  layoutDirection: LayoutDirection,
+  expandNodeFunc: (id: string,  isExpanded: boolean, direction: ExpandDirection, graphView: GraphView, layout: LayoutDirection) => void
+  graphNodeProps: graphNodeProps,
+  isGraphFullyExpanded: boolean,
+  graphView: GraphView,
+  highlighted: boolean,
+  numFwdActiveEdges: number,
+  numBwdActiveEdges: number, 
+  numFwdEdges: number, // not used for now, but might be helpful
+  numBwdEdges: number
+}
+
+
+function createReactFlowNodes(selectedNodes: GraphNode[],
+                              layoutDirection: LayoutDirection, 
+                              isGraphFullyExpanded: boolean,    
+                              isExpandedNode: boolean,          // The selectedNodes are the newly expanded neighbours of a node
+                              expandDirection: ExpandDirection | undefined,
+                              graphView: GraphView,
+                              expandNodeFunc: (id: string, isExpanded: boolean, direction: ExpandDirection, graphView: GraphView, layout: LayoutDirection) => void, 
+                              props: flowProps 
+                            ): ReactFlowNode[] {
+  const dataObjectsAndActions = graphView === 'action' ? props.configData?.actionGraph! :
+                                graphView === 'data' ? props.configData?.dataGraph! :
+                                props.configData?.fullGraph!;
+  const isHorizontal = layoutDirection === 'LR';
+
+  const centerNode = dataObjectsAndActions.getNodeById(dataObjectsAndActions.centerNodeId)!;
   const targetPos = isHorizontal ? Position.Left : Position.Top;
   const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
-  var result: ReactFlowNode[] = []; 
+  const sinkNodes = dataObjectsAndActions.getSinkNodes();
+  const sourceNodes = dataObjectsAndActions.getSourceNodes();
+  const [fwdNodes, fwdEdges] = dataObjectsAndActions.getDirectDescendants(centerNode, "all") as [GraphNode[], GraphEdge[]];
+  const [bwdNodes, bwdEdges] = dataObjectsAndActions.getDirectAncestors(centerNode, "all") as [GraphNode[], GraphEdge[]];
+  const [centerNodeDirectFwdNodes, ] = dataObjectsAndActions.getOutElems(centerNode.id);
+  const [centerNodeDirectBwdNodes, ] = dataObjectsAndActions.getInElems(centerNode.id);
+  const [reachableNodes, reachableEdges] = [[...fwdNodes, ...bwdNodes], [...fwdEdges, ...bwdEdges]];
+  const reachableSubGraph = new PartialDataObjectsAndActions(reachableNodes, reachableEdges, layoutDirection);
 
   // If we need more information to be displayed on the node, 
   // just add more fields to the flowProps interface and access it in the custom node component.
   // The additional props can be passed in ElementDetails where the LineageTab is opened.
-  nodes.forEach((node)=>{
+  var result: ReactFlowNode[] = []; 
+  selectedNodes.forEach((node)=>{
     const dataObject = node
     const nodeType = dataObject.nodeType;
+    const [currNodeDirectFwdNodes, ] = reachableSubGraph.getOutElems(dataObject.id); // instead of dataObjectsAndActions
+    const [currNodeDirectBwdNodes, ] = reachableSubGraph.getInElems(dataObject.id);
+
+    const isCenterNode = dataObject.isCenterNode;
+    const isSink = sinkNodes.includes(dataObject);
+    const isSource = sourceNodes.includes(dataObject);
+    const isCenterNodeDirectFwdNeighbour = centerNodeDirectFwdNodes.includes(dataObject); 
+    const isCenterNodeDirectBwdNeighbour = centerNodeDirectBwdNodes.includes(dataObject);
+    const isCenterNodeDescendant = fwdNodes.includes(dataObject);
+    const isCenterNodeAncestor = bwdNodes.includes(dataObject);
+
+    const data: reactFlowNodeProps = {
+      props: props,         
+      label: dataObject.id, 
+      nodeType: nodeType,
+      targetPosition: targetPos,
+      sourcePosition: sourcePos,
+      isGraphFullyExpanded: isGraphFullyExpanded,
+      layoutDirection: layoutDirection,
+      graphView: graphView,
+      expandNodeFunc: expandNodeFunc,
+      graphNodeProps: {
+        isCenterNode: isCenterNode, 
+        isSink: isSink,
+        isSource: isSource,
+        // isCenterNodeDirectFwdNeighbour: isCenterNodeDirectFwdNeighbour,
+        // isCenterNodeDirectBwdNeighbour: isCenterNodeDirectBwdNeighbour,
+        isCenterNodeDescendant: isCenterNodeDescendant,
+        isCenterNodeAncestor: isCenterNodeAncestor,
+      },
+      numBwdActiveEdges: (isGraphFullyExpanded || isCenterNode) ? currNodeDirectBwdNodes.length : 
+                         (isCenterNodeDirectFwdNeighbour || (isExpandedNode && expandDirection === 'forward')) ?  1:
+                         0,
+      numFwdActiveEdges: (isGraphFullyExpanded || isCenterNode) ? currNodeDirectFwdNodes.length :
+                         (isCenterNodeDirectBwdNeighbour || (isExpandedNode && expandDirection === 'backward')) ?  1 :
+                         0,
+      numBwdEdges: currNodeDirectBwdNodes.length,
+      numFwdEdges: currNodeDirectFwdNodes.length,
+      // the following are  hard coded for testing
+      progress: nodeType === NodeType.ActionNode ? Math.round(Math.random()*100): undefined, 
+      jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined, 
+      highlighted: false // set by handlers in Core
+    }
+
     const newNode = {
       id: dataObject.id,
       type: 'customDataNode',   // should match the name defined in custom node types
       position: {x: dataObject.position.x, y: dataObject.position.y},
       targetPosition: targetPos, // required for the node positions to actually change internally
       sourcePosition: sourcePos,
-      data: {
-        props: props,         
-        label: dataObject.id, 
-        isCenterNode: dataObject.isCenterNode, 
-        nodeType: nodeType,
-        targetPosition: targetPos,
-        sourcePosition: sourcePos,
-        // the following are hard coded for testing
-        progress: nodeType === NodeType.ActionNode ? (Math.random()*100).toFixed(1) : undefined, 
-        jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node['jsonObject'] : undefined, //TODO: node.jsonObject?
-      },
-
+      data: data,
     } as ReactFlowNode
+
     result.push(newNode);
   });
   return result;
 }
 
 
-function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: string | undefined): ReactFlowEdge[] {
-  var result: ReactFlowEdge[] = [];
+function createReactFlowEdges(selectedEdges: GraphEdge[],
+                              props: flowProps, 
+                              graphView: GraphView,
+                              selectedEdgeId: string | undefined): ReactFlowEdge[] {
+  const dataObjectsAndActions = graphView === 'action' ? props.configData?.actionGraph! :
+                                graphView === 'data' ? props.configData?.dataGraph! :
+                                props.configData?.fullGraph!;
+  const edges = dataObjectsAndActions.edges?.filter(edge => selectedEdges.includes(edge));
   const edgeColor = selectedEdgeId ? highLightedEdgeColor : defaultEdgeColor;
 
-  dataObjectsAndActions.edges.forEach(edge => {
+  var result: ReactFlowEdge[] = [];
+  edges.forEach(edge => {
+    assert(!(edge.toNode.id === undefined || edge.fromNode.id === undefined), "Edge has no source or target")
     const selected = selectedEdgeId === edge.id;
-    const uniqueId =  edge.id + edge.fromNode.id+edge.toNode.id;
+    const uniqueId =  edge.id;
     const fromNodeId = edge.fromNode.id;
     const toNodeId = edge.toNode.id;
-    var newEdge = {} as ReactFlowEdge;
 
-    if (edge.toNode.id === undefined || edge.fromNode.id === undefined) {
-      throw Error("Edge has no source or target");
-    }
-    newEdge = {
+    const newEdge = {
       type: 'customEdge',
       id: uniqueId, // has to be unique, linked to node ids
       source: fromNodeId,
@@ -135,7 +230,6 @@ function createReactFlowEdges(dataObjectsAndActions: DAGraph, selectedEdgeId: st
       labelBgBorderRadius: 8,
       labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke:  labelColor}, 
       style: { stroke:  edgeColor, strokeWidth: defaultEdgeStrokeWidth},
-      // animated:  true, 
     } as ReactFlowEdge;
     result.push(newEdge);
   });
@@ -155,15 +249,18 @@ function LineageTabCore(props: flowProps) {
    let nodes_init: ReactFlowNode[] = [];
    let edges_init: ReactFlowEdge[] = [];
  
-   const [graphView, setGraphView] = useState('full'); // control for action/data/full graph view 
+   const [graphView, setGraphView] = useState<GraphView>('full'); // control for action/data/full graph view 
    const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
-   const [layout, setLayout] = useState('TB');
+   const [layout, setLayout] = useState<LayoutDirection>('TB');
    let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false); 
 
-   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | undefined>(undefined);
+   const reactFlow = useReactFlow();
+   const [reactFlowKey, setReactFlowKey] = useState(1);
   
-   const [nodes, setNodes] = useState<ReactFlowNode<any>[]>([]);
-   const [edges, setEdges] = useState<ReactFlowEdge<any>[]>([]);
+   //const [nodes, setNodes] = useState<ReactFlowNode<any>[]>([]);
+   //const [edges, setEdges] = useState<ReactFlowEdge<any>[]>([]);
+   //const [nodes, setNodes, onNodesChange] = useNodesState([]);
+   //const [edges, setEdges, onEdgesChange] = useEdgesState([]);
  
    const navigate = useNavigate();            // handlers for navigating dataObjects and actions
    const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
@@ -174,15 +271,95 @@ function LineageTabCore(props: flowProps) {
     setOnlyDirectNeighbours([!onlyDirectNeighbours[0], buttonMessage]);
   }
 
-  function prepareAndRenderGraph(): [ReactFlowNode[], ReactFlowEdge[]] { // 
+  const expandNodeFunc = useCallback((id: string, isExpanded: boolean, 
+                                      expandDirection: ExpandDirection, 
+                                      graphView: GraphView,
+                                      layoutDirection: LayoutDirection) => {
+    // if expanded, show the direct out neighbours of the node with the id; if unexpanded, hide all descendants
+    var graph: DAGraph;
+    if (graphView === 'full'){ 
+      graph = props.configData!.fullGraph!;
+    } else if (graphView === 'data'){
+      graph = props.configData!.dataGraph!;
+    } else if (graphView === 'action'){
+      graph = props.configData!.actionGraph!;
+    } else {
+      throw Error("Unknown graph view " + graphView);
+    }
+
+    const isFwd =  expandDirection === 'forward';
+    const currNode = graph.getNodeById(id)!;
+    const currRfNode = reactFlow.getNode(currNode?.id!)!;
+    if(!isExpanded){
+      console.log("expand");
+      let [neighbourNodes, neighbourEdges] = isFwd ? graph.getOutElems(id) : graph.getInElems(id); // all positions are 0,0 here
+
+      // only create not existing nodes, update active edges of exisiting nodes
+      const currRfNodes = reactFlow.getNodes();
+      const currRfNodeIds = currRfNodes.map(rfNode => rfNode.id);
+
+      let rfNodes =  createReactFlowNodes(neighbourNodes.filter(node => !currRfNodeIds.includes(node.id)), 
+                                         layoutDirection, 
+                                         !onlyDirectNeighbours[0], 
+                                         true, 
+                                         expandDirection,
+                                         graphView, 
+                                         expandNodeFunc, 
+                                         props);
+
+      let rfEdges = createReactFlowEdges(neighbourEdges, 
+                                         props, 
+                                         graphView,
+                                         undefined);
+      rfEdges.forEach(rfEdge => {
+        if (isFwd) {
+          const currNode = reactFlow.getNode(rfEdge.target)!;
+          if(currNode !== undefined && currRfNodeIds.includes(currNode.id)){
+            currNode.data.numBwdActiveEdges += 1;
+          } 
+        } else {
+          const currNode = reactFlow.getNode(rfEdge.source)!;
+          if(currNode !== undefined && currRfNodeIds.includes(currNode.id)){
+            currNode.data.numFwdActiveEdges += 1;
+          } 
+        }
+      });
+
+      if(isFwd){
+        currRfNode!.data.numFwdActiveEdges += neighbourEdges.length; 
+      } else {
+        currRfNode!.data.numBwdActiveEdges += neighbourEdges.length; 
+      }
+
+      // current workaround: auto layout in setNodes
+      reactFlow.setEdges((eds) => {
+        rfEdges = Array.from(new Set([...eds, ...rfEdges]));
+        return rfEdges;
+      });
+      reactFlow.setNodes((nds) => {
+        rfNodes = computeLayout(nds.concat(rfNodes), rfEdges, layoutDirection); 
+        rfNodes = Array.from(new Set([...rfNodes])); // prevent adding the nodes twice in strict mode, will be changed
+        return rfNodes;
+      })
+    } else {
+      console.log("hide");
+      const [nodesIdsToRemove, edgesIdsToRemove] = dfsRemoveRfElems(currRfNode, expandDirection, reactFlow);
+      reactFlow.setEdges((eds) => eds.filter(e => !edgesIdsToRemove.includes(e.id)));
+      reactFlow.setNodes((nds) => { 
+        let rfNodes = nds.filter(n => !nodesIdsToRemove.includes(n.id)); 
+        rfNodes = computeLayout(rfNodes, reactFlow.getEdges(), layoutDirection);
+        return rfNodes;
+      });
+      
+    }
+  }, [])
+
+  function prepareAndRenderGraph(): [ReactFlowNode[], ReactFlowEdge[]] { 
     var partialGraphPair: [GraphNode[],GraphEdge[]] = [[],[]];
     var doa: DAGraph;
     var centralNodeId: string = props.elementName;
 
     // get the right central node for the graph
-    // design choice (currently 2 is implemented):
-    // 1. center the graph globally when we change the graph view while veiwing a node of different type
-    // 2. center the graph to the direct neighbour when we change the graph view while viewing a node of different type
     if (graphView === 'full'){ 
       doa = props.configData!.fullGraph!;
     } else if (graphView === 'data'){
@@ -190,58 +367,67 @@ function LineageTabCore(props: flowProps) {
       if(props.elementType === 'actions'){ 
         // switch to data graph when an action is selected -> navigate to first direct neighbour
         const [neighours, ] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
-        navigate(`/config/dataObjects/${neighours[0].id}`);
-        return [[],[]];
+        centralNodeId = neighours[0].id;
+        navigate(`/config/dataObjects/${centralNodeId}`);
       }
     } else if (graphView === 'action'){
       doa = props.configData!.actionGraph!;
       if (props.elementType === 'dataObjects'){ 
         // switch to action graph when a data object is selected -> navigate to first direct neighbour
         const [neighours, ] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
-        navigate(`/config/actions/${neighours[0].id}`);
-        return [[],[]];
+        centralNodeId = neighours[0].id;
+        navigate(`/config/actions/${centralNodeId}`);
       }
     } else {
       throw Error("Unknown graph view " + graphView);
     }
 
     // reset isCenterNode flags otherwise all previous ones will be colored
-    doa.nodes.forEach(node => {
-      node.isCenterNode = false;
-    }) 
+    doa.nodes.forEach((node) => {
+      node.setIsCenterNode(false);
+    });
+    doa.setCenterNode(doa.getNodeById(centralNodeId)!);
 
     // When the layout has changed, the nodes and edges have to be recomputed
-    partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
+    partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId); 
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0],partialGraphPair[1], layout, props.configData);
-    let nodes = createReactFlowNodes(partialGraph, layout, props);
-    let edges = createReactFlowEdges(partialGraph, undefined);
-    return [nodes, edges];
+    partialGraph.setCenterNode(partialGraph.getNodeById(centralNodeId)!); // how would props.configData.fullgraph know the new centralId?
+    let newNodes = createReactFlowNodes(partialGraphPair[0], 
+                                    layout, 
+                                    !onlyDirectNeighbours[0], 
+                                    false,
+                                    undefined,
+                                    graphView, 
+                                    expandNodeFunc, 
+                                    props);
+    let newEdges = createReactFlowEdges(partialGraphPair[1],
+                                    props, 
+                                    graphView, 
+                                    undefined);
+    
+    return [newNodes, newEdges];
+
   }
 
-
   // reset view port to the center of the lineage graph
-  function resetViewPort(rfi: ReactFlowInstance | null): void {
-    const filteredCenterNode = nodes.filter(node => node.data.isCenterNode);
-    if (rfi && nodes?.length) {
-      const n = rfi.getNode(filteredCenterNode[0].id)
-      rfi.fitView({ nodes: [n as ReactFlowNode], duration: 400 });
-    }
+  function resetViewPort(): void {
+    const filteredCenterNode = nodes.filter(node => node.data.graphNodeProps.isCenterNode);
+    const n = reactFlow.getNode(filteredCenterNode[0].id)
+    reactFlow.fitView({ nodes: [n as ReactFlowNode], duration: 400 });
   }
 
   // reset the view port with the center node in the center
-  function resetViewPortCentered(rfi: ReactFlowInstance | null): void {
-    const filteredCenterNode = nodes.filter(node => node.data.isCenterNode);
-    if (rfi && nodes?.length) {
-      const n = rfi.getNode(filteredCenterNode[0].id)
-      const width = n?.width!;
-      const height = n?.height!;
-      rfi.setViewport({x: n?.positionAbsolute?.x! + width, y: n?.positionAbsolute?.y! + height, zoom: rfi?.getZoom() || 1})
-    }
+  function resetViewPortCentered(): void {
+    const filteredCenterNode = nodes.filter(node => node.data.graphNodeProps.isCenterNode);
+    const n = reactFlow.getNode(filteredCenterNode[0].id);
+    const width = n?.width!;
+    const height = n?.height!;
+    reactFlow.setViewport({x: n?.positionAbsolute?.x! + width, y: n?.positionAbsolute?.y! + height, zoom: reactFlow?.getZoom() || 1})
   }
 
   // reset node styles on pane click
   function resetEdgeStyles(){
-    setEdges((edge) => {
+    reactFlow.setEdges((edge) => {
       return edge.map((e) =>{
         e.style = {
           ...e.style,
@@ -259,22 +445,78 @@ function LineageTabCore(props: flowProps) {
     })
   }
 
+  function resetNodeStyles(){
+    reactFlow.setNodes((node) => {
+      return node.map((elem) =>{
+        const newElem = {
+          ...elem,
+          data: {
+            ...elem.data,
+            highlighted: false
+          }
+        }
+        return newElem;
+      })
+    })
+  }
+
   // defines the conditions to (re-)render the lineage graph
-  useEffect(() =>{
+  const [nodes,edges] = useMemo(() =>{
     [nodes_init, edges_init] = prepareAndRenderGraph();
-    setNodes(nodes_init);
-    setEdges(edges_init); 
-    resetViewPortCentered(reactFlowInstance!);
-  }, [hidden, layout, onlyDirectNeighbours, props, graphView, url, reactFlowInstance]);
+    nodes_init = computeLayout(nodes_init, edges_init, layout);
+    setReactFlowKey(reactFlowKey+1); // change key to re-create react flow component (and initialize it through default nodes)
+    return [nodes_init, edges_init];
+  }, [hidden, onlyDirectNeighbours, props, graphView, url, layout]);
 
-  // set reactflow instance on init so that we can access the internal state of it
-  const onInit = (rfi) => {
-    setReactFlowInstance(rfi);
-  };
+  // reset viewport for init elems
+  useEffect(() => {
+    resetViewPortCentered();
+  }, [nodes_init, edges_init]);
 
-  const onEdgeClick = (_event, edge) => {
+
+  // keep current graph state on layout
+  // useEffect(() => {
+  //   const newLayoutDirection = layout === 'TB' ? { source: Position.Bottom, target: Position.Top } 
+  //                                              : { source: Position.Right, target: Position.Left };
+  //   const updatedNodes = computeLayout(reactFlow.getNodes(), reactFlow.getEdges(), layout).map(node => ({
+  //     ...node,
+  //     data: { ...node.data, 
+  //             layoutDirection: layout,
+  //             sourcePosition: newLayoutDirection.source,
+  //             targetPosition: newLayoutDirection.target,
+  //           },
+  //   }));
+  //   const updatedEdges = reactFlow.getEdges().map(edge => ({
+  //     ...edge,
+  //     source: edge.source,
+  //     target: edge.target
+  //   }));
+  //   updatedEdges.forEach(e => console.log(e.sourceHandle, e.targetHandle))
+  //   reactFlow.setNodes(updatedNodes);
+  //   reactFlow.setEdges(updatedEdges);
+
+  // }, [layout]);
+
+  // highlight edge and src, target nodes' border
+  const onEdgeClick = (_event, edge: ReactFlowEdge) => {
     resetEdgeStyles();
-    setEdges((e) =>{
+    resetNodeStyles();
+    reactFlow.setNodes((n) => {
+      return n.map((elem)=>{
+        if (edge.source === elem.id || edge.target === elem.id){
+          const newElem = {
+            ...elem,
+            data: {
+              ...elem.data,
+              highlighted: true
+            }
+          }
+          return newElem;
+        }
+        return elem;
+      })
+    })
+    reactFlow.setEdges((e) =>{
       return e.map((elem) =>{
         if(elem.id === edge.id){
           elem.style = {
@@ -295,16 +537,11 @@ function LineageTabCore(props: flowProps) {
   }
 
   const handleCenterFocus = () => {
-    if(reactFlowInstance){
-      resetViewPortCentered(reactFlowInstance);
-    }
-
+      resetViewPortCentered();
   }
 
   const handleResetViewPort = () => {
-    if(reactFlowInstance){
-      resetViewPort(reactFlowInstance);
-    }
+    resetViewPort();
   }
 
 
@@ -318,22 +555,23 @@ function LineageTabCore(props: flowProps) {
       }}
       >
         <ReactFlow
-          onInit={onInit}
+          key={reactFlowKey}
           defaultNodes={nodes}
           defaultEdges={edges}
-          defaultPosition={[0, 0]}
+          defaultViewport={{x:0, y:0, zoom:1}}
           onEdgeClick={onEdgeClick}
-          onPaneClick={resetEdgeStyles}
+          onPaneClick={() => {resetEdgeStyles(); resetNodeStyles();}}
           nodesConnectable={false} 
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
+          connectOnClick={false}
           minZoom={0.02}
-          maxZoom={1}
+          maxZoom={3}
         >
-          <Background/>
           {/* <MiniMap/>  */}
           <Controls />
+          <Background/> {/* Background macht fehler "<pattern> attribute x: Expected length, "NaN"!*/}
         </ReactFlow>
           <LineageGraphToolbar
           isPropsConfigDefined={props.configData !== undefined}
@@ -348,7 +586,6 @@ function LineageTabCore(props: flowProps) {
           setGraphView={setGraphView}
           handleOnClickResetViewport={handleResetViewPort}
           handleOnClickCenterFocus={handleCenterFocus}
-          reactFlowInstance={reactFlowInstance}
         />
     </Box>
      

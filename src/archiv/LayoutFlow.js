@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import ReactFlow, { addEdge, ConnectionLineType, useNodesState, useEdgesState } from 'react-flow-renderer';
-import { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge } from 'react-flow-renderer';
+import ReactFlow, { addEdge, ConnectionLineType, useNodesState, useEdgesState } from 'reactflow';
+import { applyEdgeChanges, applyNodeChanges, Background, MiniMap, Controls, Node, Edge } from 'reactflow';
 import DataObjectsAndActions, { DataObject, Action } from '../util/Graphs';
 import dagre from 'dagre';
 

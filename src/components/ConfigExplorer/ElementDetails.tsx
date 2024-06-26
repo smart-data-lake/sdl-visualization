@@ -6,6 +6,7 @@ import TabList from '@mui/joy/TabList';
 import TabPanel from '@mui/joy/TabPanel';
 import Tabs from '@mui/joy/Tabs';
 import React from 'react';
+import { ReactFlowProvider } from "reactflow";
 import { useNavigate, useParams } from "react-router-dom";
 import DraggableDivider from "../../layouts/DraggableDivider";
 import { ConfigData } from "../../util/ConfigExplorer/ConfigData";
@@ -122,7 +123,7 @@ export default function ElementDetails(props: {configData?: ConfigData, parentCm
 				<DraggableDivider id="config-lineage" cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} parentCmpRef={props.parentCmpRef} />
 				<Sheet sx={{height: '100%', minWidth: '100px'}} ref={lineageRef}>
 					{/* <ReactFlowProvider> */}
-						<LineageTabSep configData={configData} connection={connectionConfigObj} elementName={elementName as string} elementType={elementType as string} />
+						<LineageTabSep configData={configData} elementName={elementName as string} elementType={elementType as string} />
 					{/* </ReactFlowProvider> */}
 				</Sheet>
 			</>

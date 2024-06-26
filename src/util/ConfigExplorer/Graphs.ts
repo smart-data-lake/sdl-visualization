@@ -2,7 +2,13 @@
     A general Graph structure that is used by React components
 */
 import dagre from 'dagre';
+import * as d3 from 'd3';
+import { hierarchy, tree } from 'd3-hierarchy';
 import { ConfigData } from './ConfigData';
+import assert from 'assert';
+
+import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from 'reactflow'
+import { removeDuplicatesFromObjArrayOnAttributes } from '../helpers';
 
 
 
@@ -63,8 +69,12 @@ export class Node {
         this.nodeType = (nodeType !== undefined) ? nodeType : NodeType.CommonNode;
     }
 
-    setid(newid: string){
+    setId(newid: string){
         this.id = newid;
+    }
+
+    setIsCenterNode(isCenter: boolean){
+        this.isCenterNode = isCenter;
     }
 } 
 
@@ -142,18 +152,21 @@ export class DAGraph {
     public nodes: Node[];
     public edges: Edge[];
     public levels: number[];
-    public levelOneNodes: Node[];
+    public sourceNodes: Node[];
+    public sinkNodes: Node[];
+    public centerNodeId: string = '';
 
     constructor(nodes: Node[], edges: Edge[], mergeEdges: boolean = true){
         this.nodes = nodes; 
         this.edges = edges;
         this.levels = [];
 
-        this.levelOneNodes = this.#computeLevelOneNodes();
+        this.sourceNodes = this.#computeSourceNodes();
+        this.sinkNodes = this.#computeSinkNodes();
         if (mergeEdges){
             this.#mergeCommonActionEdges(); 
-            this.nodes = this.removeDuplicatesFromObjArrayOnAttributes(this.nodes, ["id"]);
-            this.edges = this.removeDuplicatesFromObjArrayOnAttributes(this.edges, ["id"])
+            this.nodes = removeDuplicatesFromObjArrayOnAttributes(this.nodes, ["id"]);
+            this.edges = removeDuplicatesFromObjArrayOnAttributes(this.edges, ["id"])
         }
     }
 
@@ -161,11 +174,16 @@ export class DAGraph {
         Compute the list of nodes without incomming edges.
         If the graph is an ActionGraph, the nodes will be actionNodes, otherwise they will be dataNodes
     */
-    #computeLevelOneNodes(){
-        var destinationNodes: Node[] = [];
-        this.edges.forEach(edge => {destinationNodes.push(edge.toNode)});
-        const destNodes = [...new Set(destinationNodes)]; //Nodes with incoming edges (remove duplicates)
-        return this.nodes.filter(x => !destNodes.includes(x)); //nodes without incoming edges
+    #computeSourceNodes(){
+        return this.nodes.filter(n => this.edges.filter(e => e.toNode === n).length === 0);
+    }
+
+    /*
+        Compuers the list of nodes without outgoing edges
+        We do this by filtering the nodes from the edges, as a node might contain a dest and a src node list
+    */
+    #computeSinkNodes(){
+        return this.nodes.filter(n => this.edges.filter(e => e.fromNode === n).length === 0);
     }
 
     /*
@@ -179,9 +197,9 @@ export class DAGraph {
         This is not implemented here because we cannot know if they are related or not from the way the graph is constructed -> future update possible
     */
     #mergeCommonActionEdges(){
-        // merge actions and related edges by looking at non root data nodes, skip M:N  and 1:N actions 
+        // merge actions and edges by looking at non root data nodes, skip M:N  and 1:N actions 
         // merging is done by jsonObj.type, not by actionNode.id
-        const nonRootNodes = this.nodes.filter(n => !this.levelOneNodes.includes(n) && n.nodeType === NodeType.DataNode);
+        const nonRootNodes = this.nodes.filter(n => !this.sourceNodes.includes(n) && n.nodeType === NodeType.DataNode);
 
         nonRootNodes.forEach(node => {
             // skip M:N cases
@@ -237,25 +255,91 @@ export class DAGraph {
         });
     }
 
-    /**
-     * Remove elements from array that have the same specified attributes.
-     * 
-     * @param {T} arr - The array we want to filter
-     * @param {string[]} attr - An array of attributes we want to filter on. If undefined, this function returns the unmodified input array.
-     * 
-     * @returns {T} The filtered array
-     */
-    removeDuplicatesFromObjArrayOnAttributes<T>(arr: T[], attr: string[] | undefined){ 
-        if (attr !== undefined){
-            if (attr!.length === 0){
-                return [...new Map(arr.map(v => [JSON.stringify(v), v])).values()];
-            } else {
-                return arr.filter((v,i,a) => a.findIndex(v2 => attr.every(k => v2[k] === v[k])) === i)
-            }
+    getSourceNodes(){
+        if (!this.sourceNodes) throw new Error("The source nodes have not been computed yet");
+        return this.sourceNodes;
+    }
+
+    getSinkNodes(){
+        if (!this.sinkNodes) throw new Error("The sink nodes have not been computed yet");
+        return this.sinkNodes;
+    }
+
+    getDirectDescendants(node: Node, returnType: 'node' | 'edge' | 'all'){
+        // sanitize inputs
+        assert(['node', 'edge', 'all'].includes(returnType), `invalid value for dfs return type: ${returnType}`)
+        assert(node !== undefined, "Cannot perform DFS on an undefined node");
+        if (returnType === 'node' || returnType === 'edge'){
+            return this.#dfs(node, 'forward', returnType);
         } else {
-            return arr;
+            return this.#dfsAll(node, 'forward');
         }
     }
+
+    getDirectAncestors(node: Node, returnType: 'node' | 'edge' | 'all'){
+        // sanitize inputs
+        assert(['node', 'edge', 'all'].includes(returnType), `invalid value for dfs return type: ${returnType}`)
+        assert(node !== undefined, "Cannot perform DFS on an undefined node");
+
+        if (returnType === 'node' || returnType === 'edge'){
+            return this.#dfs(node, 'backward', returnType);
+        } else {
+            return this.#dfsAll(node, 'backward');
+        }
+    }
+
+    /*
+        Returns an array of reachable nodes or edges from/to a given node in depth-first search order 
+        Excluding the starting node
+    */
+    #dfs(node: Node, direction: 'forward' | 'backward', returnType: 'node' | 'edge'): Node[] | Edge[] {
+
+        const visit = (startNode: Node, visited: Map<string, Node | Edge>) =>  {
+            if (!visited.has(startNode.id)){
+                var outEdges: Edge[];
+                if (returnType === 'node') {visited.set(node.id, startNode);}
+                visited.set(startNode.id, startNode);
+                if(direction === 'forward'){
+                    outEdges = this.edges.filter(edge => edge.fromNode.id === startNode.id);
+                    outEdges.forEach(edge => {if (returnType === 'edge'){visited.set(edge.id, edge)}; visit(edge.toNode, visited)});
+                } else {
+                    outEdges = this.edges.filter(edge => edge.toNode.id === startNode.id);
+                    outEdges.forEach(edge => {if (returnType === 'edge'){visited.set(edge.id, edge)}; visit(edge.fromNode, visited)});
+                }  
+            }
+        }
+        const visited = new Map();
+        visit(node, visited);
+        if(returnType === 'node'){ visited.delete(node.id);}
+        return Array.from(visited.values());
+    }
+
+
+    /*
+        Returns an array of nodes and an array of edges, that are reachable from/to a given node in depth-first search order 
+        Excluding the starting node
+    */
+    #dfsAll(node: Node, direction: 'forward' | 'backward'): [Node[], Edge[]]{
+        // sanitize input
+        assert(['forward', 'backward'].includes(direction), `invalid value for dfs direction: ${direction}`);
+
+        const visit = (startNode: Node, visitedNodes: Map<string, Node>, visitedEdges: Map<string, Edge>) =>  {
+            if (!visitedNodes.has(startNode.id)){
+                visitedNodes.set(startNode.id, startNode);
+                const  neighbourEdges = direction === 'forward' ? this.edges.filter(edge => edge.fromNode.id === startNode.id)
+                                                                : this.edges.filter(edge => edge.toNode.id === startNode.id);
+                neighbourEdges.forEach(edge => {visitedEdges.set(edge.id, edge)});
+                neighbourEdges.forEach(edge => direction === 'forward' ? visit(edge.toNode, visitedNodes, visitedEdges)
+                                                                        : visit(edge.fromNode, visitedNodes, visitedEdges));
+            }
+        }
+        const visitedNodes: Map<string, Node> = new Map();
+        const visitedEdges: Map<string, Edge> = new Map();
+        visit(node, visitedNodes, visitedEdges);
+        visitedNodes.delete(node.id);
+        return [Array.from(visitedNodes.values()), Array.from(visitedEdges.values())]
+    }
+
 
 
     /*
@@ -294,9 +378,14 @@ export class DAGraph {
         this.edges = newEdges;
     } 
 
+    setCenterNode(node: Node){
+        this.centerNodeId = node.id;
+        node.setIsCenterNode(true);
+    }
+
     setLayout(layout: string){
         if(['TB', 'LR'].includes(layout)){
-            const nodesWithPos = computeNodePositions(this.nodes, this.edges, layout);
+            const nodesWithPos = dagreLayout(this.nodes, this.edges, layout) as Node[];
             this.setNodes(nodesWithPos);
         } else {
             console.log(`"layout ${layout} is not supported. Please use 'TB' or 'LR'`);
@@ -307,8 +396,8 @@ export class DAGraph {
         return this.nodes.find(node => node.id === identifier);
     }
 
-    getEdgeById(identier: string){
-        return this.edges.find(edge => edge.id === identier);
+    getEdgeById(identifier: string){
+        return this.edges.find(edge => edge.id === identifier);
     }
 
     /** 
@@ -366,6 +455,7 @@ export class DAGraph {
     }
 
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
+    // TODO: can be oimplemented using getOu/In elements since we have the nodes and edges merged when the graph is created now.
     returnPartialGraphInputs(specificNodeId:id): [Node[], Edge[]]{
         function predecessors(nodeId: id, graph: DAGraph){
             var nodes = new Set<Node>();
@@ -398,7 +488,7 @@ export class DAGraph {
         }
 
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node; // this will fail if we rename action nodes as names comre from props, directly read from data
-        specificNode.isCenterNode = true;
+        this.setCenterNode(specificNode);
         const nodes = setAsArray(union(predecessors(specificNodeId, this)[0] as Set<Node>, 
                                  successors(specificNodeId, this)[0] as Set<Node>));//merge predeccessors and successors     
         nodes.push(specificNode as Node); //add the central/origin node itself
@@ -425,12 +515,11 @@ export class DAGraph {
 
     returnDirectNeighbours(specificNodeId: id): [Node[], Edge[]]{
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
-        specificNode.isCenterNode = true;
+        this.setCenterNode(specificNode);
         const edges = this.edges.filter(edge => edge.fromNode.id === specificNodeId || edge.toNode.id === specificNodeId);
         const nodes: Node[] = [];
-        edges.filter(e => {e.fromNode.id === specificNodeId? 
-                                                            nodes.push(e.toNode) : 
-                                                            nodes.push(e.fromNode)});
+        edges.filter(e => {e.fromNode.id === specificNodeId ? nodes.push(e.toNode) : 
+                                                              nodes.push(e.fromNode)});
         return [nodes.concat(specificNode), edges];
     }
 
@@ -440,6 +529,159 @@ export class DAGraph {
         edges.forEach(edge => edge.isCentral = true);
         return [predsAndSuccs, edges];
     }
+
+    getOutElems(specificNodeId: id): [Node[], Edge[]]{
+        const outEdges = this.edges.filter(edge => edge.fromNode.id === specificNodeId);
+        const outNodes = outEdges.map(edge => edge.toNode);
+        return [outNodes, outEdges];
+    }
+
+    getInElems(specificNodeId: id): [Node[], Edge[]]{
+        const inEdges = this.edges.filter(edge => edge.toNode.id === specificNodeId);
+        const inNodes = inEdges.map(edge => edge.fromNode);
+        return [inNodes, inEdges];
+    }
+}
+
+/*
+    Helper functions
+*/
+function getFwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEdge[]{
+    return edges.filter(e => e.source === node.data.label);
+}
+
+function getBwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEdge[]{
+    return edges.filter(e => e.target === node.data.label)
+}
+
+export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward', rfi: ReactFlowInstance): [string[], string[]] {
+    const edges = rfi.getEdges();
+    const nodeIds: Set<string> = new Set();
+    const edgeIds: Set<string> = new Set();
+    const isFwd = direction === 'forward';
+
+    const visit = (currNode: ReactFlowNode) => {
+        const outEdges = isFwd ? getFwdRfEdges(currNode, edges) :  getBwdRfEdges(currNode, edges);
+
+        outEdges.forEach(edge => {
+            edgeIds.add(edge.id)
+
+            if(isFwd){
+                currNode.data.numFwdActiveEdges -= 1;
+
+                // sanity check
+                if(currNode.data.numFwdActiveEdges < 0){
+                    console.log("FWD WARNING: node ", currNode.id, " has NEGATIVE numFwdActiveEdges: ", currNode.data.numFwdActiveEdges);
+                }
+                const nextNodeId = edge.target;
+                const nextNode = rfi.getNode(nextNodeId)!;
+                nextNode.data.numBwdActiveEdges -= 1;
+
+                if( nextNode.data.numBwdActiveEdges === 0){
+                    nodeIds.add(nextNodeId);
+                    visit(nextNode);
+                }
+            } else {
+                currNode.data.numBwdActiveEdges -= 1;
+
+                // sanity check
+                if(currNode.data.numBwdActiveEdges < 0){
+                    console.log("BWD WARNING: node ", currNode.id, " has NEGATIVE numBwdActiveEdges: ", currNode.data.numBwdActiveEdges);
+                }
+                const nextNodeId = edge.source;
+                const nextNode = rfi.getNode(nextNodeId)!;
+                nextNode.data.numFwdActiveEdges -= 1;
+                if( nextNode.data.numFwdActiveEdges === 0){
+                    nodeIds.add(nextNodeId);
+                    visit(nextNode);
+                }
+            }
+        })
+    }
+
+    visit(node);
+    return [Array.from(nodeIds), Array.from(edgeIds)]
+
+}
+
+/**
+ *  @deprecated
+ */
+export function bfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward', rfi: ReactFlowInstance): [string[], string[]]{
+    // returns an array of node ids and and array of edge ids that should be hidden
+    const nodes = rfi.getNodes();
+    const edges = rfi.getEdges();
+    const nodeIds: Set<string> = new Set();
+    const edgeIds: Set<string> = new Set();
+    const isFwd = direction === 'forward';
+    
+    // get num fwd and bwd edges of all nodes in the expanded subgraph
+    // defer visiting the node (i.e. modifying the number of active edges) until all fwd/bwd edges have been traversed
+    // hence we do not modify the active edges num of a node that can be reached from mutually unreachable nodes
+    const visitedNodes = {};
+    edges.forEach(edge => {
+        const srcNodeId = edge.source;
+        const tgtNodeId = edge.target;
+
+        if( visitedNodes[srcNodeId] === undefined){
+            visitedNodes[srcNodeId] = {
+                fwdEdgesToVisit: 1, 
+                bwdEdgesToVisit: 0 
+            };
+        } else {
+            visitedNodes[srcNodeId].fwdEdgesToVisit += 1;
+        }
+
+        if( visitedNodes[tgtNodeId] === undefined){
+            visitedNodes[tgtNodeId] = {
+                fwdEdgesToVisit: 0, 
+                bwdEdgesToVisit: 1 
+            };
+        } else {
+            visitedNodes[tgtNodeId].bwdEdgesToVisit += 1;
+        }
+    });
+
+    const visit = (currNode: ReactFlowNode) => {
+        const outEdges = isFwd ? getFwdRfEdges(currNode, edges) :  getBwdRfEdges(currNode, edges);
+
+        // the node can be removed if there are no relevant active edges connecting it
+        // dec. num active edges
+        outEdges.forEach(edge => {
+            // mark edge as hidden
+            edgeIds.add(edge.id);
+            if (isFwd){
+                currNode.data.numFwdActiveEdges -= 1;
+                visitedNodes[edge.target].bwdEdgesToVisit -= 1;
+                rfi.getNode(edge.target)!.data.numBwdActiveEdges -= 1;
+            } else {
+                currNode.data.numBwdActiveEdges -= 1;
+                visitedNodes[edge.source].fwdEdgesToVisit -= 1;
+                rfi.getNode(edge.source)!.data.numFwdActiveEdges -= 1;
+            }
+        });
+
+        // mark node as hidden if all reachable paths have been visited and there are no active edges (inEdges if bwd, outEdges if fwd)
+        outEdges.forEach(edge => {
+            var nextNode: ReactFlowNode;
+            if (isFwd){
+                nextNode = rfi.getNode(edge.target)!;
+                if(nextNode.data.numBwdActiveEdges === 0 && visitedNodes[nextNode.id].bwdEdgesToVisit === 0){
+                    nodeIds.add(nextNode.id);
+                    visit(nextNode);
+                }
+            } else {
+                nextNode = rfi.getNode(edge.source)!;  
+                if(nextNode.data.numFwdActiveEdges === 0 && visitedNodes[nextNode.id].fwdEdgesToVisit === 0){
+                    nodeIds.add(nextNode.id);
+                    visit(nextNode);
+                }
+            }
+        })
+    }
+
+    visit(node);
+    return [Array.from(nodeIds), Array.from(edgeIds)]
 }
 
 function getDataObjects(dataObjectsJSON: any): DataObject[]{
@@ -531,7 +773,6 @@ function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean =
                 });
             });
         }
-        
     });
 
     if(getAll){
@@ -543,7 +784,9 @@ function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean =
 
 
 //TODO: maybe refactor more code, e.g. extract nodes/edges forEach
-export function computeNodePositions(nodes: Node[], edges: Edge[], direction: string = 'TB'): Node[] {
+// input types for nodes and edges are maybe too restrictive, only requires edge.id and node.width, height, positions and isCenterNode attributes
+export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'TB'): Node[] {
+
     //instantiate dagre Graph
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({});
@@ -559,10 +802,11 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
     edges.forEach((edge) =>{
         dagreGraph.setEdge(edge.fromNode.id, edge.toNode.id);
     });
-    dagre.layout(dagreGraph);
+    dagre.layout(dagreGraph); 
 
     // Shift the dagre node position (anchor=center center) to the top left
     // so it matches the React Flow node anchor point (top left).
+    // hardcode width and height for now
     nodes.forEach((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
         node.position = {
@@ -573,11 +817,12 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
     });
 
     //If there is one Central Node, then shift its position to [0, 0] and shift all nodes as well
-    let centralNode = nodes.find((node) => node.isCenterNode);
+    // TODO: replace by if (this.centerNodeId === '')
+    let centralNode =  nodes.find((node) => (node as Node).isCenterNode);
     if (centralNode) {
         let shiftX = centralNode.position.x;
         let shiftY = centralNode.position.y;
-        let shiftedNodes = nodes.filter((node) => !node.isCenterNode); //See if deep copy needed with strucuturedClone() !!
+        let shiftedNodes = nodes.filter((node) => !(node as Node).isCenterNode); 
         shiftedNodes.forEach((node) => {
             node.position.x = node.position.x - shiftX;
             node.position.y = node.position.y - shiftY;
@@ -590,6 +835,60 @@ export function computeNodePositions(nodes: Node[], edges: Edge[], direction: st
 
     return nodes;
 }
+
+export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string = 'TB'): Node[] | ReactFlowNode[] {
+    const nodeWidth = 172;
+    const nodeHeight = 36;
+
+    //instantiate dagre Graph
+    const dagreGraph = new dagre.graphlib.Graph();
+    dagreGraph.setGraph({});
+    dagreGraph.setDefaultEdgeLabel(function() { return {}; });
+
+    // set graph layout and the minimum between-node distance, ranksep is needed for computing all node distances
+    dagreGraph.setGraph({ rankdir: direction, nodesep: 150, ranksep: 150});
+    
+    //add nodes + edges to the graph and calculate layout
+    nodes.forEach((node)=>{
+        dagreGraph.setNode(node.id, {width: nodeWidth, height: nodeHeight});
+    });
+    edges.forEach((edge) =>{
+        dagreGraph.setEdge(edge.source, edge.target);
+        
+    });
+    dagre.layout(dagreGraph); 
+
+    // Shift the dagre node position (anchor=center center) to the top left
+    // so it matches the React Flow node anchor point (top left).
+    nodes.forEach((node) => {
+        const nodeWithPosition = dagreGraph.node(node.id);
+        node.position = {
+        x: nodeWithPosition.x - nodeWidth / 2,
+        y: nodeWithPosition.y - nodeHeight / 2,
+        };
+        return node;
+    });
+
+    //If there is one Central Node, then shift its position to [0, 0] and shift all nodes as well
+    // TODO: replace by if (this.centerNodeId === '')
+    let centralNode =  nodes.find((node) => node.data.isCenterNode);
+    if (centralNode) {
+        let shiftX = centralNode.position.x;
+        let shiftY = centralNode.position.y;
+        let shiftedNodes = nodes.filter((node) => !node.data.isCenterNode); 
+        shiftedNodes.forEach((node) => {
+            node.position.x = node.position.x - shiftX;
+            node.position.y = node.position.y - shiftY;
+        });
+        centralNode.position.x = 0; //See if deep copy needed with strucuturedClone(), as we're altering our nodes.
+        centralNode.position.y = 0;
+        shiftedNodes.push(centralNode);
+        nodes = shiftedNodes;
+    } 
+
+    return nodes;
+}
+
   
 /* 
     Older versions of lineage graph constructors
@@ -598,7 +897,7 @@ export default class DataObjectsAndActions extends DAGraph{
     constructor(public jsonObject: any){
         const dataObjects: DataObject[] = getDataObjects(jsonObject.dataObjects);
         const actions: Action[] = getActions(jsonObject.actions, dataObjects);
-        const dataObjectsWithPosition: DataObject[] = computeNodePositions(dataObjects, actions) as DataObject[];
+        const dataObjectsWithPosition: DataObject[] = dagreLayout(dataObjects, actions) as DataObject[];
         super(dataObjectsWithPosition, actions);
         this.jsonObject = jsonObject;
     }
@@ -607,9 +906,9 @@ export default class DataObjectsAndActions extends DAGraph{
 export class PartialDataObjectsAndActions extends DAGraph{
     constructor(public nodes: Node[], 
                 public edges: Edge[], 
-                public layout_direction:  string = 'TB',
+                public layoutDirection:  string = 'TB',
                 public jsonObject?: any){
-        const nodesWithPos = computeNodePositions(nodes, edges, layout_direction);
+        const nodesWithPos = dagreLayout(nodes, edges, layoutDirection);
         super(nodesWithPos, edges, false); // don't merge actions, merging should have already been done because we call this from a full graph
         this.jsonObject = jsonObject;
     }
@@ -624,7 +923,7 @@ export  class DataObjectsAndActionsSep extends DAGraph{ // TODO: make this defau
         const dataObjects: DataObject[] = getDataObjects(jsonObject.dataObjects);
         const [actionObjects, edges] = getActionsObjects(jsonObject.actions, dataObjects, true) as [ActionObject[], Action[]];
         const dataObjectsAndActions: Node[] = dataObjects.concat(actionObjects);
-        const dataObjectsWithPosition = computeNodePositions(dataObjectsAndActions, edges) as Node[]; 
+        const dataObjectsWithPosition = dagreLayout(dataObjectsAndActions, edges); 
         super(dataObjectsWithPosition, edges);
         this.jsonObject = jsonObject;
     }
