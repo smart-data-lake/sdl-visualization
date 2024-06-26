@@ -199,4 +199,39 @@ export class Row implements MetaDataBaseObject {
   export type QueryParam = string | null;
   
   export type AsyncStatus = 'NotAsked' | 'Ok' | 'Error' | 'Loading';
+
+  /**** Entry of an element with their tstamp  ****/
+  export interface TstampEntry {
+    key: string;
+    elementName: string;
+    tstamp: Date;
+  }
+
+  export interface SchemaColumn {
+    name : string;
+    dataType: string|SchemaArrayType|SchemaStructType;
+    nullable?: boolean;
+  }
+  export interface SchemaArrayType {
+    dataType: 'array';
+    elementType: string|SchemaArrayType|SchemaStructType;
+  }
+  export interface SchemaStructType {
+    dataType: 'struct';
+    fields: SchemaColumn[];
+  }
+  export interface SchemaData{
+    info?: string;
+    schema?: SchemaColumn[];
+  }
   
+  export interface Stats {
+    numFiles? : number;
+    numRows? : number;
+    numPartitions? : number;
+    tableSizeInBytes?: string;
+    columns?: {};
+    sizeInBytes?: string;
+    createdAt?: Date;
+    lastModifiedAt?: Date;
+  }
