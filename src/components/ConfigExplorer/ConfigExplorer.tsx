@@ -1,5 +1,5 @@
-import { CircularProgress, Sheet } from '@mui/joy';
-import { useMemo, useRef, useState } from 'react';
+import { CircularProgress, Select, Sheet, Typography, Option, Box  } from '@mui/joy';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Route, Routes } from "react-router-dom";
 import DraggableDivider from '../../layouts/DraggableDivider';
 import PageHeader from '../../layouts/PageHeader';
@@ -10,7 +10,7 @@ import ElementList from './ElementList';
 import ElementTable from './ElementTable';
 import GlobalConfigView from './GlobalConfigView';
 import ErrorBoundary from '../../layouts/ErrorBoundary';
-import { useFetchConfig } from '../../hooks/useFetchData';
+import { useFetchConfig, useFetchConfigVersions } from '../../hooks/useFetchData';
 
 interface SearchFilterDef {
 	text: string;
@@ -33,11 +33,48 @@ export function applyFilter(configDataLists: InitialConfigDataLists, filter: Sea
     }	
 }
 
+function ConfigVersionSelector({
+  data,
+  value,
+  setValue,
+}: {
+  data: string[] | undefined;
+  value: string;
+  setValue: (value: string) => void;
+}) {
+  useEffect(() => {
+    if (!value && data && data.length > 0) {
+      setValue(data[0]);
+    }
+  }, [value, data, setValue]);
+
+  const handleChange = useCallback(
+    (_: React.SyntheticEvent | null, newValue: string | null) => {
+      setValue(newValue ?? "");
+    },
+    [setValue]
+  );
+
+  return (
+    <Box sx={{ display: "flex", gap: "1rem" }}>
+      <Typography level="h4">Configuration</Typography>
+      <Select size="sm" value={value} onChange={handleChange}>
+        {data?.map((version) => (
+          <Option value={version}>{version}</Option>
+        ))}
+      </Select>
+    </Box>
+  );
+}
+
 function ConfigExplorer() {
-	const { data: configData, isFetching } = useFetchConfig();
+	const [version, setVersion] = useState<string>("");
+	const { data: configData, isFetching: isFetchingConfig } = useFetchConfig(version);
+	const { data: configVersionData, isFetching: isFetchingConfigVersion } = useFetchConfigVersions();
 	const listRef = useRef<HTMLDivElement>(null);
 	const parentRef = useRef<HTMLDivElement>(null);  
 	const [filter, setFilter] = useState<SearchFilterDef>();
+  const isFetching = isFetchingConfig || isFetchingConfigVersion;
 
 	const configDataLists = useMemo(() => {
 		if (configData) {
@@ -57,7 +94,10 @@ function ConfigExplorer() {
 
 	return (
 		<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>
-			<PageHeader title={'Configuration'} noBack={true} />
+     	<PageHeader
+        title={<ConfigVersionSelector data={configVersionData} value={version} setValue={setVersion} />}
+        noBack={true}
+      />
 			<Sheet sx={{ display: 'flex', width: '100%', flex: 1, minHeight: 0 }} ref={parentRef}>
 			{!configData || isFetching ? (
           <CircularProgress />

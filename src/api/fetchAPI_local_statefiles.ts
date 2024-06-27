@@ -184,6 +184,10 @@ export class fetchAPI_local_statefiles implements fetchAPI {
           })
           .then(parsedConfig => new ConfigData(parsedConfig))
     }
+    
+    getConfigVersions(tenant: string, repo: string, env: string): Promise<string[] | undefined> {
+        return new Promise<string[]>(r => r([]))
+    }
 
     getTstampFromFilename(filename: string): Date {
         const matches = filename.match(/\.([0-9]+)\./);
