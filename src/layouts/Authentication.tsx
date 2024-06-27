@@ -10,6 +10,25 @@ import { useWorkspace } from "../hooks/useWorkspace";
 import { SxProps } from "@mui/material";
 import { useFetchEnvs, useFetchRepos, useFetchTenants } from "../hooks/useFetchData";
 
+function getEmptyWorkspaceWarning() {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        maxWidth: 320,
+        p: 1,
+      }}
+    >
+      <span>
+        To upload state files, configs and metadata of data object, use the CLI interface of the SDLB.
+        <br />
+        See also <a href="https://github.com/smart-data-lake/sdl-visualization">SDLB UI Readme</a>
+      </span>
+    </Box>
+  );
+}
+
 function WorkspaceSelector({
   selectedItem,
   data,
@@ -42,11 +61,18 @@ function WorkspaceSelector({
         {!data || isLoading ? (
           <CircularProgress size="sm" variant="solid" />
         ) : (
-          <Typography sx={typographyStyle}>{selectedItem}</Typography>
+          <Tooltip
+            arrow
+            variant="soft"
+            title={!selectedItem ? getEmptyWorkspaceWarning() : null}
+            sx={{ zIndex: 10000 }}
+          >
+            <Typography sx={typographyStyle}>{selectedItem ?? "None"}</Typography>
+          </Tooltip>
         )}
       </MenuButton>
 
-      {data && !isLoading ? (
+      {data && data.length > 0 && !isLoading ? (
         <Menu sx={{ padding: 2 }} size="sm">
           {data.map((x) => (
             <MenuItem
