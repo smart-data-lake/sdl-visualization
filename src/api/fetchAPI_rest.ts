@@ -79,6 +79,11 @@ export class fetchAPI_rest implements fetchAPI {
             return new ConfigData({});
         });
     };
+    
+    getConfigVersions = async (tenant: string, repo: string, env: string): Promise<string[] | undefined> => {
+        return fetch(`${this.url}/versions?tenant=${tenant}&repo=${repo}&env=${env}`, await this.getRequestInfo())
+        .then((res) => res.json());
+    }
 
     getTstampEntries = async (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> => {
         return this.fetch(`${this.url}/dataobject/${subtype}/${elementName}/tstamps?tenant=${tenant}&repo=${repo}&env=${env}`)

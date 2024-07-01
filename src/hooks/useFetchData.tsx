@@ -48,11 +48,22 @@ export const useFetchRun = (application: string, runId: number, attemptId: numbe
 };
 
 /**** Config ****/
-export function useFetchConfig(version: string = "1") {
+export function useFetchConfig(version: string) {
   const { tenant, repo, env } = useWorkspace();
   return useQuery({
     queryKey: ["config", tenant, repo, env, version],
     queryFn: () => fetcher().getConfig(tenant, repo, env, version),
+    enabled: !!version,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
+}
+
+export function useFetchConfigVersions() {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["config", tenant, repo, env],
+    queryFn: () => fetcher().getConfigVersions(tenant, repo, env),
     retry: false,
     staleTime: 1000 * 60 * 60 * 24,
   }); //24h
