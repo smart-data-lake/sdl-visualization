@@ -25,9 +25,9 @@ import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
-import { flowProps, graphNodeProps } from './LineageTabWithSeparateView';
+import { flowProps, graphNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { Position } from 'reactflow';
-import { reactFlowNodeProps } from './LineageTabWithSeparateView';
+import { reactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
 
 /*
   Styles to refactor (for the entire LineageTab folder)
