@@ -410,19 +410,15 @@ function LineageTabCore(props: flowProps) {
   }
 
   // reset view port to the center of the lineage graph
-  function resetViewPort(): void {
+  function resetViewPortCentered(): void {
     const filteredCenterNode = nodes.filter(node => node.data.graphNodeProps.isCenterNode);
     const n = reactFlow.getNode(filteredCenterNode[0].id)
     reactFlow.fitView({ nodes: [n as ReactFlowNode], duration: 400 });
   }
 
   // reset the view port with the center node in the center
-  function resetViewPortCentered(): void {
-    const filteredCenterNode = nodes.filter(node => node.data.graphNodeProps.isCenterNode);
-    const n = reactFlow.getNode(filteredCenterNode[0].id);
-    const width = n?.width!;
-    const height = n?.height!;
-    reactFlow.setViewport({x: n?.positionAbsolute?.x! + width, y: n?.positionAbsolute?.y! + height, zoom: reactFlow?.getZoom() || 1})
+  function resetViewPort(): void {
+    reactFlow.fitView({ nodes: reactFlow.getNodes(), duration: 400 });
   }
 
   // reset node styles on pane click
@@ -536,6 +532,7 @@ function LineageTabCore(props: flowProps) {
     });
   }
 
+  // TODO: swap names
   const handleCenterFocus = () => {
       resetViewPortCentered();
   }
