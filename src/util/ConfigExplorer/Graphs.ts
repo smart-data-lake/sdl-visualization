@@ -9,6 +9,7 @@ import assert from 'assert';
 
 import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from 'reactflow'
 import { removeDuplicatesFromObjArrayOnAttributes } from '../helpers';
+import { GraphElements } from './LineageTabUtils';
 
 
 
@@ -432,13 +433,12 @@ export class DAGraph {
      *  In rare case, an action object can have multiple incoming and outgoing edges
 
         Caveat: this assumes that we are in full graph view
-
-     * merge n-ary action functions, e.g. if D1 -> A and D2 -> A, then merge D1 and D2 into a single action node 
-     * while it could be the case that the out degree of the action node is > 1, we can merge by only looking
-     * at the in-degree of the action node 
      */
 
     getActionGraph(): DAGraph {
+        // merge n-ary action functions, e.g. if D1 -> A and D2 -> A, then merge D1 and D2 into a single action node 
+        // while it could be the case that the out degree of the action node is > 1, we can merge by only looking
+        // at the in-degree of the action node 
         const actions = this.nodes.filter(node => node.nodeType === NodeType.ActionNode) as ActionObject[];
         const newNodes: Node[] = actions;
         const newEdges: Edge[] = [];
@@ -541,6 +541,39 @@ export class DAGraph {
         const inNodes = inEdges.map(edge => edge.fromNode);
         return [inNodes, inEdges];
     }
+
+    // return a set of subgraphs spanned by the nodes associated to the given nodeIds. 
+    getConnectedNodeComponents(nodeIds: string[], G: DAGraph): Map<string, Node[]>{
+        const visited = new Set<string>();
+        const components = new Map<string, Node[]>();
+        let id = 0; // component id
+
+        const visit = (n: Node) => {
+            visited.add(n.id);
+            if(!components.has(id.toString())){
+                components.set(id.toString(), [n]);
+            } else {
+                components.get(id.toString())!.push(n); // TODO: debug. current debug case does not have the zlr tag
+            }
+            const [neighbourNodes, _] = G.returnDirectNeighbours(n.id); 
+            neighbourNodes.forEach(node => {
+                if(nodeIds.includes(node.id) && !visited.has(node.id)){ // if result contains neighbour nodes
+                    visit(node);
+                }
+            })
+            id += 1;
+        };
+
+        nodeIds.forEach(nid => {
+            console.log("visited: ", visited);
+            if (!visited.has(nid)){
+                visit(this.getNodeById(nid)!);
+            }
+        });
+
+        return components;
+    }; 
+
 }
 
 /*
@@ -837,7 +870,7 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
 }
 
 export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string = 'TB'): Node[] | ReactFlowNode[] {
-    const nodeWidth = 172;
+    const nodeWidth = 172; // TODO: refactor
     const nodeHeight = 36;
 
     //instantiate dagre Graph

@@ -11,6 +11,7 @@ import OpenWithIcon from '@mui/icons-material/OpenWith';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import SchemaIcon from '@mui/icons-material/Schema';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
+import WorkspacesIcon from '@mui/icons-material/Workspaces';
 import { Divider, IconButton, Tooltip } from '@mui/joy';
 import Option from '@mui/joy/Option';
 import Select, { SelectOption } from '@mui/joy/Select';
@@ -18,12 +19,22 @@ import Box from '@mui/material/Box';
 import { toPng } from 'html-to-image';
 
 import Draggable from 'react-draggable';
+import { ReactFlowInstance, Node as ReactFlowNode } from 'reactflow';
+import { onlyUnique } from '../../../util/helpers';
+
 
 /*
   Styling
 */
 const componentZIndex = 4;
 const styles = { zIndex:  componentZIndex, cursor: 'pointer' }
+
+/*
+  interface definitions
+*/
+type FuncTypes = 'group' | 'filter' | 'update';
+
+
 /*
   helper function for image downloading
 */
@@ -184,6 +195,48 @@ function CenterFocusButton({handleOnClick}){
   )
 }
 
+function printMethods(obj: any) {
+  // Get the prototype of the object
+  const proto = Object.getPrototypeOf(obj);
+
+  // Get all property names from the prototype
+  const propertyNames = Object.getOwnPropertyNames(proto);
+
+  // Filter out the methods
+  const methods = propertyNames.filter((name) => {
+    return typeof proto[name] === 'function';
+  });
+
+  // Print the methods
+  methods.forEach((method) => {
+    console.log(method);
+  });
+}
+
+/*
+  takes as input a ReactFlowInstance and functions:
+  - filterFunc: filter rfNodes based on custom criteria
+  - groupingFunc: defined the aggregation to be done on the filtered nodes
+  - updateFunc: update ReactFlowInstance
+
+  args: jsonObj
+
+  This function implemented for nodes only
+*/
+function GroupingButton({rfi, groupingFunc, graph, args}){ 
+  // create new rfNode need to set parentId, no nested subflows for now
+  const handleOnClick = () => {
+    groupingFunc(rfi, graph, args)
+  }
+
+  // need code to remove the grouped node
+
+  // there might be weird parent node overlappings, as the groupings are not guaranteed to be layed out well
+   return (<IconButton onClick={handleOnClick}>
+            <WorkspacesIcon/>
+          </IconButton>)
+}
+
 
 /*
   The main toolbar component
@@ -209,6 +262,7 @@ export function LineageGraphToolbar(props) {
       },
     }}
   >
+      <GroupingButton rfi={props.rfi} groupingFunc={props.groupingFunc} graph={props.graph} args={props.groupingArgs}/>
       <GraphViewSelector graphView={props.graphView} setGraphView={props.setGraphView}/>
       <Divider orientation='horizontal'/>
       <ResetViewPortButton handleOnClick={props.handleOnClickResetViewport}/>

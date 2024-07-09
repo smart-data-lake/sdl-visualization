@@ -12,8 +12,25 @@ import reactflow, {
 
 import assert from 'assert';
 
-import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems } from './Graphs';
+import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, Edge } from './Graphs';
 import { ConfigData } from './ConfigData';
+import { onlyUnique } from '../helpers';
+
+/*
+    Constants
+*/
+const SUBFLOW_BORDER_SIZE = 30;
+const CUSTOM_RF_NODE_WIDTH = 200;
+const CUSTOM_RF_NODE_HEIGHT = 80;
+const DEFAULT_RF_NODE_WIDTH = 172;
+const DEFAULT__RF_NODE_HEIGHT = 36;
+
+const labelColor = '#fcae1e';
+const defaultEdgeColor = '#b1b1b7';
+const highLightedEdgeColor = '#096bde';
+
+const defaultEdgeStrokeWidth = 3
+const highlightedEdgeStrokeWidth = 5;
 
 
 /*
@@ -22,6 +39,8 @@ import { ConfigData } from './ConfigData';
 export type LayoutDirection = 'TB' | 'LR';
 export type ExpandDirection = 'forward' | 'backward';
 export type GraphView = 'full' | 'data' | 'action';
+export type GraphElements = GraphNode[] | GraphEdge[] | [GraphNode[], GraphEdge[]];
+export type ReactFlowElements = ReactFlowNode[] | ReactFlowEdge[] | [ReactFlowNode[], ReactFlowEdge[]];
 
 export interface flowProps {
     elementName: string;
@@ -41,7 +60,7 @@ export interface graphNodeProps {
 }
 
 export interface reactFlowNodeProps {
-    props: flowProps,
+    props: any,
     label: string,
     nodeType: NodeType,
     targetPosition: Position,
@@ -64,6 +83,21 @@ export interface reactFlowNodeProps {
 /*
     Functions for rfi components creation
 */
+export function getGraphFromConfig(configData: any, graphView: GraphView){
+    var graph: DAGraph;
+    if (graphView === 'full') {
+      graph = configData!.fullGraph!;
+    } else if (graphView === 'data') {
+      graph = configData!.dataGraph!;
+    } else if (graphView === 'action') {
+      graph = configData!.actionGraph!;
+    } else {
+      throw Error("Unknown graph view " + graphView);
+    }
+    return graph;
+}
+
+
 export function createReactFlowNodes(selectedNodes: GraphNode[],
     layoutDirection: LayoutDirection,
     isGraphFullyExpanded: boolean,
@@ -95,22 +129,21 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     // The additional props can be passed in ElementDetails where the LineageTab is opened.
     var result: ReactFlowNode[] = [];
     selectedNodes.forEach((node) => {
-        const dataObject = node
-        const nodeType = dataObject.nodeType;
-        const [currNodeDirectFwdNodes,] = reachableSubGraph.getOutElems(dataObject.id); // instead of dataObjectsAndActions
-        const [currNodeDirectBwdNodes,] = reachableSubGraph.getInElems(dataObject.id);
+        const nodeType = node.nodeType;
+        const [currNodeDirectFwdNodes,] = reachableSubGraph.getOutElems(node.id); // instead of dataObjectsAndActions
+        const [currNodeDirectBwdNodes,] = reachableSubGraph.getInElems(node.id);
 
-        const isCenterNode = dataObject.isCenterNode;
-        const isSink = sinkNodes.includes(dataObject);
-        const isSource = sourceNodes.includes(dataObject);
-        const isCenterNodeDirectFwdNeighbour = centerNodeDirectFwdNodes.includes(dataObject);
-        const isCenterNodeDirectBwdNeighbour = centerNodeDirectBwdNodes.includes(dataObject);
-        const isCenterNodeDescendant = fwdNodes.includes(dataObject);
-        const isCenterNodeAncestor = bwdNodes.includes(dataObject);
+        const isCenterNode = node.isCenterNode;
+        const isSink = sinkNodes.includes(node);
+        const isSource = sourceNodes.includes(node);
+        const isCenterNodeDirectFwdNeighbour = centerNodeDirectFwdNodes.includes(node);
+        const isCenterNodeDirectBwdNeighbour = centerNodeDirectBwdNodes.includes(node);
+        const isCenterNodeDescendant = fwdNodes.includes(node);
+        const isCenterNodeAncestor = bwdNodes.includes(node);
 
         const data: reactFlowNodeProps = {
-            props: props,
-            label: dataObject.id,
+            props: props.configData![props.elementType][props.elementName],
+            label: node.id,
             nodeType: nodeType,
             targetPosition: targetPos,
             sourcePosition: sourcePos,
@@ -137,14 +170,14 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             numFwdEdges: currNodeDirectFwdNodes.length,
             // the following are  hard coded for testing
             progress: nodeType === NodeType.ActionNode ? Math.round(Math.random() * 100) : undefined,
-            jsonObject: (nodeType === NodeType.ActionNode || nodeType === NodeType.DataNode) ? node.jsonObject : undefined,
+            jsonObject: node['jsonObject'],
             highlighted: false // set by handlers in Core
         }
 
         const newNode = {
-            id: dataObject.id,
+            id: node.id,
             type: 'customDataNode',   // should match the name defined in custom node types
-            position: { x: dataObject.position.x, y: dataObject.position.y },
+            positionAbsolute: { x: node.position.x, y: node.position.y },
             targetPosition: targetPos, // required for the node positions to actually change internally
             sourcePosition: sourcePos,
             data: data,
@@ -160,8 +193,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
 export function createReactFlowEdges(selectedEdges: GraphEdge[],
     props: flowProps,
     graphView: GraphView,
-    selectedEdgeId: string | undefined, 
-    highLightedEdgeColor, defaultEdgeColor, labelColor, defaultEdgeStrokeWidth): ReactFlowEdge[] {
+    selectedEdgeId: string | undefined): ReactFlowEdge[] {
     const dataObjectsAndActions = graphView === 'action' ? props.configData?.actionGraph! :
         graphView === 'data' ? props.configData?.dataGraph! :
             props.configData?.fullGraph!;
@@ -255,10 +287,18 @@ export function updateLineageGraphOnCollapse(rfi: ReactFlowInstance, props: any)
 /*
     Functions for viewport setting
 */
-// reset view port to the center of the lineage graph
+// reset view port to the center of the lineage graph or the given node if only one provided
 export function resetViewPortCentered(rfi: ReactFlowInstance, rfNodes: ReactFlowNode[]): void {
-    const filteredCenterNode = rfNodes.filter(node => node.data.graphNodeProps.isCenterNode);
-    const n = rfi.getNode(filteredCenterNode[0].id)
+    assert(rfNodes.length > 0, "no ReactFlowNodes provided for reset viewport")
+
+    var n: ReactFlowNode;
+    if (rfNodes.length === 1){
+        n = rfi.getNode(rfNodes[0].id)!;
+    } else {
+        const filteredCenterNode = rfNodes.filter(node => node.data.graphNodeProps.isCenterNode);
+        n = rfi.getNode(filteredCenterNode[0].id)!;
+    }
+    
     rfi.fitView({ nodes: [n as ReactFlowNode], duration: 400 });
 }
 
@@ -267,13 +307,35 @@ export function resetViewPort(rfi: ReactFlowInstance): void {
     rfi.fitView({ nodes: rfi.getNodes(), duration: 400 });
 }
 
+// keep current graph state on layout
+// useEffect(() => {
+//   const newLayoutDirection = layout === 'TB' ? { source: Position.Bottom, target: Position.Top } 
+//                                              : { source: Position.Right, target: Position.Left };
+//   const updatedNodes = computeLayout(reactFlow.getNodes(), reactFlow.getEdges(), layout).map(node => ({
+//     ...node,
+//     data: { ...node.data, 
+//             layoutDirection: layout,
+//             sourcePosition: newLayoutDirection.source,
+//             targetPosition: newLayoutDirection.target,
+//           },
+//   }));
+//   const updatedEdges = reactFlow.getEdges().map(edge => ({
+//     ...edge,
+//     source: edge.source,
+//     target: edge.target
+//   }));
+//   updatedEdges.forEach(e => console.log(e.sourceHandle, e.targetHandle))
+//   reactFlow.setNodes(updatedNodes);
+//   reactFlow.setEdges(updatedEdges);
+
 
 /*
-    Functions for edge styling
+    Functions for node and edge styling
 */
-export function resetEdgeStyles(rfi: ReactFlowInstance, props: any) {
-    const { defaultEdgeColor, defaultEdgeStrokeWidth } = props;
+export function setDefaultEdgeStyles(){} // TODO
+export function setDefaultNodeStyles(){}
 
+export function resetEdgeStyles(rfi: ReactFlowInstance) {
     rfi.setEdges((edge) => {
         return edge.map((e) => {
             e.style = {
@@ -307,7 +369,28 @@ export function resetNodeStyles(rfi: ReactFlowInstance) {
     })
 }
 
-export function setEdgeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlowEdge) {
+export function setNodeStyles(rfi: ReactFlowInstance, nodeIds: string[]){
+    // set node styles based on the given nodeIds
+    rfi.setNodes((n) => {
+        return n.map((elem) => {
+            if (nodeIds.includes(elem.id)) {
+                const newElem = {
+                    ...elem,
+                    data: {
+                        ...elem.data,
+                        highlighted: true
+                    }
+                }
+                return newElem;
+            }
+            return elem;
+        })
+    })
+}
+
+export function setEdgeStyles(){} // TODO
+
+export function setNodeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlowEdge) {
     rfi.setNodes((n) => {
         return n.map((elem) => {
             if (edge.source === elem.id || edge.target === elem.id) {
@@ -325,8 +408,7 @@ export function setEdgeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlow
     })
 }
 
-export function setNodeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlowEdge, props: any) {
-    const { highLightedEdgeColor, highlightedEdgeStrokeWidth } = props;
+export function setEdgeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlowEdge) {
     rfi.setEdges((e) => {
         return e.map((elem) => {
             if (elem.id === edge.id) {
@@ -346,3 +428,134 @@ export function setNodeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlow
         })
     });
 }
+
+
+/*
+    Functions for Grouping / Retrieval
+    These should be done on the DAGraph instance only, to separete computation from rendering the ReactFlowInstance
+*/
+function getGraphNodeElements(G: DAGraph, F: (g: DAGraph, fargs: any) => GraphNode[], args: any){
+    // a generic grouping function interface that retrieves the elements from G via a getter fuction F
+    // returns the connected components 
+    const elems = F(G, args);
+    const components: Map<string, GraphNode[]> = G.getConnectedNodeComponents(graphNodeElementsToId(elems) as string[], G); 
+    return components;
+}
+
+function graphNodeElementsToId (elements: GraphNode[]): string[] {
+    return elements.map(node => node.id);
+}
+
+function getRfElementsfromDAGElements(elements: GraphNode[], rfi: ReactFlowInstance): ReactFlowNode[]{
+    // maps retrieved elements to currently shown reactFlow elements
+    // can also be done in the components computation
+    const graphElemIds = graphNodeElementsToId(elements);
+    return rfi.getNodes().filter(n => graphElemIds.includes(n.id));
+}
+
+function computeParentNodeCoords(rfElements: ReactFlowNode[]){
+    let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+    rfElements.forEach(elem => {
+        xMin = Math.min(xMin, elem.position.x);
+        xMax = Math.max(xMax, elem.position.x);
+        yMin = Math.min(yMin, elem.position.y);
+        yMax = Math.max(yMax, elem.position.y);
+    });
+
+     // Adjust by the border size B. (x, y) position is the upper left corner
+     xMin -= SUBFLOW_BORDER_SIZE;
+     xMax += SUBFLOW_BORDER_SIZE + CUSTOM_RF_NODE_WIDTH;
+     yMin -= SUBFLOW_BORDER_SIZE;
+     yMax += SUBFLOW_BORDER_SIZE + CUSTOM_RF_NODE_HEIGHT;
+ 
+     const centerX = (xMin + xMax) / 2;
+     const centerY = (yMin + yMax) / 2;
+ 
+     return { xMin: xMin, yMin: yMin, xMax: xMax, yMax: yMax, centerX: centerX, centerY: centerY};
+}
+
+
+export function highlightBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: string){
+        /*
+            Define the graph retrieval function
+        */
+        const F = (graph: DAGraph, args: any) => {
+            // return graph.nodes.filter(node => node.data.id === args.feedName); // TODO: read config data to node props 
+            return graph.nodes.filter(node => node.data.id.includes(args.subString));
+        }
+    
+        /*
+            Compute the components based on the retrieved results / aggregation and map them to ReactFlow elements
+        */
+        const components = getGraphNodeElements(G, F, {subString}) as Map<string, GraphNode[]>;
+    
+        /*
+            Update ReactFlow Instance
+        */
+        const ids: string[] = Array.from(components.values()).flatMap((nodes) => nodes.map(node => node.id));
+        setNodeStyles(rfi, ids);
+
+}
+
+
+// does this make sense? we only visualize subgraphs, as each feed defines one
+// this function here groups objects with the same substring in their ids
+export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: string){
+    /*
+        Define the graph retrieval function
+    */
+    const F = (graph: DAGraph, args: any) => {
+        // return graph.nodes.filter(node => node.data.id === args.feedName); // TODO: read config data to node props 
+        return graph.nodes.filter(node => node.data.id.includes(subString));
+    }
+
+    /*
+        Compute the components based on the retrieved results / aggregation and map them to ReactFlow elements
+    */
+    const components = getGraphNodeElements(G, F, {}) as Map<string, GraphNode[]>;
+    const componentsRf: Map<string, ReactFlowNode[]> = new Map();
+    components.forEach((v, k) => 
+        {componentsRf.set(k, getRfElementsfromDAGElements(v, rfi));}
+    );
+    
+    /*
+        Update ReactFlow Instance
+    */
+    componentsRf.forEach((v, k) => { // TODO: update the coordninates of each group locally (need to adapt parent node coord computatino)
+        if(v.length > 0){
+            // create parent nodles and update reactFlowInstance
+            const groupId = "Group " + k;
+            const coords = computeParentNodeCoords(v);
+            const groupedNode = {
+                id: groupId,
+                data: { label: groupId },
+                position: {x: coords.xMin, y:coords.yMin},
+                className: 'light',
+                style: { backgroundColor: 'rgba(255, 0, 0, 0.2)', width: coords.xMax-coords.xMin, height: coords.yMax-coords.yMin },
+                type: 'group',
+            } as ReactFlowNode; 
+            rfi.addNodes(groupedNode);
+
+            //map rfElements to parent nodes
+            const idsInComponent = v.map(n => n.id);
+            rfi.setNodes(rfNodes => {
+                return rfNodes.map(rfNode => {
+                    if(idsInComponent.includes(rfNode.id)){
+                        rfNode = {
+                            ...rfNode, 
+                            parentId: groupId,
+                            extent: 'parent',
+                            // type: 'output', // with handles
+                            
+                        }
+                    }
+                    return rfNode;
+                })
+            })
+    
+            
+        }
+    });
+}
+
+export function resetGroupSettings(){}// TODO: remove group tags from rfNodes

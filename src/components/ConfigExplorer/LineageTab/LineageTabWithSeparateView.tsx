@@ -37,21 +37,13 @@ import {
   resetViewPort, resetViewPortCentered, updateLineageGraphOnCollapse, updateLineageGraphOnExapnd, resetEdgeStyles, resetNodeStyles, setEdgeStylesOnEdgeClick, setNodeStylesOnEdgeClick,
   LayoutDirection, ExpandDirection, GraphView,
   flowProps,
-  createReactFlowNodes, createReactFlowEdges
+  createReactFlowNodes, createReactFlowEdges,
+  groupBySubstring,
+  getGraphFromConfig,
+  highlightBySubstring
 } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
 import { LineageGraphToolbar } from './LineageGraphToolbar';
-
-/*
-Global styles to be refactored
-*/
-const labelColor = '#fcae1e';
-const defaultEdgeColor = '#b1b1b7';
-const highLightedEdgeColor = '#096bde';
-
-const defaultEdgeStrokeWidth = 3
-const highlightedEdgeStrokeWidth = 5;
-
 
 
 
@@ -81,15 +73,11 @@ function LineageTabCore(props: flowProps) {
   const [graphView, setGraphView] = useState<GraphView>('full'); // control for action/data/full graph view 
   const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
   const [layout, setLayout] = useState<LayoutDirection>('TB');
+  const [grouped, setGrouped] = useState(false); // revert grouped view on second click
   let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false);
 
   const reactFlow = useReactFlow();
   const [reactFlowKey, setReactFlowKey] = useState(1);
-
-  //const [nodes, setNodes] = useState<ReactFlowNode<any>[]>([]);
-  //const [edges, setEdges] = useState<ReactFlowEdge<any>[]>([]);
-  //const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  //const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const navigate = useNavigate();            // handlers for navigating dataObjects and actions
   const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
@@ -104,21 +92,13 @@ function LineageTabCore(props: flowProps) {
     expandDirection: ExpandDirection,
     graphView: GraphView,
     layoutDirection: LayoutDirection) => {
-    // if expanded, show the direct out neighbours of the node with the id; if unexpanded, hide all descendants
-    var graph: DAGraph;
-    if (graphView === 'full') {
-      graph = props.configData!.fullGraph!;
-    } else if (graphView === 'data') {
-      graph = props.configData!.dataGraph!;
-    } else if (graphView === 'action') {
-      graph = props.configData!.actionGraph!;
-    } else {
-      throw Error("Unknown graph view " + graphView);
-    }
 
+    // if expanded, show the direct out neighbours of the node with the id; if unexpanded, hide all descendants
+    const graph = getGraphFromConfig(props.configData, graphView);
     const isFwd = expandDirection === 'forward';
     const currNode = graph.getNodeById(id)!;
     const currRfNode = reactFlow.getNode(currNode?.id!)!;
+
     if (!isExpanded) {
       console.log("expand");
       let [neighbourNodes, neighbourEdges] = isFwd ? graph.getOutElems(id) : graph.getInElems(id); // all positions are 0,0 here
@@ -140,10 +120,6 @@ function LineageTabCore(props: flowProps) {
         props,
         graphView,
         undefined,
-        highLightedEdgeColor,
-        defaultEdgeColor,
-        labelColor,
-        defaultEdgeStrokeWidth
       );
 
       updateLineageGraphOnExapnd(reactFlow, rfEdges, rfNodes, {
@@ -162,12 +138,14 @@ function LineageTabCore(props: flowProps) {
         layoutDirection
       });
     }
+
   }, [])
 
   function prepareAndRenderGraph(): [ReactFlowNode[], ReactFlowEdge[]] {
     var partialGraphPair: [GraphNode[], GraphEdge[]] = [[], []];
     var doa: DAGraph;
     var centralNodeId: string = props.elementName;
+    console.log("initial props: ", props);
 
     // get the right central node for the graph
     if (graphView === 'full') {
@@ -202,6 +180,7 @@ function LineageTabCore(props: flowProps) {
     partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0], partialGraphPair[1], layout, props.configData);
     partialGraph.setCenterNode(partialGraph.getNodeById(centralNodeId)!); // how would props.configData.fullgraph know the new centralId?
+
     let newNodes = createReactFlowNodes(partialGraphPair[0],
       layout,
       !onlyDirectNeighbours[0],
@@ -210,18 +189,22 @@ function LineageTabCore(props: flowProps) {
       graphView,
       expandNodeFunc,
       props);
+
     let newEdges = createReactFlowEdges(partialGraphPair[1],
       props,
       graphView,
-      undefined,
-      highLightedEdgeColor,
-      defaultEdgeColor,
-      labelColor,
-      defaultEdgeStrokeWidth
+      undefined
     );
 
     return [newNodes, newEdges];
   }
+
+
+  // TODO: maybe define data separation here (e.g. to separate every functionality, only update if something has changed, without modified the implemented functionalities again)
+  useEffect(() => {
+    // update grouping
+    // resetViewPort(reactFlow);
+  }, [reactFlow]);
 
 
   // defines the conditions to (re-)render the lineage graph
@@ -237,39 +220,17 @@ function LineageTabCore(props: flowProps) {
     resetViewPort(reactFlow);
   }, [nodes_init, edges_init]);
 
-
-  // keep current graph state on layout
-  // useEffect(() => {
-  //   const newLayoutDirection = layout === 'TB' ? { source: Position.Bottom, target: Position.Top } 
-  //                                              : { source: Position.Right, target: Position.Left };
-  //   const updatedNodes = computeLayout(reactFlow.getNodes(), reactFlow.getEdges(), layout).map(node => ({
-  //     ...node,
-  //     data: { ...node.data, 
-  //             layoutDirection: layout,
-  //             sourcePosition: newLayoutDirection.source,
-  //             targetPosition: newLayoutDirection.target,
-  //           },
-  //   }));
-  //   const updatedEdges = reactFlow.getEdges().map(edge => ({
-  //     ...edge,
-  //     source: edge.source,
-  //     target: edge.target
-  //   }));
-  //   updatedEdges.forEach(e => console.log(e.sourceHandle, e.targetHandle))
-  //   reactFlow.setNodes(updatedNodes);
-  //   reactFlow.setEdges(updatedEdges);
-
   // }, [layout]);
   const onPaneClick = () => {
-    resetEdgeStyles(reactFlow, { defaultEdgeColor, defaultEdgeStrokeWidth });
+    resetEdgeStyles(reactFlow);
     resetNodeStyles(reactFlow);
   }
 
   // highlight edge and src, target nodes' border
   const onEdgeClick = (_event, edge: ReactFlowEdge) => {
-    resetEdgeStyles(reactFlow, { defaultEdgeColor, defaultEdgeStrokeWidth });
+    resetEdgeStyles(reactFlow);
     resetNodeStyles(reactFlow);
-    setNodeStylesOnEdgeClick(reactFlow, edge, { highLightedEdgeColor, highlightedEdgeStrokeWidth });
+    setNodeStylesOnEdgeClick(reactFlow, edge);
     setEdgeStylesOnEdgeClick(reactFlow, edge);
   }
 
@@ -323,6 +284,10 @@ function LineageTabCore(props: flowProps) {
           setGraphView={setGraphView}
           handleOnClickResetViewport={handleResetViewPort}
           handleOnClickCenterFocus={handleCenterFocus}
+          rfi={reactFlow}
+          groupingFunc={highlightBySubstring}
+          graph={getGraphFromConfig(props.configData, graphView)}
+          groupingArgs={"zlr"} // test input arg
         />
       </Box>
 

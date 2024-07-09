@@ -177,16 +177,11 @@ export const CustomDataNode = ( {data} ) => {
     let propsHasConfigData = props.configData;
 
     if(nodeType === NodeType.DataNode){
-      if(propsHasConfigData){
         navigate(`/config/dataObjects/${nodeId}`); 
-      }
+      
     } else if (nodeType === NodeType.ActionNode){
-
-      if(propsHasConfigData){
         navigate(`/config/actions/${nodeId}`);
-      } else {
-        navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${nodeId}`);
-      }
+        // navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${nodeId}`);
     } else {
       throw Error("Unknown node type: " + nodeType);
     }
@@ -376,6 +371,29 @@ export const CustomDataNode = ( {data} ) => {
     </>
   );
 };
+
+
+/*
+  A custom node for grouped data
+*/
+export const SubflowNode = ({data}) => {
+    // destruct data
+    const { props, label, nodeType,
+      targetPosition, sourcePosition, 
+      progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
+      numBwdActiveEdges, numFwdActiveEdges,
+      expandNodeFunc, graphNodeProps, highlighted
+    }: reactFlowNodeProps = data;
+    const {isSink,  isSource,  
+        isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode
+    }: graphNodeProps = graphNodeProps;
+
+    // test Button for grouping by feed 
+  return (
+    <>
+    </>
+  )
+}
 
 //https://github.com/xyflow/xyflow/discussions/2347
 export const CustomEdge = ({

@@ -151,7 +151,7 @@ export function formatFileSize(size: number){
    * Remove elements from array that have the same specified attributes.
    * 
    * @param {T} arr - The array we want to filter
-   * @param {string[]} attr - An array of attributes we want to filter on. If undefined, this function returns the unmodified input array.
+   * @param {string[] | undefined} attr - An array of attributes we want to filter on. If undefined, this function returns the unmodified input array.
    * 
    * @returns {T} The filtered array
    */

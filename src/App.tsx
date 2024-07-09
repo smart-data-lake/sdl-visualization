@@ -34,7 +34,8 @@ export default function App() {
         <Route path='workflows/:flowId' element={<WorkflowHistory/>} errorElement={<ErrorBoundary/>}/>
         <Route path='workflows/:flowId/:runNumber/:taskId/:tab?/:stepName?' element={<Run/>} errorElement={<ErrorBoundary/>}/>
         <Route path='workflows/*' element={<NotFound/>}/>
-        <Route path='config/*' element={<ConfigExplorer />} errorElement={<ErrorBoundary/>}/>
+        {/* <Route path='lineage/*' element={<LineageExplorer/>} errorElement={<ErrorBoundary/>} /> */}
+        <Route path='config/*' element={<ConfigExplorer/>} errorElement={<ErrorBoundary/>}/>
         <Route path='settings/*' element={<Setting />}/>
       </Route>
     </Routes>
