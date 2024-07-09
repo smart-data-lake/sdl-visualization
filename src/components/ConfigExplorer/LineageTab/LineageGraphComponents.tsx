@@ -373,28 +373,6 @@ export const CustomDataNode = ( {data} ) => {
 };
 
 
-/*
-  A custom node for grouped data
-*/
-export const SubflowNode = ({data}) => {
-    // destruct data
-    const { props, label, nodeType,
-      targetPosition, sourcePosition, 
-      progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
-      numBwdActiveEdges, numFwdActiveEdges,
-      expandNodeFunc, graphNodeProps, highlighted
-    }: reactFlowNodeProps = data;
-    const {isSink,  isSource,  
-        isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode
-    }: graphNodeProps = graphNodeProps;
-
-    // test Button for grouping by feed 
-  return (
-    <>
-    </>
-  )
-}
-
 //https://github.com/xyflow/xyflow/discussions/2347
 export const CustomEdge = ({
   id,
