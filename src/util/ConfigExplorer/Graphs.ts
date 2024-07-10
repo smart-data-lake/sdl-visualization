@@ -382,6 +382,7 @@ export class DAGraph {
     setCenterNode(node: Node){
         this.centerNodeId = node.id;
         node.setIsCenterNode(true);
+        console.log("set is center node: ", node.id)
     }
 
     setLayout(layout: string){
@@ -457,6 +458,7 @@ export class DAGraph {
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
     // TODO: can be oimplemented using getOu/In elements since we have the nodes and edges merged when the graph is created now.
     returnPartialGraphInputs(specificNodeId:id): [Node[], Edge[]]{
+        console.log("return partial inputs");
         function predecessors(nodeId: id, graph: DAGraph){
             var nodes = new Set<Node>();
             var edges = new Set<Edge>();
@@ -515,7 +517,7 @@ export class DAGraph {
 
     returnDirectNeighbours(specificNodeId: id): [Node[], Edge[]]{
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
-        this.setCenterNode(specificNode);
+        // this.setCenterNode(specificNode);
         const edges = this.edges.filter(edge => edge.fromNode.id === specificNodeId || edge.toNode.id === specificNodeId);
         const nodes: Node[] = [];
         edges.filter(e => {e.fromNode.id === specificNodeId ? nodes.push(e.toNode) : 
@@ -565,7 +567,6 @@ export class DAGraph {
         };
 
         nodeIds.forEach(nid => {
-            console.log("visited: ", visited);
             if (!visited.has(nid)){
                 visit(this.getNodeById(nid)!);
             }
