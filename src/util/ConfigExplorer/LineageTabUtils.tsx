@@ -481,24 +481,27 @@ function computeChildeNodeRelativePosition(rfNode: ReactFlowNode, parentNode: Re
             y: rfNode.position.y - parentNode.position.y }
 }
 
-const sortNodes = (a: ReactFlowNode, b: ReactFlowNode): number => {
+function prioritizeParentNodes(rfi: ReactFlowInstance){
     // needed for subflow, see:
     // https://github.com/xyflow/xyflow/issues/3041 
-
-    // break ties
-    if (a.parentId === b.parentId) {
-      return -1;
-    }
-
-    // not all nodes have a parent node
-    if (a.parentId === undefined && b.parentId !== undefined){
+    
+    const sortNodes = (a: ReactFlowNode, b: ReactFlowNode): number => {
+        // break ties
+        if (a.parentId === b.parentId) {
         return -1;
-    } else if(a.parentId !== undefined && b.parentId === undefined){
-        return 1;
-    } else {
-        return a.parentId! > b.parentId! ? 1 : -1;
-    }
-  };
+        }
+
+        // not all nodes have a parent node
+        if (a.parentId === undefined && b.parentId !== undefined){
+            return -1;
+        } else if(a.parentId !== undefined && b.parentId === undefined){
+            return 1;
+        } else {
+            return a.parentId! > b.parentId! ? 1 : -1;
+        }
+    };
+    rfi.setNodes(nodes => nodes.sort(sortNodes));
+}
 
 
 export function highlightBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: string){
@@ -586,8 +589,7 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: 
     });
 
     // extra step to sort the reactFlow children nodes, as required by the current ReactFlow implementation...
-    rfi.setNodes(nodes => nodes.sort(sortNodes));
-    console.log("sorted rfNodes: ", rfi.getNodes());
+    prioritizeParentNodes(rfi);
 }
 
 export function resetGroupSettings(rfi: ReactFlowInstance){
