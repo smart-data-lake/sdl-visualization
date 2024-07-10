@@ -22,6 +22,7 @@ import { toPng } from 'html-to-image';
 import Draggable from 'react-draggable';
 import { ReactFlowInstance, Node as ReactFlowNode } from 'reactflow';
 import { onlyUnique } from '../../../util/helpers';
+import { resetGroupSettings } from '../../../util/ConfigExplorer/LineageTabUtils';
 
 
 /*
@@ -216,22 +217,14 @@ function RecomputeLayoutButton({rfi, layoutDirection, computeLayoutFunc}){
 }
 
 /*
-  takes as input a ReactFlowInstance and functions:
-  - filterFunc: filter rfNodes based on custom criteria
-  - groupingFunc: defined the aggregation to be done on the filtered nodes
-  - updateFunc: update ReactFlowInstance
-
-  args: jsonObj
-
   This function implemented for nodes only
 */
-function GroupingButton({rfi, groupingFunc, graph, args}){ 
+function GroupingButton({groupingFunc, args, handleGrouping}){ 
   // create new rfNode need to set parentId, no nested subflows for now
+  // console.log("handle grouping: ", handleGrouping)
   const handleOnClick = () => {
-    groupingFunc(rfi, graph, args)
+    handleGrouping(groupingFunc, args);
   }
-
-  // need code to remove the grouped node
 
   // there might be weird parent node overlappings, as the groupings are not guaranteed to be layed out well
   return (
@@ -270,7 +263,7 @@ export function LineageGraphToolbar(props) {
       },
     }}
   >
-      <GroupingButton rfi={props.rfi} groupingFunc={props.groupingFunc} graph={props.graph} args={props.groupingArgs}/>
+      <GroupingButton  groupingFunc={props.groupingFunc} args={props.groupingArgs} handleGrouping={props.handleGrouping}/>
       <GraphViewSelector graphView={props.graphView} setGraphView={props.setGraphView}/>
       <Divider orientation='horizontal'/>
       <ResetViewPortButton handleOnClick={props.handleOnClickResetViewport}/>

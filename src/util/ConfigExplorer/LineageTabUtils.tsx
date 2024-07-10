@@ -182,6 +182,8 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             targetPosition: targetPos, // required for the node positions to actually change internally
             sourcePosition: sourcePos,
             data: data,
+            extent: undefined,
+            parentId: undefined
         } as ReactFlowNode
 
         result.push(newNode);
@@ -479,6 +481,25 @@ function computeChildeNodeRelativePosition(rfNode: ReactFlowNode, parentNode: Re
             y: rfNode.position.y - parentNode.position.y }
 }
 
+const sortNodes = (a: ReactFlowNode, b: ReactFlowNode): number => {
+    // needed for subflow, see:
+    // https://github.com/xyflow/xyflow/issues/3041 
+
+    // break ties
+    if (a.parentId === b.parentId) {
+      return -1;
+    }
+
+    // not all nodes have a parent node
+    if (a.parentId === undefined && b.parentId !== undefined){
+        return -1;
+    } else if(a.parentId !== undefined && b.parentId === undefined){
+        return 1;
+    } else {
+        return a.parentId! > b.parentId! ? 1 : -1;
+    }
+  };
+
 
 export function highlightBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: string){
     /*
@@ -523,15 +544,14 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: 
     components.forEach((v, k) => 
         {componentsRf.set(k, getRfElementsfromDAGElements(v, rfi));}
     );
-    console.log("flow components: ", componentsRf)
 
     /*
         Update ReactFlow Instance
     */
-    componentsRf.forEach((v, k) => { // TODO: update the coordninates of each group locally (need to adapt parent node coord computatino)
+    componentsRf.forEach((v, k) => {
         if(v.length > 0){
             // create parent nodles and update reactFlowInstance
-            const groupId = "Group " + k;
+            const groupId = k; // group nodes have to be in front of the children in the sorted rfNode array
             const coords = computeParentNodeCoords(v);
             const parentNodeWidth = coords.xMax-coords.xMin;
             const parentNodeHeight = coords.yMax-coords.yMin;
@@ -564,6 +584,23 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: 
             });
         }
     });
+
+    // extra step to sort the reactFlow children nodes, as required by the current ReactFlow implementation...
+    rfi.setNodes(nodes => nodes.sort(sortNodes));
+    console.log("sorted rfNodes: ", rfi.getNodes());
 }
 
-export function resetGroupSettings(){}// TODO: remove group tags from rfNodes
+export function resetGroupSettings(rfi: ReactFlowInstance){
+    // remove all parent nodes and reset child node props (TODO: remove edges after we incorporate collapse/expand on nodes)
+    // the order matters
+    rfi.setNodes(nodes => nodes.map(node => {
+        node = {
+            ...node, 
+            parentId: undefined,
+            extent: undefined,
+            position: node.positionAbsolute! // use absolute position (i.e. relative to flow)
+        }
+        return node;
+    }));
+    rfi.setNodes(nodes => nodes.filter(node => !(node.type === 'group')));
+}

@@ -21,6 +21,7 @@ import ReactFlow, {
   Controls,
   MarkerType, Position,
   Edge as ReactFlowEdge,
+  ReactFlowInstance,
   Node as ReactFlowNode,
   ReactFlowProvider,
   useReactFlow
@@ -40,7 +41,8 @@ import {
   createReactFlowNodes, createReactFlowEdges,
   groupBySubstring,
   getGraphFromConfig,
-  highlightBySubstring
+  highlightBySubstring,
+  resetGroupSettings
 } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
 import { LineageGraphToolbar } from './LineageGraphToolbar';
@@ -195,14 +197,6 @@ function LineageTabCore(props: flowProps) {
     return [newNodes, newEdges];
   }
 
-
-  // TODO: maybe define data separation here (e.g. to separate every functionality, only update if something has changed, without modified the implemented functionalities again)
-  useEffect(() => {
-    // update grouping
-    // resetViewPort(reactFlow);
-  }, [reactFlow]);
-
-
   // defines the conditions to (re-)render the lineage graph
   const [nodes, edges] = useMemo(() => {
     [nodes_init, edges_init] = prepareAndRenderGraph();
@@ -216,7 +210,6 @@ function LineageTabCore(props: flowProps) {
     resetViewPort(reactFlow);
   }, [nodes_init, edges_init]);
 
-  // }, [layout]);
   const onPaneClick = () => {
     resetEdgeStyles(reactFlow);
     resetNodeStyles(reactFlow);
@@ -236,6 +229,15 @@ function LineageTabCore(props: flowProps) {
 
   const handleResetViewPort = () => {
     resetViewPort(reactFlow);
+  }
+
+  const handleGrouping = (groupingFunc: any, args: any) => {
+    if(!grouped){
+      groupingFunc(reactFlow, getGraphFromConfig(props.configData, graphView), args);
+    } else {
+      resetGroupSettings(reactFlow);
+    }
+    setGrouped(!grouped);
   }
 
  // TODO: refacttor handlers and import from util
@@ -282,8 +284,8 @@ function LineageTabCore(props: flowProps) {
           handleOnClickCenterFocus={handleCenterFocus}
           computeLayoutFunc={computeLayout}
           rfi={reactFlow}
+          handleGrouping={handleGrouping}
           groupingFunc={groupBySubstring}
-          graph={getGraphFromConfig(props.configData, graphView)}
           groupingArgs={"load"} // test input arg
         />
       </Box>
