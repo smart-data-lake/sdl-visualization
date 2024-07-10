@@ -16,6 +16,7 @@ import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as Gra
 import { ConfigData } from './ConfigData';
 import { onlyUnique } from '../helpers';
 
+
 /*
     Constants
 */
@@ -23,7 +24,7 @@ const SUBFLOW_BORDER_SIZE = 30;
 const CUSTOM_RF_NODE_WIDTH = 200;
 const CUSTOM_RF_NODE_HEIGHT = 80;
 const DEFAULT_RF_NODE_WIDTH = 172;
-const DEFAULT__RF_NODE_HEIGHT = 36;
+const DEFAULT_RF_NODE_HEIGHT = 36;
 
 const labelColor = '#fcae1e';
 const defaultEdgeColor = '#b1b1b7';
@@ -189,7 +190,6 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
 }
 
 
-// TODO: maybe colors should be refactored in a separate style sheet
 export function createReactFlowEdges(selectedEdges: GraphEdge[],
     props: flowProps,
     graphView: GraphView,
@@ -287,8 +287,8 @@ export function updateLineageGraphOnCollapse(rfi: ReactFlowInstance, props: any)
 /*
     Functions for viewport setting
 */
-// reset view port to the center of the lineage graph or the given node if only one provided
 export function resetViewPortCentered(rfi: ReactFlowInstance, rfNodes: ReactFlowNode[]): void {
+    // reset view port to the center of the lineage graph or the given node if only one provided
     assert(rfNodes.length > 0, "no ReactFlowNodes provided for reset viewport")
 
     var n: ReactFlowNode;
@@ -474,26 +474,32 @@ function computeParentNodeCoords(rfElements: ReactFlowNode[]){
      return { xMin: xMin, yMin: yMin, xMax: xMax, yMax: yMax, centerX: centerX, centerY: centerY};
 }
 
+function computeChildeNodeRelativePosition(rfNode: ReactFlowNode, parentNode: ReactFlowNode){
+    return {x: rfNode.position.x - parentNode.position.x, 
+            y: rfNode.position.y - parentNode.position.y }
+}
+
 
 export function highlightBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: string){
-        /*
-            Define the graph retrieval function
-        */
-        const F = (graph: DAGraph, args: any) => {
-            // return graph.nodes.filter(node => node.data.id === args.feedName); // TODO: read config data to node props 
-            return graph.nodes.filter(node => node.data.id.includes(args.subString));
-        }
-    
-        /*
-            Compute the components based on the retrieved results / aggregation and map them to ReactFlow elements
-        */
-        const components = getGraphNodeElements(G, F, {subString}) as Map<string, GraphNode[]>;
-    
-        /*
-            Update ReactFlow Instance
-        */
-        const ids: string[] = Array.from(components.values()).flatMap((nodes) => nodes.map(node => node.id));
-        setNodeStyles(rfi, ids);
+    /*
+        Define the graph retrieval function
+    */
+    const F = (graph: DAGraph, args: any) => {
+        // return graph.nodes.filter(node => node.data.id === args.feedName); 
+        return graph.nodes.filter(node => node.data.id.includes(args.subString));
+    }
+
+    /*
+        Compute the components based on the retrieved results / aggregation 
+    */
+    const components = getGraphNodeElements(G, F, {subString}) as Map<string, GraphNode[]>;
+
+
+    /*
+        Update ReactFlow Instance
+    */
+    const ids: string[] = Array.from(components.values()).flatMap((nodes) => nodes.map(node => node.id));
+    setNodeStyles(rfi, ids);
 
 }
 
@@ -517,7 +523,8 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: 
     components.forEach((v, k) => 
         {componentsRf.set(k, getRfElementsfromDAGElements(v, rfi));}
     );
-    
+    console.log("flow components: ", componentsRf)
+
     /*
         Update ReactFlow Instance
     */
@@ -526,12 +533,15 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: 
             // create parent nodles and update reactFlowInstance
             const groupId = "Group " + k;
             const coords = computeParentNodeCoords(v);
+            const parentNodeWidth = coords.xMax-coords.xMin;
+            const parentNodeHeight = coords.yMax-coords.yMin;
+
             const groupedNode = {
                 id: groupId,
                 data: { label: groupId },
                 position: {x: coords.xMin, y:coords.yMin},
-                className: 'light',
-                style: { backgroundColor: 'rgba(255, 0, 0, 0.2)', width: coords.xMax-coords.xMin, height: coords.yMax-coords.yMin },
+                // className: 'light',
+                style: { backgroundColor: 'rgba(255, 0, 0, 0.2)', width: parentNodeWidth, height: parentNodeHeight},
                 type: 'group',
             } as ReactFlowNode; 
             rfi.addNodes(groupedNode);
@@ -546,14 +556,12 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: 
                             parentId: groupId,
                             extent: 'parent',
                             // type: 'output', // with handles
-                            
+                            position: computeChildeNodeRelativePosition(rfNode, groupedNode)
                         }
                     }
                     return rfNode;
-                })
-            })
-    
-            
+                });
+            });
         }
     });
 }
