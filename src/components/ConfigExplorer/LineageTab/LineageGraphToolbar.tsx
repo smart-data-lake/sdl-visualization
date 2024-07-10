@@ -7,6 +7,7 @@ import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
+import ReorderIcon from '@mui/icons-material/Reorder';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import SchemaIcon from '@mui/icons-material/Schema';
@@ -94,7 +95,7 @@ const GraphViewSelector = ({graphView, setGraphView}) => {
   );
 }
 
-const LayoutButton = ({layout, setLayout}) => {
+function LayoutButton ({layout, setLayout}) {
   return <div
   title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'}
   className="controls"
@@ -109,8 +110,8 @@ const LayoutButton = ({layout, setLayout}) => {
 </div>
 }
 
-const GraphExpansionButton = ({expanded, setExpanded, expansionState}) => {
-  function expandGraph(): void {
+function GraphExpansionButton ({expanded, setExpanded, expansionState}) {
+  const expandGraph = () => {
     let buttonMessage = expanded ? 'Compress Graph' : 'Expand Graph';
     setExpanded([!expanded, buttonMessage]);
   }
@@ -128,7 +129,7 @@ const GraphExpansionButton = ({expanded, setExpanded, expansionState}) => {
     </div>
 }
 
-const ShowActionButton = ({hidden, setHidden}) => {
+function ShowActionButton ({hidden, setHidden}) {
   return  <div
   title='Display / Hide action IDs'
   style={styles}
@@ -195,22 +196,23 @@ function CenterFocusButton({handleOnClick}){
   )
 }
 
-function printMethods(obj: any) {
-  // Get the prototype of the object
-  const proto = Object.getPrototypeOf(obj);
+function RecomputeLayoutButton({rfi, layoutDirection, computeLayoutFunc}){
+  const handleOnClick = () => {
+    const rfNodes = rfi.getNodes();
+    const rfEdges = rfi.getEdges();
+    const layoutedNodes = computeLayoutFunc(rfNodes, rfEdges, layoutDirection);
+    rfi.setNodes(layoutedNodes);
+  }
 
-  // Get all property names from the prototype
-  const propertyNames = Object.getOwnPropertyNames(proto);
-
-  // Filter out the methods
-  const methods = propertyNames.filter((name) => {
-    return typeof proto[name] === 'function';
-  });
-
-  // Print the methods
-  methods.forEach((method) => {
-    console.log(method);
-  });
+  return (
+    <div
+      title='Recompute layout'
+      style={styles}>
+      <IconButton onClick={handleOnClick}>
+            <ReorderIcon/>
+      </IconButton>
+    </div>
+  )
 }
 
 /*
@@ -232,9 +234,15 @@ function GroupingButton({rfi, groupingFunc, graph, args}){
   // need code to remove the grouped node
 
   // there might be weird parent node overlappings, as the groupings are not guaranteed to be layed out well
-   return (<IconButton onClick={handleOnClick}>
+  return (
+    <div
+      title='Grouping'
+      style={styles}>
+      <IconButton onClick={handleOnClick}>
             <WorkspacesIcon/>
-          </IconButton>)
+      </IconButton>
+    </div>
+  )
 }
 
 
@@ -267,6 +275,7 @@ export function LineageGraphToolbar(props) {
       <Divider orientation='horizontal'/>
       <ResetViewPortButton handleOnClick={props.handleOnClickResetViewport}/>
       <CenterFocusButton handleOnClick={props.handleOnClickCenterFocus}/>
+      <RecomputeLayoutButton rfi={props.rfi} layoutDirection={props.layout} computeLayoutFunc={props.computeLayoutFunc}/>
       <LayoutButton layout={props.layout} setLayout={props.setLayout}/>
       {props.isPropsConfigDefined && <GraphExpansionButton expanded={props.expanded} setExpanded={props.setExpanded} expansionState={props.expansionState}/>}
       <Divider orientation='horizontal'/>

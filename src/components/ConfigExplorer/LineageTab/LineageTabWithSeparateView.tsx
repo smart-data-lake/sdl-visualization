@@ -45,8 +45,6 @@ import {
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
 import { LineageGraphToolbar } from './LineageGraphToolbar';
 
-
-
 /*
  Add custom node and edge types
 */
@@ -106,7 +104,6 @@ function LineageTabCore(props: flowProps) {
       // only create not existing nodes, update active edges of exisiting nodes
       const currRfNodes = reactFlow.getNodes();
       const currRfNodeIds = currRfNodes.map(rfNode => rfNode.id);
-
       let rfNodes = createReactFlowNodes(neighbourNodes.filter(node => !currRfNodeIds.includes(node.id)),
         layoutDirection,
         !onlyDirectNeighbours[0],
@@ -145,7 +142,6 @@ function LineageTabCore(props: flowProps) {
     var partialGraphPair: [GraphNode[], GraphEdge[]] = [[], []];
     var doa: DAGraph;
     var centralNodeId: string = props.elementName;
-    console.log("initial props: ", props);
 
     // get the right central node for the graph
     if (graphView === 'full') {
@@ -179,7 +175,7 @@ function LineageTabCore(props: flowProps) {
     // When the layout has changed, the nodes and edges have to be recomputed
     partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0], partialGraphPair[1], layout, props.configData);
-    partialGraph.setCenterNode(partialGraph.getNodeById(centralNodeId)!); // how would props.configData.fullgraph know the new centralId?
+    partialGraph.setCenterNode(partialGraph.getNodeById(centralNodeId)!); 
 
     let newNodes = createReactFlowNodes(partialGraphPair[0],
       layout,
@@ -242,7 +238,7 @@ function LineageTabCore(props: flowProps) {
     resetViewPort(reactFlow);
   }
 
-
+ // TODO: refacttor handlers and import from util
   return (
     <>
       <Box
@@ -284,10 +280,11 @@ function LineageTabCore(props: flowProps) {
           setGraphView={setGraphView}
           handleOnClickResetViewport={handleResetViewPort}
           handleOnClickCenterFocus={handleCenterFocus}
+          computeLayoutFunc={computeLayout}
           rfi={reactFlow}
-          groupingFunc={highlightBySubstring}
+          groupingFunc={groupBySubstring}
           graph={getGraphFromConfig(props.configData, graphView)}
-          groupingArgs={"zlr"} // test input arg
+          groupingArgs={"load"} // test input arg
         />
       </Box>
 
