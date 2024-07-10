@@ -382,7 +382,6 @@ export class DAGraph {
     setCenterNode(node: Node){
         this.centerNodeId = node.id;
         node.setIsCenterNode(true);
-        console.log("set is center node: ", node.id)
     }
 
     setLayout(layout: string){
@@ -458,7 +457,6 @@ export class DAGraph {
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
     // TODO: can be oimplemented using getOu/In elements since we have the nodes and edges merged when the graph is created now.
     returnPartialGraphInputs(specificNodeId:id): [Node[], Edge[]]{
-        console.log("return partial inputs");
         function predecessors(nodeId: id, graph: DAGraph){
             var nodes = new Set<Node>();
             var edges = new Set<Edge>();
@@ -516,6 +514,7 @@ export class DAGraph {
     }
 
     returnDirectNeighbours(specificNodeId: id): [Node[], Edge[]]{
+        // equivalent to getOutElems | getInElems
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
         // this.setCenterNode(specificNode);
         const edges = this.edges.filter(edge => edge.fromNode.id === specificNodeId || edge.toNode.id === specificNodeId);
@@ -550,7 +549,7 @@ export class DAGraph {
         const components = new Map<string, Node[]>();
         let id = 0; // component id
 
-        const visit = (n: Node) => {
+        const visit = (n: Node, currId: number) => {
             visited.add(n.id);
             if(!components.has(id.toString())){
                 components.set(id.toString(), [n]);
@@ -560,15 +559,15 @@ export class DAGraph {
             const [neighbourNodes, _] = G.returnDirectNeighbours(n.id); 
             neighbourNodes.forEach(node => {
                 if(nodeIds.includes(node.id) && !visited.has(node.id)){ // if result contains neighbour nodes
-                    visit(node);
+                    visit(node, currId);
                 }
             })
-            id += 1;
         };
 
         nodeIds.forEach(nid => {
             if (!visited.has(nid)){
-                visit(this.getNodeById(nid)!);
+                visit(this.getNodeById(nid)!, id);
+                id += 1;
             }
         });
 
@@ -873,6 +872,7 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
 export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string = 'TB'): Node[] | ReactFlowNode[] {
     const nodeWidth = 172; // TODO: refactor
     const nodeHeight = 36;
+    console.log("layout Rf");
 
     //instantiate dagre Graph
     const dagreGraph = new dagre.graphlib.Graph();
