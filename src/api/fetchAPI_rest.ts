@@ -71,7 +71,8 @@ export class fetchAPI_rest implements fetchAPI {
         .then((res) => res.json());
     };
 
-    getConfig = async (tenant: string, repo: string, env: string, version: string) => {
+    getConfig = async (tenant: string, repo: string, env: string, version: string|undefined) => {
+        if (!version) throw new Error("fetchAPI for REST does not support getting config without version specified, but parameter version was undefined");
         return this.fetch(`${this.url}/config?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`)
         .then((parsedJson) => new ConfigData(parsedJson?.config ?? {}))
         .catch((error) => {

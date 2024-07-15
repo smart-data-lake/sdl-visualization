@@ -39,7 +39,7 @@ function ConfigVersionSelector({
   setValue,
 }: {
   data: string[] | undefined;
-  value: string;
+  value: string | undefined;
   setValue: (value: string) => void;
 }) {
   useEffect(() => {
@@ -58,19 +58,21 @@ function ConfigVersionSelector({
   return (
     <Box sx={{ display: "flex", gap: "1rem" }}>
       <Typography level="h4">Configuration</Typography>
-      <Select size="sm" value={value} onChange={handleChange}>
-        {data?.map((version) => (
-          <Option value={version}>{version}</Option>
-        ))}
-      </Select>
+      {data && 
+        <Select size="sm" value={value} onChange={handleChange}>
+          {data?.map((version) => (
+            <Option value={version}>{version}</Option>
+          ))}
+        </Select>
+      }
     </Box>
   );
 }
 
 function ConfigExplorer() {
-	const [version, setVersion] = useState<string>("");
-	const { data: configData, isFetching: isFetchingConfig } = useFetchConfig(version);
+	const [version, setVersion] = useState<string|undefined>();
 	const { data: configVersionData, isFetching: isFetchingConfigVersion } = useFetchConfigVersions();
+	const { data: configData, isFetching: isFetchingConfig } = useFetchConfig(version, isFetchingConfigVersion && (configVersionData==undefined || version!=undefined));
 	const listRef = useRef<HTMLDivElement>(null);
 	const parentRef = useRef<HTMLDivElement>(null);  
 	const [filter, setFilter] = useState<SearchFilterDef>();
