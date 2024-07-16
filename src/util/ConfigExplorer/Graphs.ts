@@ -2,14 +2,11 @@
     A general Graph structure that is used by React components
 */
 import dagre from 'dagre';
-import * as d3 from 'd3';
-import { hierarchy, tree } from 'd3-hierarchy';
 import { ConfigData } from './ConfigData';
 import assert from 'assert';
 
 import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from 'reactflow'
 import { removeDuplicatesFromObjArrayOnAttributes } from '../helpers';
-import { GraphElements } from './LineageTabUtils';
 
 
 
@@ -574,6 +571,38 @@ export class DAGraph {
         return components;
     }; 
 
+    // return a set of subgraphs spanned by the nodes associated to the given nodeIds, and
+    // 
+    getConnectedNodeComponentsWithNeighbours(nodeIds: string[], G: DAGraph): Map<string, Node[]>{
+        const visited = new Set<string>();
+        const components = new Map<string, Node[]>();
+        let id = 0; // component id
+
+        const visit = (n: Node, currId: number) => {
+            visited.add(n.id);
+            if(!components.has(id.toString())){
+                components.set(id.toString(), [n]);
+            } else {
+                components.get(id.toString())!.push(n); // TODO: debug. current debug case does not have the zlr tag
+            }
+            const [neighbourNodes, _] = G.returnDirectNeighbours(n.id); 
+            neighbourNodes.forEach(node => {
+                if(nodeIds.includes(node.id) && !visited.has(node.id)){ // if result contains neighbour nodes
+                    visit(node, currId);
+                }
+            })
+        };
+
+        nodeIds.forEach(nid => {
+            if (!visited.has(nid)){
+                visit(this.getNodeById(nid)!, id);
+                id += 1;
+            }
+        });
+
+        return components;
+    }; 
+
 }
 
 /*
@@ -869,11 +898,10 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
     return nodes;
 }
 
-export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string = 'TB'): Node[] | ReactFlowNode[] {
+export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string = 'TB'): ReactFlowNode[] {
     const nodeWidth = 172; // TODO: refactor
     const nodeHeight = 36;
-    console.log("layout Rf");
-
+    
     //instantiate dagre Graph
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({});

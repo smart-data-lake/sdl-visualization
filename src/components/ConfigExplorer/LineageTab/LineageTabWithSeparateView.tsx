@@ -42,10 +42,12 @@ import {
   groupBySubstring,
   getGraphFromConfig,
   highlightBySubstring,
-  resetGroupSettings
+  resetGroupSettings,
+  prioritizeParentNodes
 } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
+import { CustomDataNode, CustomEdge, EdgeInfoBox, NodeSearchBar } from './LineageGraphComponents';
 import { LineageGraphToolbar } from './LineageGraphToolbar';
+import { layout } from 'dagre';
 
 /*
  Add custom node and edge types
@@ -74,6 +76,7 @@ function LineageTabCore(props: flowProps) {
   const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
   const [layout, setLayout] = useState<LayoutDirection>('TB');
   const [grouped, setGrouped] = useState(false); // revert grouped view on second click
+  const [infoBoxUp, setInfoBoxUp] = useState<[boolean, ReactFlowEdge | undefined]>([false, undefined]);
   let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false);
 
   const reactFlow = useReactFlow();
@@ -126,7 +129,8 @@ function LineageTabCore(props: flowProps) {
         currRfNodeIds,
         currRfNode,
         neighbourEdges,
-        layoutDirection
+        layoutDirection,
+        grouped
       });
 
     } else {
@@ -134,10 +138,11 @@ function LineageTabCore(props: flowProps) {
       updateLineageGraphOnCollapse(reactFlow, {
         currRfNode,
         expandDirection,
-        layoutDirection
+        layoutDirection,
+        grouped
       });
     }
-
+    prioritizeParentNodes(reactFlow);
   }, [])
 
   function prepareAndRenderGraph(): [ReactFlowNode[], ReactFlowEdge[]] {
@@ -199,20 +204,17 @@ function LineageTabCore(props: flowProps) {
 
   // defines the conditions to (re-)render the lineage graph
   const [nodes, edges] = useMemo(() => {
+    setInfoBoxUp([false, undefined]);
     [nodes_init, edges_init] = prepareAndRenderGraph();
     nodes_init = computeLayout(nodes_init, edges_init, layout);
     setReactFlowKey(reactFlowKey + 1); // change key to re-create react flow component (and initialize it through default nodes)
     return [nodes_init, edges_init];
   }, [hidden, onlyDirectNeighbours, props, graphView, url, layout]);
 
-  // reset viewport for init elems
-  useEffect(() => {
-    resetViewPort(reactFlow);
-  }, [nodes_init, edges_init]);
-
   const onPaneClick = () => {
     resetEdgeStyles(reactFlow);
     resetNodeStyles(reactFlow);
+    onCloseInfoBox();
   }
 
   // highlight edge and src, target nodes' border
@@ -221,6 +223,11 @@ function LineageTabCore(props: flowProps) {
     resetNodeStyles(reactFlow);
     setNodeStylesOnEdgeClick(reactFlow, edge);
     setEdgeStylesOnEdgeClick(reactFlow, edge);
+    setInfoBoxUp([true, edge]);
+  }
+
+  const onCloseInfoBox = () => {
+    setInfoBoxUp([false, undefined]);
   }
 
   const handleCenterFocus = () => {
@@ -231,14 +238,15 @@ function LineageTabCore(props: flowProps) {
     resetViewPort(reactFlow);
   }
 
-  const handleGrouping = (groupingFunc: any, args: any) => {
+  // if not a callback, reactflow props will not be updated
+  const handleGrouping = useCallback((groupingFunc: any, args: any) => {
     if(!grouped){
       groupingFunc(reactFlow, getGraphFromConfig(props.configData, graphView), args);
     } else {
       resetGroupSettings(reactFlow);
     }
     setGrouped(!grouped);
-  }
+  }, [grouped])
 
  // TODO: refacttor handlers and import from util
   return (
@@ -263,7 +271,7 @@ function LineageTabCore(props: flowProps) {
           fitView
           connectOnClick={false}
           minZoom={0.02}
-          maxZoom={3}
+          maxZoom={2.2}
         >
           {/* <MiniMap/>  */}
           <Controls />
@@ -284,10 +292,19 @@ function LineageTabCore(props: flowProps) {
           handleOnClickCenterFocus={handleCenterFocus}
           computeLayoutFunc={computeLayout}
           rfi={reactFlow}
+          grouped={grouped}
           handleGrouping={handleGrouping}
           groupingFunc={groupBySubstring}
-          groupingArgs={"load"} // test input arg
+          groupingArgs={{substring: "zlr", layoutDirection: layout}} // test input arg
         />
+        {infoBoxUp[0] && (
+          <EdgeInfoBox
+            rfi={reactFlow}
+            onClose={onCloseInfoBox}
+            edge={infoBoxUp[1]}
+          />
+        )}
+        <NodeSearchBar rfi={reactFlow} />
       </Box>
 
     </>

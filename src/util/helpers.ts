@@ -166,3 +166,15 @@ export function formatFileSize(size: number){
           return arr;
       }
   }
+
+  export function findFirstKeyWithObject(map: Map<string, Object[]>, targetObject: Object, F?: (arg: Object[]) => Object[]): string | undefined {
+    for (var [key, valueArray] of map) {
+      if(F !== undefined){
+        valueArray = F(valueArray);
+      }
+      if (valueArray.some(obj => obj === targetObject)) {
+        return key;
+      }
+    }
+    return undefined; 
+  }

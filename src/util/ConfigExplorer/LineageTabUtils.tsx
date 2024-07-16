@@ -1,37 +1,31 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import reactflow, {
-    Background,
-    Controls,
+import reactFlow, {
     MarkerType, Position,
     Edge as ReactFlowEdge,
     ReactFlowInstance,
     Node as ReactFlowNode,
-    useEdgesState,
-    useNodesState
 } from 'reactflow';
 
 import assert from 'assert';
 
 import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, Edge } from './Graphs';
 import { ConfigData } from './ConfigData';
-import { onlyUnique } from '../helpers';
+import { findFirstKeyWithObject } from '../helpers';
 
 
 /*
     Constants
 */
 const SUBFLOW_BORDER_SIZE = 30;
-const CUSTOM_RF_NODE_WIDTH = 200;
-const CUSTOM_RF_NODE_HEIGHT = 80;
-const DEFAULT_RF_NODE_WIDTH = 172;
-const DEFAULT_RF_NODE_HEIGHT = 36;
+const RF_NODE_WIDTH_CUSTOM = 200;
+const RF_NODE_HEIGHT_CUSTOM = 80;
+const RF_NODE_WIDTH_DEFAULT = 172;
+const RF_NODE_HEIGHT_DEFAULT = 36;
 
-const labelColor = '#fcae1e';
-const defaultEdgeColor = '#b1b1b7';
-const highLightedEdgeColor = '#096bde';
-
-const defaultEdgeStrokeWidth = 3
-const highlightedEdgeStrokeWidth = 5;
+const LABEL_COLOR = '#fcae1e';
+const EDGE_COLOR_DEFAULT = '#b1b1b7';
+const EDGE_COLOR_HIGHLIGHTED = '#096bde';
+const EDGE_STROKE_WIDTH_DEFAULT = 3
+const EDGE_STROKE_WIDTH_HIGHLIGHTED = 5;
 
 
 /*
@@ -42,6 +36,16 @@ export type ExpandDirection = 'forward' | 'backward';
 export type GraphView = 'full' | 'data' | 'action';
 export type GraphElements = GraphNode[] | GraphEdge[] | [GraphNode[], GraphEdge[]];
 export type ReactFlowElements = ReactFlowNode[] | ReactFlowEdge[] | [ReactFlowNode[], ReactFlowEdge[]];
+
+// generic graph retrieval function
+type GraphRetrievalFunction<F extends (...args: any[]) => any, Args extends Parameters<F>> = (
+    fn: F, 
+    ...args: Args
+) => ReturnType<F>;
+
+const applyGraphRetrievalFunction: GraphRetrievalFunction<any, any[]> = (fn, ... args)=> {
+    return fn(...args);
+}
 
 export interface flowProps {
     elementName: string;
@@ -84,18 +88,21 @@ export interface reactFlowNodeProps {
 /*
     Functions for rfi components creation
 */
-export function getGraphFromConfig(configData: any, graphView: GraphView){
-    var graph: DAGraph;
-    if (graphView === 'full') {
-      graph = configData!.fullGraph!;
-    } else if (graphView === 'data') {
-      graph = configData!.dataGraph!;
-    } else if (graphView === 'action') {
-      graph = configData!.actionGraph!;
-    } else {
-      throw Error("Unknown graph view " + graphView);
+export function getGraphFromConfig(configData: any, graphView: GraphView): DAGraph {
+    switch(graphView){
+        case 'full': {
+            return configData!.fullGraph!;
+        }
+        case 'data':{
+            return configData!.dataGraph!;
+        }
+        case 'action':{
+            return configData!.actionGraph!;
+        }
+        default: {
+            throw Error("Unknown graph view " + graphView);
+        }
     }
-    return graph;
 }
 
 
@@ -179,6 +186,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             id: node.id,
             type: 'customDataNode',   // should match the name defined in custom node types
             positionAbsolute: { x: node.position.x, y: node.position.y },
+            position: { x: node.position.x, y: node.position.y },
             targetPosition: targetPos, // required for the node positions to actually change internally
             sourcePosition: sourcePos,
             data: data,
@@ -191,7 +199,6 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     return result;
 }
 
-
 export function createReactFlowEdges(selectedEdges: GraphEdge[],
     props: flowProps,
     graphView: GraphView,
@@ -200,7 +207,7 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
         graphView === 'data' ? props.configData?.dataGraph! :
             props.configData?.fullGraph!;
     const edges = dataObjectsAndActions.edges?.filter(edge => selectedEdges.includes(edge));
-    const edgeColor = selectedEdgeId ? highLightedEdgeColor : defaultEdgeColor;
+    const edgeColor = selectedEdgeId ? EDGE_COLOR_HIGHLIGHTED : EDGE_COLOR_DEFAULT;
 
     var result: ReactFlowEdge[] = [];
     edges.forEach(edge => {
@@ -223,8 +230,8 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
             },
             labelBgPadding: [7, 7],
             labelBgBorderRadius: 8,
-            labelBgStyle: { fill: selected ? labelColor : '#fff', fillOpacity: selected ? 1 : 0.75, stroke: labelColor },
-            style: { stroke: edgeColor, strokeWidth: defaultEdgeStrokeWidth },
+            labelBgStyle: { fill: selected ? LABEL_COLOR : '#fff', fillOpacity: selected ? 1 : 0.75, stroke: LABEL_COLOR },
+            style: { stroke: edgeColor, strokeWidth: EDGE_STROKE_WIDTH_DEFAULT },
         } as ReactFlowEdge;
         result.push(newEdge);
     });
@@ -240,7 +247,8 @@ export function updateLineageGraphOnExapnd(rfi: ReactFlowInstance, rfEdges: Reac
         currRfNodeIds,
         currRfNode,
         neighbourEdges,
-        layoutDirection } = props;
+        layoutDirection,
+        grouped } = props;
     rfEdges.forEach(rfEdge => {
         if (isFwd) {
             const currNode = rfi.getNode(rfEdge.target)!;
@@ -266,21 +274,45 @@ export function updateLineageGraphOnExapnd(rfi: ReactFlowInstance, rfEdges: Reac
         rfEdges = Array.from(new Set([...eds, ...rfEdges]));
         return rfEdges;
     });
-    rfi.setNodes((nds) => {
-        rfNodes = computeLayout(nds.concat(rfNodes), rfEdges, layoutDirection);
-        rfNodes = Array.from(new Set([...rfNodes])); // prevent adding the nodes twice in strict mode, will be changed
+
+    rfi.setNodes((nds) => { 
+        // compute layout from non-parent nodes
+        const newRfNodes = rfNodes;
+        rfNodes = rfNodes.concat(nds) // existing nodes with parent + new nodes without parent
+        const nonParentNodes = computeLayout(getNonParentNodesFromArray(rfNodes), rfEdges, layoutDirection);  
+        rfNodes = Array.from(new Set(nonParentNodes)); // prevents adding the nodes twice in strict mode
+
+        // assign layouted new rfNodes to parents and include new parent nodes if necessary
+        rfNodes = rfNodes.map(rfNode => newRfNodes.includes(rfNode) ? assignNodeToParent(rfNode, rfi)! : rfNode);
+        const parentNodes = computeParentNodePositionFromArray(rfNodes, getParentNodesFromRFI(rfi));
+        rfNodes = Array.from(new Set([...rfNodes, ...parentNodes])); 
+        rfNodes = rfNodes.map(rfNode =>  // TODO: refactor this
+                    {
+                        if(rfNode.parentId !== undefined){
+                            const parentNode = getParentNodeFromArray(rfNodes, rfNode.parentId!);
+                            rfNode = {
+                                ...rfNode, 
+                                position: computeChildNodeRelativePosition(rfNode, parentNode!),
+                            }
+                        }
+                        return rfNode;
+                    }
+                );
         return rfNodes;
-    })
+    });
 }
 
-
 export function updateLineageGraphOnCollapse(rfi: ReactFlowInstance, props: any) {
-    const { currRfNode, expandDirection, layoutDirection } = props;
+    const { currRfNode, expandDirection, layoutDirection, grouped } = props;
     const [nodesIdsToRemove, edgesIdsToRemove] = dfsRemoveRfElems(currRfNode, expandDirection, rfi);
     rfi.setEdges((eds) => eds.filter(e => !edgesIdsToRemove.includes(e.id)));
     rfi.setNodes((nds) => {
-        let rfNodes = nds.filter(n => !nodesIdsToRemove.includes(n.id));
-        rfNodes = computeLayout(rfNodes, rfi.getEdges(), layoutDirection);
+        // recompute parent positions from remaining elements
+        var rfNodes = nds.filter(n => !nodesIdsToRemove.includes(n.id));
+        var nonParentNodes = Array.from(new Set(computeLayout(getNonParentNodesFromArray(rfNodes), rfi.getEdges(), layoutDirection)));
+        const parentNodes = computeParentNodePositionFromArray(nonParentNodes, getParentNodesFromArrayIds(rfi, nonParentNodes));
+        nonParentNodes = computeNodePositionFromParent(nonParentNodes, parentNodes);
+        rfNodes = [...nonParentNodes, ...parentNodes]; 
         return rfNodes;
     });
 }
@@ -292,7 +324,6 @@ export function updateLineageGraphOnCollapse(rfi: ReactFlowInstance, props: any)
 export function resetViewPortCentered(rfi: ReactFlowInstance, rfNodes: ReactFlowNode[]): void {
     // reset view port to the center of the lineage graph or the given node if only one provided
     assert(rfNodes.length > 0, "no ReactFlowNodes provided for reset viewport")
-
     var n: ReactFlowNode;
     if (rfNodes.length === 1){
         n = rfi.getNode(rfNodes[0].id)!;
@@ -342,14 +373,14 @@ export function resetEdgeStyles(rfi: ReactFlowInstance) {
         return edge.map((e) => {
             e.style = {
                 ...e.style,
-                stroke: defaultEdgeColor,
-                strokeWidth: defaultEdgeStrokeWidth
+                stroke: EDGE_COLOR_DEFAULT,
+                strokeWidth: EDGE_STROKE_WIDTH_DEFAULT
             }
             e.markerEnd = {
                 type: MarkerType.ArrowClosed,
                 width: 10,
                 height: 10,
-                color: defaultEdgeColor,
+                color: EDGE_COLOR_DEFAULT,
             }
             return e;
         })
@@ -416,14 +447,14 @@ export function setEdgeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlow
             if (elem.id === edge.id) {
                 elem.style = {
                     ...elem.style,
-                    stroke: highLightedEdgeColor,
-                    strokeWidth: highlightedEdgeStrokeWidth,
+                    stroke: EDGE_COLOR_HIGHLIGHTED,
+                    strokeWidth: EDGE_STROKE_WIDTH_HIGHLIGHTED,
                 }
                 elem.markerEnd = {
                     type: MarkerType.ArrowClosed,
                     width: 10,
                     height: 10,
-                    color: highLightedEdgeColor,
+                    color: EDGE_COLOR_HIGHLIGHTED,
                 }
             }
             return elem;
@@ -444,7 +475,7 @@ function getGraphNodeElements(G: DAGraph, F: (g: DAGraph, fargs: any) => GraphNo
     return components;
 }
 
-function graphNodeElementsToId (elements: GraphNode[]): string[] {
+function graphNodeElementsToId(elements: GraphNode[]): string[] {
     return elements.map(node => node.id);
 }
 
@@ -455,7 +486,45 @@ function getRfElementsfromDAGElements(elements: GraphNode[], rfi: ReactFlowInsta
     return rfi.getNodes().filter(n => graphElemIds.includes(n.id));
 }
 
-function computeParentNodeCoords(rfElements: ReactFlowNode[]){
+export function getParentNodesFromRFI(rfi: ReactFlowInstance){
+    return rfi.getNodes().filter(node => node.type === 'group');
+}
+
+export function getParentNodesFromArray(rfNodes: ReactFlowNode[]){
+    return rfNodes.filter(node => node.type === 'group');
+}
+
+export function getNonParentNodesFromRFI(rfi: ReactFlowInstance){
+    return rfi.getNodes().filter(node => node.type !== 'group');
+}
+
+export function getNonParentNodesFromArray(rfNodes: ReactFlowNode[]){
+    return rfNodes.filter(node => node.type !== 'group');
+}
+
+export function getParentNodeIds(rfNodes: ReactFlowNode[]){
+    // returns an array of distinct parent node ids from the given array
+    // filter out undefined
+    return Array.from(new Set(rfNodes.map(rfNode=>rfNode.parentId).filter(e=>e)));
+}
+
+export function getParentNodesFromArrayIds(rfi: ReactFlowInstance, rfNodes: ReactFlowNode[]){
+    // return the array of distinct parent nodes of the given array rfNodes 
+    const ids = getParentNodeIds(rfNodes);
+    return getParentNodesFromRFI(rfi).filter(node => ids.includes(node.id));
+}
+
+export function getParentNodeFromRFI(rfi: ReactFlowInstance, parentId: string): ReactFlowNode |undefined{
+    // assume now that no parent nodes overlap
+    return getParentNodesFromRFI(rfi).filter(node => node.id === parentId)[0]
+}
+
+export function getParentNodeFromArray(parentNodes: ReactFlowNode[],  parentId: string){
+    // assume now that no parent nodes overlap
+    return parentNodes.filter(node => node.id === parentId)[0] 
+}
+
+function computeParentNodeCoordsFromChildren(rfElements: ReactFlowNode[]){
     let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
     rfElements.forEach(elem => {
         xMin = Math.min(xMin, elem.position.x);
@@ -466,9 +535,9 @@ function computeParentNodeCoords(rfElements: ReactFlowNode[]){
 
      // Adjust by the border size B. (x, y) position is the upper left corner
      xMin -= SUBFLOW_BORDER_SIZE;
-     xMax += SUBFLOW_BORDER_SIZE + CUSTOM_RF_NODE_WIDTH;
+     xMax += SUBFLOW_BORDER_SIZE + RF_NODE_WIDTH_CUSTOM;
      yMin -= SUBFLOW_BORDER_SIZE;
-     yMax += SUBFLOW_BORDER_SIZE + CUSTOM_RF_NODE_HEIGHT;
+     yMax += SUBFLOW_BORDER_SIZE + RF_NODE_HEIGHT_CUSTOM;
  
      const centerX = (xMin + xMax) / 2;
      const centerY = (yMin + yMax) / 2;
@@ -476,15 +545,136 @@ function computeParentNodeCoords(rfElements: ReactFlowNode[]){
      return { xMin: xMin, yMin: yMin, xMax: xMax, yMax: yMax, centerX: centerX, centerY: centerY};
 }
 
-function computeChildeNodeRelativePosition(rfNode: ReactFlowNode, parentNode: ReactFlowNode){
-    return {x: rfNode.position.x - parentNode.position.x, 
-            y: rfNode.position.y - parentNode.position.y }
+function computeChildNodeRelativePosition(childNode: ReactFlowNode, parentNode: ReactFlowNode){
+    // used to update child nodes' relative positions, assuming they have been created already.
+    // note that a child node always has a positionAbsolute prop by implementation, but not necessarily a position prop
+    return {x: childNode.position.x - parentNode.position.x, 
+            y: childNode.position.y - parentNode.position.y }
 }
 
-function prioritizeParentNodes(rfi: ReactFlowInstance){
+function computeParentNodePositionFromRFI(rfi: ReactFlowInstance): ReactFlowNode[]{
+    // returns the parent nodes whose positions are computed from their children 
+    // this is inefficient, we should pass component information to rfi props and get them directly 
+    // could be replaced / adapted by a mapGroupStateToRFI() function
+    const rfNodes = rfi.getNodes();
+    var parentNodes = getParentNodesFromArray(rfNodes);
+    parentNodes = parentNodes.map(parentNode => {
+        const children = rfNodes.filter(rfNode => rfNode.parentId === parentNode.id);
+        const coords = computeParentNodeCoordsFromChildren(children);
+        const parentNodeWidth = coords.xMax-coords.xMin;
+        const parentNodeHeight = coords.yMax-coords.yMin;
+        const initPosition =  {x: coords.xMin, y:coords.yMin};
+        parentNode = {
+            ...parentNode,
+            data: { ...parentNode.data, initPosition: initPosition },
+            position: initPosition,
+            zIndex: -1,
+            style: { ...parentNode.style, width: parentNodeWidth, height: parentNodeHeight},
+        } 
+        return parentNode;
+    });
+    return parentNodes;
+}
+
+export function computeParentNodePositionFromArray(rfNodes: ReactFlowNode[], parentNodes: ReactFlowNode[]): ReactFlowNode[]{
+    // same as computeParentNodePositionFromRFI, except that the parentNodes are not get from the rfi, but from the provided argument parentNodes
+    // as we do not necessarily want to recompute all parent node positions
+    // rfNodes is the array of nodes we compute the parents' position from
+    parentNodes = parentNodes.map(parentNode => {
+        const children = rfNodes.filter(rfNode => rfNode.parentId === parentNode.id);
+        const coords = computeParentNodeCoordsFromChildren(children);
+        const parentNodeWidth = coords.xMax-coords.xMin;
+        const parentNodeHeight = coords.yMax-coords.yMin;
+        const initPosition =  {x: coords.xMin, y:coords.yMin};
+        parentNode = {
+            ...parentNode,
+            data: { ...parentNode.data, initPosition: initPosition },
+            position: initPosition,
+            zIndex: -1,
+            style: { ...parentNode.style, width: parentNodeWidth, height: parentNodeHeight},
+        } 
+        return parentNode;
+    });
+    return parentNodes;
+}
+
+export function computeNodePositionFromParent(nonParentNodes: ReactFlowNode[], parentNodes: ReactFlowNode[]){
+    nonParentNodes.map(rfNode => 
+        {
+
+            if(rfNode.parentId !== undefined){
+                const parentNode = getParentNodeFromArray(parentNodes, rfNode.parentId!);
+                rfNode = {
+                    ...rfNode, 
+                    position: computeChildNodeRelativePosition(rfNode, parentNode!),
+                }
+            }
+            return rfNode;
+        }
+    );
+    return nonParentNodes;
+}
+
+function assignNodeToParent(rfNode: ReactFlowNode, rfi: ReactFlowInstance){
+    // get parentId of the node and assign it to the respective parent component, return the updated note
+    // if the parent does not yet exist in the flow, create it. Otherwise, the unmodified node is returned
+    // note that we don't recompute the child's position here as parent node's position has not been fixed yet
+    if(rfi.groupedNodeComponents === undefined || rfi.groupedNodeComponentsRf === undefined ){return rfNode}
+    const components: Map<string, GraphNode[]> = rfi.groupedNodeComponents;
+    const componentsRf: Map<string, ReactFlowNode[]> = rfi.groupedNodeComponentsRf;
+    const parentId = findFirstKeyWithObject(components, rfNode.id, (a) => (a.map(elem => (elem as GraphNode).id))); 
+
+    if(parentId === undefined){return rfNode}
+    
+    if(getParentNodeFromRFI(rfi, parentId) === undefined){
+        const coords = computeParentNodeCoordsFromChildren([rfNode]); // rfNode is the first child that appears
+        const parentNodeWidth = coords.xMax-coords.xMin;
+        const parentNodeHeight = coords.yMax-coords.yMin;
+        const initPosition =  {x: coords.xMin, y:coords.yMin};
+        const parentNode = {
+            id: parentId,
+            data: { label: parentId, initPosition: initPosition },
+            position: initPosition,
+            style: { backgroundColor: 'rgba(255, 0, 0, 0.2)', width: parentNodeWidth, height: parentNodeHeight},
+            type: 'group',
+            zIndex: -1
+        } as ReactFlowNode; 
+        rfi.addNodes(parentNode);
+    }
+
+    const updatedRfNode = {
+        ...rfNode, 
+        parentId: parentId,
+        extent: 'parent',
+        expandParent: true,
+    } as ReactFlowNode;
+    componentsRf.get(parentId)!.push(updatedRfNode);
+    rfNode = updatedRfNode;
+
+    return rfNode;
+}
+
+function computeChildrenNodePosition(nonParentNodes: ReactFlowNode[], parentNodes: ReactFlowNode[]){
+    // recompute node positions from their parent nodes if there exists one
+    nonParentNodes.map(rfNode => 
+        {
+            if(rfNode.parentId !== undefined){
+                const parentNode = getParentNodeFromArray(parentNodes, rfNode.parentId!);
+                rfNode = {
+                    ...rfNode, 
+                    position: computeChildNodeRelativePosition(rfNode, parentNode!),
+                }
+            }
+            return rfNode;
+        }
+    );
+
+}
+
+export function prioritizeParentNodes(rfi: ReactFlowInstance){
     // needed for subflow, see:
     // https://github.com/xyflow/xyflow/issues/3041 
-    
+
     const sortNodes = (a: ReactFlowNode, b: ReactFlowNode): number => {
         // break ties
         if (a.parentId === b.parentId) {
@@ -530,40 +720,45 @@ export function highlightBySubstring(rfi: ReactFlowInstance, G: DAGraph, subStri
 
 // does this make sense? we only visualize subgraphs, as each feed defines one
 // this function here groups objects with the same substring in their ids
-export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: string){
+// TODO: currently we pass in layoutDirection via args, can we pass it via reactFlowInstance?
+export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, args: any){
     /*
         Define the graph retrieval function
     */
-    const F = (graph: DAGraph, args: any) => {
+    const F = (graph: DAGraph, fargs: any) => {
         // return graph.nodes.filter(node => node.data.id === args.feedName); // TODO: read config data to node props 
-        return graph.nodes.filter(node => node.data.id.includes(subString));
+        return graph.nodes.filter(node => node.data.id.includes(fargs.substring) || node.data.id.includes("load"));
     }
 
     /*
         Compute the components based on the retrieved results / aggregation and map them to ReactFlow elements
     */
-    const components = getGraphNodeElements(G, F, {}) as Map<string, GraphNode[]>;
+    const components = getGraphNodeElements(G, F, args) as Map<string, GraphNode[]>;
     const componentsRf: Map<string, ReactFlowNode[]> = new Map();
     components.forEach((v, k) => 
         {componentsRf.set(k, getRfElementsfromDAGElements(v, rfi));}
     );
-
     /*
-        Update ReactFlow Instance
+        Update ReactFlow
     */
+    // store components in the RFI
+    rfi.groupedNodeComponents = components;
+    rfi.groupedNodeComponentsRf = componentsRf;
+
+    // create parent nodes and update reactFlowInstance
     componentsRf.forEach((v, k) => {
         if(v.length > 0){
-            // create parent nodles and update reactFlowInstance
+            // TODO: the following can be refactored
             const groupId = k; // group nodes have to be in front of the children in the sorted rfNode array
-            const coords = computeParentNodeCoords(v);
+            const coords = computeParentNodeCoordsFromChildren(v);
             const parentNodeWidth = coords.xMax-coords.xMin;
             const parentNodeHeight = coords.yMax-coords.yMin;
+            const initPosition =  {x: coords.xMin, y:coords.yMin};
 
             const groupedNode = {
                 id: groupId,
-                data: { label: groupId },
-                position: {x: coords.xMin, y:coords.yMin},
-                // className: 'light',
+                data: { label: groupId, initPosition: initPosition },
+                position: initPosition,
                 style: { backgroundColor: 'rgba(255, 0, 0, 0.2)', width: parentNodeWidth, height: parentNodeHeight},
                 type: 'group',
             } as ReactFlowNode; 
@@ -578,8 +773,8 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: 
                             ...rfNode, 
                             parentId: groupId,
                             extent: 'parent',
-                            // type: 'output', // with handles
-                            position: computeChildeNodeRelativePosition(rfNode, groupedNode)
+                            expandParent: true,
+                            position: computeChildNodeRelativePosition(rfNode, groupedNode),
                         }
                     }
                     return rfNode;
@@ -587,6 +782,14 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: 
             });
         }
     });
+
+    // recompute layout in favor of the parent nodes and adjust the children in each parent node
+    // rfi.setNodes(computeLayout(rfi.getNodes().filter(node => !(node.extent === 'parent')), // includes all parent nodes and non grouped nodes
+    //                            rfi.getEdges(), 
+    //                            args.layoutDirection));
+    // TODO: for each component, shift the children nodes by the origin of the parent node to get the relative coords and recompute layout (is the recompute guarenteed to stay in the parent node's frame?)
+    // This works only if we have created and merged the new edges as well?
+    // computeChildeNodeRelativePosition()
 
     // extra step to sort the reactFlow children nodes, as required by the current ReactFlow implementation...
     prioritizeParentNodes(rfi);
@@ -600,7 +803,7 @@ export function resetGroupSettings(rfi: ReactFlowInstance){
             ...node, 
             parentId: undefined,
             extent: undefined,
-            position: node.positionAbsolute! // use absolute position (i.e. relative to flow)
+            expandParent: false,
         }
         return node;
     }));

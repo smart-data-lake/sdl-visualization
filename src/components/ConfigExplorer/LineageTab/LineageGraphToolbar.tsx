@@ -22,7 +22,7 @@ import { toPng } from 'html-to-image';
 import Draggable from 'react-draggable';
 import { ReactFlowInstance, Node as ReactFlowNode } from 'reactflow';
 import { onlyUnique } from '../../../util/helpers';
-import { resetGroupSettings } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { resetGroupSettings, getNonParentNodesFromArray, getParentNodeFromArray, getParentNodesFromArray, computeNodePositionFromParent, computeParentNodePositionFromArray } from '../../../util/ConfigExplorer/LineageTabUtils';
 
 
 /*
@@ -200,9 +200,14 @@ function CenterFocusButton({handleOnClick}){
 function RecomputeLayoutButton({rfi, layoutDirection, computeLayoutFunc}){
   const handleOnClick = () => {
     const rfNodes = rfi.getNodes();
+    const nonParentNodes = getNonParentNodesFromArray(rfNodes);
+    const parentNodes = getParentNodesFromArray(rfNodes);
     const rfEdges = rfi.getEdges();
-    const layoutedNodes = computeLayoutFunc(rfNodes, rfEdges, layoutDirection);
-    rfi.setNodes(layoutedNodes);
+
+    var layoutedNonParentNodes = computeLayoutFunc(nonParentNodes, rfEdges, layoutDirection);
+    var layoutedParentNodes = computeParentNodePositionFromArray(nonParentNodes, parentNodes);
+    layoutedNonParentNodes = computeNodePositionFromParent(layoutedNonParentNodes, layoutedParentNodes);
+    rfi.setNodes([...layoutedNonParentNodes, ...layoutedParentNodes]);
   }
 
   return (
@@ -221,7 +226,6 @@ function RecomputeLayoutButton({rfi, layoutDirection, computeLayoutFunc}){
 */
 function GroupingButton({groupingFunc, args, handleGrouping}){ 
   // create new rfNode need to set parentId, no nested subflows for now
-  // console.log("handle grouping: ", handleGrouping)
   const handleOnClick = () => {
     handleGrouping(groupingFunc, args);
   }
