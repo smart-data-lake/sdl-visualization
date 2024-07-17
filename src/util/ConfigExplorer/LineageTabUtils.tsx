@@ -321,12 +321,12 @@ export function resetViewPortCentered(rfi: ReactFlowInstance, rfNodes: ReactFlow
         n = rfi.getNode(filteredCenterNode[0].id)!;
     }
     
-    rfi.fitView({ nodes: [n as ReactFlowNode], duration: 400 });
+    rfi.fitView({ nodes: [n as ReactFlowNode], duration: 600 });
 }
 
 // reset the view port with the center node in the center
 export function resetViewPort(rfi: ReactFlowInstance): void {
-    rfi.fitView({ nodes: rfi.getNodes(), duration: 400 });
+    rfi.fitView({ nodes: rfi.getNodes(), duration: 600 });
 }
 
 // keep current graph state on layout
@@ -491,6 +491,14 @@ export function getNonParentNodesFromArray(rfNodes: ReactFlowNode[]){
     return rfNodes.filter(node => node.type !== 'group');
 }
 
+export function getFreeNodesFromRFI(rfi: ReactFlowInstance){
+    return rfi.getNodes().filter(node => node.type !== 'group' && node.parentId === undefined);
+}
+
+export function getFreeNodesFromArray(rfNodes: ReactFlowNode[]){
+    return rfNodes.filter(node => node.type !== 'group' && node.parentId === undefined);
+}
+
 export function getParentNodeIds(rfNodes: ReactFlowNode[]){
     // returns an array of distinct parent node ids from the given array
     // filter out undefined
@@ -642,6 +650,54 @@ function assignNodeToParent(rfNode: ReactFlowNode, rfi: ReactFlowInstance){
     return rfNode;
 }
 
+// TODO: refactor into one function to govern mapping from custom graph to reactflow graph
+export function createParentNodesFromComponents(rfi: ReactFlowInstance){
+    // creates initial parent nodes from the grouped component
+    const componentsRf = rfi.groupedNodeComponentsRf;
+    const rfNodeIds = rfi.getNodes().map(node => node.id);
+    componentsRf.forEach((v, k) => {
+        if(v.length > 0){
+            // TODO: the following can be refactored
+            const groupId = `#Group ${k}`; // group nodes have to be in front of the children in the sorted rfNode array
+            const coords = computeParentNodeCoordsFromChildren(v);
+            const parentNodeWidth = coords.xMax-coords.xMin;
+            const parentNodeHeight = coords.yMax-coords.yMin;
+            const initPosition =  {x: coords.xMin, y:coords.yMin};
+
+            const groupedNode = {
+                id: groupId,
+                data: { label: groupId, initPosition: initPosition },
+                position: initPosition,
+                style: { backgroundColor: 'rgba(255, 0, 0, 0.2)', width: parentNodeWidth, height: parentNodeHeight},
+                type: 'group',
+            } as ReactFlowNode; 
+
+            if(!rfNodeIds.includes(groupId)){
+                rfi.addNodes(groupedNode);
+            } else {
+                throw Error(`parent node with id ${groupId} already exists!`);
+            }
+            
+            //map rfElements to parent nodes
+            const idsInComponent = v.map(n => n.id);
+            rfi.setNodes(rfNodes => {
+                return rfNodes.map(rfNode => {
+                    if(idsInComponent.includes(rfNode.id)){
+                        rfNode = {
+                            ...rfNode, 
+                            parentId: groupId,
+                            extent: 'parent',
+                            expandParent: true,
+                            position: computeChildNodeRelativePosition(rfNode, groupedNode),
+                        }
+                    }
+                    return rfNode;
+                });
+            });
+        }
+    });
+}
+
 export function prioritizeParentNodes(rfi: ReactFlowInstance){
     // needed for subflow, see:
     // https://github.com/xyflow/xyflow/issues/3041 
@@ -678,7 +734,6 @@ export function highlightBySubstring(rfi: ReactFlowInstance, G: DAGraph, subStri
         Compute the components based on the retrieved results / aggregation 
     */
     const components = getGraphNodeElements(G, F, {subString}) as Map<string, GraphNode[]>;
-
 
     /*
         Update ReactFlow Instance
@@ -717,42 +772,7 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, args: any){
     rfi.groupedNodeComponentsRf = componentsRf;
 
     // create parent nodes and update reactFlowInstance
-    componentsRf.forEach((v, k) => {
-        if(v.length > 0){
-            // TODO: the following can be refactored
-            const groupId = k; // group nodes have to be in front of the children in the sorted rfNode array
-            const coords = computeParentNodeCoordsFromChildren(v);
-            const parentNodeWidth = coords.xMax-coords.xMin;
-            const parentNodeHeight = coords.yMax-coords.yMin;
-            const initPosition =  {x: coords.xMin, y:coords.yMin};
-
-            const groupedNode = {
-                id: groupId,
-                data: { label: groupId, initPosition: initPosition },
-                position: initPosition,
-                style: { backgroundColor: 'rgba(255, 0, 0, 0.2)', width: parentNodeWidth, height: parentNodeHeight},
-                type: 'group',
-            } as ReactFlowNode; 
-            rfi.addNodes(groupedNode);
-
-            //map rfElements to parent nodes
-            const idsInComponent = v.map(n => n.id);
-            rfi.setNodes(rfNodes => {
-                return rfNodes.map(rfNode => {
-                    if(idsInComponent.includes(rfNode.id)){
-                        rfNode = {
-                            ...rfNode, 
-                            parentId: groupId,
-                            extent: 'parent',
-                            expandParent: true,
-                            position: computeChildNodeRelativePosition(rfNode, groupedNode),
-                        }
-                    }
-                    return rfNode;
-                });
-            });
-        }
-    });
+    createParentNodesFromComponents(rfi);
 
     // recompute layout in favor of the parent nodes and adjust the children in each parent node
     // rfi.setNodes(computeLayout(rfi.getNodes().filter(node => !(node.extent === 'parent')), // includes all parent nodes and non grouped nodes

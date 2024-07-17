@@ -14,7 +14,7 @@ import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import TableViewIcon from '@mui/icons-material/TableView';
-import { Chip, Divider, IconButton, Input, List, Tooltip } from '@mui/joy';
+import { Chip, Divider, IconButton, Input, List, ListItem, TextField, Tooltip, Option, AutocompleteOption } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
@@ -22,6 +22,7 @@ import IndeterminateCheckBoxOutlinedIcon from '@mui/icons-material/Indeterminate
 import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ClearIcon from '@mui/icons-material/Clear';
+import Autocomplete from '@mui/joy/Autocomplete';
 
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
@@ -30,6 +31,7 @@ import './LineageTab.css';
 import { flowProps, graphNodeProps, resetViewPortCentered } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { Position } from 'reactflow';
 import { reactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { AutoComplete } from 'antd';
 
 /*
   Styles to refactor (for the entire LineageTab folder)
@@ -465,62 +467,48 @@ export const EdgeInfoBox = (props) => {
 export const NodeSearchBar = ({rfi}) => {
   const [elementSearchText, setElementSearchText] = useState("");
   const [elementSearchTextErr, setElementSearchTextErr] = useState<string|null>(null);
+  const [suggestions, setSuggestions] = useState<any>([]);
 
-  // function createSection(listDef: {id: string, title: string, sectionIcon: any, elementList?: {expanded: boolean, setExpanded: (boolean) => void, elementIcon: any, elements: any[]}}) {
-  //   const isEmpty = !listDef.elementList || (listDef.elementList && listDef.elementList.elements.length == 0);
-  //   const isDisabled = listDef.elementList && isEmpty
+  useEffect(() => {
+    if (elementSearchText) {
+      const allNodes: ReactFlowNode[] = rfi.getNodes();
+      const filteredSuggestions = allNodes
+        .filter(node => node.id.includes(elementSearchText))
+        .map(node => ({
+          id: node.id,
+          type: node.type === 'group' ? 'Parent Node' : 'Non-Parent Node',
+        }));
 
-  //   return (<Box key={listDef.id}>
-
-  //     <ListItemButton color={color} key={listDef.id} onClick={expandClick} sx={{ pl: '0px', pr: '0px', pb: '0px', minHeight: '25px' }} disabled={isDisabled}>
-  //       <ListItemDecorator sx={{ minWidth: '27px'}}>
-  //         {React.createElement(listDef.sectionIcon, {onClick: handleClickNavigate(`/config/${listDef.id}`)})}
-  //       </ListItemDecorator>
-  //       <ListItemContent><Typography noWrap color={color}>{listDef.title}</Typography></ListItemContent>
-  //       {!isEmpty && (listDef.elementList!.expanded ? <ExpandLess /> : <ExpandMore />)}
-  //     </ListItemButton>
-  //     {!isEmpty && listDef.elementList!.expanded &&  (
-  //       <List key={listDef.id+".list"} size='sm'>
-  //         {createElementList(listDef.id, listDef.elementList!)}
-  //       </List>
-  //     )}
-  //   </Box>)
-  // }
-  useEffect( () => {
-    const rfNode = rfi.getNode(elementSearchText);
-    if(rfNode !== undefined){
-      resetViewPortCentered(rfi, [rfNode]);
+      setSuggestions(filteredSuggestions);
+    } else {
+      setSuggestions([]);
     }
   }, [elementSearchText]);
 
-  return (
-    <Box sx={{minWidth: '100px', 
-              maxWidth: '500px', 
-              height: '100%', 
-              overflowY: 'auto',
-              position: 'absolute',
-              top: 20,
-              left: 20}} >
-      <Tooltip arrow title={`Search and jump to a node`} placement='bottom' variant="soft">
-      <Input
-        placeholder="Search element"
-        sx={{paddingRight: '0px', "--Input-minHeight": 0}}
-        slotProps={{endDecorator: {sx: {marginLeft: "0px"}}}}
-        value={elementSearchText}
-        onChange={(e) => setElementSearchText(e.target.value)}
-        error={(elementSearchTextErr ? true : false)}
-        endDecorator={
-          <>
-            <IconButton onClick={() => setElementSearchText('')} disabled={!(elementSearchText?.length>0)} variant='plain' sx={{"--IconButton-size": "20px"}}><ClearIcon /></IconButton>
-          </>
-        }
-      />
-      </Tooltip>
 
-      {/* TODO: complete this*/}
-      {/* <List size="md" sx={{width: '100%'}}>
-        {sectionsDef.map(sectionDef => createSection(sectionDef))}
-      </List> */}
-    </Box>
+  const handleSuggestionClick = (event, suggestion) => {
+    if (suggestion) {
+      const rfNode = rfi.getNode(suggestion.id);
+      resetViewPortCentered(rfi, [rfNode]);
+    }
+  };
+
+  return  (
+    <Autocomplete
+      sx={{
+        width: 300,
+        // overflowY: 'auto',
+        position: 'absolute',
+        top: 20,
+        left: 20,
+      }}
+      freeSolo
+      placeholder="Search object"
+      options={suggestions}
+      getOptionLabel={(option) => option.id}
+      groupBy={(option) => option.type}
+      onChange={handleSuggestionClick}
+      onInputChange={(event, inputValue) => {setElementSearchText(inputValue)}}
+    />
   );
-} 
+};
