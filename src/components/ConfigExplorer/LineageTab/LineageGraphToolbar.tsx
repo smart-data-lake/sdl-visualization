@@ -22,7 +22,7 @@ import { toPng } from 'html-to-image';
 import Draggable from 'react-draggable';
 import { ReactFlowInstance, Node as ReactFlowNode } from 'reactflow';
 import { onlyUnique } from '../../../util/helpers';
-import { resetGroupSettings, getNonParentNodesFromArray, getParentNodeFromArray, getParentNodesFromArray, computeNodePositionFromParent, computeParentNodePositionFromArray } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { resetGroupSettings, getNonParentNodesFromArray, getParentNodeFromArray, getParentNodesFromArray, computeNodePositionFromParent, computeParentNodePositionFromArray, prioritizeParentNodes, computeChildNodeRelativePosition } from '../../../util/ConfigExplorer/LineageTabUtils';
 
 
 /*
@@ -205,9 +205,11 @@ function RecomputeLayoutButton({rfi, layoutDirection, computeLayoutFunc}){
     const rfEdges = rfi.getEdges();
 
     var layoutedNonParentNodes = computeLayoutFunc(nonParentNodes, rfEdges, layoutDirection);
-    var layoutedParentNodes = computeParentNodePositionFromArray(nonParentNodes, parentNodes);
+    var layoutedParentNodes = computeParentNodePositionFromArray(layoutedNonParentNodes, parentNodes);
     layoutedNonParentNodes = computeNodePositionFromParent(layoutedNonParentNodes, layoutedParentNodes);
-    rfi.setNodes([...layoutedNonParentNodes, ...layoutedParentNodes]);
+
+    rfi.setNodes([...layoutedNonParentNodes, ...layoutedParentNodes])
+    prioritizeParentNodes(rfi);
   }
 
   return (

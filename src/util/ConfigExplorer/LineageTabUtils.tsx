@@ -286,18 +286,7 @@ export function updateLineageGraphOnExapnd(rfi: ReactFlowInstance, rfEdges: Reac
         rfNodes = rfNodes.map(rfNode => newRfNodes.includes(rfNode) ? assignNodeToParent(rfNode, rfi)! : rfNode);
         const parentNodes = computeParentNodePositionFromArray(rfNodes, getParentNodesFromRFI(rfi));
         rfNodes = Array.from(new Set([...rfNodes, ...parentNodes])); 
-        rfNodes = rfNodes.map(rfNode =>  // TODO: refactor this
-                    {
-                        if(rfNode.parentId !== undefined){
-                            const parentNode = getParentNodeFromArray(rfNodes, rfNode.parentId!);
-                            rfNode = {
-                                ...rfNode, 
-                                position: computeChildNodeRelativePosition(rfNode, parentNode!),
-                            }
-                        }
-                        return rfNode;
-                    }
-                );
+        rfNodes = computeNodePositionFromParent(rfNodes, rfNodes);
         return rfNodes;
     });
 }
@@ -545,7 +534,7 @@ function computeParentNodeCoordsFromChildren(rfElements: ReactFlowNode[]){
      return { xMin: xMin, yMin: yMin, xMax: xMax, yMax: yMax, centerX: centerX, centerY: centerY};
 }
 
-function computeChildNodeRelativePosition(childNode: ReactFlowNode, parentNode: ReactFlowNode){
+export function computeChildNodeRelativePosition(childNode: ReactFlowNode, parentNode: ReactFlowNode){
     // used to update child nodes' relative positions, assuming they have been created already.
     // note that a child node always has a positionAbsolute prop by implementation, but not necessarily a position prop
     return {x: childNode.position.x - parentNode.position.x, 
@@ -599,9 +588,8 @@ export function computeParentNodePositionFromArray(rfNodes: ReactFlowNode[], par
 }
 
 export function computeNodePositionFromParent(nonParentNodes: ReactFlowNode[], parentNodes: ReactFlowNode[]){
-    nonParentNodes.map(rfNode => 
+    nonParentNodes = nonParentNodes.map(rfNode => 
         {
-
             if(rfNode.parentId !== undefined){
                 const parentNode = getParentNodeFromArray(parentNodes, rfNode.parentId!);
                 rfNode = {
@@ -652,23 +640,6 @@ function assignNodeToParent(rfNode: ReactFlowNode, rfi: ReactFlowInstance){
     rfNode = updatedRfNode;
 
     return rfNode;
-}
-
-function computeChildrenNodePosition(nonParentNodes: ReactFlowNode[], parentNodes: ReactFlowNode[]){
-    // recompute node positions from their parent nodes if there exists one
-    nonParentNodes.map(rfNode => 
-        {
-            if(rfNode.parentId !== undefined){
-                const parentNode = getParentNodeFromArray(parentNodes, rfNode.parentId!);
-                rfNode = {
-                    ...rfNode, 
-                    position: computeChildNodeRelativePosition(rfNode, parentNode!),
-                }
-            }
-            return rfNode;
-        }
-    );
-
 }
 
 export function prioritizeParentNodes(rfi: ReactFlowInstance){
@@ -727,7 +698,7 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, args: any){
     */
     const F = (graph: DAGraph, fargs: any) => {
         // return graph.nodes.filter(node => node.data.id === args.feedName); // TODO: read config data to node props 
-        return graph.nodes.filter(node => node.data.id.includes(fargs.substring) || node.data.id.includes("load"));
+        return graph.nodes.filter(node => node.data.id.includes(fargs.substring));
     }
 
     /*
