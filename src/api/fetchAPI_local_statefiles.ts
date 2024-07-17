@@ -135,7 +135,8 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         })        
     };
 
-    getConfig(tenant: string, repo: string, env: string, version: string): Promise<ConfigData> {
+    getConfig(tenant: string, repo: string, env: string, version: string | undefined): Promise<ConfigData> {
+        if (version) throw new Error("fetchAPI for local statefiles does not support getting config for a specific version, but parameter version="+version);
         const baseUrl = this.baseUrl ?? "./";
         const exportedConfigUrl = baseUrl + "exportedConfig.json";
         const configUrl = baseUrl + "config";
@@ -186,7 +187,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     }
     
     getConfigVersions(tenant: string, repo: string, env: string): Promise<string[] | undefined> {
-        return new Promise<string[]>(r => r([]))
+        return new Promise<string[] |undefined>(r => r(undefined))
     }
 
     getTstampFromFilename(filename: string): Date {

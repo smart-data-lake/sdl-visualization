@@ -48,12 +48,12 @@ export const useFetchRun = (application: string, runId: number, attemptId: numbe
 };
 
 /**** Config ****/
-export function useFetchConfig(version: string) {
+export function useFetchConfig(version: string | undefined, enabled: boolean) {
   const { tenant, repo, env } = useWorkspace();
   return useQuery({
     queryKey: ["config", tenant, repo, env, version],
     queryFn: () => fetcher().getConfig(tenant, repo, env, version),
-    enabled: !!version,
+    enabled: enabled,
     retry: false,
     staleTime: 1000 * 60 * 60 * 24,
   }); //24h
