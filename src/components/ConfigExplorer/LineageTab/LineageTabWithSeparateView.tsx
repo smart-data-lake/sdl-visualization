@@ -142,7 +142,9 @@ function LineageTabCore(props: flowProps) {
         grouped
       });
     }
+
     prioritizeParentNodes(reactFlow);
+    resetViewPortCentered(reactFlow, [currRfNode]);
   }, [])
 
   function prepareAndRenderGraph(): [ReactFlowNode[], ReactFlowEdge[]] {
@@ -295,7 +297,7 @@ function LineageTabCore(props: flowProps) {
           grouped={grouped}
           handleGrouping={handleGrouping}
           groupingFunc={groupBySubstring}
-          groupingArgs={{substring: "zlr", layoutDirection: layout}} // test input arg
+          groupingArgs={{substring: "ana", layoutDirection: layout}} // test input arg
         />
         {infoBoxUp[0] && (
           <EdgeInfoBox
