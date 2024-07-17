@@ -432,6 +432,8 @@ export const EdgeInfoBox = (props) => {
     bgcolor: 'white',
     color: 'grey.900',
     boxShadow: 2,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
     '& svg': {
       m: -0.5,
     },
@@ -466,19 +468,70 @@ export const EdgeInfoBox = (props) => {
 
 export const NodeSearchBar = ({rfi}) => {
   const [elementSearchText, setElementSearchText] = useState("");
-  const [elementSearchTextErr, setElementSearchTextErr] = useState<string|null>(null);
   const [suggestions, setSuggestions] = useState<any>([]);
+
+  const innerExpreLookUp = () => {
+
+  }
+
+  const regexSearch = (node: ReactFlowNode, text: string) => {
+    if (!node || !text) {
+      return false;
+    }
+  
+    const nodeIdLower = node.id.toLocaleLowerCase();
+    let match = false;
+    
+    const innerExpr = "((prefix|suffix|includes):)?((?!children).*)";
+    const groupMatch = text.match(new RegExp(`^group:${innerExpr}$`));
+    const childrenMatch = text.match(new RegExp(`^group:children:(.*)$`));
+    const prefixMatch = text.match(/^prefix:(.*)$/);
+    const suffixMatch = text.match(/^suffix:(.*)$/);
+    const includesMatch = text.match(/^includes:(.*)$/);
+
+    if (groupMatch) {
+      const [, , groupType, groupName] = groupMatch;
+      if (!groupType && !groupName) {
+        // Matches all group nodes
+        match = node.type === 'group';
+      } else if (groupType === 'prefix') {
+        match = node.type === 'group' && new RegExp(`^${groupName}`).test(nodeIdLower);
+      } else if (groupType === 'suffix') {
+        match = node.type === 'group' && new RegExp(`${groupName}$`).test(nodeIdLower);
+      } else if (groupType === 'includes') {
+        match = node.type === 'group' && new RegExp(groupName).test(nodeIdLower);
+      }
+    } else if (childrenMatch) {
+      const [, groupName] = childrenMatch;
+      match = node.parentId === groupName;
+      console.log("should not match: ", match)
+    } else if (prefixMatch) {
+      const [, prefix] = prefixMatch;
+      match = nodeIdLower.startsWith(prefix)
+    } else if (suffixMatch) {
+      const [, suffix] = suffixMatch;
+      match = nodeIdLower.endsWith(suffix);
+    } else if (includesMatch) {
+      const [, includes] = includesMatch;
+      console.log(includesMatch, includes);
+      match = nodeIdLower.includes(includes);
+    } else {
+      // Default case: Match all nodes with the given string as a substring
+      match = new RegExp(text).test(nodeIdLower);
+    }
+  
+    return match;
+  }
 
   useEffect(() => {
     if (elementSearchText) {
       const allNodes: ReactFlowNode[] = rfi.getNodes();
       const filteredSuggestions = allNodes
-        .filter(node => node.id.includes(elementSearchText))
+        .filter(node => regexSearch(node, elementSearchText))
         .map(node => ({
           id: node.id,
           type: node.type === 'group' ? 'Parent Node' : 'Non-Parent Node',
         }));
-
       setSuggestions(filteredSuggestions);
     } else {
       setSuggestions([]);
@@ -486,7 +539,8 @@ export const NodeSearchBar = ({rfi}) => {
   }, [elementSearchText]);
 
 
-  const handleSuggestionClick = (event, suggestion) => {
+  const handleSuggestionClick = (_, suggestion) => {
+
     if (suggestion) {
       const rfNode = rfi.getNode(suggestion.id);
       resetViewPortCentered(rfi, [rfNode]);
@@ -497,7 +551,6 @@ export const NodeSearchBar = ({rfi}) => {
     <Autocomplete
       sx={{
         width: 300,
-        // overflowY: 'auto',
         position: 'absolute',
         top: 20,
         left: 20,
@@ -505,10 +558,11 @@ export const NodeSearchBar = ({rfi}) => {
       freeSolo
       placeholder="Search object"
       options={suggestions}
+      filterOptions={(x) => x} // disable built-in filtering to override with our own search logic
       getOptionLabel={(option) => option.id}
       groupBy={(option) => option.type}
       onChange={handleSuggestionClick}
-      onInputChange={(event, inputValue) => {setElementSearchText(inputValue)}}
+      onInputChange={(_, inputValue) => setElementSearchText(inputValue)}
     />
   );
 };
