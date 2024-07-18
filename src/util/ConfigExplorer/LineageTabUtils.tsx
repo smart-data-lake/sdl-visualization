@@ -653,8 +653,10 @@ function assignNodeToParent(rfNode: ReactFlowNode, rfi: ReactFlowInstance){
 // TODO: refactor into one function to govern mapping from custom graph to reactflow graph
 export function createParentNodesFromComponents(rfi: ReactFlowInstance){
     // creates initial parent nodes from the grouped component
-    const componentsRf = rfi.groupedNodeComponentsRf;
+    const componentsRf = rfi.groupedNodeComponentsRf!;
     const rfNodeIds = rfi.getNodes().map(node => node.id);
+    assert(componentsRf !== undefined, "connected components should not be undefined!");
+    
     componentsRf.forEach((v, k) => {
         if(v.length > 0){
             // TODO: the following can be refactored
@@ -799,4 +801,6 @@ export function resetGroupSettings(rfi: ReactFlowInstance){
         return node;
     }));
     rfi.setNodes(nodes => nodes.filter(node => !(node.type === 'group')));
+    rfi.groupedNodeComponents = undefined;
+    rfi.groupedNodeComponentsRf = undefined;
 }
