@@ -470,16 +470,12 @@ export const NodeSearchBar = ({rfi}) => {
   const [elementSearchText, setElementSearchText] = useState("");
   const [suggestions, setSuggestions] = useState<any>([]);
 
-  const innerExpreLookUp = () => {
-
-  }
-
   const regexSearch = (node: ReactFlowNode, text: string) => {
     if (!node || !text) {
       return false;
     }
   
-    const nodeIdLower = node.id.toLocaleLowerCase();
+    const nodeIdLower = node.id.toLowerCase();
     let match = false;
     
     const innerExpr = "((prefix|suffix|includes):)?((?!children).*)";
@@ -489,35 +485,34 @@ export const NodeSearchBar = ({rfi}) => {
     const suffixMatch = text.match(/^suffix:(.*)$/);
     const includesMatch = text.match(/^includes:(.*)$/);
 
+    console.log(groupMatch, childrenMatch, prefixMatch, suffixMatch, includesMatch)
     if (groupMatch) {
       const [, , groupType, groupName] = groupMatch;
       if (!groupType && !groupName) {
         // Matches all group nodes
         match = node.type === 'group';
       } else if (groupType === 'prefix') {
-        match = node.type === 'group' && new RegExp(`^${groupName}`).test(nodeIdLower);
+        match = node.type === 'group' && nodeIdLower.startsWith(groupName.toLowerCase());
       } else if (groupType === 'suffix') {
-        match = node.type === 'group' && new RegExp(`${groupName}$`).test(nodeIdLower);
+        match = node.type === 'group' && nodeIdLower.endsWith(groupName.toLowerCase());
       } else if (groupType === 'includes') {
-        match = node.type === 'group' && new RegExp(groupName).test(nodeIdLower);
+        match = node.type === 'group' && nodeIdLower.includes(groupName.toLowerCase());
       }
     } else if (childrenMatch) {
       const [, groupName] = childrenMatch;
       match = node.parentId === groupName;
-      console.log("should not match: ", match)
     } else if (prefixMatch) {
       const [, prefix] = prefixMatch;
-      match = nodeIdLower.startsWith(prefix)
+      match = nodeIdLower.startsWith(prefix.toLowerCase());
     } else if (suffixMatch) {
       const [, suffix] = suffixMatch;
-      match = nodeIdLower.endsWith(suffix);
+      match = nodeIdLower.endsWith(suffix.toLowerCase());
     } else if (includesMatch) {
       const [, includes] = includesMatch;
-      console.log(includesMatch, includes);
-      match = nodeIdLower.includes(includes);
+      match = nodeIdLower.includes(includes.toLowerCase());
     } else {
       // Default case: Match all nodes with the given string as a substring
-      match = new RegExp(text).test(nodeIdLower);
+      match = nodeIdLower.includes(text.toLowerCase());
     }
   
     return match;
