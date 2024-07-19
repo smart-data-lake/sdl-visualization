@@ -656,7 +656,7 @@ export function createParentNodesFromComponents(rfi: ReactFlowInstance){
     const componentsRf = rfi.groupedNodeComponentsRf!;
     const rfNodeIds = rfi.getNodes().map(node => node.id);
     assert(componentsRf !== undefined, "connected components should not be undefined!");
-    
+
     componentsRf.forEach((v, k) => {
         if(v.length > 0){
             // TODO: the following can be refactored
@@ -742,7 +742,6 @@ export function highlightBySubstring(rfi: ReactFlowInstance, G: DAGraph, subStri
     */
     const ids: string[] = Array.from(components.values()).flatMap((nodes) => nodes.map(node => node.id));
     setNodeStyles(rfi, ids);
-
 }
 
 
@@ -797,6 +796,7 @@ export function resetGroupSettings(rfi: ReactFlowInstance){
             parentId: undefined,
             extent: undefined,
             expandParent: false,
+            position: node.positionAbsolute!,
         }
         return node;
     }));
