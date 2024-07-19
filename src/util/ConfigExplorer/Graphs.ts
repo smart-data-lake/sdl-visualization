@@ -228,13 +228,11 @@ export class DAGraph {
                 if (dataObjsAndEdges.length > 1){
                     const dataObjs = dataObjsAndEdges[0];
                     const edges = dataObjsAndEdges[1];
-                    const relatedActionObjects = dataObjsAndEdges[2]
+                    const relatedActionObjects = dataObjsAndEdges[2] // TODO: we can use a set here or a single variable
                     const actionId = dataObjsAndEdges[3];
 
                     // create new action node that unifies the edges and link the source nodes to it
-                    const jsonObjs =  Object.fromEntries(relatedActionObjects.map(x => [x.jsonObject]));
-                    jsonObjs["type"] = actionType;
-
+                    const jsonObjs = relatedActionObjects[0].jsonObject;
                     const newActionNode = new ActionObject(dataObjs, [node], actionId, jsonObjs);
                     this.nodes.push(newActionNode);
                     this.edges.push(new Edge(newActionNode, node, `${newActionNode.id}=${actionType}=${node.id}`));
@@ -982,6 +980,7 @@ export class PartialDataObjectsAndActions extends DAGraph{
 */
 export  class DataObjectsAndActionsSep extends DAGraph{ // TODO: make this default afterwards
     constructor(public jsonObject: ConfigData){
+        console.log("configdata: ", jsonObject)
         const dataObjects: DataObject[] = getDataObjects(jsonObject.dataObjects);
         const [actionObjects, edges] = getActionsObjects(jsonObject.actions, dataObjects, true) as [ActionObject[], Action[]];
         console.log("dataobjects: ", dataObjects)
