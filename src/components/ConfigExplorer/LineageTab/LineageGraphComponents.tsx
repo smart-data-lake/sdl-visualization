@@ -32,6 +32,7 @@ import { flowProps, graphNodeProps, resetViewPortCentered } from '../../../util/
 import { Position } from 'reactflow';
 import { reactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { AutoComplete } from 'antd';
+import Draggable from 'react-draggable';
 
 /*
   Styles to refactor (for the entire LineageTab folder)
@@ -415,7 +416,8 @@ export const EdgeInfoBox = (props) => {
   }
 
 
-  return <Box
+  return <Draggable bounds="parent">
+    <Box
   sx={{
     position: 'absolute',
     right: 20,
@@ -464,6 +466,7 @@ export const EdgeInfoBox = (props) => {
     </Box>
   </>
 </Box>
+</Draggable>
 }
 
 export const NodeSearchBar = ({rfi}) => {
@@ -485,7 +488,6 @@ export const NodeSearchBar = ({rfi}) => {
     const suffixMatch = text.match(/^suffix:(.*)$/);
     const includesMatch = text.match(/^includes:(.*)$/);
 
-    console.log(groupMatch, childrenMatch, prefixMatch, suffixMatch, includesMatch)
     if (groupMatch) {
       const [, , groupType, groupName] = groupMatch;
       if (!groupType && !groupName) {
