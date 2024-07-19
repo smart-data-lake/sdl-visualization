@@ -819,7 +819,7 @@ export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, args: any){
 export function groupByFeed(rfi: ReactFlowInstance, G: DAGraph, args: any){
     // required args: feedName
     const F = (graph: DAGraph, fargs: any) => {
-        return graph.nodes.filter(node => (node as ActionObject).jsonObject.metadata.feed === fargs.feedName); 
+        return graph.nodes.filter(node => (node as ActionObject).jsonObject.metadata?.feed === fargs.feedName); 
     }
     groupingRoutine(G, F, args, rfi);
 }
@@ -847,7 +847,5 @@ export function groupByConnectionId(rfi: ReactFlowInstance, G: DAGraph, args: an
     }
     groupingRoutine(G, F, args, rfi);
 }
-
-export function groupyByConnectionId(){} // TODO - data
 export function showRunHeatmap(){} //TODO - action
 export function showDataSizeHeatmap(){} //TODO - data, nFiles or size in bytes
