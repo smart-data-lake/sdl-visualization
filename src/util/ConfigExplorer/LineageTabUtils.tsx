@@ -7,7 +7,7 @@ import reactFlow, {
 
 import assert from 'assert';
 
-import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, Edge } from './Graphs';
+import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, Edge, ActionObject, DataObject } from './Graphs';
 import { ConfigData } from './ConfigData';
 import { findFirstKeyWithObject } from '../helpers';
 
@@ -34,6 +34,7 @@ const EDGE_STROKE_WIDTH_HIGHLIGHTED = 5;
 export type LayoutDirection = 'TB' | 'LR';
 export type ExpandDirection = 'forward' | 'backward';
 export type GraphView = 'full' | 'data' | 'action';
+export type DataOrActionObject = DataObject | ActionObject;
 export type GraphElements = GraphNode[] | GraphEdge[] | [GraphNode[], GraphEdge[]];
 export type ReactFlowElements = ReactFlowNode[] | ReactFlowEdge[] | [ReactFlowNode[], ReactFlowEdge[]];
 
@@ -455,6 +456,20 @@ export function setEdgeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlow
 /*
     Functions for Grouping / Retrieval
     These should be done on the DAGraph instance only, to separete computation from rendering the ReactFlowInstance
+
+    - A grouping function can be abstracted as follows:
+
+    function groupBy(args){
+        const groupingFunction = ...
+        groupingRoutine(groupingFuntion, args)
+    }
+
+    - A grouping button executes the following abstract function on click:
+
+    function group(grouped, args){
+        if(grouped) { groupBy(args) }
+        else { ungroup() }
+    }
 */
 function getGraphNodeElements(G: DAGraph, F: (g: DAGraph, fargs: any) => GraphNode[], args: any){
     // a generic grouping function interface that retrieves the elements from G via a getter fuction F
@@ -723,68 +738,48 @@ export function prioritizeParentNodes(rfi: ReactFlowInstance){
 }
 
 
-export function highlightBySubstring(rfi: ReactFlowInstance, G: DAGraph, subString: string){
-    /*
-        Define the graph retrieval function
-    */
-    const F = (graph: DAGraph, args: any) => {
-        // return graph.nodes.filter(node => node.data.id === args.feedName); 
-        return graph.nodes.filter(node => node.data.id.includes(args.subString));
-    }
+function highlightRoutine(G: DAGraph, F:(graph: DAGraph, fargs: any) => GraphNode[], args: any, rfi: ReactFlowInstance){
+        /*
+            Compute the components based on the retrieved results / aggregation 
+        */
+        const components = getGraphNodeElements(G, F, args) as Map<string, GraphNode[]>;
 
-    /*
-        Compute the components based on the retrieved results / aggregation 
-    */
-    const components = getGraphNodeElements(G, F, {subString}) as Map<string, GraphNode[]>;
-
-    /*
-        Update ReactFlow Instance
-    */
-    const ids: string[] = Array.from(components.values()).flatMap((nodes) => nodes.map(node => node.id));
-    setNodeStyles(rfi, ids);
+        /*
+            Update ReactFlow Instance
+        */
+        const ids: string[] = Array.from(components.values()).flatMap((nodes) => nodes.map(node => node.id));
+        setNodeStyles(rfi, ids);
 }
 
-
-// does this make sense? we only visualize subgraphs, as each feed defines one
-// this function here groups objects with the same substring in their ids
-// TODO: currently we pass in layoutDirection via args, can we pass it via reactFlowInstance?
-export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, args: any){
-    /*
-        Define the graph retrieval function
-    */
-    const F = (graph: DAGraph, fargs: any) => {
-        // return graph.nodes.filter(node => node.data.id === args.feedName); // TODO: read config data to node props 
-        return graph.nodes.filter(node => node.data.id.includes(fargs.substring));
-    }
-
+function groupingRoutine(G: DAGraph, F:(graph: DAGraph, fargs: any) => GraphNode[], args: any, rfi: ReactFlowInstance){
     /*
         Compute the components based on the retrieved results / aggregation and map them to ReactFlow elements
     */
-    const components = getGraphNodeElements(G, F, args) as Map<string, GraphNode[]>;
-    const componentsRf: Map<string, ReactFlowNode[]> = new Map();
-    components.forEach((v, k) => 
-        {componentsRf.set(k, getRfElementsfromDAGElements(v, rfi));}
-    );
-    /*
-        Update ReactFlow
-    */
-    // store components in the RFI
-    rfi.groupedNodeComponents = components;
-    rfi.groupedNodeComponentsRf = componentsRf;
-
-    // create parent nodes and update reactFlowInstance
-    createParentNodesFromComponents(rfi);
-
-    // recompute layout in favor of the parent nodes and adjust the children in each parent node
-    // rfi.setNodes(computeLayout(rfi.getNodes().filter(node => !(node.extent === 'parent')), // includes all parent nodes and non grouped nodes
-    //                            rfi.getEdges(), 
-    //                            args.layoutDirection));
-    // TODO: for each component, shift the children nodes by the origin of the parent node to get the relative coords and recompute layout (is the recompute guarenteed to stay in the parent node's frame?)
-    // This works only if we have created and merged the new edges as well?
-    // computeChildeNodeRelativePosition()
-
-    // extra step to sort the reactFlow children nodes, as required by the current ReactFlow implementation...
-    prioritizeParentNodes(rfi);
+        const components = getGraphNodeElements(G, F, args) as Map<string, GraphNode[]>;
+        const componentsRf: Map<string, ReactFlowNode[]> = new Map();
+        components.forEach((v, k) => 
+            {componentsRf.set(k, getRfElementsfromDAGElements(v, rfi));}
+        );
+        /*
+            Update ReactFlow Instance
+        */
+        // store components in the RFI
+        rfi.groupedNodeComponents = components;
+        rfi.groupedNodeComponentsRf = componentsRf;
+    
+        // create parent nodes and update reactFlowInstance
+        createParentNodesFromComponents(rfi);
+    
+        // recompute layout in favor of the parent nodes and adjust the children in each parent node
+        // rfi.setNodes(computeLayout(rfi.getNodes().filter(node => !(node.extent === 'parent')), // includes all parent nodes and non grouped nodes
+        //                            rfi.getEdges(), 
+        //                            args.layoutDirection));
+        // TODO: for each component, shift the children nodes by the origin of the parent node to get the relative coords and recompute layout (is the recompute guarenteed to stay in the parent node's frame?)
+        // This works only if we have created and merged the new edges as well?
+        // computeChildeNodeRelativePosition()
+    
+        // extra step to sort the reactFlow children nodes, as required by the current ReactFlow implementation...
+        prioritizeParentNodes(rfi);
 }
 
 export function resetGroupSettings(rfi: ReactFlowInstance){
@@ -804,3 +799,55 @@ export function resetGroupSettings(rfi: ReactFlowInstance){
     rfi.groupedNodeComponents = undefined;
     rfi.groupedNodeComponentsRf = undefined;
 }
+
+export function highlightBySubstring(rfi: ReactFlowInstance, G: DAGraph, args: string){
+    // required args: substring
+    const F = (graph: DAGraph, fargs: any) => {
+        return graph.nodes.filter(node =>  (node as DataOrActionObject).data.id.includes(fargs.substring));
+    }
+    highlightRoutine(G, F, args, rfi);
+}
+
+export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, args: any){
+    // required args: substring
+    const F = (graph: DAGraph, fargs: any) => {
+        return graph.nodes.filter(node => (node as DataOrActionObject).data.id.includes(fargs.substring));
+    }
+    groupingRoutine(G, F, args, rfi);
+}
+
+export function groupByFeed(rfi: ReactFlowInstance, G: DAGraph, args: any){
+    // required args: feedName
+    const F = (graph: DAGraph, fargs: any) => {
+        return graph.nodes.filter(node => (node as ActionObject).jsonObject.metadata.feed === fargs.feedName); 
+    }
+    groupingRoutine(G, F, args, rfi);
+}
+
+export function groupByObjectType(rfi: ReactFlowInstance, G: DAGraph, args: any){
+    // required args: objectType
+    const F = (graph: DAGraph, fargs: any) => {
+        return graph.nodes.filter(node => (node as DataOrActionObject).jsonObject.type === fargs.objectType);
+    }
+    groupingRoutine(G, F, args, rfi);
+}
+
+export function groupByTableName(rfi: ReactFlowInstance, G: DAGraph, args: any){
+    // required args: tableName
+    const F = (graph: DAGraph, fargs: any) => {
+        return graph.nodes.filter(node => (node as DataObject).jsonObject.table.name === fargs.objectType);
+    }
+    groupingRoutine(G, F, args, rfi);
+}
+
+export function groupByConnectionId(rfi: ReactFlowInstance, G: DAGraph, args: any){
+    // required args: connectionId
+    const F = (graph: DAGraph, fargs: any) => {
+        return graph.nodes.filter(node => (node as DataObject).jsonObject.connectionId === fargs.connectionId);
+    }
+    groupingRoutine(G, F, args, rfi);
+}
+
+export function groupyByConnectionId(){} // TODO - data
+export function showRunHeatmap(){} //TODO - action
+export function showDataSizeHeatmap(){} //TODO - data, nFiles or size in bytes
