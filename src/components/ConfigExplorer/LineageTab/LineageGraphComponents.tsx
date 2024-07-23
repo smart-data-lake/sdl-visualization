@@ -33,6 +33,8 @@ import { Position } from 'reactflow';
 import { reactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { AutoComplete } from 'antd';
 import Draggable from 'react-draggable';
+import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
+import { getRFI, getSelectedEdge, setSelectedEdge } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/ReactFlowSlice';
 
 /*
   Styles to refactor (for the entire LineageTab folder)
@@ -406,8 +408,11 @@ export const CustomEdge = ({
   );
 }
 
-export const EdgeInfoBox = (props) => {
-  const {rfi, edge, onClose} = props;
+export const EdgeInfoBox = () => {
+  const dispatch = useAppDispatch();
+  const rfi = useAppSelector((state) => getRFI(state));
+  const edge = useAppSelector((state) => getSelectedEdge(state));
+
   const source = edge.source;
   const target = edge.target;
 
@@ -415,6 +420,9 @@ export const EdgeInfoBox = (props) => {
     resetViewPortCentered(rfi, [rfNode]);
   }
 
+  const onClose = () => {
+    dispatch(setSelectedEdge(undefined));
+  }
 
   return <Draggable bounds="parent">
     <Box
@@ -469,7 +477,8 @@ export const EdgeInfoBox = (props) => {
 </Draggable>
 }
 
-export const NodeSearchBar = ({rfi}) => {
+export const NodeSearchBar = () => {
+  const rfi = useAppSelector((state) => getRFI(state));
   const [elementSearchText, setElementSearchText] = useState("");
   const [suggestions, setSuggestions] = useState<any>([]);
 

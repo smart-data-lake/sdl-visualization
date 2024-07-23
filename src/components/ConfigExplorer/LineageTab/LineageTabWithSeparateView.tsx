@@ -51,7 +51,7 @@ import { LineageGraphToolbar as Toolbar } from './LineageGraphToolbar';
 import store, { RootState } from '../../../app/store';
 import { Provider, useDispatch } from 'react-redux'
 import { useAppSelector, useAppDispatch } from '../../../hooks/useRedux';
-import { getReactFlowKey, setReactFlowInstance, setReactFlowKey } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/ReactFlowSlice';
+import { getReactFlowKey, getSelectedEdge, setReactFlowInstance, setReactFlowKey, setSelectedEdge } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/ReactFlowSlice';
 import { getView } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
 import { getExpansionState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
 import { getLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
@@ -83,8 +83,8 @@ function LineageTabCore(props: flowProps) {
   const graphView = useAppSelector((state) => getView(state));
   const isExpanded = useAppSelector((state) => getExpansionState(state));
   const layout = useAppSelector((state) => getLayout(state));
+  const edgeSelected = useAppSelector((state) => getSelectedEdge(state) !== undefined);
   const [grouped, setGrouped] = useState(false); // revert grouped view on second click
-  const [infoBoxUp, setInfoBoxUp] = useState<[boolean, ReactFlowEdge | undefined]>([false, undefined]);
 
   const reactFlow = useReactFlow();
   const reactFlowKey = useAppSelector((state) => getReactFlowKey(state));
@@ -211,9 +211,9 @@ function LineageTabCore(props: flowProps) {
 
   // defines the conditions to (re-)render the lineage graph
   const [nodes, edges] = useMemo(() => {
-    setInfoBoxUp([false, undefined]);
+    dispatch(setSelectedEdge(undefined));
     [nodes_init, edges_init] = prepareAndRenderGraph();
-    nodes_init = computeLayout(nodes_init, edges_init, layout);
+    nodes_init = computeLayout(nodes_init, edges_init, layout); // TODO: keep user state here
     // resetGroupSettings(reactFlow); // TODO: reset grouped flag as well (cannot do this on init though)
     dispatch(setReactFlowKey(reactFlowKey+1)); // change key to re-create react flow component (and initialize it through default nodes)
     return [nodes_init, edges_init];
@@ -222,7 +222,7 @@ function LineageTabCore(props: flowProps) {
   const onPaneClick = () => {
     resetEdgeStyles(reactFlow);
     resetNodeStyles(reactFlow);
-    onCloseInfoBox();
+    dispatch(setSelectedEdge(undefined));
   }
 
   // highlight edge and src, target nodes' border
@@ -231,19 +231,7 @@ function LineageTabCore(props: flowProps) {
     resetNodeStyles(reactFlow);
     setNodeStylesOnEdgeClick(reactFlow, edge);
     setEdgeStylesOnEdgeClick(reactFlow, edge);
-    setInfoBoxUp([true, edge]);
-  }
-
-  const onCloseInfoBox = () => {
-    setInfoBoxUp([false, undefined]);
-  }
-
-  const handleCenterFocus = () => {
-    resetViewPortCentered(reactFlow, nodes);
-  }
-
-  const handleResetViewPort = () => {
-    resetViewPort(reactFlow);
+    dispatch(setSelectedEdge(edge));
   }
 
   // if not a callback, reactflow props will not be updated
@@ -287,23 +275,14 @@ function LineageTabCore(props: flowProps) {
         </ReactFlow>
         <Toolbar
           isPropsConfigDefined={props.configData !== undefined}
-          rfi={reactFlow}
           grouped={grouped}
           handleGrouping={handleGrouping}
           groupingFunc={groupBySubstring}
           groupingArgs={{substring: "load", layoutDirection: layout}} // test input arg
         />
-        {infoBoxUp[0] && (
-          <EdgeInfoBox
-            rfi={reactFlow}
-            onClose={onCloseInfoBox}
-            edge={infoBoxUp[1]}
-          />
-        )}
-        <NodeSearchBar rfi={reactFlow} />
+        {edgeSelected && <EdgeInfoBox/>}
+        <NodeSearchBar/>
       </Box>
-
-
   )
 }
 
