@@ -1,8 +1,4 @@
-/**
- * The toolbar for the lineage graph 
- * modified from https://github.com/trananhtuat/animated-sidebar-indicator/blob/main/src/components/sidebar/Sidebar.jsx
- */
-import { AlignVerticalTop, LoopOutlined } from '@mui/icons-material';
+import { AlignVerticalTop, ArrowDropDown, ArrowRight, Expand, LoopOutlined } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
@@ -13,16 +9,23 @@ import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import SchemaIcon from '@mui/icons-material/Schema';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
 import WorkspacesIcon from '@mui/icons-material/Workspaces';
-import { Divider, IconButton, Tooltip } from '@mui/joy';
-import Option from '@mui/joy/Option';
+import DescriptionIcon from '@mui/icons-material/Description';
+import SettingsIcon from '@mui/icons-material/Settings';
+
+import { Button, ButtonGroup, Divider, Dropdown, IconButton, List, ListDivider, ListItem, ListItemDecorator, Menu, MenuButton, MenuItem, SvgIcon, Tooltip, Typography, Option } from '@mui/joy';
+// import Option from '@mui/joy/Option';
 import Select, { SelectOption } from '@mui/joy/Select';
 import Box from '@mui/material/Box';
 import { toPng } from 'html-to-image';
 
 import Draggable from 'react-draggable';
-import { ReactFlowInstance, Node as ReactFlowNode } from 'reactflow';
-import { onlyUnique } from '../../../util/helpers';
-import { resetGroupSettings, getNonParentNodesFromArray, getParentNodeFromArray, getParentNodesFromArray, computeNodePositionFromParent, computeParentNodePositionFromArray, prioritizeParentNodes, computeChildNodeRelativePosition } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { resetGroupSettings, getNonParentNodesFromArray, getParentNodeFromArray, getParentNodesFromArray, computeNodePositionFromParent, computeParentNodePositionFromArray, prioritizeParentNodes, computeChildNodeRelativePosition, getFreeNodesFromArray, GraphView } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { useCallback, useState } from 'react';
+import { RootState } from '../../../app/store';
+import { setGraphViewTo } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
+import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
+import { setLayoutTo } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
+import { setExpansionStateTo } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
 
 
 /*
@@ -48,13 +51,14 @@ function downloadImage(dataUrl: string) {
 }
 
 
-/*
-  Individual components of the toolbar with its custom hooks
-*/
-const GraphViewSelector = ({graphView, setGraphView}) => {
+
+const GraphViewSelector = () => {
+  const graphView = useAppSelector((state: RootState) => state.graphViewSelector.view);
+  const dispatch = useAppDispatch();
+
   const handleChange = (event, value) => {
     if(event !== null){
-      setGraphView(value);
+      dispatch(setGraphViewTo(value));
     }
   };
 
@@ -89,14 +93,19 @@ const GraphViewSelector = ({graphView, setGraphView}) => {
                 renderValue={renderSearchType}
                 sx={{ zIndex: componentZIndex, '& .MuiSelect-button': {overflow: "visible"}}}
         >
-          <Option id="full" value="full">{getSearchTypeElement('full')}</Option>
-          <Option id="data" value="data">{getSearchTypeElement('data')}</Option>
-          <Option id="action" value="action">{getSearchTypeElement('action')}</Option>
+            <Option id="full" value="full">{getSearchTypeElement('full')}</Option>
+            <ListDivider role="none" inset="gutter" />
+            <Option id="data" value="data">{getSearchTypeElement('data')}</Option>
+            <ListDivider role="none" inset="gutter" />
+            <Option id="action" value="action">{getSearchTypeElement('action')}</Option>
         </Select>
   );
 }
 
-function LayoutButton ({layout, setLayout}) {
+function LayoutButton () {
+  const layout = useAppSelector((state: RootState) => state.layoutSelector.layout);
+  const dispatch = useAppDispatch();
+
   return <div
   title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'}
   className="controls"
@@ -104,46 +113,30 @@ function LayoutButton ({layout, setLayout}) {
 >
   <IconButton
     color={'neutral'}
-    onClick={() => setLayout(layout === 'TB' ? 'LR' : 'TB')}
+    onClick={() => dispatch(setLayoutTo(layout === 'TB' ? 'LR' : 'TB'))}
   >
     {layout === 'TB' ? <AlignVerticalTop /> : <AlignHorizontalLeft />}
   </IconButton>
 </div>
 }
 
-function GraphExpansionButton ({expanded, setExpanded, expansionState}) {
-  const expandGraph = () => {
-    let buttonMessage = expanded ? 'Compress Graph' : 'Expand Graph';
-    setExpanded([!expanded, buttonMessage]);
-  }
+function GraphExpansionButton () {
+  const dispatch = useAppDispatch();
+  const isExpanded = useAppSelector((state: RootState) => state.graphExpansion.isExpanded);
+  const title = isExpanded ? 'Compress Graph' : 'Expand Graph';
 
   return <div
-      title={expansionState as string}
+      title={title}
       style={styles}
     >
       <IconButton
         color='neutral'
-        onClick={expandGraph}
+        onClick={() =>  dispatch(setExpansionStateTo({isExpanded: !isExpanded}))}
       >
-        {expanded ? <OpenWithIcon /> : <CloseFullscreenIcon />}
+        {isExpanded ?  <CloseFullscreenIcon /> : <OpenWithIcon />}
       </IconButton>
     </div>
 }
-
-function ShowActionButton ({hidden, setHidden}) {
-  return  <div
-  title='Display / Hide action IDs'
-  style={styles}
->
-  <IconButton
-    color={hidden ? 'neutral' : 'primary'}
-    onClick={() => setHidden(!hidden)}
-  >
-    <RocketLaunchOutlined />
-  </IconButton>
-</div>
-}
-
 
 function DownloadLineageButton() {
   const download = () => {
@@ -164,10 +157,11 @@ function DownloadLineageButton() {
       title='Download image as PNG file'
       style={styles}
     >
-      <IconButton
+      <IconButton sx={{display:"flex", flexDirection:"column"}}
         color='neutral'
         onClick={download}>
         <CloudDownloadIcon />
+        {/* <Typography variant='plain' sx={{ fontSize: '0.55rem' }}>download</Typography> */}
       </IconButton>
     </div>
   );
@@ -198,6 +192,8 @@ function CenterFocusButton({handleOnClick}){
 }
 
 function RecomputeLayoutButton({rfi, layoutDirection, computeLayoutFunc}){
+
+  // recomputes the layout from the current nodes in the flow instance (rfi)
   const handleOnClick = () => {
     const rfNodes = rfi.getNodes();
     const nonParentNodes = getNonParentNodesFromArray(rfNodes);
@@ -212,6 +208,16 @@ function RecomputeLayoutButton({rfi, layoutDirection, computeLayoutFunc}){
     prioritizeParentNodes(rfi);
   }
 
+  // const handleOnClick1 = () => {
+  //   // 1.layout parent nodes and "free" nodes jointly
+  //   // 2.adjust children nodes relative to parents
+  //   const rfNodes = rfi.getNodes();
+  //   const nonParentNodes = getNonParentNodesFromArray(rfNodes);
+  //   const freeNodes = getFreeNodesFromArray(rfNodes);
+  //   const parentNodes = getParentNodesFromArray(rfNodes);
+  //   const rfEdges = rfi.getEdges();
+  // }
+
   return (
     <div
       title='Recompute layout'
@@ -223,9 +229,6 @@ function RecomputeLayoutButton({rfi, layoutDirection, computeLayoutFunc}){
   )
 }
 
-/*
-  This function implemented for nodes only
-*/
 function GroupingButton({groupingFunc, args, handleGrouping}){ 
   // create new rfNode need to set parentId, no nested subflows for now
   const handleOnClick = () => {
@@ -244,54 +247,97 @@ function GroupingButton({groupingFunc, args, handleGrouping}){
   )
 }
 
+function SettingsButton(){
+  const handleOnClick = () => {
+
+  }
+
+  return (
+    <div
+      title='Settings'
+      style={styles}>
+      <IconButton onClick={handleOnClick}>
+        <SettingsIcon/>
+      </IconButton>
+    </div>
+  )
+
+}
+
+function ShowDocumentationButton(){
+  const handleChange = useCallback((_event, value) => {
+    let url = '';
+    if(value === "schema"){
+      url = 'https://smartdatalake.ch/json-schema-viewer';
+    } else if(value === "doc"){
+      url = 'https://smartdatalake.ch/';
+    } else {}
+    window.open(url, '_blank');
+  }, []);
+
+  function renderDocButton(option){
+    return <Tooltip arrow title='Show documentation options' enterDelay={500} enterNextDelay={500} placement='right'>
+            <DescriptionIcon sx={{}}/>
+          </Tooltip>    
+  }
+
+  return (
+    <div
+      title='View documentation'
+      style={styles}>
+        <Select variant="plain"
+                size="sm"
+                renderValue={renderDocButton}
+                onChange={handleChange}
+                sx={{ zIndex: componentZIndex, '& .MuiSelect-button': {overflow: "visible"}}}
+        >
+          <Option id="schemaViewer" value="schema"><Typography fontSize='xs' variant='plain'>Schema viewer</Typography></Option>
+          <Option id="documentation" value="doc"><Typography fontSize='xs' variant='plain'>Documentation</Typography></Option>
+        </Select>
+      </div>
+  );
+}
 
 /*
   The main toolbar component
 */
 export function LineageGraphToolbar(props) {
-  return <Box
-    sx={{
-      zIndex: componentZIndex,
-      position: 'absolute',
-      left: 9,
-      bottom: 135,
-      display: 'flex',
-      flexDirection: 'column-reverse',
-      border: '1px solid',
-      borderColor: 'divider',
-      borderRadius: '7px',
-      width: 50,
-      bgcolor: 'white',
-      color: 'grey.900',
-      boxShadow: 2,
-      '& svg': {
-        m: -0.5,
-      },
-    }}
-  >
-      <GroupingButton  groupingFunc={props.groupingFunc} args={props.groupingArgs} handleGrouping={props.handleGrouping}/>
-      <GraphViewSelector graphView={props.graphView} setGraphView={props.setGraphView}/>
-      <Divider orientation='horizontal'/>
-      <ResetViewPortButton handleOnClick={props.handleOnClickResetViewport}/>
-      <CenterFocusButton handleOnClick={props.handleOnClickCenterFocus}/>
-      <RecomputeLayoutButton rfi={props.rfi} layoutDirection={props.layout} computeLayoutFunc={props.computeLayoutFunc}/>
-      <LayoutButton layout={props.layout} setLayout={props.setLayout}/>
-      {props.isPropsConfigDefined && <GraphExpansionButton expanded={props.expanded} setExpanded={props.setExpanded} expansionState={props.expansionState}/>}
-      <Divider orientation='horizontal'/>
-      {/* <ShowActionButton hidden={props.hidden} setHidden={props.setHidden}/> */}
-      <DownloadLineageButton/>
-</Box>
-}
-
-/*
-  Make the toolbar optionally draggable
-*/
-export function DraggableLineageGraphToolbar(props) {
-  return (
-    <Draggable>
-      <LineageGraphToolbar {...props}/>
-    </Draggable>
-  );
+  return  <Draggable bounds="parent">
+            <Box
+            sx={{
+              zIndex: componentZIndex,
+              position: 'absolute',
+              right: 200,
+              top: 20,
+              display: 'flex',
+              flexDirection: 'row',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: '7px',
+              width: 410,
+              bgcolor: 'white',
+              color: 'grey.900',
+              boxShadow: 2,
+              '& svg': {
+                m: -0.5,
+              },
+            }}
+          >   
+              <SettingsButton/>
+              <ShowDocumentationButton/> 
+              <Divider orientation='vertical'/>
+              <GroupingButton  groupingFunc={props.groupingFunc} args={props.groupingArgs} handleGrouping={props.handleGrouping}/>
+              <GraphViewSelector/>
+              {props.isPropsConfigDefined && <GraphExpansionButton/>}
+              <Divider orientation='vertical'/>
+              <ResetViewPortButton handleOnClick={props.handleOnClickResetViewport}/>
+              <CenterFocusButton handleOnClick={props.handleOnClickCenterFocus}/>
+              <RecomputeLayoutButton rfi={props.rfi} layoutDirection={props.layout} computeLayoutFunc={props.computeLayoutFunc}/>
+              <LayoutButton/>
+              <Divider orientation='vertical'/>
+              <DownloadLineageButton/>
+            </Box>
+          </Draggable>
 }
 
 

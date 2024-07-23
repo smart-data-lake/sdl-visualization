@@ -980,14 +980,10 @@ export class PartialDataObjectsAndActions extends DAGraph{
 */
 export  class DataObjectsAndActionsSep extends DAGraph{ // TODO: make this default afterwards
     constructor(public jsonObject: ConfigData){
-        console.log("configdata: ", jsonObject)
         const dataObjects: DataObject[] = getDataObjects(jsonObject.dataObjects);
         const [actionObjects, edges] = getActionsObjects(jsonObject.actions, dataObjects, true) as [ActionObject[], Action[]];
-        console.log("dataobjects: ", dataObjects)
-        console.log("actionObjects: ", actionObjects)
         const dataObjectsAndActions: Node[] = dataObjects.concat(actionObjects);
         const dataObjectsWithPosition = dagreLayout(dataObjectsAndActions, edges); 
         super(dataObjectsWithPosition, edges);
-        // this.jsonObject = jsonObject;
     }
 }

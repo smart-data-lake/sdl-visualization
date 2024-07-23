@@ -42,12 +42,15 @@ import {
   groupBySubstring,
   getGraphFromConfig,
   highlightBySubstring,
+  groupByFeed,
   resetGroupSettings,
   prioritizeParentNodes
 } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { CustomDataNode, CustomEdge, EdgeInfoBox, NodeSearchBar } from './LineageGraphComponents';
-import { LineageGraphToolbar } from './LineageGraphToolbar';
-import { layout } from 'dagre';
+import { LineageGraphToolbar as Toolbar } from './LineageGraphToolbar';
+import store, { RootState } from '../../../app/store';
+import { Provider } from 'react-redux'
+import { useAppSelector } from '../../../hooks/useRedux';
 
 /*
  Add custom node and edge types
@@ -72,24 +75,17 @@ function LineageTabCore(props: flowProps) {
   let nodes_init: ReactFlowNode[] = [];
   let edges_init: ReactFlowEdge[] = [];
 
-  const [graphView, setGraphView] = useState<GraphView>('full'); // control for action/data/full graph view 
-  const [onlyDirectNeighbours, setOnlyDirectNeighbours] = useState([true, 'Expand Graph']); // can be simplified as well
-  const [layout, setLayout] = useState<LayoutDirection>('TB');
+  const graphView = useAppSelector((state: RootState) => state.graphViewSelector.view);
+  const isExpanded = useAppSelector((state: RootState) => state.graphExpansion.isExpanded);
+  const layout = useAppSelector((state: RootState) => state.layoutSelector.layout)
   const [grouped, setGrouped] = useState(false); // revert grouped view on second click
   const [infoBoxUp, setInfoBoxUp] = useState<[boolean, ReactFlowEdge | undefined]>([false, undefined]);
-  let [hidden, setHidden] = useState(useParams().elemelsntType === 'dataObjects' ? true : false);
 
   const reactFlow = useReactFlow();
   const [reactFlowKey, setReactFlowKey] = useState(1);
 
   const navigate = useNavigate();            // handlers for navigating dataObjects and actions
   const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
-
-  // helper functions
-  function expandGraph(): void {
-    let buttonMessage = onlyDirectNeighbours[0] ? 'Compress Graph' : 'Expand Graph';
-    setOnlyDirectNeighbours([!onlyDirectNeighbours[0], buttonMessage]);
-  }
 
   const expandNodeFunc = useCallback((id: string, isExpanded: boolean,
     expandDirection: ExpandDirection,
@@ -111,7 +107,7 @@ function LineageTabCore(props: flowProps) {
       const currRfNodeIds = currRfNodes.map(rfNode => rfNode.id);
       let rfNodes = createReactFlowNodes(neighbourNodes.filter(node => !currRfNodeIds.includes(node.id)),
         layoutDirection,
-        !onlyDirectNeighbours[0],
+        !isExpanded,
         true,
         expandDirection,
         graphView,
@@ -181,13 +177,13 @@ function LineageTabCore(props: flowProps) {
     doa.setCenterNode(doa.getNodeById(centralNodeId)!);
 
     // When the layout has changed, the nodes and edges have to be recomputed
-    partialGraphPair = onlyDirectNeighbours[0] ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
+    partialGraphPair = !isExpanded ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0], partialGraphPair[1], layout, props.configData);
     partialGraph.setCenterNode(partialGraph.getNodeById(centralNodeId)!); 
 
     let newNodes = createReactFlowNodes(partialGraphPair[0],
       layout,
-      !onlyDirectNeighbours[0],
+      !isExpanded,
       false,
       undefined,
       graphView,
@@ -208,9 +204,10 @@ function LineageTabCore(props: flowProps) {
     setInfoBoxUp([false, undefined]);
     [nodes_init, edges_init] = prepareAndRenderGraph();
     nodes_init = computeLayout(nodes_init, edges_init, layout);
+    // resetGroupSettings(reactFlow); // TODO: reset grouped flag as well (cannot do this on init though)
     setReactFlowKey(reactFlowKey + 1); // change key to re-create react flow component (and initialize it through default nodes)
     return [nodes_init, edges_init];
-  }, [hidden, onlyDirectNeighbours, props, graphView, url, layout]);
+  }, [isExpanded, props, graphView, url, layout]);
 
   const onPaneClick = () => {
     resetEdgeStyles(reactFlow);
@@ -247,11 +244,11 @@ function LineageTabCore(props: flowProps) {
       resetGroupSettings(reactFlow);
     }
     setGrouped(!grouped);
-  }, [grouped])
+  }, [grouped, graphView])
 
  // TODO: refacttor handlers and import from util
   return (
-    <>
+
       <Box
         className='data-flow'
         ref={chartBox}
@@ -278,17 +275,8 @@ function LineageTabCore(props: flowProps) {
           <Controls />
           <Background /> {/* Background macht fehler "<pattern> attribute x: Expected length, "NaN"!*/}
         </ReactFlow>
-        <LineageGraphToolbar
+        <Toolbar
           isPropsConfigDefined={props.configData !== undefined}
-          hidden={hidden}
-          setHidden={setHidden}
-          expanded={onlyDirectNeighbours[0]}
-          setExpanded={expandGraph}
-          expansionState={onlyDirectNeighbours[1]}
-          layout={layout}
-          setLayout={setLayout}
-          graphView={graphView}
-          setGraphView={setGraphView}
           handleOnClickResetViewport={handleResetViewPort}
           handleOnClickCenterFocus={handleCenterFocus}
           computeLayoutFunc={computeLayout}
@@ -308,7 +296,7 @@ function LineageTabCore(props: flowProps) {
         <NodeSearchBar rfi={reactFlow} />
       </Box>
 
-    </>
+
   )
 }
 
@@ -316,7 +304,9 @@ function LineageTabCore(props: flowProps) {
 function LineageTabSep(props: flowProps) {
   return (
     <ReactFlowProvider>
-      <LineageTabCore {...props} />
+      <Provider store={store}>
+        <LineageTabCore {...props} />
+      </Provider>
     </ReactFlowProvider>
   )
 }
