@@ -107,7 +107,7 @@ function LineageTabCore(props: flowProps) {
       const currRfNodeIds = currRfNodes.map(rfNode => rfNode.id);
       let rfNodes = createReactFlowNodes(neighbourNodes.filter(node => !currRfNodeIds.includes(node.id)),
         layoutDirection,
-        !isExpanded,
+        isExpanded,
         true,
         expandDirection,
         graphView,
@@ -183,7 +183,7 @@ function LineageTabCore(props: flowProps) {
 
     let newNodes = createReactFlowNodes(partialGraphPair[0],
       layout,
-      !isExpanded,
+      isExpanded,
       false,
       undefined,
       graphView,
