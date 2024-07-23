@@ -14,12 +14,12 @@ const graphViewButtonSlice = createSlice({
     name: 'graphViewSelector',
     initialState,
     reducers: {
-        setGraphViewTo: (state, newView: PayloadAction<GraphView>) => {
+        setGraphView: (state, newView: PayloadAction<GraphView>) => {
             state.view = newView.payload
         }
     }
 })
 
-export const {setGraphViewTo} = graphViewButtonSlice.actions;
+export const {setGraphView} = graphViewButtonSlice.actions;
 export const getView = (state: RootState) => state.graphViewSelector.view;
 export default graphViewButtonSlice.reducer;

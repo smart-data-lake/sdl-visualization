@@ -114,7 +114,6 @@ export default function ConfigurationTab(props: ElementProps) {
 	const { data: runs } = useFetchWorkflowRunsByElement(props.elementType, props.elementName);
 
   function getAttribute(attributeName: string) {
-    console.log("get attribute: ", props.data)
     return getPropertyByPath(props.data, attributeName);
   }
 

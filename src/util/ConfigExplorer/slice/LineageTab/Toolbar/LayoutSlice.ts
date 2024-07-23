@@ -14,12 +14,12 @@ const layoutButtonSlice = createSlice({
     name: 'layoutSelector',
     initialState,
     reducers: {
-        setLayoutTo: (state, newState: PayloadAction<LayoutDirection>) => {
+        setLayout: (state, newState: PayloadAction<LayoutDirection>) => {
             state.layout = newState.payload;
         }
     }
 })
 
-export const {setLayoutTo} = layoutButtonSlice.actions;
+export const {setLayout} = layoutButtonSlice.actions;
 export const getLayout = (state: RootState) => state.layoutSelector.layout;
 export default layoutButtonSlice.reducer;

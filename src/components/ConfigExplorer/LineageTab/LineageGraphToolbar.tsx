@@ -19,13 +19,17 @@ import Box from '@mui/material/Box';
 import { toPng } from 'html-to-image';
 
 import Draggable from 'react-draggable';
-import { resetGroupSettings, getNonParentNodesFromArray, getParentNodeFromArray, getParentNodesFromArray, computeNodePositionFromParent, computeParentNodePositionFromArray, prioritizeParentNodes, computeChildNodeRelativePosition, getFreeNodesFromArray, GraphView } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { resetGroupSettings, getNonParentNodesFromArray, getParentNodeFromArray, getParentNodesFromArray, computeNodePositionFromParent, computeParentNodePositionFromArray, prioritizeParentNodes, computeChildNodeRelativePosition, getFreeNodesFromArray, GraphView, resetViewPort, resetViewPortCentered } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { useCallback, useState } from 'react';
 import { RootState } from '../../../app/store';
-import { setGraphViewTo } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
-import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
-import { setLayoutTo } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
-import { setExpansionStateTo } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
+import { setGraphView, getView } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
+import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux'
+import { setLayout, getLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
+import { setExpansionState, getExpansionState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
+import { useDispatch } from 'react-redux';
+import { getRFI, setReactFlowInstance } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/ReactFlowSlice';
+import { ReactFlowInstance } from 'reactflow';
+import { dagreLayoutRf as computeLayoutFunc } from '../../../util/ConfigExplorer/Graphs';
 
 
 /*
@@ -53,12 +57,12 @@ function downloadImage(dataUrl: string) {
 
 
 const GraphViewSelector = () => {
-  const graphView = useAppSelector((state: RootState) => state.graphViewSelector.view);
+  const graphView = useAppSelector((state) => getView(state));
   const dispatch = useAppDispatch();
 
   const handleChange = (event, value) => {
     if(event !== null){
-      dispatch(setGraphViewTo(value));
+      dispatch(setGraphView(value));
     }
   };
 
@@ -103,7 +107,7 @@ const GraphViewSelector = () => {
 }
 
 function LayoutButton () {
-  const layout = useAppSelector((state: RootState) => state.layoutSelector.layout);
+  const layout = useAppSelector((state) => getLayout(state));
   const dispatch = useAppDispatch();
 
   return <div
@@ -113,7 +117,7 @@ function LayoutButton () {
 >
   <IconButton
     color={'neutral'}
-    onClick={() => dispatch(setLayoutTo(layout === 'TB' ? 'LR' : 'TB'))}
+    onClick={() => dispatch(setLayout(layout === 'TB' ? 'LR' : 'TB'))}
   >
     {layout === 'TB' ? <AlignVerticalTop /> : <AlignHorizontalLeft />}
   </IconButton>
@@ -122,7 +126,7 @@ function LayoutButton () {
 
 function GraphExpansionButton () {
   const dispatch = useAppDispatch();
-  const isExpanded = useAppSelector((state: RootState) => state.graphExpansion.isExpanded);
+  const isExpanded = useAppSelector((state) => getExpansionState(state));
   const title = isExpanded ? 'Compress Graph' : 'Expand Graph';
 
   return <div
@@ -131,7 +135,7 @@ function GraphExpansionButton () {
     >
       <IconButton
         color='neutral'
-        onClick={() =>  dispatch(setExpansionStateTo({isExpanded: !isExpanded}))}
+        onClick={() =>  dispatch(setExpansionState({isExpanded: !isExpanded}))}
       >
         {isExpanded ?  <CloseFullscreenIcon /> : <OpenWithIcon />}
       </IconButton>
@@ -167,7 +171,12 @@ function DownloadLineageButton() {
   );
 }
 
-function ResetViewPortButton({handleOnClick}){
+function ResetViewPortButton(){
+  const rfi: ReactFlowInstance = useAppSelector(state => getRFI(state));
+  const handleOnClick = () => {
+    resetViewPort(rfi);
+  }
+
   return (
     <div
       title='Center viewport'
@@ -179,7 +188,12 @@ function ResetViewPortButton({handleOnClick}){
   )
 }
 
-function CenterFocusButton({handleOnClick}){
+function CenterFocusButton(){
+  const rfi: ReactFlowInstance = useAppSelector(state => getRFI(state));
+  const handleOnClick = () => {
+    const nodes = rfi.getNodes();
+    resetViewPortCentered(rfi, nodes);
+  }
   return (
     <div
       title='Focus on central node'
@@ -191,7 +205,10 @@ function CenterFocusButton({handleOnClick}){
   )
 }
 
-function RecomputeLayoutButton({rfi, layoutDirection, computeLayoutFunc}){
+function RecomputeLayoutButton(){
+  const dispatch = useAppDispatch();
+  const rfi = useAppSelector((state) => getRFI(state));
+  const layoutDirection =  useAppSelector((state) => getLayout(state));
 
   // recomputes the layout from the current nodes in the flow instance (rfi)
   const handleOnClick = () => {
@@ -206,6 +223,7 @@ function RecomputeLayoutButton({rfi, layoutDirection, computeLayoutFunc}){
 
     rfi.setNodes([...layoutedNonParentNodes, ...layoutedParentNodes])
     prioritizeParentNodes(rfi);
+    dispatch(setReactFlowInstance(rfi));
   }
 
   // const handleOnClick1 = () => {
@@ -330,9 +348,9 @@ export function LineageGraphToolbar(props) {
               <GraphViewSelector/>
               {props.isPropsConfigDefined && <GraphExpansionButton/>}
               <Divider orientation='vertical'/>
-              <ResetViewPortButton handleOnClick={props.handleOnClickResetViewport}/>
-              <CenterFocusButton handleOnClick={props.handleOnClickCenterFocus}/>
-              <RecomputeLayoutButton rfi={props.rfi} layoutDirection={props.layout} computeLayoutFunc={props.computeLayoutFunc}/>
+              <ResetViewPortButton/>
+              <CenterFocusButton/>
+              <RecomputeLayoutButton/>
               <LayoutButton/>
               <Divider orientation='vertical'/>
               <DownloadLineageButton/>

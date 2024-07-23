@@ -6,11 +6,13 @@ import { Node as ReactFlowNode} from 'reactflow'
 
 interface ReactFlowState {
     rfi: ReactFlowInstance | undefined;
+    reactFlowKey: number;
     groupedNodeComponents:  Map<string, GraphNode[]> | undefined;// store the connected components from group retrieved elements
     groupedNodeComponentsRf:  Map<string, ReactFlowNode[]> | undefined;// A map of the connected components to the current rfi
 }
 const initialState: ReactFlowState = {
-    rfi: useReactFlow(),
+    rfi: undefined,
+    reactFlowKey: 1,
     groupedNodeComponents: undefined,
     groupedNodeComponentsRf: undefined
 }
@@ -19,18 +21,22 @@ const ReactFlowSlice = createSlice({
     name: 'reactFlow',
     initialState,
     reducers: {
-        setReactFlowInstanceTo: (state, newState: PayloadAction<ReactFlowInstance>) => {
+        setReactFlowInstance: (state, newState: PayloadAction<ReactFlowInstance>) => {
             state.rfi = newState.payload;
         },
-        setGroupedComponentsTo: (state, newState: PayloadAction<Map<string, GraphNode[]>>) => {
+        setGroupedComponents: (state, newState: PayloadAction<Map<string, GraphNode[]>>) => {
             state.groupedNodeComponents = newState.payload;
         },
-        setGroupedComponentsRfTo: (state, newState: PayloadAction<Map<string, ReactFlowNode[]>>) => {
+        setGroupedComponentsRf: (state, newState: PayloadAction<Map<string, ReactFlowNode[]>>) => {
             state.groupedNodeComponentsRf = newState.payload;
+        }, 
+        setReactFlowKey: (state, newState: PayloadAction<number>) => {
+            state.reactFlowKey = newState.payload;
         }
     }
 })
 
-export const {setReactFlowInstanceTo, setGroupedComponentsTo, setGroupedComponentsRfTo} = ReactFlowSlice.actions;
+export const {setReactFlowInstance, setGroupedComponents, setGroupedComponentsRf, setReactFlowKey} = ReactFlowSlice.actions;
 export const getRFI = (state: RootState) => state.reactFlow.rfi;
+export const getReactFlowKey = (state: RootState) => state.reactFlow.reactFlowKey;
 export default ReactFlowSlice.reducer;
