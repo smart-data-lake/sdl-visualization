@@ -2,7 +2,8 @@ import { combineReducers, configureStore, Store} from '@reduxjs/toolkit'
 import graphViewButtonReducer from '../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
 import layoutReducer from '../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice'
 import graphExpansionReducer from '../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice'
-import reactFlowReducer from '../util/ConfigExplorer/slice/LineageTab/Toolbar/ReactFlowSlice'
+import reactFlowReducer from '../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice'
+import lineageTabReducer from '../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice'
 
 // disable serialization check on rfi
 const customizedMiddleware = (getDefaultMiddleware) => getDefaultMiddleware({
@@ -16,6 +17,7 @@ const rootReducer = combineReducers({
     layoutSelector: layoutReducer,
     graphExpansion: graphExpansionReducer,
     reactFlow: reactFlowReducer,
+    lineage: lineageTabReducer
  })
 
 const store: Store = configureStore({

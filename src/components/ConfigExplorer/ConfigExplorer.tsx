@@ -11,6 +11,10 @@ import ElementTable from './ElementTable';
 import GlobalConfigView from './GlobalConfigView';
 import ErrorBoundary from '../../layouts/ErrorBoundary';
 import { useFetchConfig } from '../../hooks/useFetchData';
+import { useAppDispatch } from '../../hooks/useRedux';
+import { setLineageTabProps } from '../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
+import { Provider } from 'react-redux';
+import store from '../../app/store';
 
 interface SearchFilterDef {
 	text: string;
@@ -62,7 +66,7 @@ function ConfigExplorer() {
 			{!configData || isFetching ? (
           <CircularProgress />
         ) : ( 
-					<>
+					<Provider store={store}>
 						<ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
 						<DraggableDivider id="config-elementlist" cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
 						<Routes>
@@ -70,7 +74,7 @@ function ConfigExplorer() {
 							<Route path=":elementType/:elementName/:tab?" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} errorElement={<ErrorBoundary/>} />
 							<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} errorElement={<ErrorBoundary/>} />
 						</Routes>
-					</>
+					</Provider>
         )}
 			</Sheet>
 		</Sheet>

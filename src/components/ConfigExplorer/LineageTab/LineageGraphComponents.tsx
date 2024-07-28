@@ -34,7 +34,7 @@ import { reactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils
 import { AutoComplete } from 'antd';
 import Draggable from 'react-draggable';
 import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
-import { getRFI, getSelectedEdge, setSelectedEdge } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/ReactFlowSlice';
+import { getRFI, getSelectedEdge, setSelectedEdge } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
 
 /*
   Styles to refactor (for the entire LineageTab folder)
@@ -408,9 +408,9 @@ export const CustomEdge = ({
   );
 }
 
-export const EdgeInfoBox = () => {
+export const EdgeInfoBox = ({rfi}) => {
   const dispatch = useAppDispatch();
-  const rfi = useAppSelector((state) => getRFI(state));
+  // const rfi = useAppSelector((state) => getRFI(state));
   const edge = useAppSelector((state) => getSelectedEdge(state));
 
   const source = edge.source;
@@ -456,7 +456,7 @@ export const EdgeInfoBox = () => {
       <p><strong>Source:</strong> {source}</p>
       <IconButton 
         title='go to object'
-        onClick={() => handleFocus(rfi.getNode(source))}
+        onClick={() => handleFocus(rfi.getNode(source)!)}
         size='sm'
         sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px'}}>
         <ArrowForwardIcon />
@@ -466,7 +466,7 @@ export const EdgeInfoBox = () => {
       <p><strong>Target:</strong> {target}</p>
       <IconButton 
         title='go to object'
-        onClick={() => handleFocus(rfi.getNode(target))}
+        onClick={() => handleFocus(rfi.getNode(target)!)}
         size="sm" 
         sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px'}}>
         <ArrowForwardIcon />
@@ -477,98 +477,3 @@ export const EdgeInfoBox = () => {
 </Draggable>
 }
 
-export const NodeSearchBar = () => {
-  const rfi = useAppSelector((state) => getRFI(state));
-  const [elementSearchText, setElementSearchText] = useState("");
-  const [suggestions, setSuggestions] = useState<any>([]);
-
-  const regexSearch = (node: ReactFlowNode, text: string) => {
-    if (!node || !text) {
-      return false;
-    }
-  
-    const nodeIdLower = node.id.toLowerCase();
-    let match = false;
-    
-    const innerExpr = "((prefix|suffix|includes):)?((?!children).*)";
-    const groupMatch = text.match(new RegExp(`^group:${innerExpr}$`));
-    const childrenMatch = text.match(new RegExp(`^group:children:(.*)$`));
-    const prefixMatch = text.match(/^prefix:(.*)$/);
-    const suffixMatch = text.match(/^suffix:(.*)$/);
-    const includesMatch = text.match(/^includes:(.*)$/);
-
-    if (groupMatch) {
-      const [, , groupType, groupName] = groupMatch;
-      if (!groupType && !groupName) {
-        // Matches all group nodes
-        match = node.type === 'group';
-      } else if (groupType === 'prefix') {
-        match = node.type === 'group' && nodeIdLower.startsWith(groupName.toLowerCase());
-      } else if (groupType === 'suffix') {
-        match = node.type === 'group' && nodeIdLower.endsWith(groupName.toLowerCase());
-      } else if (groupType === 'includes') {
-        match = node.type === 'group' && nodeIdLower.includes(groupName.toLowerCase());
-      }
-    } else if (childrenMatch) {
-      const [, groupName] = childrenMatch;
-      match = node.parentId === groupName;
-    } else if (prefixMatch) {
-      const [, prefix] = prefixMatch;
-      match = nodeIdLower.startsWith(prefix.toLowerCase());
-    } else if (suffixMatch) {
-      const [, suffix] = suffixMatch;
-      match = nodeIdLower.endsWith(suffix.toLowerCase());
-    } else if (includesMatch) {
-      const [, includes] = includesMatch;
-      match = nodeIdLower.includes(includes.toLowerCase());
-    } else {
-      // Default case: Match all nodes with the given string as a substring
-      match = nodeIdLower.includes(text.toLowerCase());
-    }
-  
-    return match;
-  }
-
-  useEffect(() => {
-    if (elementSearchText) {
-      const allNodes: ReactFlowNode[] = rfi.getNodes();
-      const filteredSuggestions = allNodes
-        .filter(node => regexSearch(node, elementSearchText))
-        .map(node => ({
-          id: node.id,
-          type: node.type === 'group' ? 'Parent Node' : 'Non-Parent Node',
-        }));
-      setSuggestions(filteredSuggestions);
-    } else {
-      setSuggestions([]);
-    }
-  }, [elementSearchText]);
-
-
-  const handleSuggestionClick = (_, suggestion) => {
-
-    if (suggestion) {
-      const rfNode = rfi.getNode(suggestion.id);
-      resetViewPortCentered(rfi, [rfNode]);
-    }
-  };
-
-  return  (
-    <Autocomplete
-      sx={{
-        width: 300,
-        position: 'absolute',
-        top: 20,
-        left: 20,
-      }}
-      freeSolo
-      placeholder="Search object"
-      options={suggestions}
-      filterOptions={(x) => x} // disable built-in filtering to override with our own search logic
-      getOptionLabel={(option) => option.id}
-      groupBy={(option) => option.type}
-      onChange={handleSuggestionClick}
-      onInputChange={(_, inputValue) => setElementSearchText(inputValue)}
-    />
-  );
-};

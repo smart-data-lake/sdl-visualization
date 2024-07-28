@@ -49,10 +49,10 @@
     "postinstall-postinstall": "^2.1.0",
     "prettier": "^2.3.1",
     "query-string": "^6.13.1",
-    "react": "18.0.2",
+    "react": "18.2.0",
     "react-bootstrap": "^2.10.2",
     "react-custom-scrollbars-2": "^4.4.0",
-    "react-dom": "18.0.2",
+    "react-dom": "18.2.0",
     "react-markdown": "^8.0.3",
     "react-query": "^3.39.3",
     "react-redux": "^9.1.2",
@@ -82,8 +82,8 @@
   "resolutions": {
     "//": "See https://github.com/facebook/create-react-app/issues/11773",
     "react-error-overlay": "6.0.9",
-    "@types/react": "^18.0.2",
-    "@types/react-dom": "^18.0.2"
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0"
   },
   "scripts": {
     "start": "vite --force",
@@ -118,13 +118,13 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.7",
     "@types/dagre": "^0.7.47",
+    "immer": "^10.1.1",
     "patch-package": "^8.0.0",
-    "vitest": "^1.6.0",
-    "immer": "^10.1.1"
+    "vitest": "^1.6.0"
   },
   "peerDependencies": {
-    "react": "18.0.2",
-    "react-dom": "18.0.2"
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   },
   "homepage": "./"
 }

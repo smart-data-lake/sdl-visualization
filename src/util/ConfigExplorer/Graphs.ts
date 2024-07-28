@@ -7,6 +7,8 @@ import assert from 'assert';
 
 import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from 'reactflow'
 import { removeDuplicatesFromObjArrayOnAttributes } from '../helpers';
+import store from '../../app/store';
+import { getRFI, setRFINodeData } from './slice/LineageTab/Common/ReactFlowSlice';
 
 
 
@@ -569,38 +571,19 @@ export class DAGraph {
         return components;
     }; 
 
-    // return a set of subgraphs spanned by the nodes associated to the given nodeIds, and
-    // 
-    getConnectedNodeComponentsWithNeighbours(nodeIds: string[], G: DAGraph): Map<string, Node[]>{
-        const visited = new Set<string>();
-        const components = new Map<string, Node[]>();
-        let id = 0; // component id
-
-        const visit = (n: Node, currId: number) => {
-            visited.add(n.id);
-            if(!components.has(id.toString())){
-                components.set(id.toString(), [n]);
+    getSubgroups(F: (node: Node, fargs: any) => any, toGroupId: (result: any) => string, args: any): Map<string, Node[]>{
+        const groups = new Map<string, Node[]>();
+        this.nodes.forEach(node => {
+            const result = F(node, args);
+            const id = toGroupId(result);
+            if(!groups.has(id)){
+                groups.set(id, [node]);
             } else {
-                components.get(id.toString())!.push(n); // TODO: debug. current debug case does not have the zlr tag
+                groups.get(id)!.push(node);
             }
-            const [neighbourNodes, _] = G.returnDirectNeighbours(n.id); 
-            neighbourNodes.forEach(node => {
-                if(nodeIds.includes(node.id) && !visited.has(node.id)){ // if result contains neighbour nodes
-                    visit(node, currId);
-                }
-            })
-        };
-
-        nodeIds.forEach(nid => {
-            if (!visited.has(nid)){
-                visit(this.getNodeById(nid)!, id);
-                id += 1;
-            }
-        });
-
-        return components;
-    }; 
-
+        })
+        return groups;
+    }
 }
 
 /*
@@ -614,11 +597,13 @@ function getBwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEd
     return edges.filter(e => e.target === node.data.label)
 }
 
-export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward', rfi: ReactFlowInstance): [string[], string[]] {
+export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward', rfiq: ReactFlowInstance): [string[], string[]] {
+    const rfi = store.getState().reactFlow.rfi;
     const edges = rfi.getEdges();
     const nodeIds: Set<string> = new Set();
     const edgeIds: Set<string> = new Set();
     const isFwd = direction === 'forward';
+    const add = (x, y) => x + y;
 
     const visit = (currNode: ReactFlowNode) => {
         const outEdges = isFwd ? getFwdRfEdges(currNode, edges) :  getBwdRfEdges(currNode, edges);
@@ -627,30 +612,68 @@ export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'ba
             edgeIds.add(edge.id)
 
             if(isFwd){
-                currNode.data.numFwdActiveEdges -= 1;
+                // currNode.data.numFwdActiveEdges -= 1;
+                store.dispatch(setRFINodeData(
+                    {
+                        nodeId: currNode.id,
+                        path: 'numFwdActiveEdges',
+                        value: -1,
+                        fromOwnProps: 'data.numFwdActiveEdges',
+                        combine: add
+                    }
+                ));
 
                 // sanity check
-                if(currNode.data.numFwdActiveEdges < 0){
+                if(rfi.getNode(currNode.id).data.numFwdActiveEdges < 0){
                     console.log("FWD WARNING: node ", currNode.id, " has NEGATIVE numFwdActiveEdges: ", currNode.data.numFwdActiveEdges);
                 }
                 const nextNodeId = edge.target;
+                
+                // nextNode.data.numBwdActiveEdges -= 1;
+                store.dispatch(setRFINodeData(
+                    {
+                        nodeId: nextNodeId,
+                        path: 'numBwdActiveEdges',
+                        value: -1,
+                        fromOwnProps: 'data.numBwdActiveEdges',
+                        combine: add
+                    }
+                ));
                 const nextNode = rfi.getNode(nextNodeId)!;
-                nextNode.data.numBwdActiveEdges -= 1;
-
                 if( nextNode.data.numBwdActiveEdges === 0){
                     nodeIds.add(nextNodeId);
                     visit(nextNode);
                 }
             } else {
-                currNode.data.numBwdActiveEdges -= 1;
+                // currNode.data.numBwdActiveEdges -= 1;
+                store.dispatch(setRFINodeData(
+                    {
+                        nodeId: currNode.id,
+                        path: 'numBwdActiveEdges',
+                        value: -1,
+                        fromOwnProps: 'data.numBwdActiveEdges',
+                        combine: add
+                    }
+                ));
 
                 // sanity check
-                if(currNode.data.numBwdActiveEdges < 0){
+                if(rfi.getNode(currNode.id).data.numBwdActiveEdges < 0){
                     console.log("BWD WARNING: node ", currNode.id, " has NEGATIVE numBwdActiveEdges: ", currNode.data.numBwdActiveEdges);
                 }
                 const nextNodeId = edge.source;
+                
+                // nextNode.data.numFwdActiveEdges -= 1;
+                store.dispatch(setRFINodeData(
+                    {
+                        nodeId: nextNodeId,
+                        path: 'numFwdActiveEdges',
+                        value: -1,
+                        fromOwnProps: 'data.numFwdActiveEdges',
+                        combine: add
+                    }
+                ));
+
                 const nextNode = rfi.getNode(nextNodeId)!;
-                nextNode.data.numFwdActiveEdges -= 1;
                 if( nextNode.data.numFwdActiveEdges === 0){
                     nodeIds.add(nextNodeId);
                     visit(nextNode);

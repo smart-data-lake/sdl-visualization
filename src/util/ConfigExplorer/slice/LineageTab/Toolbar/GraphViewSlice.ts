@@ -21,5 +21,5 @@ const graphViewButtonSlice = createSlice({
 })
 
 export const {setGraphView} = graphViewButtonSlice.actions;
-export const getView = (state: RootState) => state.graphViewSelector.view;
+export const getGraphView = (state: RootState) => state.graphViewSelector.view;
 export default graphViewButtonSlice.reducer;
