@@ -14,15 +14,15 @@ import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import TableViewIcon from '@mui/icons-material/TableView';
-import { Chip, Divider, IconButton, Input, List, ListItem, TextField, Tooltip, Option, AutocompleteOption } from '@mui/joy';
+import { Chip, Divider, IconButton, Input, List, ListItem, TextField, Tooltip, Option, AutocompleteOption, Slider } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
 import IndeterminateCheckBoxOutlinedIcon from '@mui/icons-material/IndeterminateCheckBoxOutlined';
 import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import ClearIcon from '@mui/icons-material/Clear';
-import Autocomplete from '@mui/joy/Autocomplete';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
@@ -35,6 +35,8 @@ import { AutoComplete } from 'antd';
 import Draggable from 'react-draggable';
 import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
 import { getRFI, getSelectedEdge, setSelectedEdge } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
+import store from '../../../app/store';
+import { getPropertyByPath } from '../../../util/helpers';
 
 /*
   Styles to refactor (for the entire LineageTab folder)
@@ -406,6 +408,76 @@ export const CustomEdge = ({
       <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={markerEnd}/>
     </>
   );
+}
+
+export function ZoomSlider(){
+  const state = store.getState();
+  const rfi: ReactFlowInstance = getPropertyByPath(state, 'reactFlow.rfi');
+  const maxZoom = 2.2;
+  const minZoom = 0.05
+  const zoomValOnClick = 0.3;
+  const [currentZoom, setCurrentZoom] = useState(1);
+
+  // are the zoom bounds handled by the reactFlow JSX element?
+  const zoomOnSlide = (event) => {
+    const val = event.target.value;
+    const viewport = rfi.getViewport();
+    setCurrentZoom(val);
+    rfi.setViewport({...viewport, zoom: val});
+  }
+
+  const zoomOnClick = (val: number) => {
+    const viewport = rfi.getViewport();
+    const currZoom = rfi.getZoom();
+    var newZoom = currZoom + val;
+    newZoom = Math.min(Math.max(newZoom, minZoom), maxZoom);
+    setCurrentZoom(newZoom)
+    rfi.setViewport({...viewport, zoom: newZoom});
+  }
+
+  const valueText = (value: number) => {
+    return `zoom: ${value}`;
+  }
+
+  return (
+    <Box sx={{
+          position: 'absolute',
+          left: 8,
+          bottom: 40,
+          display: 'flex',
+          flexDirection: 'column',
+          height: 140,
+          width: 20
+    }}>
+      <IconButton onClick={() => zoomOnClick(zoomValOnClick)}>
+        <ZoomInIcon sx={{ position: 'absolute', padding: 0}}/>
+      </IconButton>
+      <Slider
+        variant='soft'
+        onChange={zoomOnSlide}
+        orientation="vertical"
+        aria-label="Always visible"
+        value={currentZoom ?? 1}
+        max={maxZoom}
+        min={minZoom}
+        getAriaValueText={valueText}
+        step={0.02}
+        // valueLabelDisplay="on"
+      />
+      <IconButton onClick={() => zoomOnClick(-zoomValOnClick)}>
+        <ZoomOutIcon sx={{position: 'absolute', padding: 0}}/>
+      </IconButton>
+    </Box>
+  )
+}
+
+
+export const ParentNode = ({props}) => {
+  return (
+    <Box>
+      
+    </Box>
+  )
 }
 
 export const EdgeInfoBox = ({rfi}) => {

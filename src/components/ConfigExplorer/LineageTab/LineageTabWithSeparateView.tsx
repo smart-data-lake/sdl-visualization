@@ -38,7 +38,7 @@ import {
   resetEdgeStyles, resetNodeStyles, setEdgeStylesOnEdgeClick, setNodeStylesOnEdgeClick,
   useLineageGraph
 } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { CustomDataNode, CustomEdge, EdgeInfoBox } from './LineageGraphComponents';
+import { CustomDataNode, CustomEdge, EdgeInfoBox, ZoomSlider } from './LineageGraphComponents';
 import LineageGraphToolbar from './LineageGraphToolbar';
 import store from '../../../app/store';
 import { Provider, useDispatch } from 'react-redux'
@@ -129,11 +129,12 @@ function LineageTabCore() {
         minZoom={0.02}
         maxZoom={2.2}
       >
-        <Controls />
+        {/* <Controls /> */}
         <Background /> {/* Background macht fehler "<pattern> attribute x: Expected length, "NaN"!*/}
       </ReactFlow>
       {/* {edgeSelected && <EdgeInfoBox rfi={reactFlow} />} */}
       <LineageGraphToolbar/>
+      <ZoomSlider/>
     </Box>
   )
 }
