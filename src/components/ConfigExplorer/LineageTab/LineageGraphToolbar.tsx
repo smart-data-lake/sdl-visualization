@@ -22,18 +22,17 @@ import Box from '@mui/material/Box';
 import { toPng } from 'html-to-image';
 
 import Draggable from 'react-draggable';
-import { getNonParentNodesFromArray, getParentNodeFromArray, getParentNodesFromArray, computeNodePositionFromParent, computeParentNodePositionFromArray, prioritizeParentNodes, computeChildNodeRelativePosition, getFreeNodesFromArray, GraphView, resetViewPort, resetViewPortCentered, getGraphFromConfig, groupBySubstring, groupByFeed, restoreGroupSettings } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { getNonParentNodesFromArray, getParentNodeFromArray, getParentNodesFromArray, computeNodePositionFromParent, computeParentNodePositionFromArray, prioritizeParentNodes, computeChildNodeRelativePosition, getFreeNodesFromArray, GraphView, resetViewPort, resetViewPortCentered, getGraphFromConfig, groupBySubstring, groupByFeed, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { setGraphView, getGraphView } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
 import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux'
 import { setLayout, getLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
 import { setExpansionState, getExpansionState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
-import { getGroupedState, getRFI } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
+import { getGroupedState, getGroupingRoutine, getRFI, setGroupingRoutine } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
 import { ReactFlowInstance } from 'reactflow';
 import { dagreLayoutRf as computeLayoutFunc } from '../../../util/ConfigExplorer/Graphs';
 import { setGroupingState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GroupingSlice';
 import { getConfigData, getLineageTabProps } from '../../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
-import store from '../../../app/store';
 import { Node as ReactFlowNode } from 'reactflow';
 import CloseIcon from '@mui/icons-material/Close';
 
@@ -256,6 +255,7 @@ function GroupingButton() {
     const grouped = useAppSelector(state => getGroupedState(state));
     const graphView = useAppSelector(state => getGraphView(state));
     const configData = useAppSelector(state => getConfigData(state));
+    const routine = useAppSelector(state => getGroupingRoutine(state));
     const layout = useAppSelector(state => getLayout(state));
     const expansionState = useAppSelector(state => getExpansionState(state));
 
@@ -265,17 +265,21 @@ function GroupingButton() {
     const [groupingOption, setGroupingOption] = useState('');
     const [popupPosition, setPopupPosition] = useState<{ top: number, left: number } | null>(null);
 
+    const popupRef = useRef(null);
+    const listItemRef = useRef(null);
+
     // select grouping function and apply based on the user input args
     const handleGroup = (option: string) => {
         var groupingFunc, args;
         // TODO: handle other cases if we use other grouping functions
+        // TODO: handle switch between grouping routines
         switch (option) {
             case 'byName': {
                 groupingFunc = groupBySubstring;
                 args = { substring: inputValue }
                 break;
             }
-            case 'byFeed': {
+            case 'byFeed': { // TODO: enable this case only if in action graph view
                 groupingFunc = groupByFeed;
                 args = { feedName: inputValue }
                 break;
@@ -288,13 +292,17 @@ function GroupingButton() {
         groupingFunc(rfi, getGraphFromConfig(configData, graphView), args);
         dispatch(setGroupingState(true));
         setIsPopupVisible(false);
+        // TODO: if we enable selection of grouping routine, on routine change,  propagate the selected here
+        // dispatch(setGroupingRoutine(...))
     };
 
+    // TODO: consider interaction with other buttons
     const handleReset = () => {
+        routine === 'components' ? restoreGroupSettings(rfi) : restoreGroupSettingsBySubgroup(rfi);
+        dispatch(setGroupingRoutine(undefined));
+        dispatch(setGroupingState(false));
         setSelectedIndex('');
         setInputValue('');
-        restoreGroupSettings(rfi);
-        dispatch(setGroupingState(false));
     }
 
     const handlePopupEnter = (event: React.MouseEvent<HTMLElement>) => {
@@ -312,7 +320,7 @@ function GroupingButton() {
     };
 
     const handleApply = () => {
-        if (!inputValue.length) { return }
+        // if (!inputValue.length) { return }
         if (grouped) { restoreGroupSettings(rfi) }
         setSelectedIndex(groupingOption);
         handleGroup(groupingOption);
@@ -328,14 +336,13 @@ function GroupingButton() {
                 </Tooltip>
             </MenuButton>
             <Menu sx={{ minWidth: 200, '--ListItemDecorator-size': '24px' }}>
-                <MenuItem className='byName' onMouseEnter={(event) => { handlePopupEnter(event); }}>
-                    {/* {TODO: need popup here} */}
+                <MenuItem className='byName' onClick={(event) => { handlePopupEnter(event); }}>
                     <ListItemDecorator>
                         {selectedIndex === 'byName' && <CheckIcon sx={{ position: 'absolute', bottom: 8, left: 5 }} />}
                     </ListItemDecorator>
                     Group by name
                 </MenuItem>
-                <MenuItem className='byFeed' onMouseEnter={(event) => { handlePopupEnter(event); }} >
+                <MenuItem className='byFeed' onMouseEnter={() => setGroupingOption('byFeed')} onClick={handleApply} disabled={graphView !== 'action'}> {/*onMouseEnter={(event) => { handlePopupEnter(event); }} >*/}
                     <ListItemDecorator>
                         {selectedIndex === 'byFeed' && <CheckIcon sx={{ position: 'absolute', bottom: 8, left: 5 }} />}
                     </ListItemDecorator>
@@ -385,20 +392,20 @@ function GroupingButton() {
                         <Button variant="outlined" sx={{ bgcolor: '#ababab', borderColor: '#989898', borderWidth: 2, left: 5, bottom: -20 }}
                             onClick={handleApply}>Apply</Button>
                     </Box>
-                    <Box>
+                    {/* <Box>
                         <RadioGroup name="group by functions" sx={{ gap: 1, '& > div': { p: 1 } }} defaultValue={"subgroups"}>
                             <FormControl size="sm">
                                 <FormLabel>select grouping routine</FormLabel>
                                 <Radio  value="components" label="Connected components" />
-                                {/* <FormHelperText>
+                                { <FormHelperText>
                                     description
-                                </FormHelperText> */}
+                                </FormHelperText> }
                             </FormControl>
                             <FormControl size="sm">
                                 <Radio value="subgroups" label="Subgroups" />
                             </FormControl>
                         </RadioGroup>
-                    </Box>
+                    </Box> */}
                 </Sheet>
             )}
         </Dropdown>
@@ -419,7 +426,6 @@ function SettingsButton() {
             </IconButton>
         </div>
     )
-
 }
 
 function ShowDocumentationButton() {
@@ -550,7 +556,7 @@ export const NodeSearchBar = () => {
     );
 };
 
-export default function LineageGraphToolbar({ rfi, configData }) {
+export default function LineageGraphToolbar() {
     const [alignment, setAlignment] = React.useState<string | null>('center');
     const [formats, setFormats] = React.useState(() => ['italic']);
     const isPropsConfigDefined = useAppSelector(state => getConfigData(state)) !== undefined;

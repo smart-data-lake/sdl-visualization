@@ -14,6 +14,8 @@ interface propertySetterProps {
     combine?: (arg1, arg2) => any
 }
 
+type GroupingRoutine = 'components' | 'subgroups';
+
 interface ReactFlowState {
     rfi: ReactFlowInstance | undefined;
     groupedNodeComponents: Map<string, GraphNode[]> | undefined;// store the connected components from group retrieved elements
@@ -22,16 +24,18 @@ interface ReactFlowState {
     subgroupsRf: Map<string, ReactFlowNode[]> | undefined;// A map of the subgroups to the current rfi
     selectedEdge: ReactFlowEdge | undefined;
     grouped: boolean;
+    groupingRoutine: GroupingRoutine | undefined
 }
 
 const initialState: ReactFlowState = {
     rfi: undefined,
-    groupedNodeComponents: undefined, // TODO: this makes Nodes immutable
+    groupedNodeComponents: undefined, 
     groupedNodeComponentsRf: undefined,
     subgroups: undefined,
     subgroupsRf: undefined,
     selectedEdge: undefined,
     grouped: false,
+    groupingRoutine: undefined
 }
 
 const ReactFlowSlice = createSlice({
@@ -58,6 +62,9 @@ const ReactFlowSlice = createSlice({
         },
         setGrouped: (state, newState: PayloadAction<boolean>) => {
             state.grouped = newState.payload;
+        },
+        setGroupingRoutine: (state, newState: PayloadAction<GroupingRoutine | undefined>) => {
+            state.groupingRoutine = newState.payload;
         },
         setRFINodeData: (state, newState: PayloadAction<propertySetterProps>) => {
             // mutate the props of a node in the rfi via an attribute path getter
@@ -95,8 +102,11 @@ export const {
     setRFI,
     setGroupedComponents,
     setGroupedComponentsRf,
+    setSubgroups,
+    setSubgroupsRf,
     setSelectedEdge,
-    setRFINodeData } = ReactFlowSlice.actions;
+    setRFINodeData,
+    setGroupingRoutine } = ReactFlowSlice.actions;
 export const getRFI = (state: RootState) => state.reactFlow.rfi;
 export const getGroupedComponents = (state: RootState) => state.reactFlow.groupedNodeComponents;
 export const getGroupedComponentsRf = (state: RootState) => state.reactFlow.groupedNodeComponentsRf;
@@ -104,4 +114,5 @@ export const getSubgroups = (state: RootState) => state.reactFlow.subgroups;
 export const getSubgroupsRf = (state: RootState) => state.reactFlow.subgroupsRf;
 export const getSelectedEdge = (state: RootState) => state.reactFlow.selectedEdge;
 export const getGroupedState = (state: RootState) => state.reactFlow.grouped;
+export const getGroupingRoutine = (state: RootState) => state.reactFlow.groupingRoutine;
 export default ReactFlowSlice.reducer;

@@ -10,7 +10,7 @@ const initialState: ExpansionState = {
 }
 
 const ExpansionButtonSlice = createSlice({
-    name: 'expandGraph',
+    name: 'graphExpansion',
     initialState,
     reducers: {
         setExpansionState: (state, newState: PayloadAction<ExpansionState>) => {

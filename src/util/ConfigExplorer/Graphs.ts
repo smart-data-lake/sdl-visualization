@@ -571,11 +571,12 @@ export class DAGraph {
         return components;
     }; 
 
-    getSubgroups(F: (node: Node, fargs: any) => any, toGroupId: (result: any) => string, args: any): Map<string, Node[]>{
+    getSubgroups(F: (node: Node, fargs: any) => any, args: any, 
+                 toGroupId?: (result: any, targs: any) => string, taggerArgs?: any): Map<string, Node[]>{
         const groups = new Map<string, Node[]>();
         this.nodes.forEach(node => {
             const result = F(node, args);
-            const id = toGroupId(result);
+            const id = toGroupId ? `#${toGroupId(result, taggerArgs)}` : `#parentId: ${node.id}`; 
             if(!groups.has(id)){
                 groups.set(id, [node]);
             } else {
@@ -597,7 +598,7 @@ function getBwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEd
     return edges.filter(e => e.target === node.data.label)
 }
 
-export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward', rfiq: ReactFlowInstance): [string[], string[]] {
+export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward'): [string[], string[]] {
     const rfi = store.getState().reactFlow.rfi;
     const edges = rfi.getEdges();
     const nodeIds: Set<string> = new Set();
