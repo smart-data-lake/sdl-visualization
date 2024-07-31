@@ -456,7 +456,7 @@ function ShowDocumentationButton() {
     )
 }
 
-export const NodeSearchBar = () => {
+function NodeSearchBar() {
     const rfi = useAppSelector((state) => getRFI(state));
     const [elementSearchText, setElementSearchText] = useState("");
     const [suggestions, setSuggestions] = useState<any>([]);

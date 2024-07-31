@@ -93,7 +93,7 @@ function LineageTabCore() {
     nodes_init = computeLayout(nodes_init, edges_init, layout);
     setReactFlowKey(reactFlowKey + 1); // change key to re-create react flow component (and initialize it through default nodes)
     return [nodes_init, edges_init];
-  }, [isExpanded, props, graphView, url, layout, dispatch]);
+  }, [isExpanded, props, graphView, url, layout]);
 
   const onPaneClick = () => {
     resetEdgeStyles(reactFlow);

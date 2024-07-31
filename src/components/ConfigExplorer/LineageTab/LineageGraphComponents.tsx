@@ -446,7 +446,7 @@ export function ZoomSlider(){
           bottom: 40,
           display: 'flex',
           flexDirection: 'column',
-          height: 140,
+          height: 180,
           width: 20
     }}>
       <IconButton onClick={() => zoomOnClick(zoomValOnClick)}>
@@ -473,11 +473,42 @@ export function ZoomSlider(){
 
 
 export const ParentNode = ({props}) => {
-  return (
-    <Box>
-      
-    </Box>
-  )
+  const {id, childrenId} = props;
+  const state = store.getState();
+  const layoutDirection = getPropertyByPath(state, 'layoutSelector.layout');
+  const isHorizontal = layoutDirection === 'LR';
+  const targetPosition = isHorizontal ? Position.Left : Position.Top;
+  const sourcePosition = isHorizontal ? Position.Right : Position.Bottom;
+  const bgcolor = "#fff"; 
+  const chartBox = useRef<HTMLDivElement>(); 
+
+  // TODO put childrenId into node
+
+  return  (
+    <>
+      <Box 
+      zIndex={4} 
+      ref={chartBox}
+      sx={{
+        padding: '10px',
+        border: defaultNodeBorderColor,
+        minWidth: '200px',
+        maxWidth: '200px',
+        minHeight: '80px',
+        maxHeight: '95px',
+        position: 'relative',
+        bgcolor: bgcolor,
+        textOverflow: 'ellipsis',
+      }}
+    >
+      <Handle type="source" position={sourcePosition} id={id}/>
+      <div>
+  
+      </div>
+      <Handle type="target" position={targetPosition} id={id}/>
+      </Box>
+    </>
+  );
 }
 
 export const EdgeInfoBox = ({rfi}) => {
