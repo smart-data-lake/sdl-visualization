@@ -1,4 +1,4 @@
-import { Abc, AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull } from '@mui/icons-material';
+import { Abc, AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull, Send } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
@@ -10,12 +10,11 @@ import WorkspacesIcon from '@mui/icons-material/Workspaces';
 import ToggleButtonGroup from '@mui/joy/ToggleButtonGroup';
 import * as React from 'react';
 
-import { Autocomplete, Divider, Dropdown, IconButton, ListItemDecorator, Menu, MenuButton, MenuItem, Tooltip } from '@mui/joy';
+import { Autocomplete, Button, Divider, Dropdown, IconButton, Input, ListItemDecorator, Menu, MenuButton, MenuItem, Tooltip } from '@mui/joy';
 // import Option from '@mui/joy/Option';
 import Box from '@mui/material/Box';
 import { toPng } from 'html-to-image';
 
-import { Popper } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
 import { ReactFlowInstance, Node as ReactFlowNode } from 'reactflow';
@@ -223,80 +222,67 @@ function GroupingButton() {
     const layout = useAppSelector(state => getLayout(state));
     const expansionState = useAppSelector(state => getExpansionState(state));
 
-    const [selectedIndex, setSelectedIndex] = useState('');
-    const [isPopupVisible, setIsPopupVisible] = useState(false);
-    const [inputValue, setInputValue] = useState('');
-    const [groupingOption, setGroupingOption] = useState('');
-    const [popupPosition, setPopupPosition] = useState<{ top: number, left: number } | null>(null);
-
-    const popupRef = useRef(null);
-    const listItemRef = useRef(null);
-
-    // select grouping function and apply based on the user input args
-    const handleGroup = (option: string) => {
-        var groupingFunc, args;
-        // TODO: handle other cases if we use other grouping functions
-        // TODO: handle switch between grouping routines
-        switch (option) {
-            case 'byName': {
-                groupingFunc = groupBySubstring;
-                args = { substring: inputValue }
-                break;
-            }
-            case 'byFeed': { // TODO: enable this case only if in action graph view
-                groupingFunc = groupByFeed;
-                args = { feedName: inputValue }
-                break;
-            }
-            // case '':
-            // case '':
-            default: { throw Error(`no option named ${option}`) }
-        }
-
-        groupingFunc(rfi, getGraphFromConfig(configData, graphView), args);
-        dispatch(setGroupingState(true));
-        setIsPopupVisible(false);
-        // TODO: if we enable selection of grouping routine, on routine change,  propagate the selected here
-        // dispatch(setGroupingRoutine(...))
-    };
+    const [showByNameSelector, setShowByNameSelector] = useState(false);
+    const [groupingOption, setGroupingOption] = useState<string>();
 
     // TODO: consider interaction with other buttons
     const handleReset = () => {
         routine === 'components' ? restoreGroupSettings(rfi) : restoreGroupSettingsBySubgroup(rfi);
+        setGroupingOption(undefined);
         dispatch(setGroupingRoutine(undefined));
         dispatch(setGroupingState(false));
-        setSelectedIndex('');
-        setInputValue('');
         recomputeLayout(rfi, layout);
     }
 
-    //TODO: handleApplyByName! How to avoid closing menu?!
+    const handleApplyByName = (ev: React.FormEvent<HTMLFormElement>) => {
+        ev.preventDefault();
+        const name = ev.currentTarget.elements['name'].value;
+        if (name && name.length>0) {
+            setGroupingOption('byName');
+            groupBySubstring(rfi, getGraphFromConfig(configData, graphView), {substring: name});
+            dispatch(setGroupingState(true));
+        }
+        setOpen(false);
+        setShowByNameSelector(false);
+    }
 
     const handleApplyByFeed = () => {
         setGroupingOption('byFeed');
-        setSelectedIndex(groupingOption);
-        handleGroup(groupingOption);
+        groupByFeed(rfi, getGraphFromConfig(configData, graphView));
+        dispatch(setGroupingState(true));
     }
 
+    const [open, setOpen] = React.useState(false);
+    const handleOpenChange = React.useCallback((event: React.SyntheticEvent | null, isOpen: boolean) => {
+        setOpen(isOpen);
+        setShowByNameSelector(false);
+    }, []);
+
     return (
-        <Dropdown>
+        <Dropdown open={open} onOpenChange={handleOpenChange}>
             <MenuButton  endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1 }}>
                 <Tooltip arrow title='EXPERIMENTAL: Show grouping options' enterDelay={500} enterNextDelay={500} placement='right'>
                     <WorkspacesIcon />
                 </Tooltip>
             </MenuButton>
-            <Menu sx={{'--ListItemDecorator-size': '20px' }} onClick={(ev) => ev.preventDefault()}>
-                <MenuItem className='byName' selected={selectedIndex === 'byName'} onClick={(ev) => ev.preventDefault()}>
-                    <Tooltip arrow title='group by name'  enterDelay={500} enterNextDelay={500} placement='right'>                            
+            <Menu sx={{'--ListItemDecorator-size': '20px', overflow: 'visible' }}>
+                {/* this is a normal button to avoid closing the dropdown */}
+                <Button className='byName' onClick={() => setShowByNameSelector(true)} sx={{backgroundColor: (groupingOption=='byName' ? '#e6eef7' : 'white')}}>
+                    <Tooltip arrow title='group by name' enterDelay={500} enterNextDelay={500} placement='right'>                            
                         <ListItemDecorator>
-                            <Popper placement='right' open={selectedIndex === 'byName'}></Popper>
                             <Abc />
                         </ListItemDecorator>
                     </Tooltip>
-                </MenuItem>
+                </Button>
+                {/* this is an improvised "submenu" showing an input box for the name */}
+                <Box hidden={!showByNameSelector} position="absolute" top={5} left={55} >
+                    <form onSubmit={ev => handleApplyByName(ev)}>
+                        <Input id="name" size="sm" sx={{width: 150}} placeholder='Name part for grouping' endDecorator={<IconButton type="submit" size="sm"><Send/></IconButton>}/>
+                    </form>
+                </Box>
                 <Tooltip arrow title='group by feed (only enabled if "action graph view" is selected)' enterDelay={500} enterNextDelay={500} placement='right'>                            
                     <span>{/* <span> is used to show tooltip also if MenuItem is disabled */}
-                        <MenuItem className='byFeed' selected={selectedIndex === 'byFeed'}  onClick={handleApplyByFeed} disabled={graphView !== 'action'}> {/*onMouseEnter={(event) => { handlePopupEnter(event); }} >*/}                
+                        <MenuItem className='byFeed' selected={groupingOption === 'byFeed'} onClick={handleApplyByFeed} disabled={graphView !== 'action'}> {/*onMouseEnter={(event) => { handlePopupEnter(event); }} >*/}                
                             <ListItemDecorator>
                                 <SchemaIcon />
                             </ListItemDecorator>

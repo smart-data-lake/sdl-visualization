@@ -1146,13 +1146,13 @@ export function groupByFeedName(rfi: ReactFlowInstance, G: DAGraph, args: any) {
 }
 
 // TODO: merge this with groupBYFeed
-export function groupByFeed(rfi: ReactFlowInstance, G: DAGraph, args: any = undefined) {
-    // required args: none. Returns the feed of the (action) object
+export function groupByFeed(rfi: ReactFlowInstance, G: DAGraph) {
+    // Returns the feed of the (action) object
     const F = (node: GraphNode, _: any) => {
         return (node as ActionObject).jsonObject.metadata?.feed;
     }
     const Tagger = (result, _) => result;
-    groupingRoutineBySubgroup(G, rfi, F, args, Tagger, undefined);
+    groupingRoutineBySubgroup(G, rfi, F, undefined, Tagger, undefined);
 }
 
 export function groupByObjectType(rfi: ReactFlowInstance, G: DAGraph, args: any) {
