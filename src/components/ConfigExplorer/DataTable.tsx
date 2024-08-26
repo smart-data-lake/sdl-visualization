@@ -1,6 +1,6 @@
-import { Box, CircularProgress } from "@mui/joy";
+import { Box } from "@mui/joy";
 import { DataType, Table, useTable } from 'ka-table';
-import { SortingMode, SortDirection } from 'ka-table/enums';
+import { SortDirection, SortingMode } from 'ka-table/enums';
 import { Column } from 'ka-table/models';
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +10,7 @@ import { getIcon } from "../../util/WorkflowsExplorer/StatusInfo";
 import { formatTimestamp } from "../../util/WorkflowsExplorer/date";
 import { formatDuration } from "../../util/WorkflowsExplorer/format";
 import { getPropertyByPath } from "../../util/helpers";
-import { dataTableStyleProps } from "../Common/DatatableStyle";
+import CenteredCircularProgress from "../Common/CenteredCircularProgress";
 
 export function nestedPropertyRenderer(defaultValue: string = "", paddingRight: string = '0') {
   return (prop: any) => {
@@ -100,7 +100,7 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
     return renderers;
   }, [columns]);
 
-  if (loading) return (<CircularProgress />);
+  if (loading) return (<CenteredCircularProgress />);
 
   return (
     <Box sx={{

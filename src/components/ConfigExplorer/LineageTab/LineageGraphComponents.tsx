@@ -6,37 +6,27 @@
     -adjust between node distance (max width and text-overflow)
     -sohuld be able to show all nodes of the same type (generic function in Graph.ts)
 */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
-import { EdgeProps, Handle, ReactFlowInstance, Node as ReactFlowNode, getSmoothStepPath } from 'reactflow';
+import { EdgeProps, Handle, getSmoothStepPath } from 'reactflow';
 
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
+import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
+import IndeterminateCheckBoxOutlinedIcon from '@mui/icons-material/IndeterminateCheckBoxOutlined';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import TableViewIcon from '@mui/icons-material/TableView';
-import { Chip, Divider, IconButton, Input, List, ListItem, TextField, Tooltip, Option, AutocompleteOption, Slider } from '@mui/joy';
+import { Chip, IconButton, Tooltip } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
-import IndeterminateCheckBoxOutlinedIcon from '@mui/icons-material/IndeterminateCheckBoxOutlined';
-import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 
+import { Position } from 'reactflow';
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
+import { flowProps, graphNodeProps, ReactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
-import { flowProps, graphNodeProps, resetViewPortCentered } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { Position } from 'reactflow';
-import { reactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { AutoComplete } from 'antd';
-import Draggable from 'react-draggable';
-import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
-import { getRFI, getSelectedEdge, setSelectedEdge } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
-import store from '../../../app/store';
-import { getPropertyByPath } from '../../../util/helpers';
 
 /*
   Styles to refactor (for the entire LineageTab folder)
@@ -132,7 +122,7 @@ export const CustomDataNode = ( {data} ) => {
           progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
           numBwdActiveEdges, numFwdActiveEdges,
           expandNodeFunc, graphNodeProps, highlighted
-  }: reactFlowNodeProps = data;
+  }: ReactFlowNodeProps = data;
   const {isSink,  isSource,  
          isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode
   }: graphNodeProps = graphNodeProps
@@ -151,11 +141,6 @@ export const CustomDataNode = ( {data} ) => {
 
   }, [initStateBwd, initStateFwd]);
 
-  const progressColor = progress === undefined ? actionNodeStyles.progressBar.color.done : // dummy placeholder for undefined progres
-                        progress < 30 ? actionNodeStyles.progressBar.color.low : 
-                        progress < 70 ? actionNodeStyles.progressBar.color.medium : 
-                        progress < 100 ? actionNodeStyles.progressBar.color.high:
-                        actionNodeStyles.progressBar.color.done;
   const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; 
 
   const nodeSubTypeName: string = jsonObject !== undefined ? jsonObject.type : label;
@@ -163,7 +148,6 @@ export const CustomDataNode = ( {data} ) => {
                                nodeType === NodeType.DataNode ? "dataObjects" :
                                "";
   const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, ''); // take the capital letters and the first letter of the camelCase name
-  const schemaViewerURL = 'https://smartdatalake.ch/json-schema-viewer';
   const { data: runs} = useFetchWorkflowRunsByElement(nodeTypeName, label);
   const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
 
@@ -196,18 +180,6 @@ export const CustomDataNode = ( {data} ) => {
     }
   };
 
-  // render progress bar
-  const renderProgressBar = (color, progress) => {
-    return (
-      <>
-        <Typography level="body-xs" variant="plain"> 
-          {progress}% complete
-        </Typography>
-        {/* <LinearProgress determinate size="lg" value={progress} sx={{marginBottom: actionNodeStyles.progressBar.bar.marginBottom, color: color}}  /> */}
-      </>
-    );
-  };
-
   /*
     small components
   */
@@ -233,8 +205,8 @@ export const CustomDataNode = ( {data} ) => {
           {nodeType === NodeType.ActionNode ? <RocketLaunchOutlined sx={{height: '18px'}}/> : <TableViewIcon sx={{height: '18px'}}/>}
         </Tooltip>
         <Tooltip title={nodeSubTypeName}>
-          <Typography level="body-xs" onClick={() => window.open(schemaViewerURL, '_blank')} 
-            sx={{marginLeft:'3px', cursor: 'pointer', fontSize: 14, fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap'}}
+          <Typography level="body-xs"
+            sx={{marginLeft:'3px', fontSize: 14, fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap'}}
             >
           {abbr}
           </Typography>
@@ -262,41 +234,14 @@ export const CustomDataNode = ( {data} ) => {
     )
   }
 
-  function showObjectName(){
-    return <Tooltip title={`${label}: view details`} arrow>
+  function showObjectName(layoutDirection: String){
+    return <Tooltip title={label} arrow placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
               <Typography level="body-lg" 
-                          sx={{ 
-                            fontWeight: 'bold', 
-                            textOverflow: 'ellipsis', 
-                            overflow: 'hidden', 
-                            whiteSpace: 'nowrap', 
-                            maxWidth: '100%',
-                            maxHeight: '30px',
-                            fontSize:21,
-                            cursor: 'pointer'
-                          }}
+                          sx={{fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%', maxHeight: '30px', fontSize:21, cursor: 'pointer'}}
                           onClick={() => handleDetailsClick(props, label, nodeType)} >
                 {label}
               </Typography> 
             </Tooltip>
-  }
-
-  function showProgressBar(color, progress){
-    return  <>
-              <Divider sx={{mt:5, mb:1}}  orientation='horizontal'/>
-                      {renderProgressBar(color, progress)}
-                      <Box sx={{
-                        bgcolor: color,
-                        border: '1px solid #ddd',
-                        borderRadius: '10px',
-                        width: 0.3,
-                        justifyContent: 'flex-end'
-                        }}>
-                        <Box flex={0} sx={{justifyContent: 'center', display: 'flex', color: '#fff', fontSize: 'xs', paddingRight: 1}}>
-                          {getActionStatus(progress)}
-                        </Box>
-                      </Box> 
-            </>
   }
 
   //test
@@ -347,7 +292,7 @@ export const CustomDataNode = ( {data} ) => {
 
       <div>
         {showObjectTitle()}
-        {showObjectName()}
+        {showObjectName(layoutDirection)}
       </div>
       {/*showProperties()*/}
       
@@ -410,67 +355,6 @@ export const CustomEdge = ({
   );
 }
 
-export function ZoomSlider(){
-  const state = store.getState();
-  const rfi: ReactFlowInstance = getPropertyByPath(state, 'reactFlow.rfi');
-  const maxZoom = 2.2;
-  const minZoom = 0.05
-  const zoomValOnClick = 0.3;
-  const [currentZoom, setCurrentZoom] = useState(1);
-
-  // are the zoom bounds handled by the reactFlow JSX element?
-  const zoomOnSlide = (event) => {
-    const val = event.target.value;
-    const viewport = rfi.getViewport();
-    setCurrentZoom(val);
-    rfi.setViewport({...viewport, zoom: val});
-  }
-
-  const zoomOnClick = (val: number) => {
-    const viewport = rfi.getViewport();
-    const currZoom = rfi.getZoom();
-    var newZoom = currZoom + val;
-    newZoom = Math.min(Math.max(newZoom, minZoom), maxZoom);
-    setCurrentZoom(newZoom)
-    rfi.setViewport({...viewport, zoom: newZoom});
-  }
-
-  const valueText = (value: number) => {
-    return `zoom: ${value}`;
-  }
-
-  return (
-    <Box sx={{
-          position: 'absolute',
-          left: 8,
-          bottom: 40,
-          display: 'flex',
-          flexDirection: 'column',
-          height: 140,
-          width: 20
-    }}>
-      <IconButton onClick={() => zoomOnClick(zoomValOnClick)}>
-        <ZoomInIcon sx={{ position: 'absolute', padding: 0}}/>
-      </IconButton>
-      <Slider
-        variant='soft'
-        onChange={zoomOnSlide}
-        orientation="vertical"
-        aria-label="Always visible"
-        value={currentZoom ?? 1}
-        max={maxZoom}
-        min={minZoom}
-        getAriaValueText={valueText}
-        step={0.02}
-        // valueLabelDisplay="on"
-      />
-      <IconButton onClick={() => zoomOnClick(-zoomValOnClick)}>
-        <ZoomOutIcon sx={{position: 'absolute', padding: 0}}/>
-      </IconButton>
-    </Box>
-  )
-}
-
 
 export const ParentNode = ({props}) => {
   return (
@@ -479,73 +363,3 @@ export const ParentNode = ({props}) => {
     </Box>
   )
 }
-
-export const EdgeInfoBox = ({rfi}) => {
-  const dispatch = useAppDispatch();
-  // const rfi = useAppSelector((state) => getRFI(state));
-  const edge = useAppSelector((state) => getSelectedEdge(state));
-
-  const source = edge.source;
-  const target = edge.target;
-
-  const handleFocus = (rfNode: ReactFlowNode) => {
-    resetViewPortCentered(rfi, [rfNode]);
-  }
-
-  const onClose = () => {
-    dispatch(setSelectedEdge(undefined));
-  }
-
-  return <Draggable bounds="parent">
-    <Box
-  sx={{
-    position: 'absolute',
-    right: 20,
-    top: 20,
-    display: 'flex',
-    flexDirection: 'column',
-    border: '1px solid',
-    borderColor: 'divider',
-    borderRadius: '7px',
-    width: 300,
-    height: 250,
-    maxWidth: 300,
-    maxHeight: 300,
-    bgcolor: 'white',
-    color: 'grey.900',
-    boxShadow: 2,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    '& svg': {
-      m: -0.5,
-    },
-  }}
->
-  <>
-    <button onClick={onClose}>Close</button>
-    <p><strong>Selected Edge:</strong> {edge.id}</p>
-    <Box sx={{display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
-      <p><strong>Source:</strong> {source}</p>
-      <IconButton 
-        title='go to object'
-        onClick={() => handleFocus(rfi.getNode(source)!)}
-        size='sm'
-        sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px'}}>
-        <ArrowForwardIcon />
-      </IconButton>
-    </Box>
-    <Box sx={{display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
-      <p><strong>Target:</strong> {target}</p>
-      <IconButton 
-        title='go to object'
-        onClick={() => handleFocus(rfi.getNode(target)!)}
-        size="sm" 
-        sx={{ fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '1px'}}>
-        <ArrowForwardIcon />
-      </IconButton>
-    </Box>
-  </>
-</Box>
-</Draggable>
-}
-

@@ -14,15 +14,13 @@
 */
 
 // react component imports
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import ReactFlow, {
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
   Background,
   Controls,
-  MarkerType, Position,
+  ReactFlow,
   Edge as ReactFlowEdge,
-  ReactFlowInstance,
-  Node as ReactFlowNode,
   ReactFlowProvider,
   useReactFlow
 } from 'reactflow';
@@ -33,21 +31,23 @@ import 'reactflow/dist/style.css';
 import Box from '@mui/material/Box';
 
 // local imports
-import { dagreLayoutRf as computeLayout } from '../../../util/ConfigExplorer/Graphs';
-import {
-  resetEdgeStyles, resetNodeStyles, setEdgeStylesOnEdgeClick, setNodeStylesOnEdgeClick,
-  useLineageGraph
-} from '../../../util/ConfigExplorer/LineageTabUtils';
-import { CustomDataNode, CustomEdge, EdgeInfoBox, ZoomSlider } from './LineageGraphComponents';
-import LineageGraphToolbar from './LineageGraphToolbar';
+import { Provider, useDispatch } from 'react-redux';
 import store from '../../../app/store';
-import { Provider, useDispatch } from 'react-redux'
-import { useAppSelector, useAppDispatch } from '../../../hooks/useRedux';
-import { getSelectedEdge, setRFI, setSelectedEdge } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
-import { getGraphView } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
-import { getExpansionState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
-import { getLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
+import { useAppSelector } from '../../../hooks/useRedux';
+import { dagreLayoutRf } from '../../../util/ConfigExplorer/Graphs';
+import {
+  prepareAndRenderGraph,
+  resetEdgeStyles, resetNodeStyles,
+  setEdgeStylesOnEdgeClick, setNodeStylesOnEdgeClick
+} from '../../../util/ConfigExplorer/LineageTabUtils';
+import { setRFI, setSelectedEdge } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
 import { getLineageTabProps } from '../../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
+import { getExpansionState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
+import { getGraphView } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
+import { getLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
+import CenteredCirularProgress from '../../Common/CenteredCircularProgress';
+import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
+import LineageGraphToolbar from './LineageGraphToolbar';
 
 /*
  Add custom node and edge types
@@ -60,6 +60,9 @@ const edgeTypes = {
   customEdge: CustomEdge,
 };
 
+//TODO: refactor as layout settings
+export const nodeWidth = 172;
+export const nodeHeight = 36;
 
 /*
   Implements the Lineage tab for separated action and dataObject view
@@ -67,14 +70,17 @@ const edgeTypes = {
 */
 function LineageTabCore() {
   const props = useAppSelector(state => getLineageTabProps(state))
-  const url = useParams();
+  const navigate = useNavigate(); // handlers for navigating dataObjects and actions
   const dispatch = useDispatch();
-  const lineageGraph = useLineageGraph();
+
+  // to save the zoom level before re-creating a new ReactFlow component
+  const [previousZoom, setPreviousZoom] = useState<number>();
+  // workaround to wait for reactflow div mounted, in order to get container width/height
+  const [rfContainerMounted, setRfContainerMounted] = useState(false);
 
   const graphView = useAppSelector((state) => getGraphView(state));
   const isExpanded = useAppSelector((state) => getExpansionState(state));
   const layout = useAppSelector((state) => getLayout(state));
-  const edgeSelected = useAppSelector((state) => getSelectedEdge(state) !== undefined);
 
   const reactFlow = useReactFlow();
   const [reactFlowKey, setReactFlowKey] = useState(0);
@@ -84,16 +90,22 @@ function LineageTabCore() {
     }
   }, [reactFlow, dispatch]); // though https://github.com/reduxjs/react-redux/issues/1468
 
-  const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
+  const rfContainer = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
 
   // defines the conditions to (re-)render the lineage graph
   const [nodes, edges] = useMemo(() => {
-    var nodes_init, edges_init;
-    [nodes_init, edges_init] = lineageGraph();
-    nodes_init = computeLayout(nodes_init, edges_init, layout);
+    // save current zoom to initialize new react flow component
+    setPreviousZoom(previousZoom ? reactFlow.getZoom() : 0.5); // initialize with 0.5
+    setRfContainerMounted(false); // workaround to make changing layout work correctly
+    var [nodes_init, edges_init] = prepareAndRenderGraph(navigate);
+    nodes_init = dagreLayoutRf(nodes_init, edges_init, layout, nodeWidth, nodeHeight);
     setReactFlowKey(reactFlowKey + 1); // change key to re-create react flow component (and initialize it through default nodes)
     return [nodes_init, edges_init];
-  }, [isExpanded, props, graphView, url, layout, dispatch]);
+  }, [isExpanded, props.elementName, props.elementType, graphView, layout]);
+
+  useEffect(() => {
+    setRfContainerMounted(true); // workaround to make changing layout work correctly
+  }, [nodes])
 
   const onPaneClick = () => {
     resetEdgeStyles(reactFlow);
@@ -110,31 +122,35 @@ function LineageTabCore() {
     dispatch(setSelectedEdge(edge));
   }
 
+  useEffect(() => {
+    if (rfContainer.current) setRfContainerMounted(true);
+  }, [rfContainer])
+
   return (
 
-    <Box className='data-flow' ref={chartBox} sx={{ height: '100%' }}
-    >
-      <ReactFlow
-        key={reactFlowKey}
-        defaultNodes={nodes}
-        defaultEdges={edges}
-        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-        onEdgeClick={onEdgeClick}
-        onPaneClick={onPaneClick}
-        nodesConnectable={false}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        connectOnClick={false}
-        minZoom={0.02}
-        maxZoom={2.2}
-      >
-        {/* <Controls /> */}
-        <Background /> {/* Background macht fehler "<pattern> attribute x: Expected length, "NaN"!*/}
-      </ReactFlow>
-      {/* {edgeSelected && <EdgeInfoBox rfi={reactFlow} />} */}
-      <LineageGraphToolbar/>
-      <ZoomSlider/>
+    <Box ref={rfContainer} sx={{ height: '100%' }}>
+      {rfContainerMounted && // need to wait for rfContainer ready in order to get width/height.
+        <ReactFlow
+          key={reactFlowKey}
+          defaultNodes={nodes}
+          defaultEdges={edges}
+          onEdgeClick={onEdgeClick}
+          onPaneClick={onPaneClick}
+          nodesConnectable={false}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          connectOnClick={false}
+          minZoom={0.02}
+          maxZoom={1}
+          fitView
+          fitViewOptions={{maxZoom: previousZoom, nodes: nodes.filter((node) => node.data.graphNodeProps.isCenterNode)}}
+        >
+          <Controls showFitView={false} showInteractive={false} />
+          <Background /> {/* Background macht fehler "<pattern> attribute x: Expected length, "NaN"!*/}
+          <LineageGraphToolbar/>
+        </ReactFlow>
+      }
+      {!rfContainerMounted && <CenteredCirularProgress/>}
     </Box>
   )
 }

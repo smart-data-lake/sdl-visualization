@@ -1,14 +1,15 @@
-import { CircularProgress, Sheet } from "@mui/joy";
+import { Sheet } from "@mui/joy";
 import { SortDirection } from "ka-table";
 import { useMemo, useState } from "react";
+import { fetcher } from "../../api/Fetcher";
 import useFetchWorkflows from "../../hooks/useFetchData";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
 import { checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
+import CenteredCircularProgress from "../Common/CenteredCircularProgress";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../ConfigExplorer/DataTable';
 import ToolBar from "./ToolBar/ToolBar";
 import { FilterParams, filterSearchText } from "./WorkflowHistory";
-import { fetcher } from "../../api/Fetcher";
 
 export default function Workflows() {
     const { data, isLoading, isFetching, refetch } = useFetchWorkflows();
@@ -29,7 +30,7 @@ export default function Workflows() {
 		}
     }, [data, filterParams])
 
-    if (isLoading || isFetching) return <CircularProgress/>;
+    if (isLoading || isFetching) return <CenteredCircularProgress/>;
     //if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
     
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {

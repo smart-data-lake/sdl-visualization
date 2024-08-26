@@ -1,14 +1,15 @@
-import { Box, CircularProgress, FormControl, FormLabel, Select, Sheet, Tooltip, Typography } from '@mui/joy';
-import { useEffect, useMemo, useState } from 'react';
-import DataTable, { nestedPropertyRenderer } from './DataTable';
-import { compareFunc, getPropertyByPath, onlyUnique } from '../../util/helpers';
-import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
+import { Box, FormControl, FormLabel, Select, Sheet, Tooltip } from '@mui/joy';
 import Option from '@mui/joy/Option';
-import { OverflowTooltip } from './OverflowTooltip';
-import { getMissingSchemaFileCmp } from './ElementDetails';
-import InfoBox from './InfoBox';
+import { useEffect, useMemo, useState } from 'react';
 import { useFetchDataObjectSchema, useFetchDataObjectStats } from '../../hooks/useFetchData';
 import { SchemaColumn, TstampEntry } from '../../types';
+import { compareFunc, getPropertyByPath, onlyUnique } from '../../util/helpers';
+import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
+import CenteredCircularProgress from '../Common/CenteredCircularProgress';
+import DataTable, { nestedPropertyRenderer } from './DataTable';
+import { getMissingSchemaFileCmp } from './ElementDetails';
+import InfoBox from './InfoBox';
+import { OverflowTooltip } from './OverflowTooltip';
 
 /**
  * Table cell renderer calculating a percentage value against a given base value
@@ -241,5 +242,5 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
       {info && <InfoBox info={info}/>}
       {schemaRows && columns && <DataTable key={schemaEntry?.key+'/'+statsEntry?.key} data={schemaRows} columns={columns} keyAttr="id" treeGroupKeyAttr={'parentId'}/>}
     </Sheet>
-  ) : <CircularProgress/>
+  ) : <CenteredCircularProgress/>
 }

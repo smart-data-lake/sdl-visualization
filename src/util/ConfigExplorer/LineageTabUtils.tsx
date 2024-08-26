@@ -1,19 +1,22 @@
-import reactFlow, {
+import  {
+    ReactFlow,
     MarkerType, Position,
     Edge as ReactFlowEdge,
     ReactFlowInstance,
     Node as ReactFlowNode,
+    XYPosition,
 } from 'reactflow';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCallback } from 'react';
 
 import assert from 'assert';
 
-import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, Edge, ActionObject, DataObject } from './Graphs';
+import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, Edge, ActionObject, DataObject, dagreLayoutRf } from './Graphs';
 import { ConfigData } from './ConfigData';
 import { findFirstKeyWithObject, getPropertyByPath } from '../helpers';
 import store from '../../app/store'
 import { setGroupedComponents, setGroupedComponentsRf, setRFINodeData, setSubgroups, setSubgroupsRf } from './slice/LineageTab/Common/ReactFlowSlice';
+import { nodeHeight, nodeWidth } from '../../components/ConfigExplorer/LineageTab/LineageTabWithSeparateView';
 
 
 /*
@@ -70,7 +73,7 @@ export interface graphNodeProps {
     isCenterNodeAncestor: boolean
 }
 
-export interface reactFlowNodeProps {
+export interface ReactFlowNodeProps {
     props: any,
     label: string,
     nodeType: NodeType,
@@ -160,7 +163,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
         const isCenterNodeDescendant = fwdNodes.includes(node);
         const isCenterNodeAncestor = bwdNodes.includes(node);
 
-        const data: reactFlowNodeProps = {
+        const data: ReactFlowNodeProps = {
             props: props.configData![props.elementType][props.elementName],
             label: node.id,
             nodeType: nodeType,
@@ -250,19 +253,12 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
     return result;
 }
 
-export function useLineageGraph(){
-    const navigate = useNavigate(); // handlers for navigating dataObjects and actions
-    return () => prepareAndRenderGraph(navigate);
-}
-
 function prepareGraphDirect(doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection, isExpanded: boolean): [ReactFlowNode[], ReactFlowEdge[]] {
     var partialGraphPair: [GraphNode[], GraphEdge[]] = [[], []];
     var centralNodeId: string = props.elementName;
 
     // reset isCenterNode flags otherwise all previous ones will be colored
-    doa.nodes.forEach((node) => {
-        node.setIsCenterNode(false);
-    });
+    doa.nodes.forEach((node) => node.setIsCenterNode(false));
     doa.setCenterNode(doa.getNodeById(centralNodeId)!);
 
     // When the layout has changed, the nodes and edges have to be recomputed
@@ -270,25 +266,13 @@ function prepareGraphDirect(doa: DAGraph, graphView: GraphView, props: flowProps
     const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0], partialGraphPair[1], layout, props.configData);
     partialGraph.setCenterNode(partialGraph.getNodeById(centralNodeId)!);
 
-    let newNodes = createReactFlowNodes(partialGraphPair[0],
-        layout,
-        isExpanded,
-        false,
-        undefined,
-        graphView,
-        expandNodeFunc,
-        props);
-
-    let newEdges = createReactFlowEdges(partialGraphPair[1],
-        props,
-        graphView,
-        undefined
-    );
+    let newNodes = createReactFlowNodes(partialGraphPair[0], layout, isExpanded, false, undefined, graphView, expandNodeFunc, props);
+    let newEdges = createReactFlowEdges(partialGraphPair[1], props, graphView, undefined);
 
     return [newNodes, newEdges];
 }
 
-function prepareAndRenderGraph(navigate): [ReactFlowNode[], ReactFlowEdge[]] {
+export function prepareAndRenderGraph(navigate): [ReactFlowNode[], ReactFlowEdge[]] {
     const state = store.getState();
     const graphView = getPropertyByPath(state, 'graphViewSelector.view');
     const props = getPropertyByPath(state, 'lineage.lineageTabProps');
@@ -332,7 +316,7 @@ export function recreateReactFlowNodesOnLayout() {
     var rfNodes = rfi.getNodes();
     const rfEdges = rfi.getEdges();
     const layoutDirection = getPropertyByPath(state, 'layoutSelector.layout');
-    rfNodes = computeLayout(rfNodes, rfEdges, layoutDirection);
+    rfNodes = dagreLayoutRf(rfNodes, rfEdges, layoutDirection, nodeWidth, nodeHeight);
 
     const isHorizontal = layoutDirection === 'LR';
     const targetPos = isHorizontal ? Position.Left : Position.Top;
@@ -370,7 +354,7 @@ function expandNodeFunc(id: string, isExpanded: boolean,
     const currRfNode = rfi.getNode(currNode?.id!)!;
 
     if (!isExpanded) {
-        console.log("expand");
+        // expand
         let [neighbourNodes, neighbourEdges] = isFwd ? graph.getOutElems(id) : graph.getInElems(id); // all positions are 0,0 here
 
         // only create not existing nodes, update active edges of exisiting nodes
@@ -391,7 +375,7 @@ function expandNodeFunc(id: string, isExpanded: boolean,
             undefined,
         );
 
-        updateLineageGraphOnExapnd(rfi, rfEdges, rfNodes, {
+        updateLineageGraphOnExpand(rfi, rfEdges, rfNodes, {
             isFwd,
             currRfNodeIds,
             currRfNode,
@@ -400,18 +384,18 @@ function expandNodeFunc(id: string, isExpanded: boolean,
         });
 
     } else {
-        console.log("hide");
+        // collapse
         updateLineageGraphOnCollapse(rfi, {
             currRfNode,
             expandDirection,
             layoutDirection,
         });
-        resetViewPortCentered(rfi, [currRfNode]);
+        //resetViewPortCentered(rfi, [currRfNode]);
     }
     prioritizeParentNodes(rfi);
 }
 
-function updateLineageGraphOnExapnd(rfi: ReactFlowInstance, rfEdges: ReactFlowEdge[], rfNodes: ReactFlowNode[], props: any) {
+function updateLineageGraphOnExpand(rfi: ReactFlowInstance, rfEdges: ReactFlowEdge[], rfNodes: ReactFlowNode[], props: any) {
     const { isFwd,
         currRfNodeIds,
         currRfNode,
@@ -487,7 +471,7 @@ function updateLineageGraphOnExapnd(rfi: ReactFlowInstance, rfEdges: ReactFlowEd
         // compute layout from non-parent nodes
         const newRfNodes = rfNodes;
         rfNodes = rfNodes.concat(nds) // existing nodes with parent + new nodes without parent
-        const nonParentNodes = computeLayout(getNonParentNodesFromArray(rfNodes), rfEdges, layoutDirection);
+        const nonParentNodes = dagreLayoutRf(getNonParentNodesFromArray(rfNodes), rfEdges, layoutDirection, nodeWidth, nodeHeight);
         rfNodes = Array.from(new Set(nonParentNodes)); // prevents adding the nodes twice in strict mode
 
         // assign layouted new rfNodes to parents and include new parent nodes if necessary
@@ -506,7 +490,7 @@ function updateLineageGraphOnCollapse(rfi: ReactFlowInstance, props: any) {
     rfi.setNodes((nds) => {
         // recompute parent positions from remaining elements
         var rfNodes = nds.filter(n => !nodesIdsToRemove.includes(n.id));
-        var nonParentNodes = Array.from(new Set(computeLayout(getNonParentNodesFromArray(rfNodes), rfi.getEdges(), layoutDirection)));
+        var nonParentNodes = Array.from(new Set(dagreLayoutRf(getNonParentNodesFromArray(rfNodes), rfi.getEdges(), layoutDirection, nodeWidth, nodeHeight)));
         const parentNodes = computeParentNodePositionFromArray(nonParentNodes, getParentNodesFromArrayIds(rfi, nonParentNodes));
         nonParentNodes = computeNodePositionFromParent(nonParentNodes, parentNodes);
         rfNodes = [...nonParentNodes, ...parentNodes];
@@ -518,14 +502,15 @@ function updateLineageGraphOnCollapse(rfi: ReactFlowInstance, props: any) {
 /*
     Functions for viewport setting
 */
-export function resetViewPortCentered(rfi: ReactFlowInstance, rfNodes: ReactFlowNode[]): void {
+export function resetViewPortCentered(rfi: ReactFlowInstance, rfNodes?: ReactFlowNode[]): void {
+    const nodes = rfNodes || rfi.getNodes();
     // reset view port to the center of the lineage graph or the given node if only one provided
-    assert(rfNodes.length > 0, "no ReactFlowNodes provided for reset viewport")
+    assert(nodes.length > 0, "no ReactFlowNodes provided for reset viewport")
     var n: ReactFlowNode;
-    if (rfNodes.length === 1) {
-        n = rfi.getNode(rfNodes[0].id)!;
+    if (nodes.length === 1) {
+        n = rfi.getNode(nodes[0].id)!;
     } else {
-        const filteredCenterNode = rfNodes.filter(node => node.data.graphNodeProps.isCenterNode);
+        const filteredCenterNode = nodes.filter(node => node.data.graphNodeProps!['isCenterNode']);
         n = rfi.getNode(filteredCenterNode[0].id)!;
     }
 
@@ -533,8 +518,19 @@ export function resetViewPortCentered(rfi: ReactFlowInstance, rfNodes: ReactFlow
 }
 
 // reset the view port with the center node in the center
-export function resetViewPort(rfi: ReactFlowInstance): void {
-    rfi.fitView({ nodes: rfi.getNodes(), duration: 600 });
+export function resetViewPort(rfi: ReactFlowInstance, duration: number = 600): void {
+    rfi.fitView({ nodes: rfi.getNodes(), duration: duration });
+}
+
+/*
+    Center node in Viewport
+*/
+export function setCenter(rfi: ReactFlowInstance, rfNode?: ReactFlowNode): void {
+    const node = rfNode || rfi.getNodes().filter(node => node.data.graphNodeProps!['isCenterNode'])[0];
+    const x = node.position.x + (node.width || 0)/2
+    const y = node.position.y + (node.height || 0)/2
+    console.log("setCenter",x,y)
+    rfi.setCenter(x,y, {zoom: rfi.getZoom()});
 }
 
 /*
@@ -917,7 +913,7 @@ export function createParentNodesFromComponentsByGroup(rfi: ReactFlowInstance) {
                     edgesToChildrenIds.push(rfEdge.id);
                     const isOutgoing = rfEdge.source === rfNode.id;
                     const otherChildNodeId = isOutgoing ? rfEdge.target : rfEdge.source;
-                    const otherParentNode = parentNodes.find(parentNode => parentNode.data.children.includes(otherChildNodeId));
+                    const otherParentNode = parentNodes.find(parentNode => (parentNode.data.children! as [string]).includes(otherChildNodeId));
                     const otherId = otherParentNode ? otherParentNode.id : rfEdge.id;
                     const newEdgeId = isOutgoing ? `${groupId}===${otherId}` : `${otherId}===${groupId}`;
                     if (!edgeIdSet.has(newEdgeId) && otherId !== groupId) { // find if rfEdge end is within a different parent
@@ -947,7 +943,7 @@ export function createParentNodesFromComponentsByGroup(rfi: ReactFlowInstance) {
 
     const newNodes = [...rfi.getNodes().filter(node => !groupedNodeIds.includes(node.id)), ...parentNodes];
     const newEdges = [...rfi.getEdges().filter(edge => !edgesToChildrenIds.includes(edge.id)), ...edgesToParent]
-    rfi.setNodes(computeLayout(newNodes, newEdges, layoutDirection));
+    rfi.setNodes(dagreLayoutRf(newNodes, newEdges, layoutDirection, RF_NODE_WIDTH_CUSTOM, RF_NODE_HEIGHT_CUSTOM));
     rfi.setEdges(newEdges);
 }
 
@@ -1098,7 +1094,7 @@ export function restoreGroupSettings(rfi: ReactFlowInstance) {
             parentId: undefined,
             extent: undefined,
             expandParent: false,
-            position: node.positionAbsolute!,
+            position: node.position,
         }
         return node;
     }));

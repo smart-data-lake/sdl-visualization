@@ -5,7 +5,7 @@ import dagre from 'dagre';
 import { ConfigData } from './ConfigData';
 import assert from 'assert';
 
-import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from 'reactflow'
+import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from '@xyflow/react'
 import { removeDuplicatesFromObjArrayOnAttributes } from '../helpers';
 import store from '../../app/store';
 import { getRFI, setRFINodeData } from './slice/LineageTab/Common/ReactFlowSlice';
@@ -735,13 +735,13 @@ export function bfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'ba
             // mark edge as hidden
             edgeIds.add(edge.id);
             if (isFwd){
-                currNode.data.numFwdActiveEdges -= 1;
+                (currNode.data.numFwdActiveEdges as number) -= 1;
                 visitedNodes[edge.target].bwdEdgesToVisit -= 1;
-                rfi.getNode(edge.target)!.data.numBwdActiveEdges -= 1;
+                (rfi.getNode(edge.target)!.data.numBwdActiveEdges as number) -= 1;
             } else {
-                currNode.data.numBwdActiveEdges -= 1;
+                (currNode.data.numBwdActiveEdges! as number) -= 1;
                 visitedNodes[edge.source].fwdEdgesToVisit -= 1;
-                rfi.getNode(edge.source)!.data.numFwdActiveEdges -= 1;
+                (rfi.getNode(edge.source)!.data.numFwdActiveEdges as number) -= 1;
             }
         });
 
@@ -894,10 +894,9 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
     nodes.forEach((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
         node.position = {
-        x: nodeWithPosition.x - node.width / 2,
-        y: nodeWithPosition.y - node.height / 2,
+            x: nodeWithPosition.x - node.width / 2,
+            y: nodeWithPosition.y - node.height / 2,
         };
-        return node;
     });
 
     //If there is one Central Node, then shift its position to [0, 0] and shift all nodes as well
@@ -906,23 +905,16 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
     if (centralNode) {
         let shiftX = centralNode.position.x;
         let shiftY = centralNode.position.y;
-        let shiftedNodes = nodes.filter((node) => !(node as Node).isCenterNode); 
-        shiftedNodes.forEach((node) => {
+        nodes.forEach((node) => {
             node.position.x = node.position.x - shiftX;
             node.position.y = node.position.y - shiftY;
         });
-        centralNode.position.x = 0; //See if deep copy needed with strucuturedClone(), as we're altering our nodes.
-        centralNode.position.y = 0;
-        shiftedNodes.push(centralNode);
-        nodes = shiftedNodes;
     } 
 
     return nodes;
 }
 
-export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string = 'TB'): ReactFlowNode[] {
-    const nodeWidth = 172; // TODO: refactor
-    const nodeHeight = 36;
+export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string, nodeWidth: number, nodeHeight: number): ReactFlowNode[] {
     
     //instantiate dagre Graph
     const dagreGraph = new dagre.graphlib.Graph();
@@ -933,42 +925,15 @@ export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], di
     dagreGraph.setGraph({ rankdir: direction, nodesep: 150, ranksep: 150});
     
     //add nodes + edges to the graph and calculate layout
-    nodes.forEach((node)=>{
-        dagreGraph.setNode(node.id, {width: nodeWidth, height: nodeHeight});
-    });
-    edges.forEach((edge) =>{
-        dagreGraph.setEdge(edge.source, edge.target);
-        
-    });
+    nodes.forEach((node)=> dagreGraph.setNode(node.id, {width: nodeWidth, height: nodeHeight}));
+    edges.forEach((edge) => dagreGraph.setEdge(edge.source, edge.target));
     dagre.layout(dagreGraph); 
 
-    // Shift the dagre node position (anchor=center center) to the top left
-    // so it matches the React Flow node anchor point (top left).
+    // set layouted nodes position
     nodes.forEach((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
-        node.position = {
-        x: nodeWithPosition.x - nodeWidth / 2,
-        y: nodeWithPosition.y - nodeHeight / 2,
-        };
-        return node;
+        node.position = {x: nodeWithPosition.x, y: nodeWithPosition.y};
     });
-
-    //If there is one Central Node, then shift its position to [0, 0] and shift all nodes as well
-    // TODO: replace by if (this.centerNodeId === '')
-    let centralNode =  nodes.find((node) => node.data.isCenterNode);
-    if (centralNode) {
-        let shiftX = centralNode.position.x;
-        let shiftY = centralNode.position.y;
-        let shiftedNodes = nodes.filter((node) => !node.data.isCenterNode); 
-        shiftedNodes.forEach((node) => {
-            node.position.x = node.position.x - shiftX;
-            node.position.y = node.position.y - shiftY;
-        });
-        centralNode.position.x = 0; //See if deep copy needed with strucuturedClone(), as we're altering our nodes.
-        centralNode.position.y = 0;
-        shiftedNodes.push(centralNode);
-        nodes = shiftedNodes;
-    } 
 
     return nodes;
 }

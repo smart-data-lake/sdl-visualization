@@ -1,17 +1,18 @@
 import { ZoomOutOutlined } from "@mui/icons-material";
-import { Box, CircularProgress, IconButton, Sheet, Tooltip, Typography } from "@mui/joy";
+import { Box, IconButton, Sheet, Tooltip, Typography } from "@mui/joy";
 import { SortDirection } from 'ka-table';
 import { useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
+import { fetcher } from "../../api/Fetcher";
 import { useFetchWorkflowRuns } from "../../hooks/useFetchData";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
 import { Filter, checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
+import CenteredCircularProgress from "../Common/CenteredCircularProgress";
 import { createFeedChip } from "../ConfigExplorer/ConfigurationTab";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
 import HistoryBarChart from "./HistoryChart/HistoryBarChart";
 import ToolBar from "./ToolBar/ToolBar";
-import { fetcher } from "../../api/Fetcher";
 
 
 export type FilterParams = {
@@ -74,7 +75,7 @@ export default function WorkflowHistory() {
 	}
 
 	if (isLoading || isFetching) {
-		return (<CircularProgress/>);
+		return <CenteredCircularProgress />;
 	}
 
 	const columns = [{
@@ -144,7 +145,7 @@ export default function WorkflowHistory() {
 
 	return (
 		<>
-		{!data || isLoading || isFetching ? <CircularProgress/> : null}
+		{!data || isLoading || isFetching ? <CenteredCircularProgress/> : null}
 		{data ? (
 			<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '5px 15px', gap: '15px', width: '100%', height: '100%' }}>
 				<PageHeader title={flowId!} refresh={refreshData} />    

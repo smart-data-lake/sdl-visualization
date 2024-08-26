@@ -1,40 +1,34 @@
-import * as React from 'react';
-import ToggleButtonGroup from '@mui/joy/ToggleButtonGroup';
-import { AlignVerticalTop, ArrowDropDown, ArrowRight, Expand, LoopOutlined } from '@mui/icons-material';
+import { Abc, AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
-import ReorderIcon from '@mui/icons-material/Reorder';
-import OpenWithIcon from '@mui/icons-material/OpenWith';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import SchemaIcon from '@mui/icons-material/Schema';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
 import WorkspacesIcon from '@mui/icons-material/Workspaces';
-import DescriptionIcon from '@mui/icons-material/Description';
-import SettingsIcon from '@mui/icons-material/Settings';
-import CheckIcon from '@mui/icons-material/Check';
+import ToggleButtonGroup from '@mui/joy/ToggleButtonGroup';
+import * as React from 'react';
 
-import { Button, ButtonGroup, Divider, Dropdown, IconButton, List, ListDivider, ListItem, ListItemDecorator, Menu, MenuButton, MenuItem, SvgIcon, Tooltip, Typography, Option, TextField, Input, Sheet, FormControl, FormLabel, Autocomplete, RadioGroup, Radio, FormHelperText } from '@mui/joy';
+import { Autocomplete, Divider, Dropdown, IconButton, ListItemDecorator, Menu, MenuButton, MenuItem, Tooltip } from '@mui/joy';
 // import Option from '@mui/joy/Option';
-import Select, { SelectOption } from '@mui/joy/Select';
 import Box from '@mui/material/Box';
 import { toPng } from 'html-to-image';
 
+import { Popper } from '@mui/material';
+import { useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
-import { getNonParentNodesFromArray, getParentNodeFromArray, getParentNodesFromArray, computeNodePositionFromParent, computeParentNodePositionFromArray, prioritizeParentNodes, computeChildNodeRelativePosition, getFreeNodesFromArray, GraphView, resetViewPort, resetViewPortCentered, getGraphFromConfig, groupBySubstring, groupByFeed, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { setGraphView, getGraphView } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
-import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux'
-import { setLayout, getLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
-import { setExpansionState, getExpansionState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
+import { ReactFlowInstance, Node as ReactFlowNode } from 'reactflow';
+import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
+import { dagreLayoutRf } from '../../../util/ConfigExplorer/Graphs';
+import { computeNodePositionFromParent, computeParentNodePositionFromArray, getGraphFromConfig, getNonParentNodesFromArray, getParentNodesFromArray, groupByFeed, groupBySubstring, prioritizeParentNodes, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { getGroupedState, getGroupingRoutine, getRFI, setGroupingRoutine } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
-import { ReactFlowInstance } from 'reactflow';
-import { dagreLayoutRf as computeLayoutFunc } from '../../../util/ConfigExplorer/Graphs';
+import { getConfigData } from '../../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
+import { getExpansionState, setExpansionState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
+import { getGraphView, setGraphView } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
 import { setGroupingState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GroupingSlice';
-import { getConfigData, getLineageTabProps } from '../../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
-import { Node as ReactFlowNode } from 'reactflow';
-import CloseIcon from '@mui/icons-material/Close';
+import { getLayout, setLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
+import { nodeHeight, nodeWidth } from './LineageTabWithSeparateView';
 
 /*
   Styling
@@ -77,7 +71,6 @@ function GraphViewSelector() {
         dispatch(setGraphView(value));
     };
 
-
     return (
         <Dropdown >
             <MenuButton endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1 }}>
@@ -85,24 +78,15 @@ function GraphViewSelector() {
                     {options[graphView]}
                 </Tooltip>
             </MenuButton>
-            <Menu sx={{ minWidth: 160, '--ListItemDecorator-size': '24px' }}>
+            <Menu sx={{ '--ListItemDecorator-size': '20px' }}>
                 <MenuItem selected={selectedIndex === 0} onClick={() => { handleSelect('full'); }}>
-                    <ListItemDecorator>
-                        {options['full']}
-                    </ListItemDecorator>
-                    Show full graph
+                    <ListItemDecorator>{options['full']}</ListItemDecorator>
                 </MenuItem>
                 <MenuItem selected={selectedIndex === 1} onClick={() => { handleSelect('data'); }} >
-                    <ListItemDecorator>
-                        {options['data']}
-                    </ListItemDecorator>
-                    Show data graph
+                    <ListItemDecorator>{options['data']}</ListItemDecorator>
                 </MenuItem>
                 <MenuItem selected={selectedIndex === 2} onClick={() => { handleSelect('action'); }} >
-                    <ListItemDecorator>
-                        {options['action']}
-                    </ListItemDecorator>
-                    Show action graph
+                    <ListItemDecorator>{options['action']}</ListItemDecorator>
                 </MenuItem>
             </Menu>
         </Dropdown>
@@ -114,36 +98,31 @@ function LayoutButton() {
     const layout = useAppSelector((state) => getLayout(state));
     const dispatch = useAppDispatch();
 
+    /*
     return <div
         title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'}
         className="controls"
         style={styles}
-    >
-        <IconButton
-            color={'neutral'}
-            onClick={() => dispatch(setLayout(layout === 'TB' ? 'LR' : 'TB'))}
-        >
+    >*/
+    return <Tooltip arrow title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'} enterDelay={500} enterNextDelay={500} placement='right'>
+        <IconButton color={'neutral'} onClick={() => dispatch(setLayout(layout === 'TB' ? 'LR' : 'TB'))}>
             {layout === 'TB' ? <AlignVerticalTop /> : <AlignHorizontalLeft />}
         </IconButton>
-    </div>
+    </Tooltip>    
 }
 
 function GraphExpansionButton() {
     const dispatch = useAppDispatch();
     const isExpanded = useAppSelector((state) => getExpansionState(state));
-    const title = isExpanded ? 'Compress Graph' : 'Expand Graph';
 
-    return <div
-        title={title}
-        style={styles}
-    >
+    return <Tooltip arrow title={isExpanded ? 'Collapse graph' : 'Expand graph'} enterDelay={500} enterNextDelay={500} placement='right'>
         <IconButton
             color='neutral'
             onClick={() => dispatch(setExpansionState({ isExpanded: !isExpanded }))}
         >
-            {isExpanded ? <CloseFullscreenIcon /> : <OpenWithIcon />}
+            {isExpanded ? <CloseFullscreenIcon /> : <OpenInFull />}
         </IconButton>
-    </div>
+    </Tooltip>
 }
 
 function DownloadLineageButton() {
@@ -161,34 +140,29 @@ function DownloadLineageButton() {
     };
 
     return (
-        <div
-            title='Download image as PNG file'
-            style={styles}
-        >
+        <Tooltip arrow title='Download image as PNG file' enterDelay={500} enterNextDelay={500} placement='right'>
             <IconButton sx={{ display: "flex", flexDirection: "column" }}
                 color='neutral'
                 onClick={download}>
                 <CloudDownloadIcon />
                 {/* <Typography variant='plain' sx={{ fontSize: '0.55rem' }}>download</Typography> */}
             </IconButton>
-        </div>
+        </Tooltip>
     );
 }
 
-function ResetViewPortButton() {
+function ShowAllButton() {
     const rfi: ReactFlowInstance = useAppSelector(state => getRFI(state));
     const handleOnClick = () => {
         resetViewPort(rfi);
     }
 
     return (
-        <div
-            title='Center viewport'
-            style={styles}>
+        <Tooltip arrow title='Show all' enterDelay={500} enterNextDelay={500} placement='right'>
             <IconButton onClick={handleOnClick}>
-                <LoopOutlined />
+                <FitScreen />
             </IconButton>
-        </div>
+        </Tooltip>
     )
 }
 
@@ -199,14 +173,26 @@ function CenterFocusButton() {
         resetViewPortCentered(rfi, nodes);
     }
     return (
-        <div
-            title='Focus on central node'
-            style={styles}>
+        <Tooltip arrow title='Focus on central node' enterDelay={500} enterNextDelay={500} placement='right'>
             <IconButton onClick={handleOnClick}>
                 <FilterCenterFocusIcon />
             </IconButton>
-        </div>
+        </Tooltip>
     )
+}
+
+function recomputeLayout(rfi: any, layoutDirection: any) {
+    const rfNodes = rfi.getNodes();
+    const nonParentNodes = getNonParentNodesFromArray(rfNodes);
+    const parentNodes = getParentNodesFromArray(rfNodes);
+    const rfEdges = rfi.getEdges();
+    
+    var layoutedNonParentNodes = dagreLayoutRf(nonParentNodes, rfEdges, layoutDirection, nodeWidth, nodeHeight);
+    var layoutedParentNodes = computeParentNodePositionFromArray(layoutedNonParentNodes, parentNodes);
+    layoutedNonParentNodes = computeNodePositionFromParent(layoutedNonParentNodes, layoutedParentNodes);
+
+    rfi.setNodes([...layoutedNonParentNodes, ...layoutedParentNodes])
+    prioritizeParentNodes(rfi);
 }
 
 function RecomputeLayoutButton() {
@@ -215,37 +201,15 @@ function RecomputeLayoutButton() {
 
     // recomputes the layout from the current nodes in the flow instance (rfi)
     const handleOnClick = () => {
-        const rfNodes = rfi.getNodes();
-        const nonParentNodes = getNonParentNodesFromArray(rfNodes);
-        const parentNodes = getParentNodesFromArray(rfNodes);
-        const rfEdges = rfi.getEdges();
-
-        var layoutedNonParentNodes = computeLayoutFunc(nonParentNodes, rfEdges, layoutDirection);
-        var layoutedParentNodes = computeParentNodePositionFromArray(layoutedNonParentNodes, parentNodes);
-        layoutedNonParentNodes = computeNodePositionFromParent(layoutedNonParentNodes, layoutedParentNodes);
-
-        rfi.setNodes([...layoutedNonParentNodes, ...layoutedParentNodes])
-        prioritizeParentNodes(rfi);
+        recomputeLayout(rfi, layoutDirection);
     }
 
-    // const handleOnClick1 = () => {
-    //   // 1.layout parent nodes and "free" nodes jointly
-    //   // 2.adjust children nodes relative to parents
-    //   const rfNodes = rfi.getNodes();
-    //   const nonParentNodes = getNonParentNodesFromArray(rfNodes);
-    //   const freeNodes = getFreeNodesFromArray(rfNodes);
-    //   const parentNodes = getParentNodesFromArray(rfNodes);
-    //   const rfEdges = rfi.getEdges();
-    // }
-
     return (
-        <div
-            title='Recompute layout'
-            style={styles}>
+        <Tooltip arrow title='Recompute layout' enterDelay={500} enterNextDelay={500} placement='right'>
             <IconButton onClick={handleOnClick}>
-                <ReorderIcon />
+                <Apps />
             </IconButton>
-        </div>
+        </Tooltip>
     )
 }
 
@@ -303,158 +267,54 @@ function GroupingButton() {
         dispatch(setGroupingState(false));
         setSelectedIndex('');
         setInputValue('');
+        recomputeLayout(rfi, layout);
     }
 
-    const handlePopupEnter = (event: React.MouseEvent<HTMLElement>) => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        const option = event.currentTarget.classList[3]; // className stored here
-        setPopupPosition({ top: y + 50, left: x + 100 });
-        setGroupingOption(option);
-        setIsPopupVisible(true);
-    };
+    //TODO: handleApplyByName! How to avoid closing menu?!
 
-    const handlePopupLeave = () => {
-        setIsPopupVisible(false);
-    };
-
-    const handleApply = () => {
-        // if (!inputValue.length) { return }
-        if (grouped) { restoreGroupSettings(rfi) }
+    const handleApplyByFeed = () => {
+        setGroupingOption('byFeed');
         setSelectedIndex(groupingOption);
         handleGroup(groupingOption);
-        handlePopupLeave();
     }
 
-    // there might be weird parent node overlappings, as the groupings are not guaranteed to be layed out well
     return (
         <Dropdown>
-            <MenuButton endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1 }}>
-                <Tooltip arrow title='Show grouping options' enterDelay={500} enterNextDelay={500} placement='right'>
+            <MenuButton  endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1 }}>
+                <Tooltip arrow title='EXPERIMENTAL: Show grouping options' enterDelay={500} enterNextDelay={500} placement='right'>
                     <WorkspacesIcon />
                 </Tooltip>
             </MenuButton>
-            <Menu sx={{ minWidth: 200, '--ListItemDecorator-size': '24px' }}>
-                <MenuItem className='byName' onClick={(event) => { handlePopupEnter(event); }}>
-                    <ListItemDecorator>
-                        {selectedIndex === 'byName' && <CheckIcon sx={{ position: 'absolute', bottom: 8, left: 5 }} />}
-                    </ListItemDecorator>
-                    Group by name
+            <Menu sx={{'--ListItemDecorator-size': '20px' }} onClick={(ev) => ev.preventDefault()}>
+                <MenuItem className='byName' selected={selectedIndex === 'byName'} onClick={(ev) => ev.preventDefault()}>
+                    <Tooltip arrow title='group by name'  enterDelay={500} enterNextDelay={500} placement='right'>                            
+                        <ListItemDecorator>
+                            <Popper placement='right' open={selectedIndex === 'byName'}></Popper>
+                            <Abc />
+                        </ListItemDecorator>
+                    </Tooltip>
                 </MenuItem>
-                <MenuItem className='byFeed' onMouseEnter={() => setGroupingOption('byFeed')} onClick={handleApply} disabled={graphView !== 'action'}> {/*onMouseEnter={(event) => { handlePopupEnter(event); }} >*/}
-                    <ListItemDecorator>
-                        {selectedIndex === 'byFeed' && <CheckIcon sx={{ position: 'absolute', bottom: 8, left: 5 }} />}
-                    </ListItemDecorator>
-                    Group by feed
-                </MenuItem>
-                <ListDivider />
-                <MenuItem onMouseOver={() => { }} >
-                    <ListItemDecorator />
-                    {/* <ListItemDecorator>
-                        <ArrowRight sx={{position: 'absolute', bottom: 8, right: 25}}/>
-                    </ListItemDecorator> */}
-                    More...
-                </MenuItem>
-                <ListDivider />
-                <MenuItem onMouseOver={() => { }}>
-                    <ListItemDecorator />
-                    {/* <ListItemDecorator>
-                        <ArrowRight sx={{position: 'absolute', bottom: 8, right: 25}}/>
-                    </ListItemDecorator> */}
-                    Custom...
-                </MenuItem>
-                <ListDivider />
-                <MenuItem onClick={handleReset}>
-                    <ListItemDecorator />
-                    Reset
-                </MenuItem>
-            </Menu>
-            {isPopupVisible && popupPosition && (
-                <Sheet sx={{ position: 'absolute', top: popupPosition.top, left: popupPosition.left, padding: 1.5, zIndex: 1, bgcolor: '#eff4f4' }}>
-                    <Box display="flex" flexDirection="row" alignItems="center">
-                        <FormControl >
-                            <Box display="flex" flexDirection="row" alignItems="center">
-                                <FormLabel>Grouping option: {groupingOption}</FormLabel>
-                                <IconButton onClick={() => setIsPopupVisible(false)} sx={{ left: 110, bottom: 10 }}>
-                                    <CloseIcon />
-                                </IconButton>
-                            </Box>
-                            <Input
-                                value={inputValue}
-                                required
-                                placeholder="Enter grouping criterion ..."
-                                type="email"
-                                onChange={(e) => setInputValue(e.target.value)}
-                                sx={{ marginBottom: 0 }}
-                            />
-                        </FormControl>
-                        <Button variant="outlined" sx={{ bgcolor: '#ababab', borderColor: '#989898', borderWidth: 2, left: 5, bottom: -20 }}
-                            onClick={handleApply}>Apply</Button>
-                    </Box>
-                    {/* <Box>
-                        <RadioGroup name="group by functions" sx={{ gap: 1, '& > div': { p: 1 } }} defaultValue={"subgroups"}>
-                            <FormControl size="sm">
-                                <FormLabel>select grouping routine</FormLabel>
-                                <Radio  value="components" label="Connected components" />
-                                { <FormHelperText>
-                                    description
-                                </FormHelperText> }
-                            </FormControl>
-                            <FormControl size="sm">
-                                <Radio value="subgroups" label="Subgroups" />
-                            </FormControl>
-                        </RadioGroup>
-                    </Box> */}
-                </Sheet>
-            )}
-        </Dropdown>
-    )
-}
-
-function SettingsButton() {
-    const handleOnClick = () => {
-
-    }
-
-    return (
-        <div
-            title='Settings'
-            style={styles}>
-            <IconButton onClick={handleOnClick}>
-                <SettingsIcon />
-            </IconButton>
-        </div>
-    )
-}
-
-function ShowDocumentationButton() {
-    return (
-        <Dropdown>
-            <MenuButton endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1 }}>
-                <Tooltip arrow title='Show documentation options' enterDelay={500} enterNextDelay={500} placement='right'>
-                    <DescriptionIcon />
+                <Tooltip arrow title='group by feed (only enabled if "action graph view" is selected)' enterDelay={500} enterNextDelay={500} placement='right'>                            
+                    <span>{/* <span> is used to show tooltip also if MenuItem is disabled */}
+                        <MenuItem className='byFeed' selected={selectedIndex === 'byFeed'}  onClick={handleApplyByFeed} disabled={graphView !== 'action'}> {/*onMouseEnter={(event) => { handlePopupEnter(event); }} >*/}                
+                            <ListItemDecorator>
+                                <SchemaIcon />
+                            </ListItemDecorator>
+                        </MenuItem>
+                    </span>
                 </Tooltip>
-            </MenuButton>
-            <Menu sx={{ minWidth: 160, '--ListItemDecorator-size': '24px' }}>
-                <MenuItem
-                    onClick={() => {
-                        window.open('https://smartdatalake.ch/json-schema-viewer', '_blank');
-                    }}
-                >
-                    Schema viewer
-                </MenuItem>
-                <MenuItem
-                    onClick={() => {
-                        window.open('https://smartdatalake.ch/', '_blank');
-                    }}
-                >
-                    Documentation
+                <MenuItem onClick={handleReset}>
+                    <ListItemDecorator>
+                        <Tooltip arrow title='reset grouping' enterDelay={500} enterNextDelay={500} placement='right'>
+                            <Clear />
+                        </Tooltip>
+                    </ListItemDecorator>
                 </MenuItem>
             </Menu>
         </Dropdown>
     )
 }
+
 
 export const NodeSearchBar = () => {
     const rfi = useAppSelector((state) => getRFI(state));
@@ -565,79 +425,33 @@ export default function LineageGraphToolbar() {
 
     return (
         <Draggable bounds="parent" nodeRef={nodeRef}>
-            <Box ref={nodeRef}
-                sx={{
-                    zIndex: componentZIndex,
-                    position: 'absolute',
-                    left: 100,
-                    top: 20,
-                    padding: 0.7,
-                    display: 'flex',
-                    flexDirection: 'row',
-                    border: '2.3px solid',
-                    borderColor: 'divider',
-                    borderRadius: '10px',
-                    gap: 1,
-                    // height: 55,
-                    width: 500 + 200,
-                    bgcolor: 'white',
+            <Box ref={nodeRef} sx={{ zIndex: componentZIndex, position: 'absolute', left: 0, top: 0, padding: 0.1, gap: 0.2, display: 'flex', flexDirection: 'row',                    
+                    border: '1px solid', borderColor: 'divider', borderRadius: '10px', bgcolor: 'white',
                 }}
             >
-
-                <ToggleButtonGroup
-                    variant="plain"
-                    spacing={0.1}
-                    value={alignment}
-                    onChange={(event, newAlignment) => {
-                        setAlignment(newAlignment);
-                    }}
-                    aria-label="text alignment"
+                <ToggleButtonGroup variant="plain" spacing={0.1} value={formats} 
+                    onChange={(event, newFormats) => {setFormats(newFormats);}}
                 >
-                    <SettingsButton />
-                    <ShowDocumentationButton />
-                </ToggleButtonGroup>
-                <Divider orientation="vertical" />
-                <ToggleButtonGroup
-                    variant="plain"
-                    spacing={0.1}
-                    value={formats}
-                    onChange={(event, newFormats) => {
-                        setFormats(newFormats);
-                    }}
-                    aria-label="text formatting"
-                >
-                    <GroupingButton />
-                    <GraphViewSelector />
-                    {isPropsConfigDefined && <GraphExpansionButton />}
-                </ToggleButtonGroup>
-                <Divider orientation="vertical" />
-                <ToggleButtonGroup
-                    variant="plain"
-                    spacing={0.1}
-                    value={formats}
-                    onChange={(event, newFormats) => {
-                        setFormats(newFormats);
-                    }}
-                    aria-label="text formatting"
-                >
-                    <ResetViewPortButton />
+                    <ShowAllButton />
                     <CenterFocusButton />
                     <RecomputeLayoutButton />
                     <LayoutButton />
                 </ToggleButtonGroup>
                 <Divider orientation="vertical" />
-                <ToggleButtonGroup
-                    variant="plain"
-                    spacing={0.1}
-                    value={formats}
-                    onChange={(event, newFormats) => {
-                        setFormats(newFormats);
-                    }}
-                    aria-label="text formatting"
+                <ToggleButtonGroup variant="plain" spacing={0.1} value={formats}
+                    onChange={(event, newFormats) => {setFormats(newFormats);}}                    
+                >
+                    {isPropsConfigDefined && <GraphExpansionButton />}
+                    <GraphViewSelector />
+                    <GroupingButton />
+                </ToggleButtonGroup>
+                <Divider orientation="vertical" />
+                <ToggleButtonGroup variant="plain" spacing={0.1} value={formats}
+                    onChange={(event, newFormats) => {setFormats(newFormats);}}
                 >
                     <DownloadLineageButton />
                 </ToggleButtonGroup>
-                <NodeSearchBar />
+                {/*<NodeSearchBar/>*/}
             </Box>
         </Draggable>
     );

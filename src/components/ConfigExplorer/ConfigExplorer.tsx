@@ -1,20 +1,19 @@
-import { CircularProgress, Sheet } from '@mui/joy';
+import { Sheet } from '@mui/joy';
 import { useMemo, useRef, useState } from 'react';
+import { Provider } from 'react-redux';
 import { Route, Routes } from "react-router-dom";
+import store from '../../app/store';
+import { useFetchConfig } from '../../hooks/useFetchData';
 import DraggableDivider from '../../layouts/DraggableDivider';
+import ErrorBoundary from '../../layouts/ErrorBoundary';
 import PageHeader from '../../layouts/PageHeader';
 import { ConfigDataLists, InitialConfigDataLists, emptyConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
+import CenteredCirularProgress from '../Common/CenteredCircularProgress';
 import './App.css';
 import ElementDetails from './ElementDetails';
 import ElementList from './ElementList';
 import ElementTable from './ElementTable';
 import GlobalConfigView from './GlobalConfigView';
-import ErrorBoundary from '../../layouts/ErrorBoundary';
-import { useFetchConfig } from '../../hooks/useFetchData';
-import { useAppDispatch } from '../../hooks/useRedux';
-import { setLineageTabProps } from '../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
-import { Provider } from 'react-redux';
-import store from '../../app/store';
 
 interface SearchFilterDef {
 	text: string;
@@ -64,8 +63,8 @@ function ConfigExplorer() {
 			<PageHeader title={'Configuration'} noBack={true} />
 			<Sheet sx={{ display: 'flex', width: '100%', flex: 1, minHeight: 0 }} ref={parentRef}>
 			{!configData || isFetching ? (
-          <CircularProgress />
-        ) : ( 
+          		<CenteredCirularProgress />
+        	) : ( 
 					<Provider store={store}>
 						<ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
 						<DraggableDivider id="config-elementlist" cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
@@ -75,7 +74,7 @@ function ConfigExplorer() {
 							<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} errorElement={<ErrorBoundary/>} />
 						</Routes>
 					</Provider>
-        )}
+       		 )}
 			</Sheet>
 		</Sheet>
 	);

@@ -1,9 +1,9 @@
-import { CircularProgress } from "@mui/joy";
 import { useParams } from "react-router-dom";
 import { useFetchRun } from "../../../hooks/useFetchData";
 import NotFound from "../../../layouts/NotFound";
 import PageHeader from "../../../layouts/PageHeader";
 import Attempt, { updateStateFile } from "../../../util/WorkflowsExplorer/Attempt";
+import CenteredCircularProgress from "../../Common/CenteredCircularProgress";
 import TabNav from "./Tabs";
 
 /**
@@ -18,7 +18,7 @@ const Run = () => {
     const {flowId, runNumber, taskId} = useParams();
     const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
 
-    if (isLoading || isFetching || !data) return <CircularProgress/>
+    if (isLoading || isFetching || !data) return <CenteredCircularProgress/>
     
     const attempt = data.detail ? undefined : new Attempt(updateStateFile(data));
     if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
