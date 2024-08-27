@@ -28,9 +28,8 @@ export class fetchAPI_rest implements fetchAPI {
             run.runStartTime = new Date(run.runStartTime);
             run.attemptStartTime = new Date(run.attemptStartTime);
             run.attemptStartTimeMillis = new Date(run.attemptStartTime).getTime(); // needed for HistorBarChart
+            run.lastAttemptStartTime = new Date(run.lastAttemptStartTime);
             run.runEndTime = new Date(run.runEndTime);
-            run.duration =
-            run.runEndTime.getTime() - run.attemptStartTime.getTime();
             return run;
         });
     }
@@ -72,7 +71,8 @@ export class fetchAPI_rest implements fetchAPI {
         .then((res) => res.json());
     };
 
-    getConfig = async (tenant: string, repo: string, env: string, version: string) => {
+    getConfig = async (tenant: string, repo: string, env: string, version: string|undefined) => {
+        if (!version) throw new Error("fetchAPI for REST does not support getting config without version specified, but parameter version was undefined");
         return this.fetch(`${this.url}/config?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`)
         .then((parsedJson) => new ConfigData(parsedJson?.config ?? {}))
         .catch((error) => {
@@ -80,6 +80,11 @@ export class fetchAPI_rest implements fetchAPI {
             return new ConfigData({});
         });
     };
+    
+    getConfigVersions = async (tenant: string, repo: string, env: string): Promise<string[] | undefined> => {
+        return fetch(`${this.url}/versions?tenant=${tenant}&repo=${repo}&env=${env}`, await this.getRequestInfo())
+        .then((res) => res.json());
+    }
 
     getTstampEntries = async (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> => {
         return this.fetch(`${this.url}/dataobject/${subtype}/${elementName}/tstamps?tenant=${tenant}&repo=${repo}&env=${env}`)

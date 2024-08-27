@@ -7,7 +7,7 @@ import { RefreshOutlined } from "@mui/icons-material";
  * @param props title - The title of the page, subtitle - The subtitle of the page, description - The description of the page
  * @returns JSX element that represents the PageHeader component
  */
-const PageHeader = (props: {title : string, subtitle?: string, description?: string, noBack?: boolean, refresh?: () => void}) => {
+const PageHeader = (props: {title : string | React.ReactElement, subtitle?: string, description?: string, noBack?: boolean, refresh?: () => void}) => {
     const { title, subtitle, description, noBack, refresh } = props;
     const currURL = useLocation().pathname;
     const navigate = useNavigate();
@@ -39,7 +39,7 @@ const PageHeader = (props: {title : string, subtitle?: string, description?: str
                     {!noBack && <IconButton  onClick={handleClick} variant="plain" color="neutral" size="sm">
                         <ArrowBackIosIcon sx={{scale: '80%', pl: '0.3rem'}}/>
                     </IconButton>}
-                    <Typography level="h4">{title}</Typography>
+                    {typeof title === "string" ? <Typography level="h4">{title}</Typography> : title}
                     {subtitle && <Typography level="title-md" sx={{pt: '1rem'}}>{subtitle}</Typography>}
                     {description && <Typography level="body-sm" sx={{py: '1rem'}}>{description}</Typography>}
                     <Box sx={{ flex: 1 }}/>
