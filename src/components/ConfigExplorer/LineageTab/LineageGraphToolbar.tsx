@@ -1,4 +1,4 @@
-import { Abc, AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull, Send } from '@mui/icons-material';
+import { Abc, AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull, Search, Send } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
@@ -260,7 +260,7 @@ function GroupingButton() {
 
     return (
         <Dropdown open={open} onOpenChange={handleOpenChange}>
-            <MenuButton  endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1 }}>
+            <MenuButton  endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1, outline: '0 !important' }}>
                 <Tooltip arrow title='EXPERIMENTAL: Show grouping options' enterDelay={500} enterNextDelay={500} placement='right'>
                     <WorkspacesIcon />
                 </Tooltip>
@@ -275,21 +275,23 @@ function GroupingButton() {
                     </Tooltip>
                 </Button>
                 {/* this is an improvised "submenu" showing an input box for the name */}
-                <Box hidden={!showByNameSelector} position="absolute" top={5} left={55} >
-                    <form onSubmit={ev => handleApplyByName(ev)}>
-                        <Input id="name" size="sm" sx={{width: 150}} placeholder='Name part for grouping' endDecorator={<IconButton type="submit" size="sm"><Send/></IconButton>}/>
-                    </form>
-                </Box>
+                {showByNameSelector && 
+                    <Box position="absolute" top={5} left={55} >
+                        <form onSubmit={ev => handleApplyByName(ev)}>
+                            <Input id="name" size="sm" sx={{width: 200}} autoFocus placeholder='Name substring...' endDecorator={<IconButton type="submit" size="sm"><Send/></IconButton>}/>
+                        </form>
+                    </Box>
+                }
                 <Tooltip arrow title='group by feed (only enabled if "action graph view" is selected)' enterDelay={500} enterNextDelay={500} placement='right'>                            
                     <span>{/* <span> is used to show tooltip also if MenuItem is disabled */}
-                        <MenuItem className='byFeed' selected={groupingOption === 'byFeed'} onClick={handleApplyByFeed} disabled={graphView !== 'action'}> {/*onMouseEnter={(event) => { handlePopupEnter(event); }} >*/}                
+                        <MenuItem className='byFeed' selected={groupingOption === 'byFeed'} onClick={handleApplyByFeed} disabled={graphView !== 'action'} sx={{ outline: '0 !important' }}>
                             <ListItemDecorator>
                                 <SchemaIcon />
                             </ListItemDecorator>
                         </MenuItem>
                     </span>
                 </Tooltip>
-                <MenuItem onClick={handleReset}>
+                <MenuItem onClick={handleReset} sx={{ outline: '0 !important' }}>
                     <ListItemDecorator>
                         <Tooltip arrow title='reset grouping' enterDelay={500} enterNextDelay={500} placement='right'>
                             <Clear />
@@ -302,7 +304,7 @@ function GroupingButton() {
 }
 
 
-export const NodeSearchBar = () => {
+export const NodeSearchButton = () => {
     const rfi = useAppSelector((state) => getRFI(state));
     const [elementSearchText, setElementSearchText] = useState("");
     const [suggestions, setSuggestions] = useState<any>([]);
@@ -371,40 +373,44 @@ export const NodeSearchBar = () => {
 
 
     const handleSuggestionClick = (_, suggestion) => {
-
         if (suggestion) {
             const rfNode = rfi.getNode(suggestion.id);
             resetViewPortCentered(rfi, [rfNode]);
-        }
+            setOpen(false);
+        }        
     };
 
-    const width = 200;
+    const [open, setOpen] = React.useState(false);
+    const handleOpenChange = React.useCallback((event: React.SyntheticEvent | null, isOpen: boolean) => {
+        setOpen(isOpen);
+    }, []);
 
     return (
-        <Autocomplete
-            sx={{
-                width: width,
-                position: 'absolute',
-                right: 10,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: '10px',
-            }}
-            freeSolo
-            placeholder="Search object"
-            options={suggestions}
-            filterOptions={(x) => x} // disable built-in filtering to override with our own search logic
-            getOptionLabel={(option) => option.id}
-            groupBy={(option) => option.type}
-            onChange={handleSuggestionClick}
-            onInputChange={(_, inputValue) => setElementSearchText(inputValue)}
-        />
+        <Dropdown open={open} onOpenChange={handleOpenChange} >
+            <MenuButton endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1, outline: '0 !important' }}>
+                <Tooltip arrow title='Search node' enterDelay={500} enterNextDelay={500} placement='right'>
+                    <Search />
+                </Tooltip>
+            </MenuButton>
+            <Menu placement="bottom-start" sx={{border: "none", padding: '0px', backgroundColor: 'transparent'}}>
+                <Autocomplete 
+                    sx={{ width: 390 }}
+                    freeSolo
+                    placeholder="Search node"
+                    options={suggestions}
+                    filterOptions={(x) => x} // disable built-in filtering to override with our own search logic
+                    getOptionLabel={(option) => option.id}
+                    groupBy={(option) => option.type}
+                    onChange={handleSuggestionClick}
+                    onInputChange={(_, inputValue) => setElementSearchText(inputValue)}
+                    autoFocus clearOnEscape={true} clearOnBlur={true}
+                />
+            </Menu>
+        </Dropdown>
     );
 };
 
 export default function LineageGraphToolbar() {
-    const [alignment, setAlignment] = React.useState<string | null>('center');
-    const [formats, setFormats] = React.useState(() => ['italic']);
     const isPropsConfigDefined = useAppSelector(state => getConfigData(state)) !== undefined;
     // avoid DOM warning for Draggable, see https://github.com/react-grid-layout/react-draggable/blob/v4.4.2/lib/DraggableCore.js#L159-L171
     const nodeRef = useRef(null);
@@ -415,29 +421,26 @@ export default function LineageGraphToolbar() {
                     border: '1px solid', borderColor: 'divider', borderRadius: '10px', bgcolor: 'white',
                 }}
             >
-                <ToggleButtonGroup variant="plain" spacing={0.1} value={formats} 
-                    onChange={(event, newFormats) => {setFormats(newFormats);}}
-                >
+                <ToggleButtonGroup variant="plain" spacing={0.1}>
+                    <NodeSearchButton/>
+                </ToggleButtonGroup>
+                <Divider orientation="vertical" />
+                <ToggleButtonGroup variant="plain" spacing={0.1}>
+                    {isPropsConfigDefined && <GraphExpansionButton />}
+                    <GraphViewSelector />
+                    <GroupingButton />
+                </ToggleButtonGroup>
+                <Divider orientation="vertical" />
+                <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <ShowAllButton />
                     <CenterFocusButton />
                     <RecomputeLayoutButton />
                     <LayoutButton />
                 </ToggleButtonGroup>
                 <Divider orientation="vertical" />
-                <ToggleButtonGroup variant="plain" spacing={0.1} value={formats}
-                    onChange={(event, newFormats) => {setFormats(newFormats);}}                    
-                >
-                    {isPropsConfigDefined && <GraphExpansionButton />}
-                    <GraphViewSelector />
-                    <GroupingButton />
-                </ToggleButtonGroup>
-                <Divider orientation="vertical" />
-                <ToggleButtonGroup variant="plain" spacing={0.1} value={formats}
-                    onChange={(event, newFormats) => {setFormats(newFormats);}}
-                >
+                <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <DownloadLineageButton />
                 </ToggleButtonGroup>
-                {/*<NodeSearchBar/>*/}
             </Box>
         </Draggable>
     );
