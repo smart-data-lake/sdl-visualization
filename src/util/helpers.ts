@@ -18,7 +18,9 @@ export function withDefault<Type>(input: Type, defaultVal: Type) {
 export function hoconify(obj: any, level: number = 0, addStartIndent: boolean = true, propertiesToIgnore: (string) => boolean = () => false): string {
   const startIndent = (addStartIndent ? getIndent(level) : '');
   const endIndent = getIndent(level);
-  if (isArray(obj)) {
+  if (obj == null) {
+    return startIndent + 'null';
+  } else if (isArray(obj)) {
     return startIndent + '[\n' + obj.map(e => hoconify(e, level + 1, true, propertiesToIgnore)).join('\n') + '\n' + endIndent + ']';
   } else if (typeof obj == 'object') {
     return startIndent + '{\n' + hoconifyObjectEntries(obj, level + 1, propertiesToIgnore) + '\n' + endIndent + '}';
