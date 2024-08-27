@@ -6,28 +6,27 @@
     -adjust between node distance (max width and text-overflow)
     -sohuld be able to show all nodes of the same type (generic function in Graph.ts)
 */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
 import { EdgeProps, Handle, getSmoothStepPath } from 'reactflow';
 
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
+import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
+import IndeterminateCheckBoxOutlinedIcon from '@mui/icons-material/IndeterminateCheckBoxOutlined';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import TableViewIcon from '@mui/icons-material/TableView';
-import { Chip, Divider, IconButton, Tooltip } from '@mui/joy';
+import { Chip, IconButton, Tooltip } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
-import IndeterminateCheckBoxOutlinedIcon from '@mui/icons-material/IndeterminateCheckBoxOutlined';
-import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
 
+import { Position } from 'reactflow';
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
+import { flowProps, graphNodeProps, ReactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
-import { flowProps, graphNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { Position } from 'reactflow';
-import { reactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
 
 /*
   Styles to refactor (for the entire LineageTab folder)
@@ -123,7 +122,7 @@ export const CustomDataNode = ( {data} ) => {
           progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
           numBwdActiveEdges, numFwdActiveEdges,
           expandNodeFunc, graphNodeProps, highlighted
-  }: reactFlowNodeProps = data;
+  }: ReactFlowNodeProps = data;
   const {isSink,  isSource,  
          isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode
   }: graphNodeProps = graphNodeProps
@@ -142,11 +141,6 @@ export const CustomDataNode = ( {data} ) => {
 
   }, [initStateBwd, initStateFwd]);
 
-  const progressColor = progress === undefined ? actionNodeStyles.progressBar.color.done : // dummy placeholder for undefined progres
-                        progress < 30 ? actionNodeStyles.progressBar.color.low : 
-                        progress < 70 ? actionNodeStyles.progressBar.color.medium : 
-                        progress < 100 ? actionNodeStyles.progressBar.color.high:
-                        actionNodeStyles.progressBar.color.done;
   const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; 
 
   const nodeSubTypeName: string = jsonObject !== undefined ? jsonObject.type : label;
@@ -154,7 +148,6 @@ export const CustomDataNode = ( {data} ) => {
                                nodeType === NodeType.DataNode ? "dataObjects" :
                                "";
   const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, ''); // take the capital letters and the first letter of the camelCase name
-  const schemaViewerURL = 'https://smartdatalake.ch/json-schema-viewer';
   const { data: runs} = useFetchWorkflowRunsByElement(nodeTypeName, label);
   const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
 
@@ -177,31 +170,14 @@ export const CustomDataNode = ( {data} ) => {
     let propsHasConfigData = props.configData;
 
     if(nodeType === NodeType.DataNode){
-      if(propsHasConfigData){
         navigate(`/config/dataObjects/${nodeId}`); 
-      }
+      
     } else if (nodeType === NodeType.ActionNode){
-
-      if(propsHasConfigData){
         navigate(`/config/actions/${nodeId}`);
-      } else {
-        navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${nodeId}`);
-      }
+        // navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${nodeId}`);
     } else {
       throw Error("Unknown node type: " + nodeType);
     }
-  };
-
-  // render progress bar
-  const renderProgressBar = (color, progress) => {
-    return (
-      <>
-        <Typography level="body-xs" variant="plain"> 
-          {progress}% complete
-        </Typography>
-        {/* <LinearProgress determinate size="lg" value={progress} sx={{marginBottom: actionNodeStyles.progressBar.bar.marginBottom, color: color}}  /> */}
-      </>
-    );
   };
 
   /*
@@ -229,8 +205,8 @@ export const CustomDataNode = ( {data} ) => {
           {nodeType === NodeType.ActionNode ? <RocketLaunchOutlined sx={{height: '18px'}}/> : <TableViewIcon sx={{height: '18px'}}/>}
         </Tooltip>
         <Tooltip title={nodeSubTypeName}>
-          <Typography level="body-xs" onClick={() => window.open(schemaViewerURL, '_blank')} 
-            sx={{marginLeft:'3px', cursor: 'pointer', fontSize: 14, fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap'}}
+          <Typography level="body-xs"
+            sx={{marginLeft:'3px', fontSize: 14, fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap'}}
             >
           {abbr}
           </Typography>
@@ -258,41 +234,14 @@ export const CustomDataNode = ( {data} ) => {
     )
   }
 
-  function showObjectName(){
-    return <Tooltip title={`${label}: view details`} arrow>
+  function showObjectName(layoutDirection: String){
+    return <Tooltip title={label} arrow placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
               <Typography level="body-lg" 
-                          sx={{ 
-                            fontWeight: 'bold', 
-                            textOverflow: 'ellipsis', 
-                            overflow: 'hidden', 
-                            whiteSpace: 'nowrap', 
-                            maxWidth: '100%',
-                            maxHeight: '30px',
-                            fontSize:21,
-                            cursor: 'pointer'
-                          }}
+                          sx={{fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%', maxHeight: '30px', fontSize:21, cursor: 'pointer'}}
                           onClick={() => handleDetailsClick(props, label, nodeType)} >
                 {label}
               </Typography> 
             </Tooltip>
-  }
-
-  function showProgressBar(color, progress){
-    return  <>
-              <Divider sx={{mt:5, mb:1}}  orientation='horizontal'/>
-                      {renderProgressBar(color, progress)}
-                      <Box sx={{
-                        bgcolor: color,
-                        border: '1px solid #ddd',
-                        borderRadius: '10px',
-                        width: 0.3,
-                        justifyContent: 'flex-end'
-                        }}>
-                        <Box flex={0} sx={{justifyContent: 'center', display: 'flex', color: '#fff', fontSize: 'xs', paddingRight: 1}}>
-                          {getActionStatus(progress)}
-                        </Box>
-                      </Box> 
-            </>
   }
 
   //test
@@ -343,7 +292,7 @@ export const CustomDataNode = ( {data} ) => {
 
       <div>
         {showObjectTitle()}
-        {showObjectName()}
+        {showObjectName(layoutDirection)}
       </div>
       {/*showProperties()*/}
       
@@ -377,6 +326,7 @@ export const CustomDataNode = ( {data} ) => {
   );
 };
 
+
 //https://github.com/xyflow/xyflow/discussions/2347
 export const CustomEdge = ({
   id,
@@ -403,4 +353,13 @@ export const CustomEdge = ({
       <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={markerEnd}/>
     </>
   );
+}
+
+
+export const ParentNode = ({props}) => {
+  return (
+    <Box>
+      
+    </Box>
+  )
 }

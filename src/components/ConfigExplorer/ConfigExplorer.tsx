@@ -1,15 +1,19 @@
+import { Provider } from 'react-redux';
+
 import { CircularProgress, Select, Sheet, Typography, Option, Box  } from '@mui/joy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Route, Routes } from "react-router-dom";
+import store from '../../app/store';
 import DraggableDivider from '../../layouts/DraggableDivider';
+import ErrorBoundary from '../../layouts/ErrorBoundary';
 import PageHeader from '../../layouts/PageHeader';
 import { ConfigDataLists, InitialConfigDataLists, emptyConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
+import CenteredCirularProgress from '../Common/CenteredCircularProgress';
 import './App.css';
 import ElementDetails from './ElementDetails';
 import ElementList from './ElementList';
 import ElementTable from './ElementTable';
 import GlobalConfigView from './GlobalConfigView';
-import ErrorBoundary from '../../layouts/ErrorBoundary';
 import { useFetchConfig, useFetchConfigVersions } from '../../hooks/useFetchData';
 
 interface SearchFilterDef {
@@ -102,9 +106,9 @@ function ConfigExplorer() {
       />
 			<Sheet sx={{ display: 'flex', width: '100%', flex: 1, minHeight: 0 }} ref={parentRef}>
 			{!configData || isFetching ? (
-          <CircularProgress />
-        ) : ( 
-					<>
+          		<CenteredCirularProgress />
+        	) : ( 
+					<Provider store={store}>
 						<ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
 						<DraggableDivider id="config-elementlist" cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
 						<Routes>
@@ -112,8 +116,8 @@ function ConfigExplorer() {
 							<Route path=":elementType/:elementName/:tab?" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} errorElement={<ErrorBoundary/>} />
 							<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} errorElement={<ErrorBoundary/>} />
 						</Routes>
-					</>
-        )}
+					</Provider>
+       		 )}
 			</Sheet>
 		</Sheet>
 	);

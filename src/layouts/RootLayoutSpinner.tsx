@@ -1,23 +1,8 @@
-import { Box, CircularProgress } from "@mui/joy";
-import { useWorkspace } from "../hooks/useWorkspace";
+import { useAuthenticator } from "@aws-amplify/ui-react";
+import CenteredCircularProgress from "../components/Common/CenteredCircularProgress";
 import { useFetchEnvs, useFetchRepos, useFetchTenants } from "../hooks/useFetchData";
 import { useManifest } from "../hooks/useManifest";
-import { useAuthenticator } from "@aws-amplify/ui-react";
-
-function Spinner() {
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <CircularProgress />
-    </Box>
-  );
-}
+import { useWorkspace } from "../hooks/useWorkspace";
 
 function WorkspaceSpinner({ children }) {
   const { user } = useAuthenticator();
@@ -36,7 +21,7 @@ function WorkspaceSpinner({ children }) {
   const displaySpinner = user && (isLoading);
 
   if (displaySpinner) {
-    return <Spinner />;
+    return <CenteredCircularProgress />;
   }
 
   return <>{children}</>;
@@ -46,7 +31,7 @@ function RootLayoutSpinner({ children }) {
   const { data: manifest, isFetching: isLoadingManifest } = useManifest();
 
   if (isLoadingManifest) {
-    return <Spinner />;
+    return <CenteredCircularProgress />;
   }
 
   if (!manifest?.auth) {

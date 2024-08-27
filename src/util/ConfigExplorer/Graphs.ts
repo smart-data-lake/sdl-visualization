@@ -2,13 +2,13 @@
     A general Graph structure that is used by React components
 */
 import dagre from 'dagre';
-import * as d3 from 'd3';
-import { hierarchy, tree } from 'd3-hierarchy';
 import { ConfigData } from './ConfigData';
 import assert from 'assert';
 
-import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from 'reactflow'
+import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from '@xyflow/react'
 import { removeDuplicatesFromObjArrayOnAttributes } from '../helpers';
+import store from '../../app/store';
+import { getRFI, setRFINodeData } from './slice/LineageTab/Common/ReactFlowSlice';
 
 
 
@@ -230,13 +230,11 @@ export class DAGraph {
                 if (dataObjsAndEdges.length > 1){
                     const dataObjs = dataObjsAndEdges[0];
                     const edges = dataObjsAndEdges[1];
-                    const relatedActionObjects = dataObjsAndEdges[2]
+                    const relatedActionObjects = dataObjsAndEdges[2] // TODO: we can use a set here or a single variable
                     const actionId = dataObjsAndEdges[3];
 
                     // create new action node that unifies the edges and link the source nodes to it
-                    const jsonObjs =  Object.fromEntries(relatedActionObjects.map(x => [x.jsonObject]));
-                    jsonObjs["type"] = actionType;
-
+                    const jsonObjs = relatedActionObjects[0].jsonObject;
                     const newActionNode = new ActionObject(dataObjs, [node], actionId, jsonObjs);
                     this.nodes.push(newActionNode);
                     this.edges.push(new Edge(newActionNode, node, `${newActionNode.id}=${actionType}=${node.id}`));
@@ -432,13 +430,12 @@ export class DAGraph {
      *  In rare case, an action object can have multiple incoming and outgoing edges
 
         Caveat: this assumes that we are in full graph view
-
-     * merge n-ary action functions, e.g. if D1 -> A and D2 -> A, then merge D1 and D2 into a single action node 
-     * while it could be the case that the out degree of the action node is > 1, we can merge by only looking
-     * at the in-degree of the action node 
      */
 
     getActionGraph(): DAGraph {
+        // merge n-ary action functions, e.g. if D1 -> A and D2 -> A, then merge D1 and D2 into a single action node 
+        // while it could be the case that the out degree of the action node is > 1, we can merge by only looking
+        // at the in-degree of the action node 
         const actions = this.nodes.filter(node => node.nodeType === NodeType.ActionNode) as ActionObject[];
         const newNodes: Node[] = actions;
         const newEdges: Edge[] = [];
@@ -514,8 +511,9 @@ export class DAGraph {
     }
 
     returnDirectNeighbours(specificNodeId: id): [Node[], Edge[]]{
+        // equivalent to getOutElems | getInElems
         const specificNode = this.nodes.find(node => node.id===specificNodeId) as Node;
-        this.setCenterNode(specificNode);
+        // this.setCenterNode(specificNode);
         const edges = this.edges.filter(edge => edge.fromNode.id === specificNodeId || edge.toNode.id === specificNodeId);
         const nodes: Node[] = [];
         edges.filter(e => {e.fromNode.id === specificNodeId ? nodes.push(e.toNode) : 
@@ -541,6 +539,52 @@ export class DAGraph {
         const inNodes = inEdges.map(edge => edge.fromNode);
         return [inNodes, inEdges];
     }
+
+    // return a set of subgraphs spanned by the nodes associated to the given nodeIds. 
+    getConnectedNodeComponents(nodeIds: string[], G: DAGraph): Map<string, Node[]>{
+        const visited = new Set<string>();
+        const components = new Map<string, Node[]>();
+        let id = 0; // component id
+
+        const visit = (n: Node, currId: number) => {
+            visited.add(n.id);
+            if(!components.has(id.toString())){
+                components.set(id.toString(), [n]);
+            } else {
+                components.get(id.toString())!.push(n); // TODO: debug. current debug case does not have the zlr tag
+            }
+            const [neighbourNodes, _] = G.returnDirectNeighbours(n.id); 
+            neighbourNodes.forEach(node => {
+                if(nodeIds.includes(node.id) && !visited.has(node.id)){ // if result contains neighbour nodes
+                    visit(node, currId);
+                }
+            })
+        };
+
+        nodeIds.forEach(nid => {
+            if (!visited.has(nid)){
+                visit(this.getNodeById(nid)!, id);
+                id += 1;
+            }
+        });
+
+        return components;
+    }; 
+
+    getSubgroups(F: (node: Node, fargs: any) => any, args: any, 
+                 toGroupId?: (result: any, targs: any) => string, taggerArgs?: any): Map<string, Node[]>{
+        const groups = new Map<string, Node[]>();
+        this.nodes.forEach(node => {
+            const result = F(node, args);
+            const id = toGroupId ? `#${toGroupId(result, taggerArgs)}` : `#parentId: ${node.id}`; 
+            if(!groups.has(id)){
+                groups.set(id, [node]);
+            } else {
+                groups.get(id)!.push(node);
+            }
+        })
+        return groups;
+    }
 }
 
 /*
@@ -554,11 +598,13 @@ function getBwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEd
     return edges.filter(e => e.target === node.data.label)
 }
 
-export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward', rfi: ReactFlowInstance): [string[], string[]] {
+export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward'): [string[], string[]] {
+    const rfi = store.getState().reactFlow.rfi;
     const edges = rfi.getEdges();
     const nodeIds: Set<string> = new Set();
     const edgeIds: Set<string> = new Set();
     const isFwd = direction === 'forward';
+    const add = (x, y) => x + y;
 
     const visit = (currNode: ReactFlowNode) => {
         const outEdges = isFwd ? getFwdRfEdges(currNode, edges) :  getBwdRfEdges(currNode, edges);
@@ -567,30 +613,68 @@ export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'ba
             edgeIds.add(edge.id)
 
             if(isFwd){
-                currNode.data.numFwdActiveEdges -= 1;
+                // currNode.data.numFwdActiveEdges -= 1;
+                store.dispatch(setRFINodeData(
+                    {
+                        nodeId: currNode.id,
+                        path: 'numFwdActiveEdges',
+                        value: -1,
+                        fromOwnProps: 'data.numFwdActiveEdges',
+                        combine: add
+                    }
+                ));
 
                 // sanity check
-                if(currNode.data.numFwdActiveEdges < 0){
+                if(rfi.getNode(currNode.id).data.numFwdActiveEdges < 0){
                     console.log("FWD WARNING: node ", currNode.id, " has NEGATIVE numFwdActiveEdges: ", currNode.data.numFwdActiveEdges);
                 }
                 const nextNodeId = edge.target;
+                
+                // nextNode.data.numBwdActiveEdges -= 1;
+                store.dispatch(setRFINodeData(
+                    {
+                        nodeId: nextNodeId,
+                        path: 'numBwdActiveEdges',
+                        value: -1,
+                        fromOwnProps: 'data.numBwdActiveEdges',
+                        combine: add
+                    }
+                ));
                 const nextNode = rfi.getNode(nextNodeId)!;
-                nextNode.data.numBwdActiveEdges -= 1;
-
                 if( nextNode.data.numBwdActiveEdges === 0){
                     nodeIds.add(nextNodeId);
                     visit(nextNode);
                 }
             } else {
-                currNode.data.numBwdActiveEdges -= 1;
+                // currNode.data.numBwdActiveEdges -= 1;
+                store.dispatch(setRFINodeData(
+                    {
+                        nodeId: currNode.id,
+                        path: 'numBwdActiveEdges',
+                        value: -1,
+                        fromOwnProps: 'data.numBwdActiveEdges',
+                        combine: add
+                    }
+                ));
 
                 // sanity check
-                if(currNode.data.numBwdActiveEdges < 0){
+                if(rfi.getNode(currNode.id).data.numBwdActiveEdges < 0){
                     console.log("BWD WARNING: node ", currNode.id, " has NEGATIVE numBwdActiveEdges: ", currNode.data.numBwdActiveEdges);
                 }
                 const nextNodeId = edge.source;
+                
+                // nextNode.data.numFwdActiveEdges -= 1;
+                store.dispatch(setRFINodeData(
+                    {
+                        nodeId: nextNodeId,
+                        path: 'numFwdActiveEdges',
+                        value: -1,
+                        fromOwnProps: 'data.numFwdActiveEdges',
+                        combine: add
+                    }
+                ));
+
                 const nextNode = rfi.getNode(nextNodeId)!;
-                nextNode.data.numFwdActiveEdges -= 1;
                 if( nextNode.data.numFwdActiveEdges === 0){
                     nodeIds.add(nextNodeId);
                     visit(nextNode);
@@ -651,13 +735,13 @@ export function bfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'ba
             // mark edge as hidden
             edgeIds.add(edge.id);
             if (isFwd){
-                currNode.data.numFwdActiveEdges -= 1;
+                (currNode.data.numFwdActiveEdges as number) -= 1;
                 visitedNodes[edge.target].bwdEdgesToVisit -= 1;
-                rfi.getNode(edge.target)!.data.numBwdActiveEdges -= 1;
+                (rfi.getNode(edge.target)!.data.numBwdActiveEdges as number) -= 1;
             } else {
-                currNode.data.numBwdActiveEdges -= 1;
+                (currNode.data.numBwdActiveEdges! as number) -= 1;
                 visitedNodes[edge.source].fwdEdgesToVisit -= 1;
-                rfi.getNode(edge.source)!.data.numFwdActiveEdges -= 1;
+                (rfi.getNode(edge.source)!.data.numFwdActiveEdges as number) -= 1;
             }
         });
 
@@ -810,10 +894,9 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
     nodes.forEach((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
         node.position = {
-        x: nodeWithPosition.x - node.width / 2,
-        y: nodeWithPosition.y - node.height / 2,
+            x: nodeWithPosition.x - node.width / 2,
+            y: nodeWithPosition.y - node.height / 2,
         };
-        return node;
     });
 
     //If there is one Central Node, then shift its position to [0, 0] and shift all nodes as well
@@ -822,24 +905,17 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
     if (centralNode) {
         let shiftX = centralNode.position.x;
         let shiftY = centralNode.position.y;
-        let shiftedNodes = nodes.filter((node) => !(node as Node).isCenterNode); 
-        shiftedNodes.forEach((node) => {
+        nodes.forEach((node) => {
             node.position.x = node.position.x - shiftX;
             node.position.y = node.position.y - shiftY;
         });
-        centralNode.position.x = 0; //See if deep copy needed with strucuturedClone(), as we're altering our nodes.
-        centralNode.position.y = 0;
-        shiftedNodes.push(centralNode);
-        nodes = shiftedNodes;
     } 
 
     return nodes;
 }
 
-export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string = 'TB'): Node[] | ReactFlowNode[] {
-    const nodeWidth = 172;
-    const nodeHeight = 36;
-
+export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string, nodeWidth: number, nodeHeight: number): ReactFlowNode[] {
+    
     //instantiate dagre Graph
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({});
@@ -849,42 +925,15 @@ export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], di
     dagreGraph.setGraph({ rankdir: direction, nodesep: 150, ranksep: 150});
     
     //add nodes + edges to the graph and calculate layout
-    nodes.forEach((node)=>{
-        dagreGraph.setNode(node.id, {width: nodeWidth, height: nodeHeight});
-    });
-    edges.forEach((edge) =>{
-        dagreGraph.setEdge(edge.source, edge.target);
-        
-    });
+    nodes.forEach((node)=> dagreGraph.setNode(node.id, {width: nodeWidth, height: nodeHeight}));
+    edges.forEach((edge) => dagreGraph.setEdge(edge.source, edge.target));
     dagre.layout(dagreGraph); 
 
-    // Shift the dagre node position (anchor=center center) to the top left
-    // so it matches the React Flow node anchor point (top left).
+    // set layouted nodes position
     nodes.forEach((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
-        node.position = {
-        x: nodeWithPosition.x - nodeWidth / 2,
-        y: nodeWithPosition.y - nodeHeight / 2,
-        };
-        return node;
+        node.position = {x: nodeWithPosition.x, y: nodeWithPosition.y};
     });
-
-    //If there is one Central Node, then shift its position to [0, 0] and shift all nodes as well
-    // TODO: replace by if (this.centerNodeId === '')
-    let centralNode =  nodes.find((node) => node.data.isCenterNode);
-    if (centralNode) {
-        let shiftX = centralNode.position.x;
-        let shiftY = centralNode.position.y;
-        let shiftedNodes = nodes.filter((node) => !node.data.isCenterNode); 
-        shiftedNodes.forEach((node) => {
-            node.position.x = node.position.x - shiftX;
-            node.position.y = node.position.y - shiftY;
-        });
-        centralNode.position.x = 0; //See if deep copy needed with strucuturedClone(), as we're altering our nodes.
-        centralNode.position.y = 0;
-        shiftedNodes.push(centralNode);
-        nodes = shiftedNodes;
-    } 
 
     return nodes;
 }
@@ -925,6 +974,5 @@ export  class DataObjectsAndActionsSep extends DAGraph{ // TODO: make this defau
         const dataObjectsAndActions: Node[] = dataObjects.concat(actionObjects);
         const dataObjectsWithPosition = dagreLayout(dataObjectsAndActions, edges); 
         super(dataObjectsWithPosition, edges);
-        this.jsonObject = jsonObject;
     }
 }
