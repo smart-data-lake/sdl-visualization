@@ -388,7 +388,7 @@ export const NodeSearchButton = () => {
     return (
         <Dropdown open={open} onOpenChange={handleOpenChange} >
             <MenuButton endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1, outline: '0 !important' }}>
-                <Tooltip arrow title='Search node' enterDelay={500} enterNextDelay={500} placement='right'>
+                <Tooltip arrow title={<>Search node. By default node name must contain search expr,<br/> but you can add 'prefix:' or 'suffix:' at the start to modify behaviour.</>} enterDelay={500} enterNextDelay={500} placement='right'>
                     <Search />
                 </Tooltip>
             </MenuButton>
