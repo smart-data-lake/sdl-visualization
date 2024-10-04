@@ -91,7 +91,7 @@ export default function Users() {
   const queryClient = useQueryClient();
   const { tenant } = useWorkspace();
   const userContext = useUser();
-  const { data, isFetching } = useFetchUsers();
+  const { data, isFetching } = useFetchUsers(userContext?.authenticated || false);
   const { mutateAsync: addUserAsync, isLoading: isAdding, error: addUserError } = useAddUser();
   const { mutateAsync: removeUserAsync, isLoading: isRemoving } = useRemoveUser();
   const [modalOpened, setModalOpened] = useState(false);

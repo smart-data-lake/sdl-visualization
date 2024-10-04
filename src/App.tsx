@@ -16,16 +16,11 @@ import { amplifyTheme } from './theme';
 import Setting from './components/Settings/Setting';
 import ErrorBoundary from './layouts/ErrorBoundary';
 import { WorkspaceProvider } from './hooks/useWorkspace';
-import { UserProvider } from "./hooks/useUser";
+import { UserProvider, useUser } from "./hooks/useUser";
 
-/**
- * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
- */
+function MainContent() {
+  const userContext = useUser();
 
-export default function App() {
-  
-  const {data: manifest} = useManifest();
-  
   const root = () => (
     <Routes>
       <Route element={<RootLayout />}>
@@ -45,18 +40,29 @@ export default function App() {
     { path: "*", Component: root },    
   ])
 
-  useEffect(() => {
-    if(manifest?.auth) {
-      Amplify.configure(manifest?.auth);
-    }
-  }, [manifest])
-
-  const MainContent = () => (
+  return (
     <CssVarsProvider>
       <CssBaseline />
-      <RouterProvider router={router()} />
+      {(!userContext || userContext.authenticated) && <RouterProvider router={router()} />}
+      {(userContext && !userContext.authenticated) && <Authenticator variation="modal" />}
     </CssVarsProvider>
-  );
+  )
+};
+
+
+/**
+ * App is the top element of SDLB. It defines routing and how data are fetched from the config file for the config file viewer. It returns the root page which consists of the root layout.
+ */
+
+export default function App() {
+  
+  const {data: manifest} = useManifest();
+
+  useEffect(() => {
+    if(manifest?.auth) {
+      Amplify.configure(manifest.auth);
+    }
+  }, [manifest])
 
   return (
     <ThemeProvider theme={amplifyTheme}>

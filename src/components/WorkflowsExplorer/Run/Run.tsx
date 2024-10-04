@@ -5,6 +5,7 @@ import PageHeader from "../../../layouts/PageHeader";
 import Attempt, { updateStateFile } from "../../../util/WorkflowsExplorer/Attempt";
 import CenteredCircularProgress from "../../Common/CenteredCircularProgress";
 import TabNav from "./Tabs";
+import { useUser } from "../../../hooks/useUser";
 
 /**
     The Run component displays information about a specific run of a workflow.
@@ -16,7 +17,8 @@ import TabNav from "./Tabs";
 */
 const Run = () => {
     const {flowId, runNumber, taskId} = useParams();
-    const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!));
+    const userContext = useUser();
+    const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!), !userContext || userContext.authenticated);
 
     if (isLoading || isFetching || !data) return <CenteredCircularProgress/>
     

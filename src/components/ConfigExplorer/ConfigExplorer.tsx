@@ -15,6 +15,7 @@ import ElementList from './ElementList';
 import ElementTable from './ElementTable';
 import GlobalConfigView from './GlobalConfigView';
 import { useFetchConfig, useFetchConfigVersions } from '../../hooks/useFetchData';
+import { useUser } from '../../hooks/useUser';
 
 interface SearchFilterDef {
 	text: string;
@@ -62,7 +63,7 @@ function ConfigVersionSelector({
   return (
     <Box sx={{ display: "flex", gap: "1rem" }}>
       <Typography level="h4">Configuration</Typography>
-      {data && 
+      {data && data.length > 0 &&
         <Select size="sm" value={value} onChange={handleChange}>
           {data?.map((version) => (
             <Option value={version}>{version}</Option>
@@ -74,9 +75,10 @@ function ConfigVersionSelector({
 }
 
 function ConfigExplorer() {
-	const [version, setVersion] = useState<string|undefined>();
-	const { data: configVersionData, isFetching: isFetchingConfigVersion } = useFetchConfigVersions();
-	const { data: configData, isFetching: isFetchingConfig } = useFetchConfig(version, isFetchingConfigVersion && (configVersionData==undefined || version!=undefined));
+  const userContext = useUser();
+  const [version, setVersion] = useState<string|undefined>();
+	const { data: configVersionData, isFetching: isFetchingConfigVersion } = useFetchConfigVersions(!userContext || userContext.authenticated);
+	const { data: configData, isFetching: isFetchingConfig } = useFetchConfig(version, configVersionData?.length==0 || version!=undefined);
 	const listRef = useRef<HTMLDivElement>(null);
 	const parentRef = useRef<HTMLDivElement>(null);  
 	const [filter, setFilter] = useState<SearchFilterDef>();

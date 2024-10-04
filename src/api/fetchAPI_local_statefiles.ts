@@ -187,7 +187,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     }
     
     getConfigVersions(tenant: string, repo: string, env: string): Promise<string[] | undefined> {
-        return new Promise<string[] |undefined>(r => r(undefined))
+        return new Promise<string[] | undefined>(r => r([]))
     }
 
     getTstampFromFilename(filename: string): Date {

@@ -13,6 +13,7 @@ import { createFeedChip } from "../ConfigExplorer/ConfigurationTab";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
 import HistoryBarChart from "./HistoryChart/HistoryBarChart";
 import ToolBar from "./ToolBar/ToolBar";
+import { useUser } from "../../hooks/useUser";
 
 
 export type FilterParams = {
@@ -39,7 +40,8 @@ export function filterSearchText(params: FilterParams, row: any): boolean {
 */
 export default function WorkflowHistory() {
 	const {flowId} = useParams();
-	const { data, isLoading, isFetching, refetch } = useFetchWorkflowRuns(flowId!);
+    const userContext = useUser();
+	const { data, isLoading, isFetching, refetch } = useFetchWorkflowRuns(flowId!, !userContext || userContext.authenticated);
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'startsWith', searchColumn: 'runId', additionalFilters: []})
     const currURL = useLocation().pathname;
 		

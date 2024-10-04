@@ -10,9 +10,11 @@ import CenteredCircularProgress from "../Common/CenteredCircularProgress";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../ConfigExplorer/DataTable';
 import ToolBar from "./ToolBar/ToolBar";
 import { FilterParams, filterSearchText } from "./WorkflowHistory";
+import { useUser } from "../../hooks/useUser";
 
 export default function Workflows() {
-    const { data, isLoading, isFetching, refetch } = useFetchWorkflows();
+    const userContext = useUser();
+    const { data, isLoading, isFetching, refetch } = useFetchWorkflows(!userContext || userContext.authenticated);
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'name', additionalFilters: []})
 
     const selData = useMemo(() => {
