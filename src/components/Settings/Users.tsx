@@ -78,12 +78,14 @@ const columns: any[] = [
     title: "User Permission",
     dataType: DataType.Object,
     editorRenderer: permissionDropdownRenderer,
+    width: 140
   },
   {
     key: "actions",
     renderer: editRemoveButtonsRenderer,
     headRenderer: addButtonRenderer,
     editorRenderer: saveCancelButtonsRenderer,
+    width: 55
   },
 ];
 
@@ -177,10 +179,7 @@ export default function Users() {
           columnResizing
           data={data}
           loading={{
-            enabled: isFetching || isRemoving || isAdding,
-          }}
-          virtualScrolling={{
-            enabled: true,
+            enabled: isFetching
           }}
           validation={(props) => {
             if (tableValidationFns && tableValidationFns[props.column.key]) {

@@ -1,25 +1,16 @@
-import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
-import { Box, CircularProgress, Dropdown, IconButton, Menu, MenuButton, MenuItem, Tooltip, Typography } from "@mui/joy";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
-import LoginIcon from "@mui/icons-material/Login";
-import CloseIcon from "@mui/icons-material/Close";
-import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useWorkspace } from "../hooks/useWorkspace";
+import { Box, CircularProgress, Dropdown, Menu, MenuButton, MenuItem, Tooltip, Typography } from "@mui/joy";
 import { SxProps } from "@mui/material";
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useFetchEnvs, useFetchRepos, useFetchTenants } from "../hooks/useFetchData";
+import { useUser } from "../hooks/useUser";
+import { useWorkspace } from "../hooks/useWorkspace";
 
 function getEmptyWorkspaceWarning() {
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        maxWidth: 320,
-        p: 1,
-      }}
-    >
+    <Box sx={{ display: "flex", flexDirection: "column", maxWidth: 320, p: 1, }}>
       <span>
         To upload state files, configs and metadata of data object, use the CLI interface of the SDLB.
         <br />
@@ -29,13 +20,7 @@ function getEmptyWorkspaceWarning() {
   );
 }
 
-function WorkspaceSelector({
-  selectedItem,
-  data,
-  setData,
-  typographyStyle,
-  isLoading,
-}: {
+function WorkspaceSelector({selectedItem, data, setData, typographyStyle, isLoading}: {
   selectedItem: any;
   data: any[] | undefined;
   setData: (x: any) => void;
@@ -100,7 +85,7 @@ function TenantSelector() {
       selectedItem={tenant}
       data={tenants}
       setData={setTenant}
-      typographyStyle={{ color: "white", cursor: "pointer", fontWeight: 600, fontSize: "1.125rem" }}
+      typographyStyle={{ color: "white", cursor: "pointer" }}
       isLoading={isLoading}
     />
   );
@@ -152,24 +137,11 @@ function EnvSelector() {
 }
 
 export default function Authentication() {
-  const { user, signOut, authStatus } = useAuthenticator();
-  const [showLogin, setShowLogin] = useState(false);
+  const userContext = useUser();
   const navigate = useNavigate();
-  const prevAuthStatus = useRef<any>();
-
-  useEffect(() => {
-    if (
-      authStatus !== prevAuthStatus.current &&
-      [authStatus, prevAuthStatus.current].every((x) => ["authenticated", "unauthenticated"].includes(x))
-    ) {
-      navigate(0);
-    }
-    prevAuthStatus.current = authStatus;
-  }, [authStatus]);
 
   const logout = () => {
-    setShowLogin(false);
-    signOut();
+    userContext!.signOut!();
   };
 
   const goToSetting = () => {
@@ -178,108 +150,36 @@ export default function Authentication() {
 
   return (
     <>
-      {(user || showLogin) && (
-        <Authenticator
-          variation="modal"
-          components={{
-            Header: () => (
-              <Box position="relative">
-                <IconButton
-                  variant="soft"
-                  size="sm"
-                  sx={{
-                    backgroundColor: "white",
-                    mr: -4,
-                    borderRadius: "50%",
-                    position: "absolute",
-                    right: 12,
-                    top: -18,
-                    minWidth: "1.25rem",
-                    minHeight: "1.25rem",
-                  }}
-                  onClick={() => setShowLogin(false)}
-                >
-                  <CloseIcon sx={{ fontSize: "12pt" }} />
-                </IconButton>
-              </Box>
-            ),
-          }}
-        >
-          {() => (
-            <>
-              <Box
-                sx={{
-                  position: "absolute",
-                  left: "50%",
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                }}
-              >
-                <TenantSelector />
-              </Box>
-              <Box
-                sx={{
-                  position: "absolute",
-                  right: "0",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  pr: 2,
-                }}
-              >
-                <RepoSelector /> /
-                <EnvSelector />
-                <Dropdown>
-                  <MenuButton
-                    sx={{ display: "flex" }}
-                    slots={{
-                      root: Box,
-                    }}
-                  >
-                    <SettingsIcon sx={{ color: "white", cursor: "pointer", ml: 1, fontSize: "1.25em" }} />
-                  </MenuButton>
+      <Box sx={{display: "flex", alignContent: "flex-end", flexDirection: "row", gap: 1}}>
+        <TenantSelector /> /
+        <RepoSelector /> /
+        <EnvSelector />
+      </Box>
+      <Box>
+        <Dropdown>
 
-                  <Menu sx={{ padding: 2 }} size="sm">
-                    <Typography fontSize="inherit" sx={{ marginBottom: 2 }}>
-                      {user?.attributes?.email}
-                    </Typography>
-                    <MenuItem onClick={logout}>
-                      <Box display="flex" width={1} alignItems="center" justifyContent="space-between">
-                        Logout
-                        <LogoutIcon sx={{ cursor: "pointer", ml: 1 }} />
-                      </Box>
-                    </MenuItem>
-                    <MenuItem onClick={goToSetting}>
-                      <Box display="flex" width={1} alignItems="center" justifyContent="start">
-                        User Management
-                      </Box>
-                    </MenuItem>
-                  </Menu>
-                </Dropdown>
+          <MenuButton slots={{ root: Box}} sx={{display: "flex", height: "28px"}}>
+            <SettingsIcon sx={{ height: "25px", color: "white", cursor: "pointer"}} />
+          </MenuButton>
+
+          <Menu sx={{ padding: 2 }} size="sm">
+            <Typography fontSize="inherit" sx={{ marginBottom: 2 }}>
+              {userContext?.email}
+            </Typography>
+            <MenuItem onClick={logout}>
+              <Box display="flex" width={1} alignItems="center" justifyContent="space-between">
+                Logout
+                <LogoutIcon sx={{ cursor: "pointer", ml: 1 }} />
               </Box>
-            </>
-          )}
-        </Authenticator>
-      )}
-      {!user && (
-        <Box
-          sx={{
-            position: "absolute",
-            right: "0",
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            pr: 2,
-          }}
-        >
-          <Tooltip title="Sign in">
-            <LoginIcon
-              sx={{ color: "white", cursor: "pointer", ml: 2, fontSize: "1.25em" }}
-              onClick={() => setShowLogin(true)}
-            />
-          </Tooltip>
-        </Box>
-      )}
+            </MenuItem>
+            <MenuItem onClick={goToSetting}>
+              <Box display="flex" width={1} alignItems="center" justifyContent="start">
+                User Management
+              </Box>
+            </MenuItem>
+          </Menu>
+        </Dropdown>
+      </Box>
     </>
   );
 }

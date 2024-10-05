@@ -24,14 +24,17 @@ function MainContent() {
   const root = () => (
     <Routes>
       <Route element={<RootLayout />}>
-        <Route index element={<Home/>}/>
-        <Route path='workflows/' element={<Workflows/>} errorElement={<ErrorBoundary/>}/>
-        <Route path='workflows/:flowId' element={<WorkflowHistory/>} errorElement={<ErrorBoundary/>}/>
-        <Route path='workflows/:flowId/:runNumber/:taskId/:tab?/:stepName?' element={<Run/>} errorElement={<ErrorBoundary/>}/>
-        <Route path='workflows/*' element={<NotFound/>}/>
-        {/* <Route path='lineage/*' element={<LineageExplorer/>} errorElement={<ErrorBoundary/>} /> */}
-        <Route path='config/*' element={<ConfigExplorer/>} errorElement={<ErrorBoundary/>}/>
-        <Route path='settings/*' element={<Setting />}/>
+        {userContext?.loginElement ? <Route path='*' element={userContext.loginElement}/> : <>
+          <Route index element={<Home/>}/>
+          <Route path='workflows/' element={<Workflows/>} errorElement={<ErrorBoundary/>}/>
+          <Route path='workflows/:flowId' element={<WorkflowHistory/>} errorElement={<ErrorBoundary/>}/>
+          <Route path='workflows/:flowId/:runNumber/:taskId/:tab?/:stepName?' element={<Run/>} errorElement={<ErrorBoundary/>}/>
+          <Route path='workflows/*' element={<NotFound/>}/>
+          {/* <Route path='lineage/*' element={<LineageExplorer/>} errorElement={<ErrorBoundary/>} /> */}
+          <Route path='config/*' element={<ConfigExplorer/>} errorElement={<ErrorBoundary/>}/>
+          <Route path='settings/*' element={<Setting />}/>
+          </>
+        }
       </Route>
     </Routes>
   );
@@ -43,8 +46,7 @@ function MainContent() {
   return (
     <CssVarsProvider>
       <CssBaseline />
-      {(!userContext || userContext.authenticated) && <RouterProvider router={router()} />}
-      {(userContext && !userContext.authenticated) && <Authenticator variation="modal" />}
+      <RouterProvider router={router()} />
     </CssVarsProvider>
   )
 };

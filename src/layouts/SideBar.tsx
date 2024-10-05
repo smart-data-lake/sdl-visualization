@@ -73,14 +73,6 @@ const SideBar = () => {
                     ))}
                 </Stack>
             </Box>
-            <Box>
-                <Divider />
-                <Stack>
-                    <IconButton variant='plain' sx={{ borderRadius: 0 }} disabled={true}>
-                        <SettingsRoundedIcon />
-                    </IconButton>                    
-                </Stack>
-            </Box>
         </Sheet>
      );
 }

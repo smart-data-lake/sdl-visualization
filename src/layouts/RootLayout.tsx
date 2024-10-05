@@ -12,34 +12,12 @@ import RootLayoutSpinner from "./RootLayoutSpinner";
 function RootLayout() {
         
     return ( 
-        <Box
-            sx={{
-                display: 'flex',
-                height: '100vh',
-                alignItems: 'stretch',
-            }}
-        >
+        <Box sx={{ display: 'flex', height: '100vh', alignItems: 'stretch'}}>
             <Header />
             <Box
-                sx={{
-                    display: 'flex',
-                    height: '100vh',
-                    width: '100vh',
-                    justifyContent: 'flex-start',
-                    alignItems: 'stretch',
-                    flex: 1,
-                    minHeight: 0
-                }}
-                >
+                sx={{display: 'flex', height: '100vh', width: '100vh', justifyContent: 'flex-start', alignItems: 'stretch', flex: 1, minHeight: 0 }}>
                 <SideBar/>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        flex: 1,
-                        minWidth: 0
-                    }}
-                >
+                <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                     <RootLayoutSpinner>
                         <Outlet />
                     </RootLayoutSpinner>

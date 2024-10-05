@@ -26,10 +26,7 @@ const BasicBreadcrumbs = () => {
     }
 
     return (
-        <Breadcrumbs 
-            aria-label="breadcrumbs"
-            sx={{color: 'white'}}
-        >
+        <Breadcrumbs aria-label="breadcrumbs" sx={{color: 'white', padding: 0}}>
             {links.map((item, idx) => 
                 // create link for elements except the last
                 (idx < links.length -1 ? <Link onClick={() => handleClick(item)} key={item} sx={{color: 'white'}}>{getItem(item, idx == 0, idx)}</Link> : getItem(item, idx == 0, idx))
