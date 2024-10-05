@@ -5,8 +5,7 @@ import dagre from 'dagre';
 import { ConfigData } from './ConfigData';
 import assert from 'assert';
 
-import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from '@xyflow/react'
-import { removeDuplicatesFromObjArrayOnAttributes } from '../helpers';
+import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from 'reactflow'
 import store from '../../app/store';
 import { getRFI, setRFINodeData } from './slice/LineageTab/Common/ReactFlowSlice';
 
@@ -156,18 +155,13 @@ export class DAGraph {
     public sinkNodes: Node[];
     public centerNodeId: string = '';
 
-    constructor(nodes: Node[], edges: Edge[], mergeEdges: boolean = true){
+    constructor(nodes: Node[], edges: Edge[]){
         this.nodes = nodes; 
         this.edges = edges;
         this.levels = [];
 
         this.sourceNodes = this.#computeSourceNodes();
         this.sinkNodes = this.#computeSinkNodes();
-        if (mergeEdges){
-            this.#mergeCommonActionEdges(); 
-            this.nodes = removeDuplicatesFromObjArrayOnAttributes(this.nodes, ["id"]);
-            this.edges = removeDuplicatesFromObjArrayOnAttributes(this.edges, ["id"])
-        }
     }
 
     /*
@@ -184,73 +178,6 @@ export class DAGraph {
     */
     #computeSinkNodes(){
         return this.nodes.filter(n => this.edges.filter(e => e.fromNode === n).length === 0);
-    }
-
-    /*
-        For every dataNode, merge all incoming action edges into a single edge with a singl actionNode.
-        This should only affect the full graph, not data or action graph.
-        After merging we assume that there are no action nodes with multiple incoming edges.
-        We don't merge data graph or action graph
-
-        There are cases where we have multiple actions of the same type but actually some of them are not related 
-        e.g. {a1, a2, a3} -> d, all actions or of the same type, but {a1, a2} and a3 are not related, then we should not merge them 
-        This is not implemented here because we cannot know if they are related or not from the way the graph is constructed -> future update possible
-    */
-    #mergeCommonActionEdges(){
-        // merge actions and edges by looking at non root data nodes, skip M:N  and 1:N actions 
-        // merging is done by jsonObj.type, not by actionNode.id
-        const nonRootNodes = this.nodes.filter(n => !this.sourceNodes.includes(n) && n.nodeType === NodeType.DataNode);
-
-        nonRootNodes.forEach(node => {
-            // skip M:N cases
-            // get incomming edges from actions to current dataNode and filter them by action type
-            // data objects can NOT be directly connected to each other
-            const actionSet = new Map<string, [DataObject[], Edge[], ActionObject[], string]>(); // action id: actionNodes
-            this.edges.filter(edge => edge.toNode === node).forEach(edge => {
-                const currAction = edge.fromNode as ActionObject;
-                const actionType = currAction.getActionType();
-                const actionId = currAction.id;
-
-                // keep track of nodes in every type of action
-                // this works because we have guarantee that pred(pred(n)) of a dataNode n will be a dataNode
-                const relatedDataObj = this.#getEdgePredecessor(edge).fromNode as DataObject; 
-                if (actionSet.has(actionType)) {
-                    const actionSetEntry = actionSet.get(actionType)!;
-                    actionSetEntry[0].push(relatedDataObj);
-                    actionSetEntry[1].push(edge);
-                    actionSetEntry[2].push(currAction);
-                } else {
-                    actionSet.set(actionType, [[relatedDataObj], [edge], [currAction], actionId]);
-                }
-            });
-
-            // merge edges if we have multiple data objects for the action input
-            // replace part of this.edges by merged edges and part of this.nodes by an unified node
-            for (const [actionType, dataObjsAndEdges] of actionSet){
-                if (dataObjsAndEdges.length > 1){
-                    const dataObjs = dataObjsAndEdges[0];
-                    const edges = dataObjsAndEdges[1];
-                    const relatedActionObjects = dataObjsAndEdges[2] // TODO: we can use a set here or a single variable
-                    const actionId = dataObjsAndEdges[3];
-
-                    // create new action node that unifies the edges and link the source nodes to it
-                    const jsonObjs = relatedActionObjects[0].jsonObject;
-                    const newActionNode = new ActionObject(dataObjs, [node], actionId, jsonObjs);
-                    this.nodes.push(newActionNode);
-                    this.edges.push(new Edge(newActionNode, node, `${newActionNode.id}=${actionType}=${node.id}`));
-                    dataObjs.forEach(d => {
-                        this.edges.push(new Edge(d, newActionNode, `${d.id}=${actionType}=${actionId}`, actionId)) //
-                    });
-
-                    // remove redundant nodes and edges
-                    edges.forEach(e => {
-                        this.edges.splice(this.edges.indexOf(e), 1); 
-                        this.edges.splice(this.edges.indexOf(this.#getEdgePredecessor(e)), 1);
-                        this.nodes.splice(this.nodes.indexOf(e.fromNode), 1);
-                    })
-                }
-            }
-        });
     }
 
     getSourceNodes(){
@@ -422,7 +349,7 @@ export class DAGraph {
             })
            
         });
-        return new DAGraph(newNodes, [...newEdges.values()], false);
+        return new DAGraph(newNodes, [...newEdges.values()]);
     }
     
     /**
@@ -448,7 +375,7 @@ export class DAGraph {
             }) 
         });
 
-        return new DAGraph(newNodes, newEdges, false);
+        return new DAGraph(newNodes, newEdges);
     }
 
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
@@ -813,8 +740,8 @@ function getActions(actionsJSON: any, dataObjects: any): Action[] { // edge type
     May need to be refactored
 */
 function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean = false): Action[] | [ActionObject[], Action[]]{ // node type
-    const result: Action[] = [];
-    const actionNodes: ActionObject[] = [];
+    const edges: Action[] = [];
+    const nodes: ActionObject[] = [];
     const allActions: string[] = Object.keys(actionsJSON);
 
     allActions.forEach(actionId => {
@@ -832,37 +759,36 @@ function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean =
         // maybe future versions that are compatible with more frameworks/libs should be considered
         if (action.type === 'MLflowPredictAction') inputIds.push(action.mlflowId);
         if (action.type === 'MLflowTrainAction') outputIds.push(action.mlflowId);
-        
-        if (getAll){ 
-            inputIds.forEach((inputId: string) => {
-                outputIds.forEach((outputId: string) => {
-                    const doFrom = dataObjects.find((o: any) => o.id === inputId);
-                    const doTo = dataObjects.find((o: any) => o.id === outputId);
-                    const actionObject = new ActionObject(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, action);
-                    actionNodes.push(actionObject);
 
-                    // create id for incomming and outgoing edges to the action object
-                    const incommingEdge = new Action(doFrom, actionObject, actionId + `"_from_${inputId}"`, action); 
-                    const outgoingEdge = new Action(actionObject, doTo, actionId + `"_to_${outputId}"`, action);
-                    result.push(incommingEdge);
-                    result.push(outgoingEdge);
-                });
+        if (getAll){
+            // an action is a node with incoming and outgoing edges
+            const actionObject = new ActionObject(dataObjects.filter(o => inputIds.includes(o.id)), dataObjects.filter(o => outputIds.includes(o.id)), actionId, action);
+            nodes.push(actionObject);        
+            inputIds.forEach((inputId: string) => {
+                const doFrom = dataObjects.find((o: any) => o.id === inputId);
+                const incommingEdge = new Action(doFrom, actionObject, actionId + `_from_${inputId}`, action); 
+                edges.push(incommingEdge);
+            });
+            outputIds.forEach((outputId: string) => {
+                const doTo = dataObjects.find((o: any) => o.id === outputId);
+                const outgoingEdge = new Action(actionObject, doTo, actionId + `_to_${outputId}`, action);
+                edges.push(outgoingEdge);
             });
         } else {
             // an action is treated as an edge, no merge needed
             inputIds.forEach((inputId: string) => {
                 outputIds.forEach((outputId: string) => {
-                    const a = new Action(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, action);
-                    result.push(a);
+                    const edge = new Action(dataObjects.find((o: any) => o.id === inputId), dataObjects.find((o: any) => o.id === outputId), actionId, action);
+                    edges.push(edge);
                 });
             });
         }
     });
 
     if(getAll){
-        return [actionNodes, result];
+        return [nodes, edges];
     } else {
-        return result;   
+        return edges;   
     }     
 }
 
@@ -958,7 +884,7 @@ export class PartialDataObjectsAndActions extends DAGraph{
                 public layoutDirection:  string = 'TB',
                 public jsonObject?: any){
         const nodesWithPos = dagreLayout(nodes, edges, layoutDirection);
-        super(nodesWithPos, edges, false); // don't merge actions, merging should have already been done because we call this from a full graph
+        super(nodesWithPos, edges);
         this.jsonObject = jsonObject;
     }
 }
@@ -972,7 +898,8 @@ export  class DataObjectsAndActionsSep extends DAGraph{ // TODO: make this defau
         const dataObjects: DataObject[] = getDataObjects(jsonObject.dataObjects);
         const [actionObjects, edges] = getActionsObjects(jsonObject.actions, dataObjects, true) as [ActionObject[], Action[]];
         const dataObjectsAndActions: Node[] = dataObjects.concat(actionObjects);
-        const dataObjectsWithPosition = dagreLayout(dataObjectsAndActions, edges); 
+        const dataObjectsWithPosition = dagreLayout(dataObjectsAndActions, edges);
+        console.log(actionObjects, edges)
         super(dataObjectsWithPosition, edges);
     }
 }

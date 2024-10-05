@@ -201,10 +201,10 @@ export const CustomDataNode = ( {data} ) => {
     const objectType = nodeType === NodeType.ActionNode ? "Action Object" : "Data Object";
     return (
       <Box sx={{display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
-        <Tooltip title={objectType}>
+        <Tooltip title={objectType} arrow disableInteractive placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
           {nodeType === NodeType.ActionNode ? <RocketLaunchOutlined sx={{height: '18px'}}/> : <TableViewIcon sx={{height: '18px'}}/>}
         </Tooltip>
-        <Tooltip title={nodeSubTypeName}>
+        <Tooltip title={nodeSubTypeName} arrow disableInteractive placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
           <Typography level="body-xs"
             sx={{marginLeft:'3px', fontSize: 14, fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap'}}
             >
@@ -235,7 +235,7 @@ export const CustomDataNode = ( {data} ) => {
   }
 
   function showObjectName(layoutDirection: String){
-    return <Tooltip title={label} arrow placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
+    return <Tooltip title={label} arrow disableInteractive placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
               <Typography level="body-lg" 
                           sx={{fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%', maxHeight: '30px', fontSize:21, cursor: 'pointer'}}
                           onClick={() => handleDetailsClick(props, label, nodeType)} >
