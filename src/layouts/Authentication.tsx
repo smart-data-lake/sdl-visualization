@@ -42,7 +42,8 @@ function WorkspaceSelector({selectedItem, data, setData, typographyStyle, isLoad
         {!data || isLoading ? (
           <CircularProgress size="sm" variant="solid" />
         ) : (
-          <Tooltip arrow variant="soft" title={!selectedItem ? getEmptyWorkspaceWarning() : tooltipText} sx={{ zIndex: 10000 }}>
+          <Tooltip arrow disableInteractive variant="soft" placement="left" title={!selectedItem ? getEmptyWorkspaceWarning() : tooltipText}
+                   enterDelay={!selectedItem ? 100 : 1000} sx={{ zIndex: 10000 }}>
             <Typography sx={typographyStyle}>{selectedItem ?? "None"}</Typography>
           </Tooltip>
         )}
