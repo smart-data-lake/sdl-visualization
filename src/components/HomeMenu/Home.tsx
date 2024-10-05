@@ -21,7 +21,7 @@ const Home = () => {
                     Start here with Smart Data Lake Builder UI
                 </Typography>
                 <Sheet sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', p: 0, m: 0 }}>
-                    {info.map((item) => <WelcomeCard title={item.title} subtitle={item.subtitle} image={item.image} link={item.link}/>)}
+                    {info.map((item,idx) => <WelcomeCard key={idx} title={item.title} subtitle={item.subtitle} image={item.image} link={item.link}/>)}
                 </Sheet>
             </Sheet>
         </>

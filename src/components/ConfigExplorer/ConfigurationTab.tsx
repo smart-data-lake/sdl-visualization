@@ -56,7 +56,7 @@ export function createSearchChip(attr: string, value: string, route: string, ico
   if (value){
     const path = `/config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`;
     return(
-      <Link to={path}>
+      <Link to={path} key={attr+':'+value}>
         <Chip key={attr} sx={{mr: 1, ...sx}} color={color} startDecorator={icon} variant="outlined" onClick={(e) => e.stopPropagation()} size={size}>{value}</Chip>
       </Link>
     )
@@ -73,7 +73,7 @@ export function createDataObjectChip(name: string, size: ('sm' | 'md' | 'lg') ="
 
 export function createActionsChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
   return(
-    <Link to={"/config/actions/"+name}>
+    <Link to={"/config/actions/"+name} key={"action/"+name}>
       <Chip key={"action/"+name} color="primary" startDecorator={<RocketLaunchOutlined />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
@@ -81,7 +81,7 @@ export function createActionsChip(name: string, size: ('sm' | 'md' | 'lg') ="md"
 
 function createConnectionChip(name: string){
   return(
-    <Link to={"/config/connections/"+name}>
+    <Link to={"/config/connections/"+name} key={"connections/"+name}>
       <Chip key={"connections/"+name} color="primary" startDecorator={<LanOutlinedIcon />} variant="outlined" >{name}</Chip>
     </Link>
   )
