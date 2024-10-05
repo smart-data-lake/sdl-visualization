@@ -65,8 +65,8 @@ function ConfigVersionSelector({
       <Typography level="h4">Configuration</Typography>
       {data && data.length > 0 &&
         <Select size="sm" value={value} onChange={handleChange}>
-          {data?.map((version) => (
-            <Option value={version}>{version}</Option>
+          {data?.map((version, idx) => (
+            <Option key={idx} value={version}>{version}</Option>
           ))}
         </Select>
       }

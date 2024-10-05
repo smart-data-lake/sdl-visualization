@@ -173,7 +173,7 @@ export default function WorkflowHistory() {
 					stateFilters={checkFiltersAvailability(data, stateFilters('status'))}
 					filterParams={filterParams}
 					datetimePicker={true}/>
-				<DataTable data={selData} columns={columns} navigator={(row) => `${currURL}/${row.runId}/${row.attemptId}/timeline`} keyAttr='path'/>
+				<DataTable data={selData} columns={columns} navigator={(row) => `${currURL}/${row.runId}.${row.attemptId}/timeline`} keyAttr='path'/>
 			</Sheet>   
 		):(<NotFound errorType={500}/>)
 	}

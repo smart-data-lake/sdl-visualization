@@ -28,7 +28,7 @@ function MainContent() {
           <Route index element={<Home/>}/>
           <Route path='workflows/' element={<Workflows/>} errorElement={<ErrorBoundary/>}/>
           <Route path='workflows/:flowId' element={<WorkflowHistory/>} errorElement={<ErrorBoundary/>}/>
-          <Route path='workflows/:flowId/:runNumber/:taskId/:tab?/:stepName?' element={<Run/>} errorElement={<ErrorBoundary/>}/>
+          <Route path='workflows/:flowId/:runIdAttempt/:tab?/:stepName?' element={<Run/>} errorElement={<ErrorBoundary/>}/>
           <Route path='workflows/*' element={<NotFound/>}/>
           {/* <Route path='lineage/*' element={<LineageExplorer/>} errorElement={<ErrorBoundary/>} /> */}
           <Route path='config/*' element={<ConfigExplorer/>} errorElement={<ErrorBoundary/>}/>

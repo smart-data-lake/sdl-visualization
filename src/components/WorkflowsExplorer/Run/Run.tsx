@@ -16,9 +16,10 @@ import { useUser } from "../../../hooks/useUser";
     @returns {JSX.Element} - The Run component UI.
 */
 const Run = () => {
-    const {flowId, runNumber, taskId} = useParams();
+    const {flowId, runIdAttempt} = useParams();
+    const [runId,attemptNb] = runIdAttempt!.split(".");
     const userContext = useUser();
-    const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, parseInt(runNumber!), parseInt(taskId!), !userContext || userContext.authenticated);
+    const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, parseInt(runId!), parseInt(attemptNb!), !userContext || userContext.authenticated);
 
     if (isLoading || isFetching || !data) return <CenteredCircularProgress/>
     
