@@ -15,7 +15,7 @@ const Header = () => {
   return (
     <>
       <Sheet color="primary" variant="solid"
-        sx={{ top: 0, width: "100%", display: "flex", flexDirection: "row", alignItems: "flex-end", position: "fixed", height: 45, zIndex: 10000,  paddingX: 2, gap: 2, paddingBottom: "7px" }}>
+        sx={{ top: 0, width: "100%", display: "flex", flexDirection: "row", alignItems: "flex-end", position: "fixed", height: 45, zIndex: 10000,  paddingLeft: 2, gap: 2, paddingBottom: "7px" }}>
         <Box><img alt="SDLB UI logo" src="images/sdl_logo_old_plain_white.svg" height={20} /></Box>
         {userContext?.authenticated && <BasicBreadcrumbs />}
         <Box sx={{ flexGrow: 1 }} />

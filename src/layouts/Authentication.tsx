@@ -1,6 +1,6 @@
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
-import { Box, CircularProgress, Dropdown, Menu, MenuButton, MenuItem, Tooltip, Typography } from "@mui/joy";
+import { Box, CircularProgress, Dropdown, IconButton, Menu, MenuButton, MenuItem, Tooltip, Typography } from "@mui/joy";
 import { SxProps } from "@mui/material";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -20,12 +20,13 @@ function getEmptyWorkspaceWarning() {
   );
 }
 
-function WorkspaceSelector({selectedItem, data, setData, typographyStyle, isLoading}: {
+function WorkspaceSelector({selectedItem, data, setData, typographyStyle, isLoading, tooltipText}: {
   selectedItem: any;
   data: any[] | undefined;
   setData: (x: any) => void;
   typographyStyle?: SxProps | undefined;
   isLoading?: boolean;
+  tooltipText?: string;
 }) {
   const url = useLocation().pathname;
   const navigate = useNavigate();
@@ -37,27 +38,17 @@ function WorkspaceSelector({selectedItem, data, setData, typographyStyle, isLoad
 
   return (
     <Dropdown>
-      <MenuButton
-        sx={{ display: "flex" }}
-        slots={{
-          root: Box,
-        }}
-      >
+      <MenuButton sx={{ display: "flex" }} slots={{ root: Box }}>
         {!data || isLoading ? (
           <CircularProgress size="sm" variant="solid" />
         ) : (
-          <Tooltip
-            arrow
-            variant="soft"
-            title={!selectedItem ? getEmptyWorkspaceWarning() : null}
-            sx={{ zIndex: 10000 }}
-          >
+          <Tooltip arrow variant="soft" title={!selectedItem ? getEmptyWorkspaceWarning() : tooltipText} sx={{ zIndex: 10000 }}>
             <Typography sx={typographyStyle}>{selectedItem ?? "None"}</Typography>
           </Tooltip>
         )}
       </MenuButton>
 
-      {data && data.length > 0 && !isLoading ? (
+      {data && data.length > 0 && !isLoading && (
         <Menu sx={{ padding: 2 }} size="sm">
           {data.map((x) => (
             <MenuItem
@@ -71,7 +62,7 @@ function WorkspaceSelector({selectedItem, data, setData, typographyStyle, isLoad
             </MenuItem>
           ))}
         </Menu>
-      ) : null}
+      )}
     </Dropdown>
   );
 }
@@ -87,6 +78,7 @@ function TenantSelector() {
       setData={setTenant}
       typographyStyle={{ color: "white", cursor: "pointer" }}
       isLoading={isLoading}
+      tooltipText="Change tenant"
     />
   );
 }
@@ -109,6 +101,7 @@ function RepoSelector() {
       setData={setRepo}
       typographyStyle={{ color: "white", cursor: "pointer" }}
       isLoading={isFetchingTenants || isFetchingRepos}
+      tooltipText="Choose repository"
     />
   );
 }
@@ -132,6 +125,7 @@ function EnvSelector() {
       setData={setEnv}
       typographyStyle={{ color: "white", cursor: "pointer" }}
       isLoading={isFetchingTenants || isFetchingRepos || isFetchingEnvs}
+      tooltipText="Choose environment"
     />
   );
 }
@@ -155,10 +149,10 @@ export default function Authentication() {
         <RepoSelector /> /
         <EnvSelector />
       </Box>
-      <Box>
+      <Box sx={{marginBottom: "-4px"}}>
         <Dropdown>
 
-          <MenuButton slots={{ root: Box}} sx={{display: "flex", height: "28px"}}>
+          <MenuButton slots={{ root: IconButton }} slotProps={{ root: { variant: 'solid', color: 'primary' }}} sx={{display: "flex", borderRadius: '50%'}}>
             <SettingsIcon sx={{ height: "25px", color: "white", cursor: "pointer"}} />
           </MenuButton>
 
