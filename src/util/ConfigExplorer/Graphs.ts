@@ -761,19 +761,26 @@ function getActionsObjects(actionsJSON: any, dataObjects: any, getAll: boolean =
         if (action.type === 'MLflowTrainAction') outputIds.push(action.mlflowId);
 
         if (getAll){
-            // an action is a node with incoming and outgoing edges
-            const actionObject = new ActionObject(dataObjects.filter(o => inputIds.includes(o.id)), dataObjects.filter(o => outputIds.includes(o.id)), actionId, action);
-            nodes.push(actionObject);        
-            inputIds.forEach((inputId: string) => {
-                const doFrom = dataObjects.find((o: any) => o.id === inputId);
-                const incommingEdge = new Action(doFrom, actionObject, actionId + `_from_${inputId}`, action); 
-                edges.push(incommingEdge);
-            });
-            outputIds.forEach((outputId: string) => {
-                const doTo = dataObjects.find((o: any) => o.id === outputId);
-                const outgoingEdge = new Action(actionObject, doTo, actionId + `_to_${outputId}`, action);
-                edges.push(outgoingEdge);
-            });
+            try {
+                // an action is a node with incoming and outgoing edges
+                const actionObject = new ActionObject(dataObjects.filter(o => inputIds.includes(o.id)), dataObjects.filter(o => outputIds.includes(o.id)), actionId, action);
+                inputIds.forEach((inputId: string) => {
+                    const doFrom = dataObjects.find((o: any) => o.id === inputId);
+                    if (!doFrom) throw Error(`Cannot load lineage Action '${actionId}': inputId '${inputId}' not found in DataObjects`);
+                    const incommingEdge = new Action(doFrom, actionObject, actionId + `_from_${inputId}`, action); 
+                    edges.push(incommingEdge);
+                });
+                outputIds.forEach((outputId: string) => {
+                    const doTo = dataObjects.find((o: any) => o.id === outputId);
+                    if (!doTo) throw Error(`Cannot load lineage of Action '${actionId}': outputId '${outputId}' not found in DataObjects`);
+                    const outgoingEdge = new Action(actionObject, doTo, actionId + `_to_${outputId}`, action);
+                    edges.push(outgoingEdge);
+                });
+                nodes.push(actionObject);
+            }
+            catch (e) {
+                console.log(e);
+            }
         } else {
             // an action is treated as an edge, no merge needed
             inputIds.forEach((inputId: string) => {

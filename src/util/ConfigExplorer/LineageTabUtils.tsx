@@ -6,8 +6,6 @@ import  {
     Node as ReactFlowNode,
     XYPosition,
 } from 'reactflow';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useCallback } from 'react';
 
 import assert from 'assert';
 
@@ -256,20 +254,25 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
 function prepareGraphDirect(doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection, isExpanded: boolean): [ReactFlowNode[], ReactFlowEdge[]] {
     var partialGraphPair: [GraphNode[], GraphEdge[]] = [[], []];
     var centralNodeId: string = props.elementName;
+    const centralNode = doa.getNodeById(centralNodeId);
 
-    // reset isCenterNode flags otherwise all previous ones will be colored
-    doa.nodes.forEach((node) => node.setIsCenterNode(false));
-    doa.setCenterNode(doa.getNodeById(centralNodeId)!);
+    if (centralNode) {
+        // reset isCenterNode flags otherwise all previous ones will be colored
+        doa.nodes.forEach((node) => node.setIsCenterNode(false));
 
-    // When the layout has changed, the nodes and edges have to be recomputed
-    partialGraphPair = !isExpanded ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
-    const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0], partialGraphPair[1], layout, props.configData);
-    partialGraph.setCenterNode(partialGraph.getNodeById(centralNodeId)!);
+        // When the layout has changed, the nodes and edges have to be recomputed
+        partialGraphPair = !isExpanded ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
+        const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0], partialGraphPair[1], layout, props.configData);
+        if (centralNode) partialGraph.setCenterNode(centralNode);
 
-    let newNodes = createReactFlowNodes(partialGraphPair[0], layout, isExpanded, false, undefined, graphView, expandNodeFunc, props);
-    let newEdges = createReactFlowEdges(partialGraphPair[1], props, graphView, undefined);
+        let newNodes = createReactFlowNodes(partialGraphPair[0], layout, isExpanded, false, undefined, graphView, expandNodeFunc, props);
+        let newEdges = createReactFlowEdges(partialGraphPair[1], props, graphView, undefined);
 
-    return [newNodes, newEdges];
+        return [newNodes, newEdges];
+    } else {
+        console.warn(`Central node ${centralNodeId} not found in current graph`);
+        return [[], []];
+    }
 }
 
 export function prepareAndRenderGraph(navigate): [ReactFlowNode[], ReactFlowEdge[]] {
