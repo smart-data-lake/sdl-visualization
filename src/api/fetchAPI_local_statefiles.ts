@@ -190,6 +190,18 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         return new Promise<string[] | undefined>(r => r([]))
     }
 
+    getDescription(
+        elementType: string | undefined,
+        elementName: string | undefined,
+        tenant: string,
+        repo: string,
+        env: string,
+        version: string | undefined
+    ) {
+        const filename = "/description/" + elementType + "/" + elementName + ".md"; //file must be in public/description/elementType folder
+        return getUrlContent(filename).catch((error) => console.log(error));
+    }
+    
     getTstampFromFilename(filename: string): Date {
         const matches = filename.match(/\.([0-9]+)\./);
         if (!matches || matches.length < 2) {
