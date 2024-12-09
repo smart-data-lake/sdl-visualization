@@ -260,4 +260,8 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     getEnvs(tenant: string, repo: string): Promise<any[]> {
         return new Promise((r) => r([]));
     }
+    
+    getLicenses(tenant: string): Promise<any> {
+        return new Promise((r) => r({}));
+    }
 }

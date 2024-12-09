@@ -7,8 +7,15 @@ import { RefreshOutlined } from "@mui/icons-material";
  * @param props title - The title of the page, subtitle - The subtitle of the page, description - The description of the page
  * @returns JSX element that represents the PageHeader component
  */
-const PageHeader = (props: {title : string | React.ReactElement, subtitle?: string, description?: string, noBack?: boolean, refresh?: () => void}) => {
-    const { title, subtitle, description, noBack, refresh } = props;
+const PageHeader = (props: {
+    title: string | React.ReactElement;
+    subtitle?: string;
+    description?: string;
+    noBack?: boolean;
+    corner?: string | React.ReactElement;
+    refresh?: () => void;
+}) => {    
+    const { title, subtitle, description, noBack, corner, refresh } = props;
     const currURL = useLocation().pathname;
     const navigate = useNavigate();
 
@@ -43,6 +50,7 @@ const PageHeader = (props: {title : string | React.ReactElement, subtitle?: stri
                     {subtitle && <Typography level="title-md" sx={{pt: '1rem'}}>{subtitle}</Typography>}
                     {description && <Typography level="body-sm" sx={{py: '1rem'}}>{description}</Typography>}
                     <Box sx={{ flex: 1 }}/>
+                    {typeof corner === "string" ? <Typography level="body-sm">{corner}</Typography> : corner}
                     {refresh && <IconButton onClick={refresh} variant="plain" color="neutral" size="sm">
                         <RefreshOutlined/>
                     </IconButton>}
