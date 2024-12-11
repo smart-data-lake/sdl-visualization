@@ -95,8 +95,7 @@ export class fetchAPI_rest implements fetchAPI {
         version: string | undefined,
     ) => {
         const filename = `${elementType}/${elementName}.md`;
-        const requestInfo = await this.getRequestInfo();
-        const response = await fetch(`${this.url}/descriptions/${filename}?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`, requestInfo);
+        const response = await this.getDescriptionFile(filename, tenant, repo, env, version);
         const responseBody = await response.json();
         if (!response.ok) {
             throw new Error(responseBody["detail"]);
@@ -135,11 +134,7 @@ export class fetchAPI_rest implements fetchAPI {
              // Second capture group: "images/train.png"
              // Last capture group: ")"
             const filename = match[2];
-            const promise = fetch(
-                `${this.url}/descriptions/${filename}?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`,
-                await this.getRequestInfo()
-            )
-            .then((response) => {
+            const promise = this.getDescriptionFile(filename, tenant, repo, env, version).then((response) => {
                 if (!response.ok) {
                     return response.json().then((error) => {
                         throw new Error(error["detail"]);
@@ -158,6 +153,19 @@ export class fetchAPI_rest implements fetchAPI {
             return `${$1}${fileUrl}${$3}`;
         } );
     }
+
+    private getDescriptionFile = async (
+        filename: string,
+        tenant: string,
+        repo: string,
+        env: string,
+        version: string | undefined
+    ): Promise<any> => {
+        return fetch(
+            `${this.url}/descriptions/${filename}?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`,
+            await this.getRequestInfo("GET", { Accept: "image/*,*/*;q=0.8" })
+        );
+    };
 
     getTstampEntries = async (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> => {
         return this.fetch(`${this.url}/dataobject/${subtype}/${elementName}/tstamps?tenant=${tenant}&repo=${repo}&env=${env}`)
