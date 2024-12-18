@@ -35,9 +35,12 @@ export function getMissingSchemaFileCmp(elementType: string, elementName: string
 	</Box>
 }
 
-export default function ElementDetails(props: { configData?: ConfigData, parentCmpRef: React.RefObject<HTMLDivElement> }) {
-
-	const { configData } = props;
+export default function ElementDetails(props: {
+  configData?: ConfigData;
+  parentCmpRef: React.RefObject<HTMLDivElement>;
+  version: string | undefined;
+}) {
+  const { configData, version } = props;
 	const { elementName, elementType, tab } = useParams();
 	const [lastTab, setLastTab] = React.useState('configuration');
 	const [openLineage, setOpenLineage] = React.useState(false);
@@ -64,7 +67,7 @@ export default function ElementDetails(props: { configData?: ConfigData, parentC
 
 	const setSelectedTab = (v: any) => (tab ? navigateRel(`../${v}`) : navigateRel(`${v}`));
 
-	const { data: description, isLoading: descriptionIsLoading } = useFetchDescription(elementType, elementName);
+	const { data: description, isLoading: descriptionIsLoading } = useFetchDescription(elementType, elementName, version);
 	const { data: schemaEntries, isLoading: schemaEntriesLoading } = useFetchDataObjectSchemaEntries(elementType, elementName);
 	const { data: statsEntries } = useFetchDataObjectStatsEntries(elementType, elementName);
 

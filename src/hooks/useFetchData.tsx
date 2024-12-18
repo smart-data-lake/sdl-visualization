@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from "react-query";
-import { getUrlContent } from "../util/ConfigExplorer/HoconParser";
 import { useWorkspace } from "./useWorkspace";
 import { fetcher } from "../api/Fetcher";
 import { useAuthenticator } from "@aws-amplify/ui-react";
@@ -138,13 +137,18 @@ export const useFetchDataObjectStats = (statsEntry: TstampEntry | undefined) => 
 };
 
 /**** Element description markdown files ****/
-function getDescription(elementType: string, elementName: string) {
-	const filename = "/description/" + elementType + "/" + elementName +".md"; //file must be in public/description/elementType folder
-	return getUrlContent(filename)
-	.catch((error) => console.log(error))
-}
-export const useFetchDescription = (elementType: string|undefined, elementName: string|undefined) => {
-  return useQuery({ queryKey: ['description',elementType,elementName], queryFn: () => getDescription(elementType!, elementName!), retry: false, staleTime: 1000 * 60 * 60 * 24 }) //24h
+export const useFetchDescription = (
+  elementType: string | undefined,
+  elementName: string | undefined,
+  version: string | undefined
+) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["description", elementType, elementName, tenant, repo, env, version],
+    queryFn: () => fetcher().getDescription(elementType, elementName, tenant, repo, env, version),
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }); //24h
 }
 
 export const useFetchUsers = (enabled: boolean) => {

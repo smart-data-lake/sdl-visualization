@@ -86,6 +86,87 @@ export class fetchAPI_rest implements fetchAPI {
         .then((res) => res.json());
     }
 
+    getDescription = async (
+        elementType: string | undefined,
+        elementName: string | undefined,
+        tenant: string,
+        repo: string,
+        env: string,
+        version: string | undefined,
+    ) => {
+        const filename = `${elementType}/${elementName}.md`;
+        const response = await this.getDescriptionFile(filename, tenant, repo, env, version);
+        const responseBody = await response.json();
+        if (!response.ok) {
+            throw new Error(responseBody["detail"]);
+        }
+        return await this.resolveDescriptionImageUrls(responseBody.content, tenant, repo, env, version);
+    };
+
+    /**
+     * For description .md files fetched from REST endpoint, images with relative URLs 
+     * will be fetched from the same endpoint and their URLs will be resolved to blob URLs
+     * 
+     * E.g. On local, `![less flights more ...](images/train.png)`
+     * will be fetched from `/api/v1/descriptions/images/train.png?tenant={tenant}&repo={repo}&env={env}&version={version}`
+     * and will be resolved to `![less flights more ...](blob:http://localhost:5173/fe475b95-c790-4739-8169-ff09e3696462)`
+     */
+    private resolveDescriptionImageUrls = async (
+        markdown: string,
+        tenant: string,
+        repo: string,
+        env: string,
+        version: string | undefined
+    ) => {
+        // Matches "![less flights more ...](images/train.png)"
+        // Does not match
+        // - "![Lorem Picsum](https://picsum.photos/200/300)"
+        // - "![Lorem Picsum](http://picsum.photos/200/300)"
+        // - "![Lorem Picsum](ftp://picsum.photos/200/300)"
+        const regex = /(!\[.*?\]\()((?!https?|ftp).*)(\))/g;
+        const promises: Array<Promise<any>> = [];
+        const fileUrlMap: Map<string, string> = new Map();
+
+        // Fetch and resolve all URLs
+        const matches = markdown?.matchAll(regex);
+        for (const match of matches) {
+             // First capture group: "![less flights more ...]("
+             // Second capture group: "images/train.png"
+             // Last capture group: ")"
+            const filename = match[2];
+            const promise = this.getDescriptionFile(filename, tenant, repo, env, version).then((response) => {
+                if (!response.ok) {
+                    return response.json().then((error) => {
+                        throw new Error(error["detail"]);
+                    });
+                }
+                return response.blob().then((blob) => fileUrlMap.set(filename, URL.createObjectURL(blob)));
+            });
+
+            promises.push(promise);
+        }
+    
+        await Promise.allSettled(promises);
+
+        return markdown?.replace(regex, (_, $1, filename, $3) => {
+            const fileUrl = fileUrlMap.get(filename) ?? filename;
+            return `${$1}${fileUrl}${$3}`;
+        } );
+    }
+
+    private getDescriptionFile = async (
+        filename: string,
+        tenant: string,
+        repo: string,
+        env: string,
+        version: string | undefined
+    ): Promise<any> => {
+        return fetch(
+            `${this.url}/descriptions/${filename}?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`,
+            await this.getRequestInfo("GET", { Accept: "image/*,*/*;q=0.8" })
+        );
+    };
+
     getTstampEntries = async (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> => {
         return this.fetch(`${this.url}/dataobject/${subtype}/${elementName}/tstamps?tenant=${tenant}&repo=${repo}&env=${env}`)
         .then((parsedJson) =>

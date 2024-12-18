@@ -115,7 +115,11 @@ function ConfigExplorer() {
 						<DraggableDivider id="config-elementlist" cmpRef={listRef} isRightCmp={false} defaultCmpWidth={250} parentCmpRef={parentRef} />
 						<Routes>
 							<Route path=":elementType" element={<ElementTable dataLists={filteredConfigDataLists!} />} errorElement={<ErrorBoundary/>} />
-							<Route path=":elementType/:elementName/:tab?" element={<ElementDetails configData={configData} parentCmpRef={parentRef} />} errorElement={<ErrorBoundary/>} />
+              <Route
+                path=":elementType/:elementName/:tab?"
+                element={<ElementDetails configData={configData} parentCmpRef={parentRef} version={version} />}
+                errorElement={<ErrorBoundary />}
+              />
 							<Route path="globalOptions" element={<GlobalConfigView data={configData?.global}/>} errorElement={<ErrorBoundary/>} />
 						</Routes>
 					</Provider>

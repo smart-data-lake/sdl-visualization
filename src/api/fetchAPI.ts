@@ -18,6 +18,7 @@ export interface fetchAPI {
     getWorkflowRunsByDataObject: (name: string) => Promise<any>;
     getConfig: (tenant: string, repo: string, env: string, version: string | undefined) => Promise<ConfigData>;
     getConfigVersions: (tenant: string, repo: string, env: string) => Promise<string[] | undefined>;
+    getDescription: (elementType: string | undefined, elementName: string | undefined, tenant: string, repo: string, env: string, version: string | undefined) => Promise<any>;
     getTstampEntries: (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string) => Promise<TstampEntry[] | undefined>;
     getSchema(schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<SchemaData | undefined>;
     getStats(statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<Stats  | undefined>;
