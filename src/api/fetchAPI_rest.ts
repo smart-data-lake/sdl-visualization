@@ -158,4 +158,14 @@ export class fetchAPI_rest implements fetchAPI {
         return fetch(`${this.url}/envs?tenant=${tenant}&repo=${repo}`, await this.getRequestInfo())
         .then((res) => res.json());
     }
+    
+    getLicenses = async (tenant: string): Promise<any[]> => {
+        const requestInfo = await this.getRequestInfo();
+        const response = await fetch(`${this.url}/license?tenant=${tenant}`, requestInfo);
+        const responseBody = await response.json();
+        if (!response.ok) {
+            throw new Error(responseBody["detail"]);
+        }
+        return responseBody;
+    }
 }

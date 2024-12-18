@@ -27,5 +27,6 @@ export interface fetchAPI {
     getTenants: () => Promise<string[]>
     getRepos: (tenant: string) => Promise<any[]>
     getEnvs: (tenant: string, repo: string) => Promise<any[]>
+    getLicenses: (tenant: string) => Promise<any>;
     clearCache: () => void;
 }

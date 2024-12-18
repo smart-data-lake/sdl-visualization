@@ -195,4 +195,13 @@ export const useFetchEnvs = (tenant: string, repo: string) => {
   }); //24h
 };
 
+export const useFetchLicenses = () => {
+  const { tenant } = useWorkspace();
+  return useQuery<any, Error>({
+    queryKey: ["license", tenant],
+    queryFn: () => fetcher().getLicenses(tenant),
+    enabled: tenant !== "PrivateTenant",
+  });
+};
+
 export default useFetchWorkflows;
