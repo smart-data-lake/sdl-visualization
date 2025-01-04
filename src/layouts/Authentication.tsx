@@ -8,18 +8,6 @@ import { useFetchEnvs, useFetchRepos, useFetchTenants } from "../hooks/useFetchD
 import { useUser } from "../hooks/useUser";
 import { useWorkspace } from "../hooks/useWorkspace";
 
-function getEmptyWorkspaceWarning() {
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", maxWidth: 320, p: 1, }}>
-      <span>
-        To upload state files, configs and metadata of data object, use the CLI interface of the SDLB.
-        <br />
-        See also <a href="https://github.com/smart-data-lake/sdl-visualization">SDLB UI Readme</a>
-      </span>
-    </Box>
-  );
-}
-
 function WorkspaceSelector({selectedItem, data, setData, typographyStyle, isLoading, tooltipText}: {
   selectedItem: any;
   data: any[] | undefined;
@@ -42,7 +30,7 @@ function WorkspaceSelector({selectedItem, data, setData, typographyStyle, isLoad
         {!data || isLoading ? (
           <CircularProgress size="sm" variant="solid" />
         ) : (
-          <Tooltip arrow disableInteractive variant="soft" placement="left" title={!selectedItem ? getEmptyWorkspaceWarning() : tooltipText}
+          <Tooltip arrow disableInteractive variant="soft" placement="left" title={tooltipText}
                    enterDelay={!selectedItem ? 100 : 1000} sx={{ zIndex: 10000 }}>
             <Typography sx={typographyStyle}>{selectedItem ?? "None"}</Typography>
           </Tooltip>

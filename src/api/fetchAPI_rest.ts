@@ -66,8 +66,8 @@ export class fetchAPI_rest implements fetchAPI {
         return Promise.resolve([])
     };        
     
-    getRun = async (args: { tenant: string, repo: string, env: string, application: string; runId: number; attemptId: number }) => {
-        return fetch(`${this.url}/state?tenant=${args.tenant}&repo=${args.repo}&env=${args.env}&application=${args.application}&runId=${args.runId}&attemptId=${args.attemptId}`, await this.getRequestInfo())
+    getRun = async (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number) => {
+        return fetch(`${this.url}/state?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}&runId=${runId}&attemptId=${attemptId}`, await this.getRequestInfo())
         .then((res) => res.json());
     };
 

@@ -20,7 +20,7 @@ const emptyUserContext = { user_id: undefined, email: undefined, permissions: []
 const UserProvider = (props: React.PropsWithChildren) => {
   const { user, signOut, authStatus } = useAuthenticator();
   const { data } = useFetchUsers(authStatus === "authenticated");
-  const [userContext, setUserContext] = useState<UserContextType | undefined>(emptyUserContext);
+  const [userContext, setUserContext] = useState<UserContextType>(emptyUserContext);
   
   useEffect(() => {
     if (authStatus === "authenticated") {

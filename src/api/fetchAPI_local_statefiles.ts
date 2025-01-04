@@ -125,11 +125,11 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         })
     };    
     
-    getRun = async (args: {tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number}) => {            
+    getRun = async (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number) => {            
         return this.reuseIndex()
-        .then(data => data.filter(run => (run.name === args.application && run.runId === args.runId && run.attemptId === args.attemptId))[0])
+        .then(data => data.filter(run => (run.name === application && run.runId === runId && run.attemptId === attemptId))[0])
         .then(val => { 
-            if (!val) console.log("getRun not found", args.application, args.runId, args.attemptId);
+            if (!val) console.log("getRun not found", application, runId, attemptId);
             return fetch(this.statePath + '/' + val.path)
                     .then(res => res.json())
         })        
