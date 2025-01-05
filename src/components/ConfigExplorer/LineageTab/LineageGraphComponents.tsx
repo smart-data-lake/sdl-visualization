@@ -27,6 +27,7 @@ import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { flowProps, graphNodeProps, ReactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
+import { useWorkspace } from '../../../hooks/useWorkspace';
 
 /*
   Styles to refactor (for the entire LineageTab folder)
@@ -152,8 +153,7 @@ export const CustomDataNode = ( {data} ) => {
   const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
 
   // handlers
-  const navigate = useNavigate();
-  const url = useParams();
+  const {navigateContent} = useWorkspace();
   const handleOnExpandButtonClick = (direction) => {
     if(direction === 'forward'){
       setIsExpandedForward(!isExpandedForward); 
@@ -170,11 +170,10 @@ export const CustomDataNode = ( {data} ) => {
     let propsHasConfigData = props.configData;
 
     if(nodeType === NodeType.DataNode){
-        navigate(`/config/dataObjects/${nodeId}`); 
+        navigateContent(`config/dataObjects/${nodeId}`); 
       
     } else if (nodeType === NodeType.ActionNode){
-        navigate(`/config/actions/${nodeId}`);
-        // navigate(`/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${nodeId}`);
+        navigateContent(`config/actions/${nodeId}`);
     } else {
       throw Error("Unknown node type: " + nodeType);
     }

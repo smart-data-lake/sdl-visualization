@@ -1,58 +1,41 @@
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { Box, CircularProgress, Dropdown, IconButton, Menu, MenuButton, MenuItem, Tooltip, Typography } from "@mui/joy";
-import { SxProps } from "@mui/material";
 import { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useFetchEnvs, useFetchRepos, useFetchTenants } from "../hooks/useFetchData";
 import { useUser } from "../hooks/useUser";
 import { useWorkspace } from "../hooks/useWorkspace";
 
-function WorkspaceSelector({selectedItem, data, setData, typographyStyle, isLoading, tooltipText}: {
+function WorkspaceSelector({selectedItem, data, setData, isLoading, tooltipText}: {
   selectedItem: any;
-  data: any[] | undefined;
+  data: string[];
   setData: (x: any) => void;
-  typographyStyle?: SxProps | undefined;
   isLoading?: boolean;
   tooltipText?: string;
 }) {
-  const url = useLocation().pathname;
-  const navigate = useNavigate();
-
-  function handleNavigation() {
-    const targetURL = url.split("/").splice(1)[0];
-    navigate(targetURL);
-  }
-
   return (
-    <Dropdown>
-      <MenuButton sx={{ display: "flex" }} slots={{ root: Box }}>
-        {!data || isLoading ? (
-          <CircularProgress size="sm" variant="solid" />
-        ) : (
-          <Tooltip arrow disableInteractive variant="soft" placement="left" title={tooltipText}
-                   enterDelay={!selectedItem ? 100 : 1000} sx={{ zIndex: 10000 }}>
-            <Typography sx={typographyStyle}>{selectedItem ?? "None"}</Typography>
-          </Tooltip>
-        )}
-      </MenuButton>
-
-      {data && data.length > 0 && !isLoading && (
-        <Menu sx={{ padding: 2 }} size="sm">
-          {data.map((x) => (
-            <MenuItem
-              key={x}
-              onClick={() => {
-                setData(x);
-                handleNavigation();
-              }}
-            >
-              {x}
-            </MenuItem>
-          ))}
-        </Menu>
-      )}
-    </Dropdown>
+        isLoading ? <CircularProgress size="sm" variant="solid" /> : (
+          data.length == 0 ? (
+            <Typography sx={{color: "white"}}>None</Typography>
+          ) : (
+            <Dropdown>
+              <MenuButton slots={{ root: Box }}>
+                <Tooltip arrow disableInteractive variant="soft" placement="left" title={tooltipText}
+                        enterDelay={!selectedItem ? 100 : 1000} sx={{ zIndex: 10000 }}>
+                  <Typography sx={{color: "white", cursor: "pointer"}}>{selectedItem ?? "None"}</Typography>
+                </Tooltip>
+              </MenuButton>
+              {data.length > 0 && (
+              <Menu sx={{ padding: 2 }} size="sm">
+                {data.map((x) => (
+                  <MenuItem key={x} onClick={() => setData(x)}>{x}</MenuItem>
+                ))}
+              </Menu>
+              )}
+            </Dropdown>
+          )
+        )
   );
 }
 
@@ -65,7 +48,6 @@ function TenantSelector() {
       selectedItem={tenant}
       data={tenants}
       setData={setTenant}
-      typographyStyle={{ color: "white", cursor: "pointer" }}
       isLoading={isLoading}
       tooltipText="Change tenant"
     />
@@ -74,22 +56,21 @@ function TenantSelector() {
 
 function RepoSelector() {
   const { tenant, repo, setRepo } = useWorkspace();
-  const { isFetching: isFetchingTenants } = useFetchTenants();
-  const { data: repos = [], isFetching: isFetchingRepos } = useFetchRepos(tenant);
+  const { data: repos = [], isFetching: isFetchingRepos } = useFetchRepos(tenant!);
 
   useEffect(() => {
-    if (repos && !repos.includes(repo)) {
-      setRepo(repos[0]);
+    if (tenant && !isFetchingRepos && !repos.includes(repo)) {
+      if (repos) setRepo(repos[0]);
+      else setRepo();
     }
-  }, [repos]);
+  }, [tenant, repos]);
 
   return (
     <WorkspaceSelector
       selectedItem={repo}
       data={repos}
       setData={setRepo}
-      typographyStyle={{ color: "white", cursor: "pointer" }}
-      isLoading={isFetchingTenants || isFetchingRepos}
+      isLoading={!tenant || isFetchingRepos}
       tooltipText="Choose repository"
     />
   );
@@ -97,23 +78,22 @@ function RepoSelector() {
 
 function EnvSelector() {
   const { tenant, repo, env, setEnv } = useWorkspace();
-  const { isFetching: isFetchingTenants } = useFetchTenants();
-  const { isFetching: isFetchingRepos } = useFetchRepos(tenant);
-  const { data: envs = [], isFetching: isFetchingEnvs } = useFetchEnvs(tenant, repo);
+  const { data: repos = [], isFetching: isFetchingRepos } = useFetchRepos(tenant!);
+  const { data: envs = [], isFetching: isFetchingEnvs } = useFetchEnvs(tenant!, repo);
 
   useEffect(() => {
-    if (envs && !envs.includes(env)) {
-      setEnv(envs[0]);
+    if (!isFetchingRepos && repos.includes(repo) && !isFetchingEnvs && !envs.includes(env)) {
+      if (envs) setEnv(envs[0]);
+      else setEnv();
     }
-  }, [envs]);
+  }, [repo, repos, envs]);
 
   return (
     <WorkspaceSelector
       selectedItem={env}
       data={envs}
       setData={setEnv}
-      typographyStyle={{ color: "white", cursor: "pointer" }}
-      isLoading={isFetchingTenants || isFetchingRepos || isFetchingEnvs}
+      isLoading={!tenant || isFetchingEnvs}
       tooltipText="Choose environment"
     />
   );
@@ -122,22 +102,25 @@ function EnvSelector() {
 export default function Authentication() {
   const userContext = useUser();
   const navigate = useNavigate();
+  const {tenant} = useWorkspace();
 
   const logout = () => {
     userContext!.signOut!();
   };
 
   const goToSetting = () => {
-    navigate("settings/users");
+    navigate(`/${tenant}/settings/users`);
   };
 
   return (
     <>
-      <Box sx={{display: "flex", alignContent: "flex-end", flexDirection: "row", gap: 1}}>
-        <TenantSelector /> /
-        <RepoSelector /> /
-        <EnvSelector />
-      </Box>
+      {tenant && 
+        <Box sx={{display: "flex", alignContent: "flex-end", flexDirection: "row", gap: 1}}>
+          <TenantSelector /> /
+          <RepoSelector /> /
+          <EnvSelector />
+        </Box>
+      }
       <Box sx={{marginBottom: "-4px"}}>
         <Dropdown>
 

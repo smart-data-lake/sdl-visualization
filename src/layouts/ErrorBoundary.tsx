@@ -6,7 +6,7 @@ export default function ErrorBoundary() {
     const errorStack = error.stack?.split("\n") || [];
 
     return (
-    <Box sx={{ alignItems: 'center', paddingTop: '1rem', flex: 1 }}>
+    <Box sx={{ alignItems: 'center', paddingTop: '45px', flex: 1 }}>
         <Alert variant="soft" color="danger" invertedColors sx={{ alignItems: 'flex-start', gap: '1rem' }}>            
             <Box sx={{ flex: 1, gap: '2rem' }}>
                 <Typography level="title-lg">Application Error</Typography>

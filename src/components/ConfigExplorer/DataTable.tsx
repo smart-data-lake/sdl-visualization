@@ -3,7 +3,6 @@ import { DataType, Table, useTable } from 'ka-table';
 import { SortDirection, SortingMode } from 'ka-table/enums';
 import { Column } from 'ka-table/models';
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import "ka-table/style.css";
 import { getIcon } from "../../util/WorkflowsExplorer/StatusInfo";
@@ -36,12 +35,10 @@ export function durationRenderer(prop: any) {
 }
 
 
-export default function DataTable(props: { data: any[], columns: any[], keyAttr: string, treeGroupKeyAttr?: string, navigator?: (any) => string }) {
+export default function DataTable(props: { data: any[], columns: any[], keyAttr: string, treeGroupKeyAttr?: string, navigate?: (any) => void }) {
 
-  const { data, columns, keyAttr, treeGroupKeyAttr, navigator } = props;
+  const { data, columns, keyAttr, treeGroupKeyAttr, navigate } = props;
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate();
-  const navigateRel = (subPath: string) => navigate(subPath, {relative: 'path'}); // this navigates Relative to path, not route
   const dataTable = useTable();
 
   if (data && data.length > 0 && loading) setLoading(false);
@@ -108,7 +105,7 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
       fontFamily: 'Roboto,Helvetica,Arial,sans-serif', fontWeight: '400', fontSize: '0.875rem', // defaults from MuiTypography-root
       '& ka-table-wrapper': { overflow: 'auto' },
       '& .ka-thead-cell-content, .ka-cell-text': { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-      '& .ka-row': (props.navigator ? { cursor: 'pointer', '&:hover': { backgroundColor: '#f0f0ef'}} : {}),
+      '& .ka-row': (navigate ? { cursor: 'pointer', '&:hover': { backgroundColor: '#f0f0ef'}} : {}),
       '& .ka-thead-background': { backgroundColor: 'white' },
       '& .ka-thead-cell': { color: 'primary', zIndex: '99', fontWeight: '600', height: '25px', paddingTop: '7px', paddingBottom: '7px' },
       '& .ka-cell, .ka-thead-cell': { paddingLeft: '7px', paddingRight: '7px' },
@@ -133,7 +130,7 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
           dataRow: {
             elementAttributes: () => ({
               onClick: (e, data) => {
-                if (navigator) navigateRel(navigator(data.childProps.rowData));
+                if (navigate) navigate(data.childProps.rowData);
               }
             })
           },

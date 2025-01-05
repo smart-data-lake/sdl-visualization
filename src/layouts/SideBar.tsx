@@ -1,52 +1,37 @@
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
-import { Box, Divider, IconButton, Sheet, Stack, Tooltip } from '@mui/joy';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useManifest } from '../hooks/useManifest';
+import { Box, IconButton, Sheet, Stack, Tooltip } from '@mui/joy';
+import { useWorkspace } from '../hooks/useWorkspace';
+import { History } from '@mui/icons-material';
 
 /**
  * The SideBar is a navigation bar that is fixed on the left side of the screen. It contains buttons that allow the user to navigate to different pages, such as the Home page, Workflows Explorer page, and Config Viewer page.
- * @returns JSX element that represents the SideBar component
  */
 const SideBar = () => {
-    const manifest = useManifest();
-    const navigate = useNavigate();
-    const location = useLocation();
+    const {contentPath, contentSubPath, navigateContent} = useWorkspace();
+    const module = (contentSubPath?.split("/") || [""])[0];
 
-    function getModulePath() {
-        const secondSlashPos = location.pathname.indexOf('/',1);
-        if (secondSlashPos>0) {
-            return location.pathname.substring(0, secondSlashPos);
-        } else {
-            return location.pathname;
-        }
-    }
-
-    if (manifest.isLoading) return <></>
-    
-    const buttons = [
-        {
-            icon : <HomeRoundedIcon/>,
-            link : '/',
-            disabled : false,
-            filetype : 'none',
-            description: 'Home'
-        },
-        {
-            icon : <SpeedRoundedIcon/>,
-            link : '/workflows',
-            filetype : 'state',
-            description: 'Workflows Explorer'
-        },
-        {
+    var buttons = [{
+        icon : <HomeRoundedIcon/>,
+        subPath : "",
+        filetype : 'none',
+        description: 'Home'
+    }]
+    if (contentPath) {
+        buttons.push({
             icon : <TuneRoundedIcon/>,
-            link : '/config',
+            subPath : 'config',
             filetype : 'config',
-            description: 'Config Viewer'
-        }
-    ]
+            description: 'Configuration Viewer'
+        });
+        buttons.push({
+            icon : <History/>,
+            subPath : 'workflows',
+            filetype : 'state',
+            description: 'Workflows History Explorer'
+        })
+    }
 
     return ( 
         <Sheet color='neutral' invertedColors variant='outlined'
@@ -63,10 +48,9 @@ const SideBar = () => {
             <Box>
                 <Stack spacing={0}>   
                     {buttons.map((component) => (
-                        <Tooltip key={component.filetype} arrow title={component.disabled ? `No data was found for the menu "${component.description.toLowerCase()}". Please check that the ${component.filetype} files are at the expected location according to the manifest.` : component.description} placement='right' enterDelay={500} enterNextDelay={500}>
-                            <IconButton onClick={e => navigate(component.link)} color={getModulePath()===component.link ? 'primary' : 'neutral'} variant='plain'
-                                sx={{ borderRadius: 0 }}
-                                disabled={component.disabled}>
+                        <Tooltip key={component.filetype} arrow title={component.description} placement='right' enterDelay={500} enterNextDelay={500}>
+                            <IconButton onClick={e => navigateContent(component.subPath)} color={module===component.subPath ? 'primary' : 'neutral'} variant='plain'
+                                sx={{ borderRadius: 0 }}>
                                     {component.icon}
                             </IconButton>
                         </Tooltip>

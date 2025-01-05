@@ -21,6 +21,7 @@ import { useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import { ConfigData, ConfigDataLists, emptyConfigDataLists } from '../../util/ConfigExplorer/ConfigData';
 import './ComponentsStyles.css';
 import { applyFilter } from './ConfigExplorer';
+import { useWorkspace } from '../../hooks/useWorkspace';
 
 interface ElementListProps{
   configData?: ConfigData;
@@ -33,11 +34,8 @@ interface ElementListProps{
 export default function ElementList(props: ElementListProps) {
 
   const {configDataLists} = props;
-
-  const urlParamsType = useMatch('/config/:elementType');
-  const urlParamsElement = useMatch('/config/:elementType/:elementName');
-  const elementType = urlParamsElement?.params.elementType || urlParamsType?.params.elementType;
-  const elementName = urlParamsElement?.params.elementName;
+  const {contentSubPath, navigateContent} = useWorkspace();
+  const [_, elementType, elementName] = (contentSubPath || "").split("/").filter(x => x.length>0);
   const [urlSearchParams] = useSearchParams();
   const elementSearchTextParam = urlSearchParams.get('elementSearch') || '';
   const elementSearchTypeParam = urlSearchParams.get('elementSearchType') || '';
@@ -48,7 +46,6 @@ export default function ElementList(props: ElementListProps) {
   const [elementSearchText, setElementSearchText] = React.useState<string>('');
   const [elementSearchType, setElementSearchType] = React.useState<string>("id");
   const [elementSearchTextErr, setElementSearchTextErr] = React.useState<string|null>(null);
-  const navigate = useNavigate();
 
   React.useEffect(() => {  
     if (elementSearchTextParam) {
@@ -66,7 +63,7 @@ export default function ElementList(props: ElementListProps) {
   function handleClickNavigate(to: string) {
     return (ev: React.MouseEvent<HTMLDivElement>) => {
       ev.stopPropagation();
-      navigate(to);
+      navigateContent(to);
     }
   }
 
@@ -139,7 +136,7 @@ export default function ElementList(props: ElementListProps) {
       .map((obj,i) => {
         const color = primaryColorIfSelected(id, obj.id)
         return (
-          <ListItemButton color={color} key={obj.id} onClick={handleClickNavigate(`/config/${id}/${obj.id}`)} sx={{ pl: '0.75rem', pr: '0px', pt: '0px', pb: '0px', minHeight: '22px'}}>
+          <ListItemButton color={color} key={obj.id} onClick={handleClickNavigate(`config/${id}/${obj.id}`)} sx={{ pl: '0.75rem', pr: '0px', pt: '0px', pb: '0px', minHeight: '22px'}}>
             <ListItemDecorator sx={{ minWidth: '25px'}}>
               {React.createElement(listDef.elementIcon, {})}
             </ListItemDecorator>
@@ -155,12 +152,12 @@ export default function ElementList(props: ElementListProps) {
     const color = primaryColorIfSelected(listDef.id)
     const expandClick = () => {
       if (listDef.elementList) listDef.elementList!.setExpanded(!listDef.elementList!.expanded)
-      else navigate(`/config/${listDef.id}`)
+      else navigateContent(`config/${listDef.id}`)
     }
     return (<Box key={listDef.id}>
       <ListItemButton color={color} key={listDef.id} onClick={expandClick} sx={{ pl: '0px', pr: '0px', pb: '0px', minHeight: '25px', color: primaryColorIfSelected(listDef.id) }} disabled={isDisabled}>
         <ListItemDecorator sx={{ minWidth: '27px'}}>
-          {React.createElement(listDef.sectionIcon, {onClick: handleClickNavigate(`/config/${listDef.id}`)})}
+          {React.createElement(listDef.sectionIcon, {onClick: handleClickNavigate(`config/${listDef.id}`)})}
         </ListItemDecorator>
         <ListItemContent><Typography noWrap color={color}>{listDef.title}</Typography></ListItemContent>
         {!isEmpty && (listDef.elementList!.expanded ? <ExpandLess /> : <ExpandMore />)}

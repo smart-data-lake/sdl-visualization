@@ -48,6 +48,7 @@ import { getLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar
 import CenteredCirularProgress from '../../Common/CenteredCircularProgress';
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
 import LineageGraphToolbar from './LineageGraphToolbar';
+import { useWorkspace } from '../../../hooks/useWorkspace';
 
 /*
  Add custom node and edge types
@@ -70,7 +71,7 @@ export const nodeHeight = 36;
 */
 function LineageTabCore() {
   const props = useAppSelector(state => getLineageTabProps(state))
-  const navigate = useNavigate(); // handlers for navigating dataObjects and actions
+  const {navigateContent} = useWorkspace(); // handlers for navigating dataObjects and actions
   const dispatch = useDispatch();
 
   // to save the zoom level before re-creating a new ReactFlow component
@@ -97,7 +98,7 @@ function LineageTabCore() {
     // save current zoom to initialize new react flow component
     setPreviousZoom(previousZoom ? reactFlow.getZoom() : 0.5); // initialize with 0.5
     setRfContainerMounted(false); // workaround to make changing layout work correctly
-    var [nodes_init, edges_init] = prepareAndRenderGraph(navigate);
+    var [nodes_init, edges_init] = prepareAndRenderGraph(navigateContent);
     nodes_init = dagreLayoutRf(nodes_init, edges_init, layout, nodeWidth, nodeHeight);
     setReactFlowKey(reactFlowKey + 1); // change key to re-create react flow component (and initialize it through default nodes)
     return [nodes_init, edges_init];

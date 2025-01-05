@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import Header from "./Header";
 import SideBar from "./SideBar";
 import RootLayoutSpinner from "./RootLayoutSpinner";
+import { WorkspaceProvider } from "../hooks/useWorkspace";
 
 /**
     RootLayout sets up the main layout that is consistent across all pages of the application.

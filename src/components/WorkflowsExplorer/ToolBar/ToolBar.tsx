@@ -26,7 +26,6 @@ const ToolBar = (
     }) => {
     const { data, filterParams, updateFilterParams, stateFilters, datetimePicker, searchPlaceholder, setPhases } = props;
 
-
     function setSearchText(text: string) {
         const searchText = (text.trim().length > 0 ? text.trim() : undefined);    
         updateFilterParams({searchText: searchText})    

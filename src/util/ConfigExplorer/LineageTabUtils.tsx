@@ -1,20 +1,18 @@
-import  {
-    ReactFlow,
+import {
     MarkerType, Position,
     Edge as ReactFlowEdge,
     ReactFlowInstance,
-    Node as ReactFlowNode,
-    XYPosition,
+    Node as ReactFlowNode
 } from 'reactflow';
 
 import assert from 'assert';
 
-import { DAGraph, dagreLayoutRf as computeLayout, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, Edge, ActionObject, DataObject, dagreLayoutRf } from './Graphs';
-import { ConfigData } from './ConfigData';
-import { findFirstKeyWithObject, getPropertyByPath } from '../helpers';
-import store from '../../app/store'
-import { setGroupedComponents, setGroupedComponentsRf, setRFINodeData, setSubgroups, setSubgroupsRf } from './slice/LineageTab/Common/ReactFlowSlice';
+import store from '../../app/store';
 import { nodeHeight, nodeWidth } from '../../components/ConfigExplorer/LineageTab/LineageTabWithSeparateView';
+import { findFirstKeyWithObject, getPropertyByPath } from '../helpers';
+import { ConfigData } from './ConfigData';
+import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems } from './Graphs';
+import { setGroupedComponents, setGroupedComponentsRf, setRFINodeData, setSubgroups, setSubgroupsRf } from './slice/LineageTab/Common/ReactFlowSlice';
 
 
 /*
@@ -132,7 +130,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             props.configData?.fullGraph!;
     const isHorizontal = layoutDirection === 'LR';
 
-    const centerNode = dataObjectsAndActions.getNodeById(dataObjectsAndActions.centerNodeId)!;
+    const centerNode = dataObjectsAndActions.getNodeById(props.elementName)!;
     const targetPos = isHorizontal ? Position.Left : Position.Top;
     const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
     const sinkNodes = dataObjectsAndActions.getSinkNodes();
@@ -294,7 +292,7 @@ export function prepareAndRenderGraph(navigate): [ReactFlowNode[], ReactFlowEdge
             // switch to data graph when an action is selected -> navigate to first direct neighbour
             const [neighours,] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
             centralNodeId = neighours[0].id;
-            navigate(`/config/dataObjects/${centralNodeId}`);
+            navigate(`config/dataObjects/${centralNodeId}`);
         }
     } else if (graphView === 'action') {
         doa = props.configData!.actionGraph!;
@@ -302,7 +300,7 @@ export function prepareAndRenderGraph(navigate): [ReactFlowNode[], ReactFlowEdge
             // switch to action graph when a data object is selected -> navigate to first direct neighbour
             const [neighours,] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
             centralNodeId = neighours[0].id;
-            navigate(`/config/actions/${centralNodeId}`);
+            navigate(`config/actions/${centralNodeId}`);
         }
     } else {
         throw Error("Unknown graph view " + graphView);

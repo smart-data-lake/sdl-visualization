@@ -1,11 +1,12 @@
 import CloseIcon from '@mui/icons-material/Close';
 import { Box, IconButton, Sheet, Typography } from "@mui/joy";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useWorkspace } from '../../../hooks/useWorkspace';
 import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import { createDataObjectChip } from '../../ConfigExplorer/ConfigurationTab';
-import { createPropertiesComponent } from '../../ConfigExplorer/PropertiesComponent';
 import InfoBox from '../../ConfigExplorer/InfoBox';
+import { createPropertiesComponent } from '../../ConfigExplorer/PropertiesComponent';
 
 const getRow = (attempt: Attempt, taskName: string) => {
     if (taskName === 'err') throw(new Error('was not able to fetch task name'));
@@ -50,14 +51,9 @@ const ContentSheet = (props: {action: Row}) => {
 const ContentDrawer = (props: {attempt: Attempt}) => {
     const { attempt } = props;
     const { stepName } = useParams();
-    //const {data: manifest} = useManifest();
-    //const {data: configData} = useConfig(manifest);
-    const navigate = useNavigate();
-    const navigateRel = (subPath: string) => navigate(subPath, {relative: 'path'}); // this navigates Relative to path, not route
+    const {navigateRel} = useWorkspace();
 
     const action : Row = getRow(attempt, stepName || 'err');
-    
-    //const isActionInConfig = () => (configData && configData.actions[action.step_name])
 
     return ( 
         <Sheet sx={{ gap: '1rem', height: '100%' }}>

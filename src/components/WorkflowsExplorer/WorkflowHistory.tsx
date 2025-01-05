@@ -2,9 +2,11 @@ import { ZoomOutOutlined } from "@mui/icons-material";
 import { Box, IconButton, Sheet, Tooltip, Typography } from "@mui/joy";
 import { SortDirection } from 'ka-table';
 import { useMemo, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { fetcher } from "../../api/Fetcher";
 import { useFetchWorkflowRuns } from "../../hooks/useFetchData";
+import { useUser } from "../../hooks/useUser";
+import { useWorkspace } from "../../hooks/useWorkspace";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
 import { Filter, checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
@@ -13,7 +15,6 @@ import { createFeedChip } from "../ConfigExplorer/ConfigurationTab";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
 import HistoryBarChart from "./HistoryChart/HistoryBarChart";
 import ToolBar from "./ToolBar/ToolBar";
-import { useUser } from "../../hooks/useUser";
 
 
 export type FilterParams = {
@@ -43,7 +44,7 @@ export default function WorkflowHistory() {
     const userContext = useUser();
 	const { data, isLoading, isFetching, refetch } = useFetchWorkflowRuns(flowId!, !userContext || userContext.authenticated);
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'startsWith', searchColumn: 'runId', additionalFilters: []})
-    const currURL = useLocation().pathname;
+	const {navigateRel} = useWorkspace();
 		
     const selData = useMemo(() => {
         if (data && data.length>0) {
@@ -173,7 +174,7 @@ export default function WorkflowHistory() {
 					stateFilters={checkFiltersAvailability(data, stateFilters('status'))}
 					filterParams={filterParams}
 					datetimePicker={true}/>
-				<DataTable data={selData} columns={columns} navigator={(row) => `${currURL}/${row.runId}.${row.attemptId}/timeline`} keyAttr='path'/>
+				<DataTable data={selData} columns={columns} navigate={(row) => navigateRel(`${row.runId}.${row.attemptId}/timeline`)} keyAttr='path'/>
 			</Sheet>   
 		):(<NotFound errorType={500}/>)
 	}

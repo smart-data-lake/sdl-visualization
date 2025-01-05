@@ -17,6 +17,7 @@ import MarkdownComponent from './MarkdownComponent';
 import { createPropertiesComponent } from './PropertiesComponent';
 import { getIcon } from '../../util/WorkflowsExplorer/StatusInfo';
 import { Stats, TstampEntry } from '../../types';
+import { useWorkspace } from '../../hooks/useWorkspace';
 
 interface ElementProps {
   data: any; // config of object to display
@@ -53,8 +54,12 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
 }
 
 export function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: "primary" | "neutral" | "success" | "danger" | "warning" | undefined = "primary", size: ('sm' | 'md' | 'lg') ="md", sx: object = {}) {
+  const {contentPath} = useWorkspace();
   if (value){
-    const path = `/config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`;
+    const path = (attr == "feedSel" ? 
+      `${contentPath}config/${route}?elementSearchType=${attr}&elementSearch=${value}` :
+      `${contentPath}config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`
+    )
     return(
       <Link to={path} key={attr+':'+value}>
         <Chip key={attr} sx={{mr: 1, ...sx}} color={color} startDecorator={icon} variant="outlined" onClick={(e) => e.stopPropagation()} size={size}>{value}</Chip>
@@ -64,31 +69,34 @@ export function createSearchChip(attr: string, value: string, route: string, ico
 }
 
 export function createDataObjectChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}, key?: any){
+  const {contentPath} = useWorkspace();
   return(
-    <Link to={"/config/dataObjects/"+name} key={key}>
+    <Link to={`${contentPath}config/dataObjects/${name}`} key={key}>
       <Chip key={"dataObjects/"+name} color="primary" startDecorator={<TableViewTwoTone />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
 }
 
 export function createActionsChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
+  const {contentPath} = useWorkspace();
   return(
-    <Link to={"/config/actions/"+name} key={"action/"+name}>
+    <Link to={`${contentPath}config/actions/${name}`} key={"action/"+name}>
       <Chip key={"action/"+name} color="primary" startDecorator={<RocketLaunchOutlined />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
 }
 
 function createConnectionChip(name: string){
+  const {contentPath} = useWorkspace();
   return(
-    <Link to={"/config/connections/"+name} key={"connections/"+name}>
+    <Link to={`${contentPath}config/connections/${name}`} key={"connections/"+name}>
       <Chip key={"connections/"+name} color="primary" startDecorator={<LanOutlinedIcon />} variant="outlined" >{name}</Chip>
     </Link>
   )
 }
 
 export function createFeedChip(feed: string, elementType: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
-  return createSearchChip("metadata.feed", feed, elementType, <AltRouteIcon />, "success", size, sx);
+  return createSearchChip("feedSel", feed, elementType, <AltRouteIcon />, "success", size, sx);
 }
 
 export function createSimpleChip(name: string, key?: any) {

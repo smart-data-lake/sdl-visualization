@@ -2,13 +2,14 @@ import { AlignVerticalTop } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import { Box, IconButton } from '@mui/joy';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ReactFlow, Background, Controls, Edge, MarkerType, Node, Position, applyEdgeChanges, applyNodeChanges } from 'reactflow';
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { Background, Controls, Edge, MarkerType, Node, Position, ReactFlow, applyEdgeChanges, applyNodeChanges } from 'reactflow';
 import { ConfigData } from '../../../util/ConfigExplorer/ConfigData';
 import DataObjectsAndActions, { DAGraph, PartialDataObjectsAndActions } from '../../../util/ConfigExplorer/Graphs';
 import '../ComponentsStyles.css';
 
 import { ReactFlowProvider } from 'reactflow';
+import { useWorkspace } from '../../../hooks/useWorkspace';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 
 // accessed as ag attributes
@@ -126,14 +127,13 @@ function LineageTab(props: flowProps) {
 
   const [layout, setLayout] = useState('TB');
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>(''); // wird verschwinden mit anderer Sicht
- 
+
   let initial_render = prepareAndRenderGraph();
   const [nodes, setNodes] = useState(initial_render[0]);
   const [edges, setEdges] = useState(initial_render[1]);
 
-  const navigate = useNavigate();            // handlers for navigating dataObjects and actions
+  const {navigateContent} = useWorkspace();            // handlers for navigating dataObjects and actions
   const chartBox = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
-
 
   // helper functions
   function prepareAndRenderGraph(): [Node[], Edge[]] {
@@ -148,16 +148,16 @@ function LineageTab(props: flowProps) {
 
   function clickOnNode(node: flowNodeWithString){
     if (props.configData) {
-      navigate(`/config/dataObjects/${node.id}`);
+      navigateContent(`config/dataObjects/${node.id}`);
     }
     setSelectedEdgeId(''); // revert filled action label (this will, however, always change, if we navigate from the config tab)
   } 
 
   function clickOnEdge(edge: flowEdgeWithString){
     if (props.configData) { 
-      navigate(`/config/actions/${edge.data.old_id}`); //Link programmatically
+      navigateContent(`config/actions/${edge.data.old_id}`); //Link programmatically
     } else {
-      navigate( `/workflows/${url.flowId}/${url.runNumber}/${url.taskId}/${url.tab}/${edge.data.old_id}`);
+      navigateContent( `workflows/${url.flowId}/${url.runNumber}.${url.taskId}/${url.tab}/${edge.data.old_id}`);
     }
     setSelectedEdgeId(edge.data.old_id);
   }
@@ -198,7 +198,7 @@ function LineageTab(props: flowProps) {
         edges={edges}
         defaultViewport={{x:0, y:0, zoom:1}} 
         onNodeClick={(event, node) => {!props.runContext && clickOnNode(node)}}
-        onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
+        //onEdgeClick={(event, edge) => {!props.runContext && clickOnEdge(edge)}}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodesConnectable={false} //prevents adding new edges
