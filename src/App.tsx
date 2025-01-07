@@ -77,7 +77,7 @@ export default function App() {
           <Routing/>
         </UserProvider>  
       </Authenticator.Provider>
-    </WorkspaceProvider>  
+    </WorkspaceProvider>
   )
 
   const root = () => (
@@ -94,7 +94,7 @@ export default function App() {
     <ThemeProvider theme={amplifyTheme}>
       <CssVarsProvider>
         <CssBaseline />
-        <RouterProvider router={router()} />
+        <RouterProvider router={router()}/>
       </CssVarsProvider>
     </ThemeProvider>
   );

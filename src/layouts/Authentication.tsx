@@ -41,7 +41,7 @@ function WorkspaceSelector({selectedItem, data, setData, isLoading, tooltipText}
 
 function TenantSelector() {
   const { tenant, setTenant } = useWorkspace();
-  const { data: tenants = [], isFetching: isLoading } = useFetchTenants();
+  const { data: tenants = [], isFetching: isLoading, isError, error } = useFetchTenants();
 
   return (
     <WorkspaceSelector
@@ -56,10 +56,10 @@ function TenantSelector() {
 
 function RepoSelector() {
   const { tenant, repo, setRepo } = useWorkspace();
-  const { data: repos = [], isFetching: isFetchingRepos } = useFetchRepos(tenant!);
+  const { data: repos = [], isFetching: isFetchingRepos, isError } = useFetchRepos(tenant!);
 
   useEffect(() => {
-    if (tenant && !isFetchingRepos && !repos.includes(repo)) {
+    if (!isError && tenant && !isFetchingRepos && Array.isArray(repos) && !repos.includes(repo)) {
       if (repos) setRepo(repos[0]);
       else setRepo();
     }
@@ -78,11 +78,11 @@ function RepoSelector() {
 
 function EnvSelector() {
   const { tenant, repo, env, setEnv } = useWorkspace();
-  const { data: repos = [], isFetching: isFetchingRepos } = useFetchRepos(tenant!);
-  const { data: envs = [], isFetching: isFetchingEnvs } = useFetchEnvs(tenant!, repo);
+  const { data: repos = [], isFetching: isFetchingRepos, isError: isErrorRepos } = useFetchRepos(tenant!);
+  const { data: envs = [], isFetching: isFetchingEnvs, isError: isErrorEnvs } = useFetchEnvs(tenant!, repo);
 
   useEffect(() => {
-    if (!isFetchingRepos && repos.includes(repo) && !isFetchingEnvs && !envs.includes(env)) {
+    if (!isErrorRepos && !isFetchingRepos && Array.isArray(repos) && repos.includes(repo) && !isErrorEnvs && !isFetchingEnvs && Array.isArray(envs) && !envs.includes(env)) {
       if (envs) setEnv(envs[0]);
       else setEnv();
     }

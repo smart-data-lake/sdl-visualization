@@ -14,12 +14,13 @@ export class fetchAPI_rest implements fetchAPI {
         this.env = env;
     }
 
-    private async fetch(url: string) {
-        const res = await fetch(url, await this.getRequestInfo());
-        if (res.ok) {
-            return await res.json();
+    private async fetch(url: string, init: Promise<RequestInit> = this.getRequestInfo()) {
+        const response = await fetch(url, await init);
+        if (!response.ok) {
+            const msg = (await response.json())['message'] + ` (${response.status})`;
+            throw new Error(msg);
         }
-        throw new Error(await res.text());
+        return await response.json();
     }
 
     private processRuns(runs) {
@@ -67,23 +68,17 @@ export class fetchAPI_rest implements fetchAPI {
     };        
     
     getRun = async (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number) => {
-        return fetch(`${this.url}/state?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}&runId=${runId}&attemptId=${attemptId}`, await this.getRequestInfo())
-        .then((res) => res.json());
+        return this.fetch(`${this.url}/state?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}&runId=${runId}&attemptId=${attemptId}`)
     };
 
     getConfig = async (tenant: string, repo: string, env: string, version: string|undefined) => {
         if (!version) throw new Error("fetchAPI for REST does not support getting config without version specified, but parameter version was undefined");
         return this.fetch(`${this.url}/config?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`)
         .then((parsedJson) => new ConfigData(parsedJson?.config ?? {}))
-        .catch((error) => {
-            console.log(error);
-            return new ConfigData({});
-        });
     };
     
     getConfigVersions = async (tenant: string, repo: string, env: string): Promise<string[] | undefined> => {
-        return fetch(`${this.url}/versions?tenant=${tenant}&repo=${repo}&env=${env}`, await this.getRequestInfo())
-        .then((res) => res.json());
+        return this.fetch(`${this.url}/versions?tenant=${tenant}&repo=${repo}&env=${env}`)
     }
 
     getDescription = async (
@@ -161,9 +156,9 @@ export class fetchAPI_rest implements fetchAPI {
         env: string,
         version: string | undefined
     ): Promise<any> => {
-        return fetch(
-            `${this.url}/descriptions/${filename}?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`,
-            await this.getRequestInfo("GET", { Accept: "image/*,*/*;q=0.8" })
+        return this.fetch( 
+            `${this.url}/descriptions/${filename}?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`, 
+            this.getRequestInfo("GET", { Accept: "image/*,*/*;q=0.8" })
         );
     };
 
@@ -203,50 +198,35 @@ export class fetchAPI_rest implements fetchAPI {
     clearCache = () => undefined    
 
     getUsers = async (tenant: string) => {
-        const response = await fetch(`${this.url}/users?tenant=${tenant}`, await this.getRequestInfo());
-        return await response.json();
+        return this.fetch(`${this.url}/users?tenant=${tenant}`);
     };
     
     addUser = async (tenant: string, email: string, access: string) => {
         const requestInfo = await this.getRequestInfo("POST", { "Content-Type": "application/json" });
         requestInfo.body = JSON.stringify({ email, access });
-        const response = await fetch(`${this.url}/users?tenant=${tenant}`, requestInfo);
-        const responseBody = await response.json();
-        if (!response.ok) {
-            throw new Error(responseBody["detail"]);
-        }
-        return responseBody;
+        return this.fetch(`${this.url}/users?tenant=${tenant}`, Promise.resolve(requestInfo));
     };
     
     removeUser = async (tenant: string, email: string) => {
-        return await fetch(
+        return this.fetch(
             `${this.url}/users?tenant=${tenant}&email=${email}`,
-            await this.getRequestInfo("DELETE", { "Content-Type": "application/json" })
+            this.getRequestInfo("DELETE", { "Content-Type": "application/json" })
         );
     };
 
     getTenants = async () => {
-        return fetch(`${this.url}/tenants`, await this.getRequestInfo())
-        .then((res) => res.json());
+        return this.fetch(`${this.url}/tenants`);
     }
 
     getRepos = async (tenant: string) => {
-        return fetch(`${this.url}/repo?tenant=${tenant}`, await this.getRequestInfo())
-        .then((res) => res.json());
+        return this.fetch(`${this.url}/repo?tenant=${tenant}`)
     }
 
     getEnvs = async (tenant: string, repo: string) => {
-        return fetch(`${this.url}/envs?tenant=${tenant}&repo=${repo}`, await this.getRequestInfo())
-        .then((res) => res.json());
+        return this.fetch(`${this.url}/envs?tenant=${tenant}&repo=${repo}`)
     }
     
     getLicenses = async (tenant: string): Promise<any[]> => {
-        const requestInfo = await this.getRequestInfo();
-        const response = await fetch(`${this.url}/license?tenant=${tenant}`, requestInfo);
-        const responseBody = await response.json();
-        if (!response.ok) {
-            throw new Error(responseBody["detail"]);
-        }
-        return responseBody;
+        return this.fetch(`${this.url}/license?tenant=${tenant}`);
     }
 }
