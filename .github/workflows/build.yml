@@ -13,9 +13,6 @@ on:
   # allow for manual builds from feature branches
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build-and-create-release:
 
@@ -63,7 +60,7 @@ jobs:
       if: ${{ github.ref_name == 'master' }}
       uses:  phips28/gh-action-bump-version@v11.0.7
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PAT_ACTIONS }}
       with:
         target-branch: develop
         skip-tag: true
