@@ -3,18 +3,7 @@ import App from "./App";
 import * as ReactDOMClient from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "react-query";
 import "@aws-amplify/ui-react/styles.css";
-import { TenantProvider } from "./hooks/TenantProvider";
 
-// react 17
-// import { render } from "react-dom";
-// render(
-//   <StrictMode>
-//     <App />
-//   </StrictMode>,
-//   document.getElementById("root")
-// );
-
-// react 18
 const rootElement = document.getElementById("root");
 const root = ReactDOMClient.createRoot(rootElement as HTMLElement);
 const queryClient = new QueryClient({
@@ -24,12 +13,11 @@ const queryClient = new QueryClient({
     },
   },
 });
+
 root.render(
   <StrictMode>
-    <TenantProvider>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
-    </TenantProvider>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
   </StrictMode>
 );

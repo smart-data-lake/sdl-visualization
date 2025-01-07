@@ -2,31 +2,31 @@ import InboxIcon from '@mui/icons-material/Inbox';
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import { Box, IconButton, Sheet, Typography } from "@mui/joy";
-import Tab, { tabClasses } from '@mui/joy/Tab';
+import Tab from '@mui/joy/Tab';
 import TabList from '@mui/joy/TabList';
 import TabPanel from '@mui/joy/TabPanel';
 import Tabs from '@mui/joy/Tabs';
 import React, { useMemo, useState } from "react";
-import { ReactFlowProvider } from "react-flow-renderer";
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import GlobalStyle from "../../../GlobalStyle";
 import theme from "../../../theme";
 import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import { checkFiltersAvailability, stateFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
-import LineageTab from "../../ConfigExplorer/LineageTab";
+import LineageTab from '../../ConfigExplorer/LineageTab/LineageTab';
 import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
 import ToolBar from "../ToolBar/ToolBar";
 import ContentDrawer from './ContentDrawer';
 
 import { SortDirection } from 'ka-table';
+import { useWorkspace } from '../../../hooks/useWorkspace';
 import DraggableDivider from "../../../layouts/DraggableDivider";
-import { DAGraph } from "../../../util/ConfigExplorer/Graphs";
+import { PartialDataObjectsAndActions } from "../../../util/ConfigExplorer/Graphs";
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
-import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../../ConfigExplorer/DataTable';
-import { FilterParams, filterSearchText } from '../WorkflowHistory';
 import { createActionsChip } from '../../ConfigExplorer/ConfigurationTab';
+import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../../ConfigExplorer/DataTable';
+import { FilterParams, filterSearchText } from '../WorkflowHistory';
 
 /**
  * This is a TypeScript function that returns a set of three React components which are rendered inside a parent component. 
@@ -41,9 +41,11 @@ import { createActionsChip } from '../../ConfigExplorer/ConfigurationTab';
 const TabsPanels = (props: { attempt: Attempt }) => {
     const { attempt } = props;
     const data = attempt.timelineRows;
-    const {tab, stepName} = useParams();
+    var {tab, stepName} = useParams();
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'step_name', additionalFilters: []})
     const [timelinePhases, setTimelinePhases] = useState(['Exec', 'Init', 'Prepare']);
+	const {navigateRel} = useWorkspace();
+    tab = tab || 'timeline';
 
     const selData = useMemo(() => {
         if (data && data.length>0) {
@@ -66,7 +68,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
     
 	function actionsLinkRenderer(prop: any) {
 		return createActionsChip(prop.value, 'sm', {mt: -1});
-	}    
+	}
 
     const columns = [{
 		title: 'Action',
@@ -134,7 +136,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
                     <TabPanel className='actions-table-panel' value='table' sx={{p: '0px', width: '100%', height: '100%'}}>
                         <Sheet
                             sx={{ height: '100%', backgroundColor: stepName ? 'primary.main' : 'none', opacity: stepName ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
-                            <DataTable data={selData} columns={columns} navigator={(row) => (stepName ? `../${row.step_name}` : `${row.step_name}`)} keyAttr='step_name'/>
+                            <DataTable data={selData} columns={columns} navigate={(row) => navigateRel((stepName ? `../${row.step_name}` : `${row.step_name}`))} keyAttr='step_name'/>
                         </Sheet>
                     </TabPanel>
                 </>)}
@@ -161,8 +163,7 @@ const TabNav = (props: { attempt: Attempt }) => {
     const [openLineage, setOpenLineage] = useState<boolean>(false);
     const lineageRef = React.useRef<HTMLDivElement>(null);
     const { attempt } = props;
-    const navigate = useNavigate();
-    const navigateRel = (subPath: string) => navigate(subPath, {relative: 'path'}); // this navigates Relative to path, not route
+	const {navigateRel} = useWorkspace();
 
     const setSelectedTab = (_e: any, v: any) => (tab && stepName ? navigateRel(`../../${v}`) : (tab ? navigateRel(`../${v}`) : navigateRel(`${v}`))); 
 
@@ -171,15 +172,15 @@ const TabNav = (props: { attempt: Attempt }) => {
         rows.forEach((row: Row) => {
             data.push({
                 action: row.step_name,
-                inputIds: row.details.inputIds ? row.details.inputIds : [],
-                outputIds: row.details.outputIds ? row.details.outputIds : []
+                inputIds: row.details.inputIds || [],
+                outputIds: row.details.outputIds || []
             })
         })
 
         return data;
     }
 
-    const graph: DAGraph = useMemo(() => {
+    const graph: PartialDataObjectsAndActions = useMemo(() => {
         return new Lineage(prepareGraph(attempt.timelineRows)).graph
     }, [attempt]);
 
@@ -206,16 +207,14 @@ const TabNav = (props: { attempt: Attempt }) => {
                             )
                         }
                     </Box>
-                    <TabsPanels attempt={attempt}/>
+                    <TabsPanels attempt={attempt} key={`${attempt.appName}.${attempt.runId}.${attempt.attemptId}`}/>
                 </Tabs>
             </Sheet>
             {openLineage && (
                 <>
                     <DraggableDivider id="workflow-lineage" cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} />
                     <Sheet ref={lineageRef}>
-                        <ReactFlowProvider>
-                            <LineageTab graph={graph} elementName="" elementType="" />
-                        </ReactFlowProvider>
+                            <LineageTab graph={graph} elementName="" elementType="actions" />
                     </Sheet>
                 </>
             )}

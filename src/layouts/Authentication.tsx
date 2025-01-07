@@ -1,162 +1,151 @@
-import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
-import {
-  Box,
-  Dropdown,
-  Grid,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuItem,
-  Tooltip,
-  Typography,
-} from "@mui/joy";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
-import LoginIcon from "@mui/icons-material/Login";
-import CloseIcon from "@mui/icons-material/Close";
-import PersonIcon from "@mui/icons-material/AccountCircleRounded";
-import { useEffect, useRef, useState } from "react";
+import { Box, CircularProgress, Dropdown, IconButton, Menu, MenuButton, MenuItem, Tooltip, Typography } from "@mui/joy";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTenant } from "../hooks/TenantProvider";
-import { useFetchTenants } from "../hooks/useFetchData";
+import { useFetchEnvs, useFetchRepos, useFetchTenants } from "../hooks/useFetchData";
+import { useUser } from "../hooks/useUser";
+import { useWorkspace } from "../hooks/useWorkspace";
+
+function WorkspaceSelector({selectedItem, data, setData, isLoading, tooltipText}: {
+  selectedItem: any;
+  data: string[];
+  setData: (x: any) => void;
+  isLoading?: boolean;
+  tooltipText?: string;
+}) {
+  return (
+        isLoading ? <CircularProgress size="sm" variant="solid" /> : (
+          data.length == 0 ? (
+            <Typography sx={{color: "white"}}>None</Typography>
+          ) : (
+            <Dropdown>
+              <MenuButton slots={{ root: Box }}>
+                <Tooltip arrow disableInteractive variant="soft" placement="left" title={tooltipText}
+                        enterDelay={!selectedItem ? 100 : 1000} sx={{ zIndex: 10000 }}>
+                  <Typography sx={{color: "white", cursor: "pointer"}}>{selectedItem ?? "None"}</Typography>
+                </Tooltip>
+              </MenuButton>
+              {data.length > 0 && (
+              <Menu sx={{ padding: 2 }} size="sm">
+                {data.map((x) => (
+                  <MenuItem key={x} onClick={() => setData(x)}>{x}</MenuItem>
+                ))}
+              </Menu>
+              )}
+            </Dropdown>
+          )
+        )
+  );
+}
 
 function TenantSelector() {
-  const { tenant, setTenant } = useTenant();
-  const { data: tenants = [] } = useFetchTenants();
+  const { tenant, setTenant } = useWorkspace();
+  const { data: tenants = [], isFetching: isLoading, isError, error } = useFetchTenants();
 
   return (
-    <Dropdown>
-      <MenuButton
-        sx={{ display: "flex" }}
-        slots={{
-          root: Box,
-        }}
-      >
-        <Typography
-          fontSize="inherit"
-          sx={{ color: "white", cursor: "pointer" }}
-        >
-          {tenant}
-        </Typography>
-      </MenuButton>
+    <WorkspaceSelector
+      selectedItem={tenant}
+      data={tenants}
+      setData={setTenant}
+      isLoading={isLoading}
+      tooltipText="Change tenant"
+    />
+  );
+}
 
-      <Menu sx={{ padding: 2 }} size="sm">
-        {tenants.map((x) => (
-          <MenuItem onClick={() => setTenant(x)}>{x}</MenuItem>
-        ))}
-      </Menu>
-    </Dropdown>
+function RepoSelector() {
+  const { tenant, repo, setRepo } = useWorkspace();
+  const { data: repos = [], isFetching: isFetchingRepos, isError } = useFetchRepos(tenant!);
+
+  useEffect(() => {
+    if (!isError && tenant && !isFetchingRepos && Array.isArray(repos) && !repos.includes(repo)) {
+      if (repos) setRepo(repos[0]);
+      else setRepo();
+    }
+  }, [tenant, repos]);
+
+  return (
+    <WorkspaceSelector
+      selectedItem={repo}
+      data={repos}
+      setData={setRepo}
+      isLoading={!tenant || isFetchingRepos}
+      tooltipText="Choose repository"
+    />
+  );
+}
+
+function EnvSelector() {
+  const { tenant, repo, env, setEnv } = useWorkspace();
+  const { data: repos = [], isFetching: isFetchingRepos, isError: isErrorRepos } = useFetchRepos(tenant!);
+  const { data: envs = [], isFetching: isFetchingEnvs, isError: isErrorEnvs } = useFetchEnvs(tenant!, repo);
+
+  useEffect(() => {
+    if (!isErrorRepos && !isFetchingRepos && Array.isArray(repos) && repos.includes(repo) && !isErrorEnvs && !isFetchingEnvs && Array.isArray(envs) && !envs.includes(env)) {
+      if (envs) setEnv(envs[0]);
+      else setEnv();
+    }
+  }, [repo, repos, envs]);
+
+  return (
+    <WorkspaceSelector
+      selectedItem={env}
+      data={envs}
+      setData={setEnv}
+      isLoading={!tenant || isFetchingEnvs}
+      tooltipText="Choose environment"
+    />
   );
 }
 
 export default function Authentication() {
-  const { user, signOut, authStatus } = useAuthenticator();
-  const [showLogin, setShowLogin] = useState(false);
+  const userContext = useUser();
   const navigate = useNavigate();
-  const prevAuthStatus = useRef<any>();
-
-  useEffect(() => {
-    if (
-      authStatus !== prevAuthStatus.current &&
-      [authStatus, prevAuthStatus.current].every((x) =>
-        ["authenticated", "unauthenticated"].includes(x)
-      )
-    ) {
-      navigate(0);
-    }
-    prevAuthStatus.current = authStatus;
-  }, [authStatus]);
+  const {tenant} = useWorkspace();
 
   const logout = () => {
-    setShowLogin(false);
-    signOut();
+    userContext!.signOut!();
   };
 
-  const { tenant, setTenant } = useTenant();
-
   const goToSetting = () => {
-    navigate("settings/users");
+    navigate(`/${tenant}/settings/users`);
   };
 
   return (
     <>
-      {(user || showLogin) && (
-        <Authenticator
-          variation="modal"
-          components={{
-            Header: () => (
-              <Box position="relative">
-                <IconButton
-                  variant="soft"
-                  size="sm"
-                  sx={{
-                    backgroundColor: "white",
-                    mr: -4,
-                    borderRadius: "50%",
-                    position: "absolute",
-                    right: 12,
-                    top: -18,
-                    minWidth: "1.25rem",
-                    minHeight: "1.25rem",
-                  }}
-                  onClick={() => setShowLogin(false)}
-                >
-                  <CloseIcon sx={{ fontSize: "12pt" }} />
-                </IconButton>
-              </Box>
-            ),
-          }}
-        >
-          {() => (
-            <>
-              <TenantSelector />
-              <Tooltip title="Settings">
-                <SettingsIcon
-                  sx={{ color: "white", cursor: "pointer", ml: 2 }}
-                  onClick={() => goToSetting()}
-                />
-              </Tooltip>
-              <Dropdown>
-                <MenuButton
-                  sx={{ display: "flex" }}
-                  slots={{
-                    root: Box,
-                  }}
-                >
-                  <PersonIcon
-                    sx={{ color: "white", cursor: "pointer", ml: 2 }}
-                  />
-                </MenuButton>
+      {tenant && 
+        <Box sx={{display: "flex", alignContent: "flex-end", flexDirection: "row", gap: 1}}>
+          <TenantSelector /> /
+          <RepoSelector /> /
+          <EnvSelector />
+        </Box>
+      }
+      <Box sx={{marginBottom: "-4px"}}>
+        <Dropdown>
 
-                <Menu sx={{ padding: 2 }} size="sm">
-                  <Typography fontSize="inherit" sx={{ marginBottom: 2 }}>
-                    {user?.attributes?.email}
-                  </Typography>
-                  <MenuItem onClick={logout}>
-                    <Box
-                      display="flex"
-                      width={1}
-                      alignItems="center"
-                      justifyContent="end"
-                    >
-                      Logout
-                      <LogoutIcon sx={{ cursor: "pointer", ml: 1 }} />
-                    </Box>
-                  </MenuItem>
-                </Menu>
-              </Dropdown>
-            </>
-          )}
-        </Authenticator>
-      )}
-      {!user && (
-        <Tooltip title="Sign in">
-          <LoginIcon
-            sx={{ color: "white", cursor: "pointer", ml: 2 }}
-            onClick={() => setShowLogin(true)}
-          />
-        </Tooltip>
-      )}
+          <MenuButton slots={{ root: IconButton }} slotProps={{ root: { variant: 'solid', color: 'primary' }}} sx={{display: "flex", borderRadius: '50%'}}>
+            <SettingsIcon sx={{ height: "25px", color: "white", cursor: "pointer"}} />
+          </MenuButton>
+
+          <Menu sx={{ padding: 2 }} size="sm">
+            <Typography fontSize="inherit" sx={{ marginBottom: 2 }}>
+              {userContext?.email}
+            </Typography>
+            <MenuItem onClick={logout}>
+              <Box display="flex" width={1} alignItems="center" justifyContent="space-between">
+                Logout
+                <LogoutIcon sx={{ cursor: "pointer", ml: 1 }} />
+              </Box>
+            </MenuItem>
+            <MenuItem onClick={goToSetting}>
+              <Box display="flex" width={1} alignItems="center" justifyContent="start">
+                User Management
+              </Box>
+            </MenuItem>
+          </Menu>
+        </Dropdown>
+      </Box>
     </>
   );
 }

@@ -1,70 +1,32 @@
-import { Node, Edge, DAGraph, PartialDataObjectsAndActions } from '../ConfigExplorer/Graphs'
+import { Node, Edge, PartialDataObjectsAndActions, NodeType, ActionObject, DataObject } from '../ConfigExplorer/Graphs'
 
 export class Lineage {
     lineageData: any;
-    graph: DAGraph;
+    graph: PartialDataObjectsAndActions;
 
     constructor(data: {action: string, inputIds: string[], outputIds: string[]}[]) {
-        const preprocessedData: {id: string, node: Node, edges: {id: string, to: Node}[]}[] = this.prepareGraphData(data)
-        const nodes = this.getNodes(preprocessedData);
-        const edges = this.getEdges(preprocessedData);
+        let nodes = new Map<string,Node>();
+        let edges: Edge[] = [];
 
-        this.graph = new PartialDataObjectsAndActions(nodes, edges)
-    }
-
-    getNodes = (data: {id: string, node: Node, edges: {id: string, to: Node}[]}[]) => {
-        let nodes : Node[] = [];
-        data.forEach(node => {
-            nodes.push(node.node)
-        })
-
-        return nodes;
-    }
-
-    getEdges = (data: {id: string, node: Node, edges: {id: string, to: Node}[]}[]) => {
-        let edges : Edge[] = [];
-        data.forEach(fromNode => {
-            fromNode.edges.forEach(toNode => {
-                edges.push(new Edge(fromNode.node, toNode.to, toNode.id, 'runLineage'))
-            })
-        })
-        
-        return edges
-    }
-
-    prepareGraphData = (data: {action: string, inputIds: string[], outputIds: string[]}[]) => {
-        let nodes: string[] = [];
-        let graph: {id: string, node: Node, edges: {id: string, to: Node}[]}[] = [];
-
-        data.forEach(action => {
-            action.inputIds.forEach(elem => {
-                if (!nodes.includes(elem)) nodes.push(elem);
+        let actions = data.map(entry => {
+            const fromNodes = entry.inputIds.map(dataObjectId => {
+                if (!nodes.has(dataObjectId)) nodes.set(dataObjectId, new DataObject(dataObjectId));
+                return nodes.get(dataObjectId)!;
             });
-            action.outputIds.forEach(elem => {
-                if (!nodes.includes(elem)) nodes.push(elem);
+            const toNodes = entry.outputIds.map(dataObjectId => {
+                if (!nodes.has(dataObjectId)) nodes.set(dataObjectId, new DataObject(dataObjectId));
+                return nodes.get(dataObjectId)!;
             });
-        });
-
-        nodes.forEach(node => {
-            graph.push({id: node, node: new Node(node, {y: 0, x: 0}), edges: []})
+            const actionNode = new ActionObject(fromNodes, toNodes, entry.action);
+            nodes.set(entry.action, actionNode);
+            return actionNode;
+        });                
+        actions.forEach(action => {
+            action.fromNodes.forEach(fromNode => edges.push(new Edge(fromNode, action, fromNode.id+"-"+action.id)))
+            action.toNodes.forEach(toNode => edges.push(new Edge(action, toNode, action.id+"-"+toNode.id)))
         })
 
-        nodes.forEach(node => {
-            data.forEach(action => {
-                action.inputIds.forEach(input => {
-                    if (input === node) {
-                        action.outputIds.forEach(target => {
-                            graph.forEach(elem => {
-                                if (elem.id === node) {
-                                    elem.edges.push({to: new Node(target), id: action.action})
-                                }
-                            })
-                        });
-                    }
-                })
-            })
-        })
-
-        return graph
+        this.graph = new PartialDataObjectsAndActions(Array.from(nodes.values()), edges);
     }
+
 }

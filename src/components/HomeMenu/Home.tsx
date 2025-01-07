@@ -4,9 +4,9 @@ import PageHeader from "../../layouts/PageHeader";
 import WelcomeCard from "./WelcomeCard";
 
 const info = [
-    {title: 'Configuration', subtitle: 'Explore configuration', image: 'images/config.png', link: 'internal;/config'},
-    {title: 'Workflows', subtitle: 'Explore runtime info', image: 'images/workflow.png', link: 'internal;/workflows'},
-    {title: 'Documentation', subtitle: 'Learn about SDLB', image: 'images/wwwsdlb.png', link: 'external;https://www.smartdatalake.ch/'},
+    {title: 'Configuration', subtitle: 'Explore configuration', image: 'images/config.png', linkType: 'internal', link: 'config'},
+    {title: 'Workflows', subtitle: 'Explore runtime info', image: 'images/workflow.png', linkType: 'internal', link: 'workflows'},
+    {title: 'Documentation', subtitle: 'Learn about SDLB', image: 'images/wwwsdlb.png', linkType: 'external', link: 'https://www.smartdatalake.ch/'},
 ]
 
 const Home = () => {
@@ -21,7 +21,7 @@ const Home = () => {
                     Start here with Smart Data Lake Builder UI
                 </Typography>
                 <Sheet sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', p: 0, m: 0 }}>
-                    {info.map((item) => <WelcomeCard title={item.title} subtitle={item.subtitle} image={item.image} link={item.link}/>)}
+                    {info.map((item,idx) => <WelcomeCard key={idx} {...item}/>)}
                 </Sheet>
             </Sheet>
         </>

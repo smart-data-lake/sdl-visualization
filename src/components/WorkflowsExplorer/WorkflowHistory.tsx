@@ -1,12 +1,16 @@
 import { ZoomOutOutlined } from "@mui/icons-material";
-import { Box, CircularProgress, IconButton, Sheet, Tooltip, Typography } from "@mui/joy";
+import { Box, IconButton, Sheet, Tooltip, Typography } from "@mui/joy";
 import { SortDirection } from 'ka-table';
 import { useMemo, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
-import { fetcher, useFetchWorkflowRuns } from "../../hooks/useFetchData";
+import { useParams } from "react-router-dom";
+import { fetcher } from "../../api/Fetcher";
+import { useFetchWorkflowRuns } from "../../hooks/useFetchData";
+import { useUser } from "../../hooks/useUser";
+import { useWorkspace } from "../../hooks/useWorkspace";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
 import { Filter, checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
+import CenteredCircularProgress from "../Common/CenteredCircularProgress";
 import { createFeedChip } from "../ConfigExplorer/ConfigurationTab";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
 import HistoryBarChart from "./HistoryChart/HistoryBarChart";
@@ -37,9 +41,10 @@ export function filterSearchText(params: FilterParams, row: any): boolean {
 */
 export default function WorkflowHistory() {
 	const {flowId} = useParams();
-	const { data, isLoading, isFetching, refetch } = useFetchWorkflowRuns(flowId!);
+    const userContext = useUser();
+	const { data, isLoading, isFetching, refetch } = useFetchWorkflowRuns(flowId!, !userContext || userContext.authenticated);
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'startsWith', searchColumn: 'runId', additionalFilters: []})
-    const currURL = useLocation().pathname;
+	const {navigateRel} = useWorkspace();
 		
     const selData = useMemo(() => {
         if (data && data.length>0) {
@@ -73,7 +78,7 @@ export default function WorkflowHistory() {
 	}
 
 	if (isLoading || isFetching) {
-		return (<CircularProgress/>);
+		return <CenteredCircularProgress />;
 	}
 
 	const columns = [{
@@ -143,7 +148,7 @@ export default function WorkflowHistory() {
 
 	return (
 		<>
-		{!data || isLoading || isFetching ? <CircularProgress/> : null}
+		{!data || isLoading || isFetching ? <CenteredCircularProgress/> : null}
 		{data ? (
 			<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '5px 15px', gap: '15px', width: '100%', height: '100%' }}>
 				<PageHeader title={flowId!} refresh={refreshData} />    
@@ -169,7 +174,7 @@ export default function WorkflowHistory() {
 					stateFilters={checkFiltersAvailability(data, stateFilters('status'))}
 					filterParams={filterParams}
 					datetimePicker={true}/>
-				<DataTable data={selData} columns={columns} navigator={(row) => `${currURL}/${row.runId}/${row.attemptId}/timeline`} keyAttr='path'/>
+				<DataTable data={selData} columns={columns} navigate={(row) => navigateRel(`${row.runId}.${row.attemptId}/timeline`)} keyAttr='path'/>
 			</Sheet>   
 		):(<NotFound errorType={500}/>)
 	}

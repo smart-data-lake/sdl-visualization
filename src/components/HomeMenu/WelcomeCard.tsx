@@ -5,19 +5,15 @@ import CardContent from '@mui/joy/CardContent';
 import CardOverflow from '@mui/joy/CardOverflow';
 import Typography from '@mui/joy/Typography';
 import { useNavigate } from 'react-router-dom';
+import { useWorkspace } from '../../hooks/useWorkspace';
 
-export default function OverflowCard(props: {title: string, subtitle: string, image?: string, link?: string} ) {
-  const { title, subtitle, image, link } = props;
-  const navigate = useNavigate();
+export default function OverflowCard(props: {title: string, subtitle: string, image?: string, linkType: string, link: string} ) {
+  const { title, subtitle, image, linkType, link } = props;
+  const {navigateContent} = useWorkspace();
 
   const handleClick = () => {
-    console.log(link)
-    if(link?.split(';')[0] === 'internal') {
-      navigate(link?.split(';')[1]);
-    }
-    else if(link?.split(';')[0] === 'external') {
-      window.open(link?.split(';')[1], '_blank');
-    }
+    if (linkType === 'internal') navigateContent(link);
+    else if (linkType === 'external') window.open(link, '_blank');
   }
 
   return (

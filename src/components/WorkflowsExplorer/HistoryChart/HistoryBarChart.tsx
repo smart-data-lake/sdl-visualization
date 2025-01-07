@@ -1,28 +1,20 @@
-import { useTheme } from "@mui/joy/styles";
 import { useState } from "react";
-import { useLocation, useNavigate } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useWorkspace } from "../../../hooks/useWorkspace";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
-import { CustomTooltip } from "./CustomTooltip";
 import { getStatusColor } from "../Timeline/TimelineRow/utils";
+import { CustomTooltip } from "./CustomTooltip";
 
 const HistoryBarChart = (props: {runs: any[], selectRange: (range: [Date,Date]) => void}) => {
     const { runs } = props;
-    const curr = useLocation();
-	  const navigate = useNavigate();
     const [refArea, setRefArea] = useState<number[]>([]);
-    const theme = useTheme();
-
-    const handleClick = (data, index) => {
-      const target = `${curr.pathname}/${data.runId}/${data.attemptId}/timeline`
-		  navigate(target);
-    };
+    const {navigateRel} = useWorkspace();
 
     const handleSelectRange = (endDate) => {
-      if (refArea.length > 0) {
-        if (refArea[0] && endDate) props.selectRange([new Date(Math.min(refArea[0], endDate)), new Date(Math.max(refArea[0], endDate))]);
-        setRefArea([]); // reset
+      if (refArea && refArea[0] && endDate && refArea[0] != endDate) {
+        props.selectRange([new Date(Math.min(refArea[0], endDate)), new Date(Math.max(refArea[0], endDate))]);
       }
+      setRefArea([]); // reset
     }
 
 
@@ -53,7 +45,7 @@ const HistoryBarChart = (props: {runs: any[], selectRange: (range: [Date,Date]) 
                 dataKey="duration" 
                 stackId="a" 
                 fill="#20af2e"
-                onClick={handleClick}
+                onClick={data => navigateRel(`${data.runId}.${data.attemptId}/timeline`)}
                 barSize={runs.length < 26 ? 15 : undefined}
                 radius={[2, 2, 0, 0]}
                 minPointSize={5}

@@ -8,20 +8,21 @@ import Option from '@mui/joy/Option';
 import 'github-markdown-css/github-markdown.css';
 import { useEffect, useState } from 'react';
 import { Link } from "react-router-dom";
-import { Stats, TsIndexEntry, useFetchDataObjectStats, useFetchWorkflowRunsByElement } from '../../hooks/useFetchData';
+import { useFetchDataObjectStats, useFetchWorkflowRunsByElement } from '../../hooks/useFetchData';
 import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
 import { getPropertyByPath } from '../../util/helpers';
 import './ComponentsStyles.css';
 import ConfigurationAccordions from './ConfigurationAccordions';
 import MarkdownComponent from './MarkdownComponent';
 import { createPropertiesComponent } from './PropertiesComponent';
-import { cellIconRenderer } from './DataTable';
 import { getIcon } from '../../util/WorkflowsExplorer/StatusInfo';
+import { Stats, TstampEntry } from '../../types';
+import { useWorkspace } from '../../hooks/useWorkspace';
 
 interface ElementProps {
   data: any; // config of object to display
   connection?: any; // connection config of object to display  
-  statsIndex?: TsIndexEntry[]; // index of available statistics files, ordered from youngest to oldest
+  statsEntries?: TstampEntry[]; // list of available statistics entries, ordered from youngest to oldest
   elementName: string;
   elementType: string;
 }
@@ -43,9 +44,9 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
       <Box sx={{flex: 1, textAlign: 'right'}}>Outputs</Box>
     </Box>  
     <Box sx={{display: 'flex'}}>    
-      <Stack sx={{flex: 1, height: '100%', alignSelf: 'center', marginRight: '15px'}} spacing={1}>{inputs.map(name => createDataObjectChip(name))}</Stack>
+      <Stack sx={{flex: 1, height: '100%', alignSelf: 'center', marginRight: '15px'}} spacing={1}>{inputs.map((name,idx) => createDataObjectChip(name,'md',{},idx))}</Stack>
       <Stack sx={{flex: 1, height: '100%', alignItems: 'end', alignSelf: 'center', marginLeft: '15px'}} spacing={1}>
-        {outputs.map(name => createDataObjectChip(name))}
+        {outputs.map((name,idx) => createDataObjectChip(name,'md',{},idx))}
       </Stack>
     </Box>
   </Box>
@@ -53,61 +54,68 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
 }
 
 export function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: "primary" | "neutral" | "success" | "danger" | "warning" | undefined = "primary", size: ('sm' | 'md' | 'lg') ="md", sx: object = {}) {
+  const {contentPath} = useWorkspace();
   if (value){
-    const path = `/config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`;
+    const path = (attr == "feedSel" ? 
+      `${contentPath}config/${route}?elementSearchType=${attr}&elementSearch=${value}` :
+      `${contentPath}config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`
+    )
     return(
-      <Link to={path}>
+      <Link to={path} key={attr+':'+value}>
         <Chip key={attr} sx={{mr: 1, ...sx}} color={color} startDecorator={icon} variant="outlined" onClick={(e) => e.stopPropagation()} size={size}>{value}</Chip>
       </Link>
     )
   }
 }
 
-export function createDataObjectChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
+export function createDataObjectChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}, key?: any){
+  const {contentPath} = useWorkspace();
   return(
-    <Link to={"/config/dataObjects/"+name}>
+    <Link to={`${contentPath}config/dataObjects/${name}`} key={key}>
       <Chip key={"dataObjects/"+name} color="primary" startDecorator={<TableViewTwoTone />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
 }
 
 export function createActionsChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
+  const {contentPath} = useWorkspace();
   return(
-    <Link to={"/config/actions/"+name}>
+    <Link to={`${contentPath}config/actions/${name}`} key={"action/"+name}>
       <Chip key={"action/"+name} color="primary" startDecorator={<RocketLaunchOutlined />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
 }
 
 function createConnectionChip(name: string){
+  const {contentPath} = useWorkspace();
   return(
-    <Link to={"/config/connections/"+name}>
+    <Link to={`${contentPath}config/connections/${name}`} key={"connections/"+name}>
       <Chip key={"connections/"+name} color="primary" startDecorator={<LanOutlinedIcon />} variant="outlined" >{name}</Chip>
     </Link>
   )
 }
 
 export function createFeedChip(feed: string, elementType: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
-  return createSearchChip("metadata.feed", feed, elementType, <AltRouteIcon />, "success", size, sx);
+  return createSearchChip("feedSel", feed, elementType, <AltRouteIcon />, "success", size, sx);
 }
 
-export function createSimpleChip(name: string) {
-  return <Chip size="sm">{name}</Chip>
+export function createSimpleChip(name: string, key?: any) {
+  return <Chip key={key} size="sm">{name}</Chip>
 }
 
 export default function ConfigurationTab(props: ElementProps) {
 
   // store the current stats entry to display
-  const [statsEntry, setStatsEntry] = useState<TsIndexEntry>();
+  const [statsEntry, setStatsEntry] = useState<TstampEntry>();
 
   // initialize stats entry if not yet set
   useEffect(() => {
-    if (statsEntry && !props.statsIndex) {
+    if (statsEntry && !props.statsEntries) {
       setStatsEntry(undefined);
-    } else if (props.statsIndex && (!statsEntry  || (statsEntry && props.statsIndex && props.statsIndex.findIndex((e) => e.filename == statsEntry.filename) < 0))) {
-      setStatsEntry(props.statsIndex[0]);
+    } else if (props.statsEntries && (!statsEntry  || (statsEntry && props.statsEntries && props.statsEntries.findIndex((e) => e.key == statsEntry.key) < 0))) {
+      setStatsEntry(props.statsEntries[0]);
     }
-  }, [props.statsIndex]);
+  }, [props.statsEntries]);
 
 	const { data: stats } = useFetchDataObjectStats(statsEntry);
 
@@ -120,7 +128,7 @@ export default function ConfigurationTab(props: ElementProps) {
   //attributes to be displayed at the top of the page
   let topAttributes: {key: string, func: (x:any) => any}[] = [
     {key: "path", func: (x: any) => x},
-    {key: "partitions", func: (cols: any) => <Stack spacing={0.5} direction="row">{(cols as string[]).map(col => createSimpleChip(col))}</Stack>}, 
+    {key: "partitions", func: (cols: any) => <Stack spacing={0.5} direction="row">{(cols as string[]).map((col,idx) => createSimpleChip(col,idx))}</Stack>}, 
     {key: "table", func: (tbl: any) => (tbl.db || (props.connection && props.connection.db) || "<db?>") + "." + tbl.name},
     {key: "table.primaryKey", func: (cols: any) => <Stack spacing={0.5} direction="row">{(cols as string[]).map(col => createSimpleChip(col))}</Stack>}, 
     {key: "db", func: (x: any) => x},
@@ -165,8 +173,8 @@ export default function ConfigurationTab(props: ElementProps) {
     const statsPrep = {...stats};
     if (Object.keys(statsPrep).length > 0) {    
       statsPrep['Exported at'] = (
-        <Select variant="plain" size='sm' value={statsEntry?.filename} onChange={(ev, value) => setStatsEntry(props.statsIndex?.find((e) => e.filename === value))}>
-          {props.statsIndex?.map((e) => <Option key={e.filename} value={e.filename}>{formatTimestamp(e.ts)}</Option>)}
+        <Select variant="plain" size='sm' value={statsEntry?.key} onChange={(ev, value) => setStatsEntry(props.statsEntries?.find((e) => e.key === value))}>
+          {props.statsEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTimestamp(e.tstamp)}</Option>)}
         </Select>      
       )
     }
@@ -181,7 +189,7 @@ export default function ConfigurationTab(props: ElementProps) {
       <tr key={idx}>        
         <td style={{padding: '2px 5px'}}>{formatTimestamp(run.attemptStartTime)}</td>
         <td style={{padding: '2px 5px', width: 'auto'}}>
-          <Link to={`/workflows/${run.name}/${run.runId}/${run.attemptId}/table`}>{getIcon(run.status, '0px', {display: 'block', margin: 'auto'})}</Link>
+          <Link to={`/workflows/${run.name}/${run.runId}.${run.attemptId}/table`}>{getIcon(run.status, '0px', {display: 'block', margin: 'auto'})}</Link>
         </td>
         <td style={{padding: '2px 5px'}}><Link to={`/workflows/${run.name}`}>{run.name}</Link></td>
       </tr>
