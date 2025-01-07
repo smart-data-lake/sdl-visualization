@@ -2,6 +2,7 @@ import { Auth } from "aws-amplify";
 import { fetchAPI } from "./fetchAPI";
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { TstampEntry } from "../types";
+import { compareFunc, dateFromNumber, sortIfArray } from "../util/helpers";
 
 export class fetchAPI_rest implements fetchAPI {
     url: string;
@@ -79,7 +80,7 @@ export class fetchAPI_rest implements fetchAPI {
     };
     
     getConfigVersions = async (tenant: string, repo: string, env: string): Promise<string[] | undefined> => {
-        return this.fetch(`${this.url}/versions?tenant=${tenant}&repo=${repo}&env=${env}`)
+        return this.fetch(`${this.url}/versions?tenant=${tenant}&repo=${repo}&env=${env}`).then(x => sortIfArray(x).reverse())
     }
 
     getDescription = async (
@@ -171,10 +172,10 @@ export class fetchAPI_rest implements fetchAPI {
 
     getTstampEntries = async (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> => {
         return this.fetch(`${this.url}/dataobject/${subtype}/${elementName}/tstamps?tenant=${tenant}&repo=${repo}&env=${env}`)
-        .then((parsedJson) =>
-            parsedJson.map(
+        .then((parsedJson: []) =>
+            parsedJson.toSorted().reverse().map(
                 (ts: number) =>
-                    ({ key: `${elementName}.${subtype}.${ts}`, elementName: elementName, tstamp: new Date(ts) } as TstampEntry)
+                    ({ key: `${elementName}.${subtype}.${ts}`, elementName: elementName, ts, tstamp: dateFromNumber(ts) } as TstampEntry)
             )
         )
         .catch((error) => {
@@ -185,7 +186,7 @@ export class fetchAPI_rest implements fetchAPI {
 
     getSchema = async (schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => {
         if (!schemaTstampEntry?.elementName || !schemaTstampEntry?.tstamp) return Promise.resolve(undefined);
-        return this.fetch(`${this.url}/dataobject/schema/${schemaTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${schemaTstampEntry.tstamp.getTime()}`)
+        return this.fetch(`${this.url}/dataobject/schema/${schemaTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${schemaTstampEntry.ts}`)
         .catch((error) => {
             console.log(error);
             return undefined;
@@ -194,7 +195,7 @@ export class fetchAPI_rest implements fetchAPI {
 
     getStats = async (statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => {
         if (!statsTstampEntry?.elementName || !statsTstampEntry?.tstamp) return Promise.resolve(undefined);
-        return this.fetch(`${this.url}/dataobject/stats/${statsTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${statsTstampEntry.tstamp.getTime()}`)
+        return this.fetch(`${this.url}/dataobject/stats/${statsTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${statsTstampEntry.ts}`)
         .then((parsedJson) => parsedJson.stats)
         .catch((error) => {
             console.log(error);
@@ -222,15 +223,15 @@ export class fetchAPI_rest implements fetchAPI {
     };
 
     getTenants = async () => {
-        return this.fetch(`${this.url}/tenants`);
+        return this.fetch(`${this.url}/tenants`).then(x => sortIfArray(x));
     }
 
     getRepos = async (tenant: string) => {
-        return this.fetch(`${this.url}/repo?tenant=${tenant}`)
+        return this.fetch(`${this.url}/repo?tenant=${tenant}`).then(x => sortIfArray(x))
     }
 
     getEnvs = async (tenant: string, repo: string) => {
-        return this.fetch(`${this.url}/envs?tenant=${tenant}&repo=${repo}`)
+        return this.fetch(`${this.url}/envs?tenant=${tenant}&repo=${repo}`).then(x => sortIfArray(x))
     }
     
     getLicenses = async (tenant: string): Promise<any[]> => {

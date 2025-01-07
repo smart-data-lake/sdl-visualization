@@ -68,10 +68,10 @@ export function onlyUnique(value, index, array) {
  * This can be used for sorting arrays.
  * usage: arr.sort(compareFunc("x"))
  */
-export function compareFunc(attr: any) {
+export function compareFunc(attr: any, reverse: boolean = false) {
   return (a, b) => {
     if (a[attr] === b[attr]) return 0;
-    else return a[attr] > b[attr] || a[attr] === undefined ? 1 : -1;
+    else return (a[attr] > b[attr] || a[attr] === undefined ? 1 : -1) * (reverse ? -1 : 1);
   }
 }
 
@@ -221,3 +221,13 @@ export function setAttributeFromPath ( entity, path, value) {
     }
   });
 };
+
+export function dateFromNumber( ts: number ) {
+  // convert number to date handling seconds or milliseconds format.
+  return new Date((ts<9000000000 ? ts*1000 : ts))
+}
+
+export function sortIfArray<TInput>(v: TInput) {
+  if (Array.isArray(v)) return (v as []).sort() as TInput;
+  else v;
+}
