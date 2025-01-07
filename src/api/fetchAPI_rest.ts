@@ -2,6 +2,7 @@ import { Auth } from "aws-amplify";
 import { fetchAPI } from "./fetchAPI";
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { TstampEntry } from "../types";
+import { compareFunc, dateFromNumber, sortIfArray } from "../util/helpers";
 
 export class fetchAPI_rest implements fetchAPI {
     url: string;
@@ -17,7 +18,8 @@ export class fetchAPI_rest implements fetchAPI {
     private async fetch(url: string, init: Promise<RequestInit> = this.getRequestInfo()) {
         const response = await fetch(url, await init);
         if (!response.ok) {
-            const msg = (await response.json())['message'] + ` (${response.status})`;
+            const json = await response.json()
+            const msg = (json['message'] || json['detail']) + ` (${response.status})`;
             throw new Error(msg);
         }
         return await response.json();
@@ -78,7 +80,7 @@ export class fetchAPI_rest implements fetchAPI {
     };
     
     getConfigVersions = async (tenant: string, repo: string, env: string): Promise<string[] | undefined> => {
-        return this.fetch(`${this.url}/versions?tenant=${tenant}&repo=${repo}&env=${env}`)
+        return this.fetch(`${this.url}/versions?tenant=${tenant}&repo=${repo}&env=${env}`).then(x => sortIfArray(x).reverse())
     }
 
     getDescription = async (
@@ -90,12 +92,9 @@ export class fetchAPI_rest implements fetchAPI {
         version: string | undefined,
     ) => {
         const filename = `${elementType}/${elementName}.md`;
-        const response = await this.getDescriptionFile(filename, tenant, repo, env, version);
-        const responseBody = await response.json();
-        if (!response.ok) {
-            throw new Error(responseBody["detail"]);
-        }
-        return await this.resolveDescriptionImageUrls(responseBody.content, tenant, repo, env, version);
+        const description = await this.getDescriptionFile(filename, tenant, repo, env, version);
+        if (description) return this.resolveDescriptionImageUrls((await description!.json()).content, tenant, repo, env, version);
+        else return Promise.resolve(undefined);
     };
 
     /**
@@ -130,12 +129,11 @@ export class fetchAPI_rest implements fetchAPI {
              // Last capture group: ")"
             const filename = match[2];
             const promise = this.getDescriptionFile(filename, tenant, repo, env, version).then((response) => {
-                if (!response.ok) {
-                    return response.json().then((error) => {
-                        throw new Error(error["detail"]);
-                    });
+                if (response!.ok) {
+                    return response!.blob().then((blob) => fileUrlMap.set(filename, URL.createObjectURL(blob)));
+                } else {
+                    return Promise.resolve(undefined);
                 }
-                return response.blob().then((blob) => fileUrlMap.set(filename, URL.createObjectURL(blob)));
             });
 
             promises.push(promise);
@@ -155,19 +153,29 @@ export class fetchAPI_rest implements fetchAPI {
         repo: string,
         env: string,
         version: string | undefined
-    ): Promise<any> => {
-        return this.fetch( 
+    ): Promise<Response | undefined> => {
+        const response = await fetch( 
             `${this.url}/descriptions/${filename}?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`, 
-            this.getRequestInfo("GET", { Accept: "image/*,*/*;q=0.8" })
+            await this.getRequestInfo("GET", { Accept: "image/*,*/*;q=0.8" })
         );
+        if (response.status == 404) {
+            console.log(`getDescriptionFile ${filename} not found.`);
+            return Promise.resolve(undefined);
+        }
+        if (!response.ok) {
+            const json = await response.json()
+            const msg = (json['message'] || json['detail']) + ` (${response.status})`;
+            throw new Error(msg);
+        }
+        return response;        
     };
 
     getTstampEntries = async (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> => {
         return this.fetch(`${this.url}/dataobject/${subtype}/${elementName}/tstamps?tenant=${tenant}&repo=${repo}&env=${env}`)
-        .then((parsedJson) =>
-            parsedJson.map(
+        .then((parsedJson: []) =>
+            parsedJson.toSorted().reverse().map(
                 (ts: number) =>
-                    ({ key: `${elementName}.${subtype}.${ts}`, elementName: elementName, tstamp: new Date(ts) } as TstampEntry)
+                    ({ key: `${elementName}.${subtype}.${ts}`, elementName: elementName, ts, tstamp: dateFromNumber(ts) } as TstampEntry)
             )
         )
         .catch((error) => {
@@ -178,7 +186,7 @@ export class fetchAPI_rest implements fetchAPI {
 
     getSchema = async (schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => {
         if (!schemaTstampEntry?.elementName || !schemaTstampEntry?.tstamp) return Promise.resolve(undefined);
-        return this.fetch(`${this.url}/dataobject/schema/${schemaTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${schemaTstampEntry.tstamp.getTime()}`)
+        return this.fetch(`${this.url}/dataobject/schema/${schemaTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${schemaTstampEntry.ts}`)
         .catch((error) => {
             console.log(error);
             return undefined;
@@ -187,7 +195,7 @@ export class fetchAPI_rest implements fetchAPI {
 
     getStats = async (statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => {
         if (!statsTstampEntry?.elementName || !statsTstampEntry?.tstamp) return Promise.resolve(undefined);
-        return this.fetch(`${this.url}/dataobject/stats/${statsTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${statsTstampEntry.tstamp.getTime()}`)
+        return this.fetch(`${this.url}/dataobject/stats/${statsTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${statsTstampEntry.ts}`)
         .then((parsedJson) => parsedJson.stats)
         .catch((error) => {
             console.log(error);
@@ -215,15 +223,15 @@ export class fetchAPI_rest implements fetchAPI {
     };
 
     getTenants = async () => {
-        return this.fetch(`${this.url}/tenants`);
+        return this.fetch(`${this.url}/tenants`).then(x => sortIfArray(x));
     }
 
     getRepos = async (tenant: string) => {
-        return this.fetch(`${this.url}/repo?tenant=${tenant}`)
+        return this.fetch(`${this.url}/repo?tenant=${tenant}`).then(x => sortIfArray(x))
     }
 
     getEnvs = async (tenant: string, repo: string) => {
-        return this.fetch(`${this.url}/envs?tenant=${tenant}&repo=${repo}`)
+        return this.fetch(`${this.url}/envs?tenant=${tenant}&repo=${repo}`).then(x => sortIfArray(x))
     }
     
     getLicenses = async (tenant: string): Promise<any[]> => {

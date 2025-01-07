@@ -204,6 +204,7 @@ export class Row implements MetaDataBaseObject {
   export interface TstampEntry {
     key: string;
     elementName: string;
+    ts: number;
     tstamp: Date;
   }
 

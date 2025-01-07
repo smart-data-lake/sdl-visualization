@@ -78,6 +78,8 @@ export default function ElementDetails(props: {
 		elementType: elementType as string
 	}));
 
+	const hasSchema = schemaEntries && schemaEntries.length > 0
+
 	return (
 		<>
 			<Sheet sx={{ flex: 1, minWidth: '500px', height: '100%', display: 'flex', flexDirection: 'column', p: '1rem 0rem 1rem 0.5rem' }}>
@@ -90,9 +92,9 @@ export default function ElementDetails(props: {
 									<Tab value="description" disabled={!description}>Description</Tab>
 								</span>
 							</Tooltip>
-							<Tooltip arrow variant="soft" title={(schemaEntriesLoading ? "Loading" : (!schemaEntries ? getMissingSchemaFileCmp(elementType!, elementName!) : null))} enterDelay={500} enterNextDelay={500} placement='bottom-start'>
+							<Tooltip arrow variant="soft" title={(schemaEntriesLoading ? "Loading" : (!hasSchema ? getMissingSchemaFileCmp(elementType!, elementName!) : null))} enterDelay={500} enterNextDelay={500} placement='bottom-start'>
 								<span>
-									{elementType === "dataObjects" && <Tab value="schema" disabled={!schemaEntries}>Schema</Tab>}
+									{elementType === "dataObjects" && <Tab value="schema" disabled={!hasSchema}>Schema</Tab>}
 								</span>
 							</Tooltip>
 						</TabList>
