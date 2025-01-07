@@ -17,7 +17,8 @@ export class fetchAPI_rest implements fetchAPI {
     private async fetch(url: string, init: Promise<RequestInit> = this.getRequestInfo()) {
         const response = await fetch(url, await init);
         if (!response.ok) {
-            const msg = (await response.json())['message'] + ` (${response.status})`;
+            const json = await response.json()
+            const msg = (json['message'] || json['detail']) + ` (${response.status})`;
             throw new Error(msg);
         }
         return await response.json();
@@ -90,12 +91,9 @@ export class fetchAPI_rest implements fetchAPI {
         version: string | undefined,
     ) => {
         const filename = `${elementType}/${elementName}.md`;
-        const response = await this.getDescriptionFile(filename, tenant, repo, env, version);
-        const responseBody = await response.json();
-        if (!response.ok) {
-            throw new Error(responseBody["detail"]);
-        }
-        return await this.resolveDescriptionImageUrls(responseBody.content, tenant, repo, env, version);
+        const description = await this.getDescriptionFile(filename, tenant, repo, env, version);
+        if (description) return this.resolveDescriptionImageUrls((await description!.json()).content, tenant, repo, env, version);
+        else return Promise.resolve(undefined);
     };
 
     /**
@@ -130,12 +128,11 @@ export class fetchAPI_rest implements fetchAPI {
              // Last capture group: ")"
             const filename = match[2];
             const promise = this.getDescriptionFile(filename, tenant, repo, env, version).then((response) => {
-                if (!response.ok) {
-                    return response.json().then((error) => {
-                        throw new Error(error["detail"]);
-                    });
+                if (response!.ok) {
+                    return response!.blob().then((blob) => fileUrlMap.set(filename, URL.createObjectURL(blob)));
+                } else {
+                    return Promise.resolve(undefined);
                 }
-                return response.blob().then((blob) => fileUrlMap.set(filename, URL.createObjectURL(blob)));
             });
 
             promises.push(promise);
@@ -155,11 +152,21 @@ export class fetchAPI_rest implements fetchAPI {
         repo: string,
         env: string,
         version: string | undefined
-    ): Promise<any> => {
-        return this.fetch( 
+    ): Promise<Response | undefined> => {
+        const response = await fetch( 
             `${this.url}/descriptions/${filename}?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`, 
-            this.getRequestInfo("GET", { Accept: "image/*,*/*;q=0.8" })
+            await this.getRequestInfo("GET", { Accept: "image/*,*/*;q=0.8" })
         );
+        if (response.status == 404) {
+            console.log(`getDescriptionFile ${filename} not found.`);
+            return Promise.resolve(undefined);
+        }
+        if (!response.ok) {
+            const json = await response.json()
+            const msg = (json['message'] || json['detail']) + ` (${response.status})`;
+            throw new Error(msg);
+        }
+        return response;        
     };
 
     getTstampEntries = async (type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> => {
