@@ -20,15 +20,10 @@ type LineElementProps = {
   };
   grayed?: boolean;
   isLastAttempt: boolean;
-  duration: number | null;
   dragging: boolean;
   displayPhases: string[];
   startTimeOfFirstAttempt?: number;
   paramsString?: string;
-  init_duration?: number;
-  init_ts_epoch?: number;
-  prepare_duration?: number;
-  prepare_ts_epoch?: number;
 };
 
 export type LabelPosition = 'left' | 'right' | 'none';
@@ -42,15 +37,8 @@ const LineElement: React.FC<LineElementProps> = ({
 	timeline,
 	grayed,
 	isLastAttempt,
-	duration,
 	dragging,
 	displayPhases,
-	init_duration,
-	init_ts_epoch,
-	prepare_duration,
-	prepare_ts_epoch,
-  
-  //paramsString,
 }) => {
 	const status = getRowStatus(row);
 	// Extend visible area little bit to prevent lines seem like going out of bounds. Happens
@@ -58,23 +46,12 @@ const LineElement: React.FC<LineElementProps> = ({
 	const extendAmount = (timeline.visibleEndTime - timeline.visibleStartTime) * 0.01;
 	const visibleDuration = timeline.visibleEndTime - timeline.visibleStartTime + extendAmount;
 	
-	
-	const _boxStartTime = (phase: string) => {
-		switch (phase) {
-			case 'init':
-				return init_ts_epoch;
-			case 'prepare':
-				return prepare_ts_epoch;
-			}
-		return row.data.ts_epoch;
-	}
-
 	// Legacy mechanism that used to handle pending tasks
 	/* if (!boxStartTime || status === 'pending') {
 		return null;
 	} */
 
-	// Calculate have much box needs to be pushed from (or to) left
+	// Calculate how much box needs to be pushed from (or to) left
 	const valueFromLeft = (boxStartTime: number | undefined) => {
 		if (!boxStartTime) return undefined;
 		return (boxStartTime - timeline.visibleStartTime) / visibleDuration * 100;
@@ -125,18 +102,18 @@ const LineElement: React.FC<LineElementProps> = ({
   }
 
 
-  const valueFromLeftExec = valueFromLeft(_boxStartTime('exec'));
-  const widthExec = width(duration, valueFromLeftExec);
+  const valueFromLeftExec = valueFromLeft(row.data.startTstmp);
+  const widthExec = width(row.data.getDuration(), valueFromLeftExec);
   const labelPositionExec = getLengthLabelPosition(valueFromLeftExec, widthExec);
-  const displayExec = displayPhases.includes('Exec');
+  const displayExec = row.data.startTstmp && displayPhases.includes('Exec');
 
-  const valueFromLeftInit = valueFromLeft(_boxStartTime('init'));
-  const widthInit = width(init_duration, valueFromLeftInit);
-  const displayInit = init_duration && displayPhases.includes('Init');
+  const valueFromLeftInit = valueFromLeft(row.data.startTstmpInit);
+  const widthInit = width(row.data.getDurationInit(), valueFromLeftInit);
+  const displayInit = row.data.startTstmpInit && displayPhases.includes('Init');
 
-  const valueFromLeftPrepare = valueFromLeft(_boxStartTime('prepare'));
-  const widthPrepare = width(prepare_duration, valueFromLeftPrepare);
-  const displayPrepare = prepare_duration && displayPhases.includes('Prepare');
+  const valueFromLeftPrepare = valueFromLeft(row.data.startTstmpPrepare);
+  const widthPrepare = width(row.data.getDurationPrepare(), valueFromLeftPrepare);
+  const displayPrepare = row.data.startTstmpPrepare && displayPhases.includes('Prepare');
 
   return (
     <>
@@ -146,7 +123,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			row, 
 			dragging, 
 			labelPositionExec,
-			duration, 
+			row.data.getDuration(), 
 			grayed, 
 			status, 
 			isLastAttempt
@@ -157,7 +134,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			row, 
 			dragging, 
 			'none', 
-			init_duration, 
+			row.data.getDurationInit(), 
 			grayed, 
 			'INITIALIZED', 
 			isLastAttempt
@@ -168,7 +145,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			row, 
 			dragging, 
 			'none', 
-			prepare_duration, 
+			row.data.getDurationPrepare(), 
 			grayed, 
 			'PREPARED', 
 			isLastAttempt

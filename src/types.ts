@@ -43,6 +43,7 @@ export class Row implements MetaDataBaseObject {
     tags?: string[] | undefined;
     task_name?: string;
     foreach_label?: string;
+    startTstmp?: number;
     endTstmp?: number;
     startTstmpPrepare? : number;
     endTstmpPrepare?: number;
@@ -56,19 +57,20 @@ export class Row implements MetaDataBaseObject {
       this.run_number = action.executionId.runId;
       this.attempt_id = action.executionId.attemptId;
       this.task_id = 1;
-      this.ts_epoch = new Date(action.startTstmp).getTime();
       this.status = action.state as TaskStatus;
-      this.started_at = this.ts_epoch;
-      this.duration = durationMillis(action.duration === 'PT0S' ? 'PT0.001S' : action.duration);
-      this.finished_at = this.started_at + (this.duration === 0 ? 1 : this.duration);
       this.user_name = '';
       this.system_tags = [];
       this.message = action.msg;
+      this.startTstmp = action.startTstmp ? new Date(action.startTstmp).getTime() : undefined;
       this.endTstmp = action.endTstmp ? new Date(action.endTstmp).getTime() : undefined;
       this.startTstmpPrepare = action.startTstmpPrepare ? new Date(action.startTstmpPrepare).getTime() : undefined;
       this.endTstmpPrepare = action.endTstmpPrepare ? new Date(action.endTstmpPrepare).getTime() : undefined;
       this.startTstmpInit = action.startTstmpInit ? new Date(action.startTstmpInit).getTime() : undefined;
       this.endTstmpInit = action.endTstmpInit ? new Date(action.endTstmpInit).getTime() : undefined;
+      this.ts_epoch = (this.startTstmpPrepare || this.startTstmpInit || this.startTstmp)!;
+      this.started_at = this.ts_epoch;
+      this.finished_at = (this.startTstmp ? this.endTstmp : this.startTstmpInit ? this.endTstmpInit : this.endTstmpPrepare) || Date.now();
+      this.duration = durationMillis(action.duration === 'PT0S' ? 'PT0.001S' : action.duration);
       this.details = action;
     }
 
@@ -80,16 +82,25 @@ export class Row implements MetaDataBaseObject {
     }
 
     /**
-     * Return task duration with hadnling for running state. If task is in running state, we want to compare its start time to
+     * Return task duration with handling for running state. If task is in running state, we want to compare its start time to
      * current time. Note that we are not camparing current time to ts_epoch field, which is just time for task object, not actual task time itself.
      */
-    getTaskDuration(): number | null {
-      return this.status === 'RUNNING' && this.started_at
-        ? Date.now() - this.started_at
-        : this.duration
-        ? this.duration
-        : null;
+    getDuration(): number | null {
+      return this.startTstmp ? ((this.endTstmp || Date.now()) - this.startTstmp) : this.duration;
     }
+
+    getDurationInit(): number | null {
+      return this.startTstmpInit ? ((this.endTstmpInit || Date.now()) - this.startTstmpInit) : null;
+    }
+
+    getDurationPrepare(): number | null {
+      return this.startTstmpPrepare ? ((this.endTstmpPrepare || Date.now()) - this.startTstmpPrepare) : null;
+    }
+
+    getTaskEnd(): number | null {
+      if (this.status === 'RUNNING' && this.started_at) return Date.now();      
+      return this.finished_at || this.endTstmpInit || this.endTstmpPrepare || null;
+    }    
   }
   
   

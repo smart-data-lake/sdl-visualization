@@ -47,19 +47,14 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
 				<TaskListLabel item={item} displayPhases={displayPhases} link={link}/>
 				<RowElement item={item} paramsString={paramsString} onOpen={onOpen} link={link}>
 						<LineElement
-							key={item.finished_at}
+							key={`${item.flow_id}.${item.run_number}.${item.attempt_id}.${item.step_name}`}
 							timeline={lineElementMetrics}
 							row={{ type: 'task', data: item }}
 							isLastAttempt={true}
-							duration={item.getTaskDuration()}
 							startTimeOfFirstAttempt={timeline.sortBy === 'duration' ? item.started_at || 0 : undefined}
 							dragging={dragging}
 							displayPhases={displayPhases}
 							paramsString={paramsString}
-							init_ts_epoch={item.startTstmpInit}
-							init_duration={item.startTstmpInit && item.endTstmpInit ? item.endTstmpInit - item.startTstmpInit : undefined}
-							prepare_ts_epoch={item.startTstmpPrepare}
-							prepare_duration={item.startTstmpPrepare && item.endTstmpPrepare ? item.endTstmpPrepare - item.startTstmpPrepare : undefined}
 						/>
 				</RowElement>
 			</Element>

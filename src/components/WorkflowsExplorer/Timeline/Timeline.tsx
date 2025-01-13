@@ -72,7 +72,6 @@ const Timeline: React.FC<TimelineProps> = ({
     [dragging, paramsString, rows, searchStatus, timeline, displayPhases],
   );
 
-
   const autosizerContents = useCallback(
     ({height, width}) => (
       <>
@@ -95,35 +94,17 @@ const Timeline: React.FC<TimelineProps> = ({
             {...(footerType === 'minimap'
               ? {
                   type: 'minimap',
-                  props: {
-                    timeline,
-                    rows,
-                    onMove: onMove,
-                    onHandleMove: onHandleMove,
-                    onDraggingStateChange: setDragging,
-                  },
+                  props: { timeline, rows, onMove: onMove, onHandleMove: onHandleMove, onDraggingStateChange: setDragging },
                 }
               : {
                   type: 'minimal',
-                  props: {
-                    startTime: timeline.startTime,
-                    visibleStartTime: timeline.visibleStartTime,
-                    visibleEndtime: timeline.visibleEndTime,
-                  },
+                  props: { startTime: timeline.startTime, visibleStartTime: timeline.visibleStartTime, visibleEndtime: timeline.visibleEndTime },
                 })}
           />
         </div>
       </>
     ),
-    [
-      dragging,
-      footerType,
-      onHandleMove,
-      onMove,
-      rowRenderer,
-      rows,
-      timeline,
-    ],
+    [ dragging, footerType, onHandleMove, onMove, rowRenderer, rows, timeline ],
   );
 
   return (
@@ -151,14 +132,7 @@ function getUniqueKey(index: number, row: Row) {
    return key + row.task_id;
 }
 
-function createRowRenderer({
-  rows,
-  timeline,
-  searchStatus,
-  paramsString = '',
-  dragging,
-  displayPhases,
-}: RowRendererProps) {
+function createRowRenderer({ rows, timeline, searchStatus, paramsString = '', dragging, displayPhases }: RowRendererProps) {
   return ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const row = rows[index];
     return (
