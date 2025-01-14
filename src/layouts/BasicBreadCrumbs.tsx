@@ -1,5 +1,4 @@
-import { Breadcrumbs, Typography, Link } from "@mui/joy";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Breadcrumbs, Typography, Link, Box } from "@mui/joy";
 import { capitalize } from "../util/helpers";
 import { useWorkspace } from "../hooks/useWorkspace";
 
@@ -11,24 +10,25 @@ import { useWorkspace } from "../hooks/useWorkspace";
 const BasicBreadcrumbs = () => {
     const {contentSubPath} = useWorkspace();
     const links = (contentSubPath || "").split('/');
-    const navigate = useNavigate();
+    const {navigateRel} = useWorkspace();
 
     function getItem(str: string, doCapitalize: boolean, key: any) {
-      return <Typography key={key} fontSize="inherit">{(doCapitalize ? capitalize(str) : str)}</Typography>
+      return <Typography key={key} fontSize="inherit" noWrap={true} sx={{color: "white"}}>{(doCapitalize ? capitalize(str) : str)}</Typography>
     }
 
-    function navigateRelative(idx: number) {
+    function navigateUp(idx: number) {
       const cntToRemove = links.length - idx - 1;
-      navigate("../".repeat(cntToRemove), {relative: "path"});
+      navigateRel("../".repeat(cntToRemove));
     }
 
     return (
-        <Breadcrumbs aria-label="breadcrumbs" sx={{color: 'white', padding: 0}}>
-            {links.map((item, idx) => 
+
+      <Box sx={{display: "flex", alignContent: "flex-end", flexDirection: "row", gap: 1, flexGrow: 1, overflowX: "hidden"}}>
+          {links.map((item, idx) => 
                 // create link for elements except the last
-                (idx < links.length -1 ? <Link onClick={() => navigateRelative(idx)} key={item} sx={{color: 'white'}}>{getItem(item, idx == 0, idx)}</Link> : getItem(item, idx == 0, idx))
-            )}
-        </Breadcrumbs>
+                (idx < links.length -1 ? <><Link onClick={() => navigateUp(idx)} key={item} sx={{color: 'white'}}>{getItem(item, idx == 0, idx)}</Link> /</> : getItem(item, idx == 0, idx))
+          )}
+      </Box>            
     );
 }
 

@@ -23,7 +23,7 @@ function WorkspaceSelector({selectedItem, data, setData, isLoading, tooltipText}
               <MenuButton slots={{ root: Box }}>
                 <Tooltip arrow disableInteractive variant="soft" placement="left" title={tooltipText}
                         enterDelay={!selectedItem ? 100 : 1000} sx={{ zIndex: 10000 }}>
-                  <Typography sx={{color: "white", cursor: "pointer"}}>{selectedItem ?? "None"}</Typography>
+                  <Typography sx={{color: "white", cursor: "pointer"}} noWrap={true}>{selectedItem ?? "None"}</Typography>
                 </Tooltip>
               </MenuButton>
               {data.length > 0 && (
