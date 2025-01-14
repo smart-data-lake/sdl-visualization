@@ -15,6 +15,7 @@ import { createFeedChip } from "../ConfigExplorer/ConfigurationTab";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
 import HistoryBarChart from "./HistoryChart/HistoryBarChart";
 import ToolBar from "./ToolBar/ToolBar";
+import { useQueryClient } from "react-query";
 
 
 export type FilterParams = {
@@ -50,6 +51,7 @@ export default function WorkflowHistory() {
 	const { data, isLoading, isFetching, refetch } = useFetchWorkflowRuns(flowId!, !userContext || userContext.authenticated);
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'startsWith', searchColumn: 'runId', additionalFilters: []})
 	const {navigateRel} = useWorkspace();
+	const queryClient = useQueryClient();
 		
     const selData = useMemo(() => {
         if (data && data.length>0) {
@@ -80,6 +82,7 @@ export default function WorkflowHistory() {
 	function refreshData() {
 		fetcher().clearCache();
 		refetch();
+		queryClient.invalidateQueries(["workflows"]);
 	}
 
 	if (isLoading || isFetching) {

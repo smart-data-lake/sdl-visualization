@@ -8,6 +8,7 @@ import { compareMultiFunc } from "../../../util/helpers";
 import Attempt, { updateStateFile } from "../../../util/WorkflowsExplorer/Attempt";
 import CenteredCircularProgress from "../../Common/CenteredCircularProgress";
 import TabNav from "./Tabs";
+import { useQueryClient } from "react-query";
 
 /**
     The Run component displays information about a specific run of a workflow.
@@ -23,11 +24,18 @@ const Run = () => {
     const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, runId!, attemptNb!, !userContext || userContext.authenticated);
 	const { data: runs } = useFetchWorkflowRuns(flowId!, !userContext || userContext.authenticated);
 	const {navigateContent} = useWorkspace();
+    const queryClient = useQueryClient();
 
     if (isLoading || isFetching) return <CenteredCircularProgress/>
     
     const attempt = (data ? new Attempt(updateStateFile(data)) : undefined);
     
+	function refreshData() {
+		refetch();
+		queryClient.invalidateQueries(["workflow", flowId]);        
+		queryClient.invalidateQueries(["workflows"]);
+	}
+
     var prevNavigate: any = undefined;
     var nextNavigate: any = undefined;
     if (Array.isArray(runs)) {
@@ -39,7 +47,7 @@ const Run = () => {
     }
 
     return (<>
-        <PageHeader title= {(attempt? flowId + ': ' : '') + 'run ' + runId + ' attempt ' + attemptNb} enablePrevNext={true} prevNavigate={prevNavigate} nextNavigate={nextNavigate} refresh={refetch} />
+        <PageHeader title= {(attempt? flowId + ': ' : '') + 'run ' + runId + ' attempt ' + attemptNb} enablePrevNext={true} prevNavigate={prevNavigate} nextNavigate={nextNavigate} refresh={refreshData} />
         {attempt ? <TabNav attempt={attempt}/> : <NotFound errorType={500} errorMessage={'run ' + runId + ' attempt ' + attemptNb + " not found!"}/>}
     </>);
 }
