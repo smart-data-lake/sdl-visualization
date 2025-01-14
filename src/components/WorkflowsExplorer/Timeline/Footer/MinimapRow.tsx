@@ -22,7 +22,7 @@ const MinimapRow: React.FC<MinimapRowProps> = ({ started, finished, status, time
   const extendAmount = (timeline.endTime - timeline.startTime) * 0.01;
   const visibleDuration = timeline.endTime - timeline.startTime + extendAmount;
   const width = ((finished - started) / visibleDuration) * 100;
-  const left = timeline.sortBy === 'duration' ? 0 : ((started - timeline.startTime) / visibleDuration) * 100;
+  const left = ((started - timeline.startTime) / visibleDuration) * 100;
 
   return (
     <MinimapLine

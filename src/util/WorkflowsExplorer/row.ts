@@ -27,21 +27,21 @@ const sortSmallest = (a: Row, b: Row) => {
 /**
  * Find smallest and biggest time value from rows
  */
-export const startAndEndpointsOfRows = (rows: Row[]): { start: number; end: number } => {
-  const start = [...rows]
-    // Filter out those tasks that doesn't have started_at. Those cannot provide as correct data
-    .filter((item) => (!!(item && item.started_at)))
-    .sort(sortSmallest)[0];
-  const end = [...rows]
-    // Filter out those tasks that doesn't have finished_at. Those cannot provide as correct data
-    .filter((item) =>
-      !!(item.finished_at),
-    )
-    .sort((a, b) => takeBiggest(b) - takeBiggest(a))[0];
-
+export const startAndEndExecPointsOfRows = (rows: Row[]): { start: number; end: number } => {
+  const start = Math.min(...(rows.map(row => row.startTstmp!).filter(x => x)));
+  const end =  Math.max(...(rows.map(row => row.endTstmp!).filter(x => x)));
   return {
-    start: start ? takeSmallest(start) || 0 : 0,
-    end: end ? takeBiggest(end) : 0,
+    start: (isFinite(start) ? start : 0),
+    end: (isFinite(end) ? end : 0),
+  };
+};
+
+export const startAndEndOverallPointsOfRows = (rows: Row[]): { start: number; end: number } => {
+  const start = Math.min(...(rows.map(row => row.startTstmpPrepare || row.startTstmpInit || row.startTstmp!).filter(x => x)));
+  const end =  Math.max(...(rows.map(row => row.endTstmp || row.startTstmp || row.endTstmpInit || row.startTstmpInit || row.endTstmpPrepare || row.startTstmpPrepare!).filter(x => x)));
+  return {
+    start: (isFinite(start) ? start : 0),
+    end: (isFinite(end) ? end : 0),
   };
 };
 
@@ -80,8 +80,6 @@ export const getCurrentStepName = (rows: Row[]): string =>
 export const sortRows = (rows: any, sortType: SortType) => {
 	if(sortType === 'start time asc') return rows.sort(startTimeAsc)
 	if(sortType === 'start time desc') return rows.sort(startTimeDesc)
-	if(sortType === 'duration asc') return rows.sort(durationAsc)
-	if(sortType === 'duration desc') return rows.sort(durationDesc)
 	return rows;
 }
 

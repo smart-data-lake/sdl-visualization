@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import styled, { css } from 'styled-components';
 import { AsyncStatus, Row } from '../../../../types';
 import TaskListLabel from '../TaskListLabel';
@@ -27,43 +27,39 @@ type TimelineRowProps = {
 const TimelineRow: React.FC<TimelineRowProps> = ({
 	item,
 	timeline,
-	onOpen,
 	paramsString,
 	sticky,
 	dragging,
 	displayPhases,
 }) => {
-	if (!item || !item) return null;
+	if (!item) return null;
 	const Element = sticky ? StickyStyledRow : StyledRow;
-
-	const { groupingEnabled, ...lineElementMetrics } = timeline;
-
-    const {stepName} = useParams();
-	const link = stepName ? `../${item.step_name}` : item.step_name;
+    const {tab, stepName} = useParams();
+	const link = tab ? (stepName ? `../${item.step_name}` : item.step_name) : `timeline/${item.step_name}`;
 
 	return (
 		<>
 			<Element>
 				<TaskListLabel item={item} displayPhases={displayPhases} link={link}/>
-				<RowElement item={item} paramsString={paramsString} onOpen={onOpen} link={link}>
-						<LineElement
-							key={`${item.flow_id}.${item.run_number}.${item.attempt_id}.${item.step_name}`}
-							timeline={lineElementMetrics}
-							row={{ type: 'task', data: item }}
-							isLastAttempt={true}
-							startTimeOfFirstAttempt={timeline.sortBy === 'duration' ? item.started_at || 0 : undefined}
-							dragging={dragging}
-							displayPhases={displayPhases}
-							paramsString={paramsString}
-						/>
+				<RowElement link={link}>
+					<LineElement
+						key={`${item.flow_id}.${item.run_number}.${item.attempt_id}.${item.step_name}`}
+						timeline={timeline}
+						row={item}
+						isLastAttempt={true}
+						startTimeOfFirstAttempt={item.started_at || 0}
+						dragging={dragging}
+						displayPhases={displayPhases}
+						paramsString={paramsString}
+					/>
 				</RowElement>
 			</Element>
 		</>
 	);
 };
 
-const RowElement = (props: React.PropsWithChildren<{ item: Row; onOpen: () => void; paramsString?: string, link?: string }>) => {
-	const { item, link } = props;  
+const RowElement = (props: React.PropsWithChildren<{ link?: string }>) => {
+	const { link } = props;  
 	return (
 			<RowGraphLinkContainer to={link!} relative='path' data-testid="timeline-row-graphic-container">
 				{props.children}

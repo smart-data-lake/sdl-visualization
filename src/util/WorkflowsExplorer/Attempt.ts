@@ -1,5 +1,6 @@
 import { ActionsState, Row, StateFile, Run as TimelineRun } from "../../types";
 import { compareFunc } from "../helpers";
+import { Filter } from "./StatusInfo";
 
 /**
  * Update old state files to current format
@@ -43,7 +44,6 @@ export default class Attempt {
     attemptId: number;
     details: StateFile; // Contains all general information
     timelineRows: Row[];
-    timelineRun: TimelineRun;
     
     constructor(stateFile: StateFile) {  
         if (stateFile) {
@@ -52,7 +52,6 @@ export default class Attempt {
             this.attemptId = stateFile.attemptId;
             this.details = stateFile;  
             this.timelineRows = this.getTimelineRows(stateFile.actionsState).sort(compareFunc('started_at'));
-            this.timelineRun =  this.getTimelineRun();
         } else {
             throw new Error("Error: no statefile found");
         }
@@ -74,17 +73,17 @@ export default class Attempt {
         return rows;
     }
 
-    getTimelineRun() {
-        const run : TimelineRun = {
+    getTimelineRun(filters: Filter[]): TimelineRun {
+        const activeTimelineRows = (filters.length>0 ? this.timelineRows.filter(row => filters.some(f => f.predicate(row))) : this.timelineRows);
+        return {
             flow_id: this.details.appConfig.applicationName,
             run_number: this.details.runId,
             status: 'completed',
             user: 'undefined',
             user_name: 'undefined',
-            ts_epoch: new Date(this.details.runStartTime).getTime() - 10, // start 10ms earlier
-            finished_at: Math.max(...(this.timelineRows.flatMap(row => row.finished_at!).filter(x=>x))),
+            ts_epoch:  Math.min(...(activeTimelineRows.flatMap(row => row.started_at!).filter(x=>x))) - 10, // start 10ms earlier
+            finished_at: Math.max(...(activeTimelineRows.flatMap(row => row.finished_at!).filter(x=>x))),
             system_tags: [],
         }
-        return run;
     }  
 }

@@ -5,7 +5,6 @@ import { AsyncStatus, Row } from '../../../types';
 import { toRelativeSize } from '../../../util/WorkflowsExplorer/style';
 import TimelineFooter from './Footer';
 import TimelineRow from './TimelineRow';
-import { TasksSortBy } from './useTaskListSettings';
 
 const listStyle = { transition: 'height 0.25s' };
 
@@ -29,7 +28,6 @@ export type TimelineMetrics = {
   endTime: number;
   visibleEndTime: number;
   visibleStartTime: number;
-  sortBy: TasksSortBy;
   groupingEnabled: boolean;
 };
 
@@ -104,7 +102,7 @@ const Timeline: React.FC<TimelineProps> = ({
         </div>
       </>
     ),
-    [ dragging, footerType, onHandleMove, onMove, rowRenderer, rows, timeline ],
+    [ dragging, footerType, onHandleMove, onMove, rowRenderer, rows, timeline, displayPhases ],
   );
 
   return (

@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import styled, { css } from 'styled-components';
 import { Row } from '../../../types';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
-import { getPath } from '../../../util/WorkflowsExplorer/routing';
 import { colorByStatus } from '../../../util/WorkflowsExplorer/style';
 
 //

@@ -13,7 +13,7 @@ import GlobalStyle from "../../../GlobalStyle";
 import theme from "../../../theme";
 import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
-import { checkFiltersAvailability, stateFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
+import { checkFiltersAvailability, Filter, stateFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import LineageTab from '../../ConfigExplorer/LineageTab/LineageTab';
 import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
 import ToolBar from "../ToolBar/ToolBar";
@@ -26,7 +26,8 @@ import { PartialDataObjectsAndActions } from "../../../util/ConfigExplorer/Graph
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
 import { createActionsChip } from '../../ConfigExplorer/ConfigurationTab';
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../../ConfigExplorer/DataTable';
-import { FilterParams, filterSearchText } from '../WorkflowHistory';
+import { filterByGroup, FilterParams, filterSearchText } from '../WorkflowHistory';
+import { onlyUnique } from '../../../util/helpers';
 
 /**
  * This is a TypeScript function that returns a set of three React components which are rendered inside a parent component. 
@@ -43,7 +44,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
     const data = attempt.timelineRows;
     var {tab, stepName} = useParams();
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'step_name', additionalFilters: []})
-    const [timelinePhases, setTimelinePhases] = useState(['Exec', 'Init', 'Prepare']);
+    const [timelinePhases, setTimelinePhases] = useState(['Exec']);
 	const {navigateRel} = useWorkspace();
     tab = tab || 'timeline';
 
@@ -54,13 +55,20 @@ const TabsPanels = (props: { attempt: Attempt }) => {
 				selected = selected.filter((row) => filterSearchText(filterParams, row));
 			}
 			if (filterParams.additionalFilters.length > 0) {
-				selected = selected.filter(row => filterParams.additionalFilters.some(filter => filter.predicate(row)));
+				selected = filterByGroup(filterParams.additionalFilters, selected);
 			}
 			return selected;
 		} else {
 			return [];
 		}
     }, [data, filterParams])
+
+    const attemptFilterDefs = data.map(r => r.attempt_id).filter(onlyUnique)
+    .map(id => new Filter('attempt', id.toString(), row => row['attempt_id'] === id))
+    const timelineRun = useMemo(() => {
+        const attemptActiveFilters = filterParams.additionalFilters.filter(f => f.group === 'attempt');
+        return attempt.getTimelineRun(attemptActiveFilters);    
+    }, [data, filterParams]);
 
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {
 		setFilterParams({...filterParams, ...partialFilter})
@@ -110,6 +118,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
                     filterParams={filterParams}
                     updateFilterParams={updateFilterParams}
                     stateFilters={checkFiltersAvailability(data, stateFilters('status'))}
+                    attemptFilters={attemptFilterDefs}
                     searchPlaceholder="Search by action name"
                     setPhases={tab == 'timeline' && attempt.details.runStateFormatVersion && attempt.details.runStateFormatVersion > 1 ? setTimelinePhases : undefined}
                 />
@@ -127,7 +136,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
                                 <Sheet
                                     sx={{ flex: '1', width: '99%', position: 'absolute', top: 0, left: 0, backgroundColor: stepName ? 'primary.main' : 'none', opacity: stepName ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
                                     <Sheet sx={{ gap: '0.5rem', height: '69vh', display: 'flex', }} >
-                                        <VirtualizedTimeline run={attempt.timelineRun} rows={selData} displayPhases={timelinePhases} />
+                                        <VirtualizedTimeline run={timelineRun} rows={selData} displayPhases={timelinePhases} />
                                     </Sheet>
                                 </Sheet>
                             </ThemeProvider>

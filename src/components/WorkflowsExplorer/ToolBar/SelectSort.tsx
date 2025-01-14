@@ -40,22 +40,6 @@ const SelectSort = (props: {updateSort: (sort: SortType) => void}) => {
 					Start time
 				</Typography>
 			</Option>
-	  	  	<Option value="duration asc">
-				<ListItemDecorator>
-					<ArrowUpwardIcon/>
-				</ListItemDecorator>
-				<Typography sx={{ml: '0.5rem'}}>
-					Duration
-				</Typography>
-			</Option>
-	  	  	<Option value="duration desc">
-				<ListItemDecorator>
-					<ArrowDownwardIcon/>
-				</ListItemDecorator>
-				<Typography sx={{ml: '0.5rem'}}>
-					Duration
-				</Typography>
-			</Option>
   	  	</Select>
   	);
 }

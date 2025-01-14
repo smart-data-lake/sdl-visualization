@@ -1,6 +1,6 @@
 import React, { createRef, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { getLongestRowDuration, getTaskLineStatus, startAndEndpointsOfRows } from '../../../../util/WorkflowsExplorer/row';
+import { getLongestRowDuration, getTaskLineStatus, startAndEndExecPointsOfRows } from '../../../../util/WorkflowsExplorer/row';
 import { Row, TaskStatus } from "../../../../types";
 import MinimapRow from './MinimapRow';
 import MinimapActiveSection from './MinimapActiveSection';
@@ -83,29 +83,16 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
       // 13 groups since we cannot fit more.
       const perGroup = Math.ceil(rows.length / 13);
       const grps : Row[][] = [];
-      // Cut all rows to 13 groups
-      for (let i = 0; i < 13; i++) {
+      // Cut all rows to max 13 groups
+      for (let i = 0; i < Math.min(rows.length, 13); i++) {
         grps.push(rows.slice(perGroup * i, perGroup * i + perGroup));
       }
       // Calculate start and end points for each group
       const linegroups = grps.map((grp) => {
         const status = getTaskLineStatus(grp);
-
-        if (timeline.sortBy !== 'duration') {
-          const { start, end } = startAndEndpointsOfRows(grp);
-          return { status, start, end: status === 'RUNNING' ? timeline.endTime : end };
-        } else {
-          const timings = startAndEndpointsOfRows(grp);
-          const longest = getLongestRowDuration(grp);
-
-          return {
-            start: status === 'RUNNING' ? timeline.startTime : timings.start,
-            end: status === 'RUNNING' ? timeline.endTime : timings.start + longest,
-            status,
-          };
-        }
-      });
-
+        const { start, end } = startAndEndExecPointsOfRows(grp);
+        return { status, start, end };
+      })
       setLines(linegroups.filter((r) => r.start !== 0 && r.end !== 0));
     }
   , [rows, timeline.groupingEnabled, timeline.sortBy, timeline.startTime, timeline.endTime]);

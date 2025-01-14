@@ -76,7 +76,6 @@ const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
               endTime: timelineControls.max,
               visibleStartTime: timelineControls.timelineStart,
               visibleEndTime: timelineControls.timelineEnd,
-              sortBy: "startTime",
               groupingEnabled: false
             }}
             onHandleMove={footerHandleUpdate}

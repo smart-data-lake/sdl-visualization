@@ -25,6 +25,11 @@ export type FilterParams = {
 	additionalFilters: Filter[]
 }
 
+export function filterByGroup(filters: Filter[], rows: any[]): any[] {
+	const filterGrps = Object.values(Object.groupBy(filters, f => f.group));
+	return rows.filter(row => filterGrps.map(filters => filters!.some(filter => filter.predicate(row))).every(x => x));
+}
+
 export function filterSearchText(params: FilterParams, row: any): boolean {
 	if (params.searchText) {
 		if (params.searchMode === 'equals') return row[params.searchColumn].toString().toLowerCase() === params.searchText!.toLowerCase();

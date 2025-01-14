@@ -1,6 +1,6 @@
 import { useEffect, useReducer } from 'react';
 import { Run, Row } from '../../../types';
-import { getLongestRowDuration, startAndEndpointsOfRows } from '../../../util/WorkflowsExplorer/row';
+import { getLongestRowDuration, startAndEndExecPointsOfRows, startAndEndOverallPointsOfRows } from '../../../util/WorkflowsExplorer/row';
 
 //
 // Hook for controlling timeline. Timeline does not require use of this but this hook will provide functions
@@ -42,7 +42,7 @@ export function timelineControlsReducer(state: TimelineControlsState, action: Ti
       if (state.controlled) {
         return {
           ...state,
-          max: end,
+          max: action.end,
           min: action.start,
           timelineStart: action.start > state.timelineStart ? action.start : state.timelineStart,
           timelineEnd: end < state.timelineEnd ? end : state.timelineEnd,
@@ -50,9 +50,9 @@ export function timelineControlsReducer(state: TimelineControlsState, action: Ti
       } else {
         return {
           ...state,
-          max: action.mode === 'left' ? action.end : end,
+          max: action.end,
           min: action.start,
-          timelineEnd: action.mode === 'left' ? action.end : end,
+          timelineEnd: action.end,
           timelineStart: action.start,
           controlled: false,
         };
@@ -216,22 +216,16 @@ export default function useTimelineControls(
   });
 
   useEffect(() => {
-    const timings = startAndEndpointsOfRows([...rows]);
-    const endTime =
-      mode === 'left'
-        ? run.ts_epoch + getLongestRowDuration(rows)
-        : run.finished_at && run.finished_at > timings.end
-        ? run.finished_at
-        : timings.end;
-    if (timings.start !== 0 && endTime !== 0 && endTime !== timelineControls.max) {
+    const timings = startAndEndOverallPointsOfRows([...rows]);
+    if (timings.start !== 0 && timings.end !== 0 && (timings.start !== timelineControls.timelineEnd || timings.end !== timelineControls.max)) {
       dispatch({
         type: 'update',
-        start: run.ts_epoch,
-        end: endTime,
+        start: timings.start,
+        end: timings.end,
         mode: mode,
       });
     }
-  }, [rows, run.ts_epoch, mode, run.finished_at, timelineControls.max]);
+  }, [rows]);
 
   useEffect(() => {
     const tm = setInterval(() => {

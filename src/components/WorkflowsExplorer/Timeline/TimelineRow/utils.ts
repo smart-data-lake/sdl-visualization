@@ -1,46 +1,13 @@
 import { lighten } from 'polished';
 import { DefaultTheme } from 'styled-components';
-import { Step, Row } from '../../../../types';
-import { StepRowData } from '../useTaskData';
-import { LabelPosition } from './LineElement';
+import { Row } from '../../../../types';
 import defaultTheme from '../../../../theme';
 
-/**
- * Finds place for duration label in timeline. Default right, if not space left, if no space then none.
- * @param fromLeft % value from left of timeline
- * @param width Width of given element
- * @returns Position where label should be positioned
- */
-export function getLengthLabelPosition(fromLeft: number | undefined, width: number | undefined): LabelPosition {
-  if (!(fromLeft && width)) return 'none';
-  if (fromLeft + width < 90) {
-    return 'right';
-  } else if (fromLeft + width > 90 && fromLeft > 10) {
-    return 'left';
-  }
-
-  return 'none';
-}
-
-export function getStepDuration(step: Step, status: string, calculatedDuration: number): number {
-  if (status === 'running') {
-    return Date.now() - step.ts_epoch;
-  }
-
-  return step.duration && step.duration > calculatedDuration ? step.duration : calculatedDuration;
-}
-
-export function getRowStatus(
-  row: { type: 'step'; data: Step; rowObject: StepRowData } | { type: 'task'; data: Row },
-): string {
-  if (row.type === 'step') {
-    return row.rowObject.status;
+export function getRowStatus(row: Row) {
+  if (row.status) {
+    return row.status;
   } else {
-    if (row.data.status) {
-      return row.data.status;
-    } else {
-      return row.data.finished_at ? 'SUCCEEDED' : 'RUNNING';
-    }
+    return row.finished_at ? 'SUCCEEDED' : 'RUNNING';
   }
 }
 

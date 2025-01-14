@@ -3,20 +3,18 @@ import React from 'react';
 import styled, { DefaultTheme, css, keyframes } from 'styled-components';
 import { Row } from '../../../../types';
 import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
-import { TasksSortBy } from '../useTaskListSettings';
-import { getLengthLabelPosition, getRowStatus, statusColor } from './utils';
+import { getRowStatus, statusColor } from './utils';
 
 //
 // Typedef
 //
 
 type LineElementProps = {
-  row: { type: 'task'; data: Row };
+  row: Row;
   timeline: {
     startTime: number;
     visibleEndTime: number;
     visibleStartTime: number;
-    sortBy: TasksSortBy;
   };
   grayed?: boolean;
   isLastAttempt: boolean;
@@ -57,8 +55,8 @@ const LineElement: React.FC<LineElementProps> = ({
 		return (boxStartTime - timeline.visibleStartTime) / visibleDuration * 100;
 	}
 	const width = (duration: number | null | undefined, valueFromLeft: number | undefined) => {
-		if (!valueFromLeft) return undefined;
-		return duration && status !== 'running' ? (duration / visibleDuration) * 100 : 100 - valueFromLeft;
+		if (valueFromLeft == undefined) return undefined;
+		return duration && status !== 'RUNNING' ? (duration / visibleDuration) * 100 : 100 - valueFromLeft;
 	}
 
 
@@ -67,7 +65,6 @@ const LineElement: React.FC<LineElementProps> = ({
 		width: number | undefined, 
 		row: any, 
 		dragging: boolean, 
-		labelPosition: LabelPosition, 
 		duration: any, 
 		grayed: boolean | undefined, 
 		status: string, 
@@ -89,12 +86,9 @@ const LineElement: React.FC<LineElementProps> = ({
 					dragging={dragging}
 					title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (unknown status)` : ''}`}				
 				>
-					{(isLastAttempt || status === 'RUNNING') && (
-					<RowMetricLabel duration={duration} labelPosition={labelPosition} data-testid="boxgraphic-label" />
-					)}
 					<BoxGraphicLine grayed={grayed} state={status} isLastAttempt={isLastAttempt} />
 					<BoxGraphicMarkerStart />
-					{status !== 'running' && <BoxGraphicMarkerEnd />}
+					{status !== 'RUNNING' && <BoxGraphicMarkerEnd />}
 				</BoxGraphic>
 				</LineElementContainer>
 			</>
@@ -102,18 +96,17 @@ const LineElement: React.FC<LineElementProps> = ({
   }
 
 
-  const valueFromLeftExec = valueFromLeft(row.data.startTstmp);
-  const widthExec = width(row.data.getDuration(), valueFromLeftExec);
-  const labelPositionExec = getLengthLabelPosition(valueFromLeftExec, widthExec);
-  const displayExec = row.data.startTstmp && displayPhases.includes('Exec');
+  const valueFromLeftExec = valueFromLeft(row.startTstmp);
+  const widthExec = width(row.getDuration(), valueFromLeftExec);
+  const displayExec = row.startTstmp && displayPhases.includes('Exec');
 
-  const valueFromLeftInit = valueFromLeft(row.data.startTstmpInit);
-  const widthInit = width(row.data.getDurationInit(), valueFromLeftInit);
-  const displayInit = row.data.startTstmpInit && displayPhases.includes('Init');
+  const valueFromLeftInit = valueFromLeft(row.startTstmpInit);
+  const widthInit = width(row.getDurationInit(), valueFromLeftInit);
+  const displayInit = row.startTstmpInit && displayPhases.includes('Init');
 
-  const valueFromLeftPrepare = valueFromLeft(row.data.startTstmpPrepare);
-  const widthPrepare = width(row.data.getDurationPrepare(), valueFromLeftPrepare);
-  const displayPrepare = row.data.startTstmpPrepare && displayPhases.includes('Prepare');
+  const valueFromLeftPrepare = valueFromLeft(row.startTstmpPrepare);
+  const widthPrepare = width(row.getDurationPrepare(), valueFromLeftPrepare);
+  const displayPrepare = row.startTstmpPrepare && displayPhases.includes('Prepare');
 
   return (
     <>
@@ -122,8 +115,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			widthExec,
 			row, 
 			dragging, 
-			labelPositionExec,
-			row.data.getDuration(), 
+			row.getDuration(), 
 			grayed, 
 			status, 
 			isLastAttempt
@@ -133,8 +125,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			widthInit, 
 			row, 
 			dragging, 
-			'none', 
-			row.data.getDurationInit(), 
+			row.getDurationInit(), 
 			grayed, 
 			'INITIALIZED', 
 			isLastAttempt
@@ -144,8 +135,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			widthPrepare, 
 			row, 
 			dragging, 
-			'none', 
-			row.data.getDurationPrepare(), 
+			row.getDurationPrepare(), 
 			grayed, 
 			'PREPARED', 
 			isLastAttempt

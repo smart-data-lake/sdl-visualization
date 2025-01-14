@@ -4,6 +4,7 @@ import DatetimePicker from "../DatetimePicker/DatetimePicker";
 import { getPhasesColor, getStatusColor } from "../Timeline/TimelineRow/utils";
 import { FilterParams } from "../WorkflowHistory";
 import FilterMenu from "./FilterMenu";
+import defaultTheme from "../../../theme";
 
 
 /**
@@ -20,11 +21,12 @@ const ToolBar = (
         filterParams: FilterParams,        
         updateFilterParams: (params: Partial<FilterParams>) => void,
         stateFilters: Filter[],
+        attemptFilters?: Filter[],
         datetimePicker?: boolean,
         searchPlaceholder?: string,
-        setPhases?: (phases: string[]) => void
+        setPhases?: (phases: string[]) => void,
     }) => {
-    const { data, filterParams, updateFilterParams, stateFilters, datetimePicker, searchPlaceholder, setPhases } = props;
+    const { data, filterParams, updateFilterParams, stateFilters, attemptFilters, datetimePicker, searchPlaceholder, setPhases } = props;
 
     function setSearchText(text: string) {
         const searchText = (text.trim().length > 0 ? text.trim() : undefined);    
@@ -37,10 +39,20 @@ const ToolBar = (
         updateFilterParams({additionalFilters: newAdditionalFilters})    
     }
 
+    function setAttemptsFilters(filters: Filter[]) {
+        const otherFilters = filterParams.additionalFilters.filter(f => f.group != 'attempt');
+        const newAdditionalFilters = otherFilters.concat(filters);
+        updateFilterParams({additionalFilters: newAdditionalFilters})    
+    }
+
     function setDateRange(range?: [Date,Date]) {
         updateFilterParams({dateRange: range})    
     }    
     
+    // enable only the last attempt by default
+    const attemptFilterInit = (attemptFilters ? attemptFilters.map(_ => false) : []);
+    if (attemptFilters) attemptFilterInit[attemptFilterInit.length -1] = true;
+
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <Input
@@ -50,6 +62,7 @@ const ToolBar = (
                 onChange={(event) => setSearchText(event.target.value)}
             />
             {stateFilters && <FilterMenu title='Filter Status' filters={stateFilters} setFilters={setStateFilters} colorMap={getStatusColor} withIcon={true}/>}
+            {attemptFilters && attemptFilters.length>1 && <FilterMenu title='Select Attempts' filters={attemptFilters} setFilters={setAttemptsFilters} filterInit={attemptFilterInit} colorMap={() => defaultTheme.color.bg.dark}/>}
             {setPhases && <FilterMenu title='Select Phases' filters={phaseFilters} setFilters={filters => setPhases(filters.map(f => f.name))} filterInit={[false,false,true]} colorMap={getPhasesColor}/>}
             {datetimePicker && <DatetimePicker range={filterParams.dateRange} setRange={setDateRange}/>}
         </Box>
