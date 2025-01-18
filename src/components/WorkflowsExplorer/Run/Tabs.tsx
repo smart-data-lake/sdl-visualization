@@ -8,26 +8,21 @@ import TabPanel from '@mui/joy/TabPanel';
 import Tabs from '@mui/joy/Tabs';
 import React, { useMemo, useState } from "react";
 import { useParams } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
-import GlobalStyle from "../../../GlobalStyle";
-import theme from "../../../theme";
 import { Row } from "../../../types";
 import Attempt from "../../../util/WorkflowsExplorer/Attempt";
 import { checkFiltersAvailability, Filter, stateFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
 import LineageTab from '../../ConfigExplorer/LineageTab/LineageTab';
-import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
 import ToolBar from "../ToolBar/ToolBar";
 import ContentDrawer from './ContentDrawer';
 
-import { SortDirection } from 'ka-table';
 import { useWorkspace } from '../../../hooks/useWorkspace';
 import DraggableDivider from "../../../layouts/DraggableDivider";
 import { PartialDataObjectsAndActions } from "../../../util/ConfigExplorer/Graphs";
-import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
-import { createActionsChip } from '../../ConfigExplorer/ConfigurationTab';
-import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../../ConfigExplorer/DataTable';
-import { filterByGroup, FilterParams, filterSearchText } from '../WorkflowHistory';
 import { onlyUnique } from '../../../util/helpers';
+import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
+import { filterByGroup, FilterParams, filterSearchText } from '../WorkflowHistory';
+import { TableView } from './TableView';
+import { TimelineView } from './TimelineView';
 
 /**
  * This is a TypeScript function that returns a set of three React components which are rendered inside a parent component. 
@@ -44,8 +39,7 @@ const TabsPanels = (props: { attempt: Attempt }) => {
     const data = attempt.timelineRows;
     var {tab, stepName} = useParams();
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'step_name', additionalFilters: []})
-    const [timelinePhases, setTimelinePhases] = useState(['Exec']);
-	const {navigateRel} = useWorkspace();
+    const [[additionalLeftToolbarElements, additionalRightToolbarElements], setAdditionalToolbarElements] = useState<[JSX.Element?, JSX.Element?]>([]);
     tab = tab || 'timeline';
 
     const selData = useMemo(() => {
@@ -73,41 +67,6 @@ const TabsPanels = (props: { attempt: Attempt }) => {
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {
 		setFilterParams({...filterParams, ...partialFilter})
 	}      
-    
-	function actionsLinkRenderer(prop: any) {
-		return createActionsChip(prop.value, 'sm', {mt: -1});
-	}
-
-    const columns = [{
-		title: 'Action',
-		property: 'step_name',
-        renderer: actionsLinkRenderer        
-	}, {
-		title: 'Status',
-		property: 'status',
-		renderer: cellIconRenderer,
-		width: '100px'
-	}, {
-		title: 'Start',
-		property: 'started_at',
-		renderer: (x) => dateRenderer(x),
-		width: '175px',
-        sortDirection: SortDirection.Ascend,
-	}, {
-		title: 'Finish',
-		property: 'finished_at',
-		renderer: (x) => dateRenderer(x),
-		width: '175px',
-	}, {
-		title: 'Attempt',
-		property: 'attempt_id',
-		width: '80px'
-	}, {
-		title: 'Duration',
-		property: 'duration',
-		renderer: (x) => durationRenderer(x),
-		width: '150px'
-	}]
 
     return (
         <Sheet sx={{ display: 'flex', height: '100%', width: '100%' }}>
@@ -120,7 +79,8 @@ const TabsPanels = (props: { attempt: Attempt }) => {
                     stateFilters={checkFiltersAvailability(data, stateFilters('status'))}
                     attemptFilters={attemptFilterDefs}
                     searchPlaceholder="Search by action name"
-                    setPhases={tab == 'timeline' && attempt.details.runStateFormatVersion && attempt.details.runStateFormatVersion > 1 ? setTimelinePhases : undefined}
+                    leftElements={additionalLeftToolbarElements}
+                    rightElements={additionalRightToolbarElements}
                 />
                 {/* Renders either an icon and message indicating that no actions were found, or the VirtualizedTimeline/Table and ContentDrawer components */}
                 {selData.length === 0 ? (
@@ -130,23 +90,10 @@ const TabsPanels = (props: { attempt: Attempt }) => {
                     </Sheet>
                 ) : (<>
                     <TabPanel className='timeline-panel' value='timeline' sx={{p: '0px', width: '100%', height: '100%'}}>
-                        <Sheet sx={{ display: 'flex', gap: '0.5rem', width: '100%', height: '100%'}} >
-                            <ThemeProvider theme={theme}>
-                                <GlobalStyle />
-                                <Sheet
-                                    sx={{ flex: '1', width: '99%', position: 'absolute', top: 0, left: 0, backgroundColor: stepName ? 'primary.main' : 'none', opacity: stepName ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
-                                    <Sheet sx={{ gap: '0.5rem', height: '69vh', display: 'flex', }} >
-                                        <VirtualizedTimeline run={timelineRun} rows={selData} displayPhases={timelinePhases} />
-                                    </Sheet>
-                                </Sheet>
-                            </ThemeProvider>
-                        </Sheet>
+                        <TimelineView run={timelineRun} rows={selData} stepName={stepName} setToolbarElements={setAdditionalToolbarElements} />
                     </TabPanel>
                     <TabPanel className='actions-table-panel' value='table' sx={{p: '0px', width: '100%', height: '100%'}}>
-                        <Sheet
-                            sx={{ height: '100%', backgroundColor: stepName ? 'primary.main' : 'none', opacity: stepName ? [0.4, 0.4, 0.4] : [], transition: 'opacity 0.2s ease-in-out', cursor: 'context-menu' }}>
-                            <DataTable data={selData} columns={columns} navigate={(row) => navigateRel((stepName ? `../${row.step_name}` : `${row.step_name}`))} keyAttr='step_name'/>
-                        </Sheet>
+                        <TableView rows={selData} stepName={stepName} setToolbarElements={setAdditionalToolbarElements} />
                     </TabPanel>
                 </>)}
             </Sheet>

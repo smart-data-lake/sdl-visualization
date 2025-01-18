@@ -5687,10 +5687,10 @@ jsonify@^0.0.1:
   resolved "https://registry.npmjs.org/jsonify/-/jsonify-0.0.1.tgz"
   integrity sha512-2/Ki0GcmuqSrgFyelQq9M05y7PS0mEwuIzrf3f1fPqkVDVRvZrPZtVSMHxdgo8Aq0sxAOb/cr2aqqA3LeWHVPg==
 
-ka-table@^8.2.0:
-  version "8.4.0"
-  resolved "https://registry.npmjs.org/ka-table/-/ka-table-8.4.0.tgz"
-  integrity sha512-k3bxEzGiC5L5f+YJChrJgwnXUugRlwKerpKVCJr6EVwaYB+NweNCo4gGAXTpPXCtNDMJyEyPe10ueqDykbVvng==
+ka-table@11.3.1:
+  version "11.3.1"
+  resolved "https://registry.yarnpkg.com/ka-table/-/ka-table-11.3.1.tgz#d06fb9894f01a3207306bc8c798e96c64d40d75a"
+  integrity sha512-J8QR3ZV3/S5FlOf2wH3friLzLwG8VFp+8HtMJa84HZj16cbCFPwf4VeGhRC5G1tQYqJ1vadXiSivZO9R8N/JqA==
 
 klaw-sync@^6.0.0:
   version "6.0.0"

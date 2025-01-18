@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
-import { Run, Row } from '../../../types';
 import styled from 'styled-components';
+import { Row, Run } from '../../../types';
 import Timeline from './Timeline';
 import useTimelineControls from './useTimelineControls';
 

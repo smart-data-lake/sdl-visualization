@@ -1,10 +1,10 @@
 import { Box, Input } from "@mui/joy";
-import { Filter, phaseFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
+import defaultTheme from "../../../theme";
+import { Filter } from "../../../util/WorkflowsExplorer/StatusInfo";
 import DatetimePicker from "../DatetimePicker/DatetimePicker";
-import { getPhasesColor, getStatusColor } from "../Timeline/TimelineRow/utils";
+import { getStatusColor } from "../Timeline/TimelineRow/utils";
 import { FilterParams } from "../WorkflowHistory";
 import FilterMenu from "./FilterMenu";
-import defaultTheme from "../../../theme";
 
 
 /**
@@ -24,9 +24,10 @@ const ToolBar = (
         attemptFilters?: Filter[],
         datetimePicker?: boolean,
         searchPlaceholder?: string,
-        setPhases?: (phases: string[]) => void,
+        leftElements?: JSX.Element,
+        rightElements?: JSX.Element,
     }) => {
-    const { data, filterParams, updateFilterParams, stateFilters, attemptFilters, datetimePicker, searchPlaceholder, setPhases } = props;
+    const { data, filterParams, updateFilterParams, stateFilters, attemptFilters, datetimePicker, searchPlaceholder, leftElements, rightElements } = props;
 
     function setSearchText(text: string) {
         const searchText = (text.trim().length > 0 ? text.trim() : undefined);    
@@ -61,10 +62,12 @@ const ToolBar = (
                 sx={{fontSize: 'var(--joy-fontSize-sm)', zIndex: 'auto',}}
                 onChange={(event) => setSearchText(event.target.value)}
             />
-            {stateFilters && <FilterMenu title='Filter Status' filters={stateFilters} setFilters={setStateFilters} colorMap={getStatusColor} withIcon={true}/>}
             {attemptFilters && attemptFilters.length>1 && <FilterMenu title='Select Attempts' filters={attemptFilters} setFilters={setAttemptsFilters} filterInit={attemptFilterInit} colorMap={() => defaultTheme.color.bg.dark}/>}
-            {setPhases && <FilterMenu title='Select Phases' filters={phaseFilters} setFilters={filters => setPhases(filters.map(f => f.name))} filterInit={[false,false,true]} colorMap={getPhasesColor}/>}
+            {stateFilters && <FilterMenu title='Filter Status' filters={stateFilters} setFilters={setStateFilters} colorMap={getStatusColor} withIcon={true}/>}
             {datetimePicker && <DatetimePicker range={filterParams.dateRange} setRange={setDateRange}/>}
+            {leftElements && leftElements}
+            <Box sx={{flex: 1}}/>
+            {rightElements && rightElements}
         </Box>
     )
 }

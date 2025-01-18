@@ -1,8 +1,8 @@
 import { Box } from "@mui/joy";
-import { DataType, Table, useTable } from 'ka-table';
+import { DataType, ITableInstance, Table, useTable } from 'ka-table';
 import { SortDirection, SortingMode } from 'ka-table/enums';
 import { Column } from 'ka-table/models';
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import "ka-table/style.css";
 import { getIcon } from "../../util/WorkflowsExplorer/StatusInfo";
@@ -35,11 +35,15 @@ export function durationRenderer(prop: any) {
 }
 
 
-export default function DataTable(props: { data: any[], columns: any[], keyAttr: string, treeGroupKeyAttr?: string, navigate?: (any) => void }) {
+export default function DataTable(props: { data: any[], columns: any[], keyAttr: string, treeGroupKeyAttr?: string, navigate?: (any) => void, useTableRef?: (ITableInstance) => void}) {
 
   const { data, columns, keyAttr, treeGroupKeyAttr, navigate } = props;
   const [loading, setLoading] = useState(true)
   const dataTable = useTable();
+  
+  useEffect(() => {
+    if (props.useTableRef && dataTable) props.useTableRef(dataTable);
+  }, []);
 
   if (data && data.length > 0 && loading) setLoading(false);
 
@@ -70,6 +74,9 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
         if (c.width) col.width = c.width;
         if (c.sortDirection) col.sortDirection = c.sortDirection;
         if (c.style) col.style = c.style;
+        if (c.isSortable!==undefined) col.isSortable = c.isSortable;
+        if (c.isResizable!==undefined) col.isResizable = c.isResizable;
+        if (c.visible!==undefined) col.visible = c.visible;
       } else {
         col = {
           key: c,
@@ -104,7 +111,7 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
       flex: 1, minHeight: 0, width: '100%', height: '100%',
       fontFamily: 'Roboto,Helvetica,Arial,sans-serif', fontWeight: '400', fontSize: '0.875rem', // defaults from MuiTypography-root
       '& ka-table-wrapper': { overflow: 'auto' },
-      '& .ka-thead-cell-content, .ka-cell-text': { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+      '& .ka-thead-cell-content, .ka-cell-text': { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', height: '25px' },
       '& .ka-row': (navigate ? { cursor: 'pointer', '&:hover': { backgroundColor: '#f0f0ef'}} : {}),
       '& .ka-thead-background': { backgroundColor: 'white' },
       '& .ka-thead-cell': { color: 'primary', zIndex: '99', fontWeight: '600', height: '25px', paddingTop: '7px', paddingBottom: '7px' },
@@ -158,7 +165,7 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
             }
           }
         }}
-        noData={{ text: "No data found", hideHeader: true }}
+        noData={{ text: "No data found", hideHeader: true }}        
       />
     </Box>
   )
