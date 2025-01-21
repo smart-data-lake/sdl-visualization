@@ -52,8 +52,11 @@ const WorkspaceProvider = (props: React.PropsWithChildren) => {
       navigate(contentPath + contentSubPath);
     }
   }
+  function ensureTrailingSlash(path: string) {
+    return (path.endsWith("/") ? path : path + "/")
+  }
   function navigateRel(relPath: string) {
-    navigate(relPath, {relative: "path"})
+    navigate(ensureTrailingSlash(location.pathname) + relPath);
   }
 
   return (

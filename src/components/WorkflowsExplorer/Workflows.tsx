@@ -35,7 +35,6 @@ export default function Workflows() {
     }, [data, filterParams])
 
     if (isLoading || isFetching) return <CenteredCircularProgress/>;
-    //if (process.env.NODE_ENV === 'development' && data.detail) console.log(data.detail);
     
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {
 		setFilterParams({...filterParams, ...partialFilter})
