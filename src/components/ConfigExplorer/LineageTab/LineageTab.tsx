@@ -11,6 +11,7 @@ import '../ComponentsStyles.css';
 import { ReactFlowProvider } from 'reactflow';
 import { useWorkspace } from '../../../hooks/useWorkspace';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
+import useLocalStorageState from '../../../hooks/useLocalStorageState';
 
 // accessed as ag attributes
 interface flowProps {
@@ -125,7 +126,7 @@ function LineageTab(props: flowProps) {
   let nodes_init: Node[] = [];
   let edges_init: Edge[] = [];
 
-  const [layout, setLayout] = useState('TB');
+  const [layout, setLayout] = useLocalStorageState('run.graphLayout', 'TB');
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>(''); // wird verschwinden mit anderer Sicht
 
   let initial_render = prepareAndRenderGraph();

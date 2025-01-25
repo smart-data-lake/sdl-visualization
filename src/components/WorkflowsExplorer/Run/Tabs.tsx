@@ -19,6 +19,8 @@ import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
 import { filterByGroup, FilterParams, filterSearchText } from '../WorkflowHistory';
 import { TableView } from './TableView';
 import { TimelineView } from './TimelineView';
+import LineageTabSep from "../../ConfigExplorer/LineageTab/LineageTabWithSeparateView";
+import LineageTab from "../../ConfigExplorer/LineageTab/LineageTab";
 
 /**
  * This is a TypeScript function that returns a set of three React components which are rendered inside a parent component. 
@@ -33,7 +35,7 @@ import { TimelineView } from './TimelineView';
 const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
     const { attempt, tab } = props;
     const data = attempt.timelineRows;
-    var {stepName} = useParams();
+    const params = useParams();
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'step_name', additionalFilters: []})
     const [[additionalLeftToolbarElements, additionalRightToolbarElements], setAdditionalToolbarElements] = useState<[JSX.Element?, JSX.Element?]>([]);
 
@@ -88,16 +90,17 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
             {selData.length === 0 && <Typography>No actions found</Typography>}
             {selData.length > 0 && <>
                 <TabPanel className='content-panel' value='timeline' sx={{height: '100%', width: '100%', overflow: 'hidden'}}>
-                    <TimelineView run={timelineRun} rows={selData} stepName={stepName} setToolbarElements={setAdditionalToolbarElements} />
+                    <TimelineView run={timelineRun} rows={selData} stepName={params.stepName} setToolbarElements={setAdditionalToolbarElements} />
                 </TabPanel>
                 <TabPanel className='content-panel' value='table' sx={{height: '100%', width: '100%', overflow: 'hidden'}}>
-                    <TableView rows={selData} stepName={stepName} setToolbarElements={setAdditionalToolbarElements} />
+                    <TableView rows={selData} stepName={params.stepName} setToolbarElements={setAdditionalToolbarElements} />
                 </TabPanel>
-                <TabPanel className='content-panel' value='graph' sx={{height: '100%', width: '100%', overflow: 'hidden'}}>
+                <TabPanel className='content-panel' value='graph' sx={{height: '100%', width: '100%', overflow: 'hidden', paddingTop: '0'}}>
+                    <LineageTab elementName="" elementType="" graph={graph} key={params.toString()}/>
                 </TabPanel>
             </>}
         </Sheet>
-        {stepName &&
+        {params.stepName &&
             <Sheet sx={{ position: 'absolute', background: 'white', zIndex: 999, top: 0, height: '80vh', left: '60%', width: '40%', display: 'flex', flexDirection: 'column', boxShadow: '-10px 20px 20px lightgray', p: '1rem' }}>
                 <ContentDrawer attempt={attempt} />
             </Sheet>
