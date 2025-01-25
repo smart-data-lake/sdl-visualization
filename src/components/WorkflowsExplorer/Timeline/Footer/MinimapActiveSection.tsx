@@ -25,7 +25,7 @@ const MinimapActiveSection: React.FC<ActiveSectionProps> = ({ timeline, dragging
 
   return (
     <MiniTimelineActiveSection
-      dragging={dragging}
+      $dragging={dragging}
       style={{
         width: width + '%',
         left: left + '%',
@@ -59,7 +59,7 @@ const MinimapActiveSection: React.FC<ActiveSectionProps> = ({ timeline, dragging
 // Style
 //
 
-const MiniTimelineActiveSection = styled.div<{ dragging: boolean }>`
+const MiniTimelineActiveSection = styled.div<{ $dragging: boolean }>`
   position: relative;
   height: 3.0625rem;
   background #fff;
@@ -67,7 +67,7 @@ const MiniTimelineActiveSection = styled.div<{ dragging: boolean }>`
   border-right: ${(p) => p.theme.border.thinLight};
   border-bottom: 0.5rem solid ${(p) => p.theme.color.border.light};
   cursor: grab;
-  transition: ${(p) => (p.dragging ? 'none' : '0.5s left, 0.5s width')};
+  transition: ${(p) => (p.$dragging ? 'none' : '0.5s left, 0.5s width')};
 `;
 
 export default MinimapActiveSection;

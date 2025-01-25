@@ -74,7 +74,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			<>
 				<LineElementContainer
 					style={{ transform: `translateX(${valueFromLeft}%)` }}
-					dragging={dragging}
+					$dragging={dragging}
 					data-testid="boxgraphic-container"
 				>
 				<BoxGraphic
@@ -151,7 +151,7 @@ const RowMetricLabel: React.FC<{
   'data-testid'?: string;
 }> = ({ duration, labelPosition, ...rest }) =>
   labelPosition === 'none' ? null : (
-    <BoxGraphicValue position={labelPosition} {...rest}>
+    <BoxGraphicValue $position={labelPosition} {...rest}>
       {duration ? formatDuration(duration, 1) : ''}
     </BoxGraphicValue>
   );
@@ -160,15 +160,15 @@ const RowMetricLabel: React.FC<{
 // Style
 //
 
-const LineElementContainer = styled.div<{ dragging: boolean }>`
+const LineElementContainer = styled.div<{ $dragging: boolean }>`
   width: 100%;
-  transition: ${(p) => (p.dragging ? 'none' : '0.5s transform')};
+  transition: ${(p) => (p.$dragging ? 'none' : '0.5s transform')};
 `;
 
-export const BoxGraphicValue = styled.div<{ position: LabelPosition }>`
+export const BoxGraphicValue = styled.div<{ $position: LabelPosition }>`
   position: absolute;
-  left: ${({ position }) => (position === 'right' ? '100%' : 'auto')};
-  right: ${({ position }) => (position === 'left' ? '100%' : 'auto')};
+  left: ${({ $position }) => ($position === 'right' ? '100%' : 'auto')};
+  right: ${({ $position }) => ($position === 'left' ? '100%' : 'auto')};
   padding: 0 0.625rem;
   top: 1px;
   line-height: 1.625rem;

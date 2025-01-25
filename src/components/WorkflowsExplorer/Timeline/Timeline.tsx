@@ -46,7 +46,6 @@ const Timeline: React.FC<TimelineProps> = ({
   searchStatus,
   footerType = 'minimap',
   paramsString = '',
-  customMinimumHeight = 31.25,
   onHandleMove = () => null,
   onMove = () => null,
   displayPhases,
@@ -107,7 +106,7 @@ const Timeline: React.FC<TimelineProps> = ({
   );
 
   return (
-    <ListContainer customMinHeight={customMinimumHeight}>
+    <ListContainer>
       <AutoSizer>{autosizerContents}</AutoSizer>
     </ListContainer>
   );
@@ -154,7 +153,7 @@ function createRowRenderer({ rows, timeline, searchStatus, paramsString = '', dr
 // Style
 //
 
-const ListContainer = styled.div<{ customMinHeight: number }>`
+const ListContainer = styled.div`
     width: 100%;  
     height: 100%;
 `;

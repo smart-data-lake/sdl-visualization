@@ -40,6 +40,73 @@ export function filterSearchText(params: FilterParams, row: any): boolean {
 	return true;
 }
 
+function feedSelLinkRenderer(prop: any) {
+	return createFeedChip(prop.value, 'actions', 'sm', {mt: -1});
+}
+
+const columns = [{
+	title: 'Run',
+	property: 'runId',
+	width: '75px'
+}, {
+	title: 'Attempt',
+	property: 'attemptId',
+	width: '80px'
+}, {
+	title: 'Run Start',
+	property: 'runStartTime',
+	renderer: dateRenderer,
+	width: '175px'
+}, {
+	title: 'Attempt Start',
+	property: 'attemptStartTime',
+	renderer: dateRenderer,
+	width: '175px',
+	sortDirection: SortDirection.Descend,
+}, {
+	title: 'Duration',
+	property: 'duration',
+	renderer: durationRenderer,
+	width: '100px'
+}, {
+	title: 'Status',
+	property: 'status',
+	renderer: cellIconRenderer,
+	width: '75px'
+}, {
+	title: 'Feed Selector',
+	property: 'feedSel',
+	renderer: feedSelLinkRenderer,
+	width: '150px'
+}, {
+	title: 'SUCCEEDED',
+	property: 'actionsStatus.SUCCEEDED',
+	headRenderer: titleIconRenderer,
+	renderer: nestedPropertyRenderer('0', '7px'),
+	style: { textAlign: 'right' },
+	width: '51px' // min width for sorting
+}, {
+	title: 'SKIPPED',
+	property: 'actionsStatus.SKIPPED',
+	headRenderer: titleIconRenderer,
+	renderer: nestedPropertyRenderer('0', '7px'),
+	style: { textAlign: 'right' },
+	width: '51px' // min width for sorting
+}, {
+	title: 'FAILED',
+	property: 'actionsStatus.FAILED',
+	headRenderer: titleIconRenderer,
+	renderer: nestedPropertyRenderer('0', '7px'),
+	style: { textAlign: 'right' },
+	width: '51px' // min width for sorting
+}, {				
+	title: 'SDLB Version',
+	property: 'buildVersion',
+}, {
+	title: 'App Version',
+	property: 'appVersion',
+}]
+
 /**
  * The WorkflowHistory component is the page that displays the history of a workflow as a table.
  * It allows the user to filter according to different filters/search/sort criteria passed to the ToolBar component.
@@ -76,10 +143,6 @@ export default function WorkflowHistory() {
 		setFilterParams({...filterParams, ...partialFilter})
 	}
 
-	function feedSelLinkRenderer(prop: any) {
-		return createFeedChip(prop.value, 'actions', 'sm', {mt: -1});
-	}
-
 	function refreshData() {
 		fetcher().clearCache();
 		refetch();
@@ -89,71 +152,6 @@ export default function WorkflowHistory() {
 	if (isLoading || isFetching) {
 		return <CenteredCircularProgress />;
 	}
-
-	const columns = [{
-		title: 'Run',
-		property: 'runId',
-		width: '75px'
-	}, {
-		title: 'Attempt',
-		property: 'attemptId',
-		width: '80px'
-	}, {
-		title: 'Run Start',
-		property: 'runStartTime',
-		renderer: dateRenderer,
-		width: '175px'
-	}, {
-		title: 'Attempt Start',
-		property: 'attemptStartTime',
-		renderer: dateRenderer,
-		width: '175px',
-        sortDirection: SortDirection.Descend,
-	}, {
-		title: 'Duration',
-		property: 'duration',
-		renderer: durationRenderer,
-		width: '100px'
-	}, {
-		title: 'Status',
-		property: 'status',
-		renderer: cellIconRenderer,
-		width: '75px'
-	}, {
-		title: 'Feed Selector',
-		property: 'feedSel',
-		renderer: feedSelLinkRenderer,
-		width: '150px'
-	}, {
-		title: 'SUCCEEDED',
-		property: 'actionsStatus.SUCCEEDED',
-		headRenderer: titleIconRenderer,
-		renderer: nestedPropertyRenderer('0', '7px'),
-		style: { textAlign: 'right' },
-		width: '51px' // min width for sorting
-	}, {
-		title: 'SKIPPED',
-		property: 'actionsStatus.SKIPPED',
-		headRenderer: titleIconRenderer,
-		renderer: nestedPropertyRenderer('0', '7px'),
-		style: { textAlign: 'right' },
-		width: '51px' // min width for sorting
-	}, {
-		title: 'FAILED',
-		property: 'actionsStatus.FAILED',
-		headRenderer: titleIconRenderer,
-		renderer: nestedPropertyRenderer('0', '7px'),
-		style: { textAlign: 'right' },
-		width: '51px' // min width for sorting
-	}, {				
-		title: 'SDLB Version',
-		property: 'buildVersion',
-		//width: '150px'
-	}, {
-		title: 'App Version',
-		property: 'appVersion',
-		//width: '150px'
-	}]
 
 	return (
 		<>

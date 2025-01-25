@@ -15,20 +15,17 @@ const SideBar = () => {
     var buttons = [{
         icon : <HomeRoundedIcon/>,
         subPath : "",
-        filetype : 'none',
         description: 'Home'
     }]
     if (contentPath) {
         buttons.push({
             icon : <TuneRoundedIcon/>,
-            subPath : 'config',
-            filetype : 'config',
+            subPath : 'config/dataObjects',
             description: 'Configuration Viewer'
         });
         buttons.push({
             icon : <History/>,
             subPath : 'workflows',
-            filetype : 'state',
             description: 'Workflows History Explorer'
         })
     }
@@ -48,8 +45,8 @@ const SideBar = () => {
             <Box>
                 <Stack spacing={0}>   
                     {buttons.map((component) => (
-                        <Tooltip key={component.filetype} arrow title={component.description} placement='right' enterDelay={500} enterNextDelay={500}>
-                            <IconButton onClick={e => navigateContent(component.subPath)} color={module===component.subPath ? 'primary' : 'neutral'} variant='plain'
+                        <Tooltip key={component.subPath} arrow title={component.description} placement='right' enterDelay={500} enterNextDelay={500}>
+                            <IconButton onClick={e => navigateContent(component.subPath)} color={module===component.subPath || (module && component.subPath.startsWith(module)) ? 'primary' : 'neutral'} variant='plain'
                                 sx={{ borderRadius: 0 }}>
                                     {component.icon}
                             </IconButton>

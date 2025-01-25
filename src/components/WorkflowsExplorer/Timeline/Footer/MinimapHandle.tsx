@@ -25,7 +25,7 @@ const MinimapHandle: React.FC<HandleProps> = ({ label, onDragStart, which, isZoo
     <MiniTimelineIconLine />
     <MiniTimelineIconLine />
     <MiniTimelineIconLine />
-    <MiniTimelineLabel which={which} isZoomed={isZoomed} stackText={stackText}>
+    <MiniTimelineLabel $which={which} $isZoomed={isZoomed} $stackText={stackText}>
       {label}
     </MiniTimelineLabel>
   </MiniTimelineHandle>
@@ -56,23 +56,23 @@ const MiniTimelineIconLine = styled.div`
   margin-bottom: 2px;
 `;
 
-const LeftLabelPositioning = css<{ isZoomed: boolean }>`
-  ${(p) => (p.isZoomed ? 'right: 100%;' : 'left: 0%')}
+const LeftLabelPositioning = css<{ $isZoomed: boolean }>`
+  ${(p) => (p.$isZoomed ? 'right: 100%;' : 'left: 0%')}
 `;
 
-const RightLabelPositioning = css<{ isZoomed: boolean }>`
-  ${(p) => (p.isZoomed ? 'left: 0%' : 'right: 100%;')}
+const RightLabelPositioning = css<{ $isZoomed: boolean }>`
+  ${(p) => (p.$isZoomed ? 'left: 0%' : 'right: 100%;')}
 `;
 
-const MiniTimelineLabel = styled.div<{ which: 'left' | 'right'; isZoomed: boolean; stackText?: boolean }>`
+const MiniTimelineLabel = styled.div<{ $which: 'left' | 'right'; $isZoomed: boolean; $stackText?: boolean }>`
   position: absolute;
   top: 3.125rem;
 
-  right: ${(p) => (p.which === 'right' ? '100%' : 'none')};
+  right: ${(p) => (p.$which === 'right' ? '100%' : 'none')};
   font-size: 0.875rem;
-  white-space: ${(p) => (p.stackText && p.isZoomed ? 'none' : 'pre')};
+  white-space: ${(p) => (p.$stackText && p.$isZoomed ? 'none' : 'pre')};
 
-  ${(p) => (p.which === 'left' ? LeftLabelPositioning : RightLabelPositioning)}
+  ${(p) => (p.$which === 'left' ? LeftLabelPositioning : RightLabelPositioning)}
 `;
 
 export default MinimapHandle;

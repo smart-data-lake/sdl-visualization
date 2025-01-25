@@ -26,7 +26,7 @@ const MinimapRow: React.FC<MinimapRowProps> = ({ started, finished, status, time
 
   return (
     <MinimapLine
-      status={status}
+      $status={status}
       style={{
         width: width + '%',
         left: left + '%',
@@ -39,9 +39,9 @@ const MinimapRow: React.FC<MinimapRowProps> = ({ started, finished, status, time
 // Style
 //
 
-const MinimapLine = styled.div<{ status: TaskStatus }>`
+const MinimapLine = styled.div<{ $status: TaskStatus }>`
   position: relative;
-  background: ${(p) => statusColor(p.theme, false, p.status, true)};
+  background: ${(p) => statusColor(p.theme, false, p.$status, true)};
   height: 2px;
   min-height: 2px;
   margin-bottom: 1px;

@@ -98,7 +98,7 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
             </>}
         </Sheet>
         {stepName &&
-            <Sheet sx={{ position: 'absolute', background: 'white', zIndex: 1, top: 0, height: '80vh', left: '60%', width: '40%', display: 'flex', flexDirection: 'column', boxShadow: '-10px 20px 20px lightgray', p: '1rem' }}>
+            <Sheet sx={{ position: 'absolute', background: 'white', zIndex: 999, top: 0, height: '80vh', left: '60%', width: '40%', display: 'flex', flexDirection: 'column', boxShadow: '-10px 20px 20px lightgray', p: '1rem' }}>
                 <ContentDrawer attempt={attempt} />
             </Sheet>
         }

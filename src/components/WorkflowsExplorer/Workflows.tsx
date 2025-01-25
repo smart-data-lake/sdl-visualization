@@ -53,7 +53,6 @@ export default function Workflows() {
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'name', additionalFilters: []})
     const [[additionalLeftToolbarElements, additionalRightToolbarElements], setAdditionalToolbarElements] = useState<[JSX.Element?, JSX.Element?]>([]);
 	const {navigateRel} = useWorkspace();
-    console.log("Workflows")
 
     const selData = useMemo(() => {
         if (data && data.length>0) {
