@@ -1,9 +1,9 @@
 import { lighten } from 'polished';
 import React from 'react';
-import styled, { DefaultTheme, css, keyframes } from 'styled-components';
 import { Row } from '../../../../types';
 import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
 import { getRowStatus, statusColor } from './utils';
+import { css, DefaultTheme, keyframes, styled } from 'styled-components';
 
 //
 // Typedef
@@ -78,15 +78,15 @@ const LineElement: React.FC<LineElementProps> = ({
 					data-testid="boxgraphic-container"
 				>
 				<BoxGraphic
-					root={row.type === 'step'}
+					$root={row.type === 'step'}
 					style={{
 					width: `${width}%`,
 					}}
 					data-testid="boxgraphic"
-					dragging={dragging}
+					$dragging={dragging}
 					title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (unknown status)` : ''}`}				
 				>
-					<BoxGraphicLine grayed={grayed} state={status} isLastAttempt={isLastAttempt} />
+					<BoxGraphicLine $grayed={grayed} $state={status} $isLastAttempt={isLastAttempt} />
 					<BoxGraphicMarkerStart />
 					{status !== 'RUNNING' && <BoxGraphicMarkerEnd />}
 				</BoxGraphic>
@@ -189,14 +189,14 @@ export const BoxGraphicValue = styled.div<{ position: LabelPosition }>`
   }
 `;
 
-const BoxGraphic = styled.div<{ root: boolean; dragging: boolean }>`
+const BoxGraphic = styled.div<{ $root: boolean; $dragging: boolean }>`
   position: absolute;
   cursor: pointer;
   color: ${(p) => p.theme.color.text.dark};
   min-width: 0.3125rem;
   height: 1.6875rem;
   line-height: 1.6875rem;
-  transition: ${(p) => (p.dragging ? 'none' : '0.5s width')};
+  transition: ${(p) => (p.$dragging ? 'none' : '0.5s width')};
 `;
 
 const UnkownAnimation = (theme: DefaultTheme) => keyframes`
@@ -209,9 +209,9 @@ const UnkownMoveAnimation = keyframes`
   50% { transform: translateX(100%) }
 `;
 
-const BoxGraphicLine = styled.div<{ grayed?: boolean; state: string; isLastAttempt: boolean }>`
+const BoxGraphicLine = styled.div<{ $grayed?: boolean; $state: string; $isLastAttempt: boolean }>`
   position: absolute;
-  background: ${(p) => statusColor(p.theme, p.grayed || false, p.state, p.isLastAttempt)};
+  background: ${(p) => statusColor(p.theme, p.$grayed || false, p.$state, p.$isLastAttempt)};
   width: 100%;
   height: 0.375rem;
   top: 50%;
@@ -220,7 +220,7 @@ const BoxGraphicLine = styled.div<{ grayed?: boolean; state: string; isLastAttem
   overflow: hidden;
 
   ${(p) =>
-    p.state === 'refining' &&
+    p.$state === 'refining' &&
     css`
       animation: 5s ${UnkownAnimation(p.theme)} infinite;
       &::after {
@@ -242,7 +242,7 @@ const BoxGraphicLine = styled.div<{ grayed?: boolean; state: string; isLastAttem
     `}
 
   &:hover {
-    background: ${(p) => statusColor(p.theme, p.grayed || false, p.state, p.isLastAttempt)};
+    background: ${(p) => statusColor(p.theme, p.$grayed || false, p.$state, p.$isLastAttempt)};
   }
 `;
 

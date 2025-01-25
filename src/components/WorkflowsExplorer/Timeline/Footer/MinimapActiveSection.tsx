@@ -29,6 +29,7 @@ const MinimapActiveSection: React.FC<ActiveSectionProps> = ({ timeline, dragging
       style={{
         width: width + '%',
         left: left + '%',
+        background: '#fff'
       }}
       onMouseDown={(e) => startMove(e.clientX)}
       onTouchStart={(e) => startMove(e.touches[0].clientX)}

@@ -46,7 +46,7 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
 						key={`${item.flow_id}.${item.run_number}.${item.attempt_id}.${item.step_name}`}
 						timeline={timeline}
 						row={item}
-						isLastAttempt={true}
+						isLastAttempt={timeline.latestAttemptId === item.attempt_id}
 						startTimeOfFirstAttempt={item.started_at || 0}
 						dragging={dragging}
 						displayPhases={displayPhases}

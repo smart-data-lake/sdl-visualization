@@ -129,10 +129,10 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         return this.reuseIndex()
         .then(data => data.filter(run => (run.name === application && run.runId === runId && run.attemptId === attemptId))[0])
         .then(val => { 
-            if (!val) console.log("getRun not found", application, runId, attemptId);
+            if (!val) console.log("getRun not found", application, runId, attemptId);            
             return fetch(this.statePath + '/' + val.path)
                     .then(res => res.json())
-        })        
+        })
     };
 
     getConfig(tenant: string, repo: string, env: string, version: string | undefined): Promise<ConfigData> {

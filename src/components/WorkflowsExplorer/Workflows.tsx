@@ -1,4 +1,4 @@
-import { Sheet } from "@mui/joy";
+import { Box, Sheet } from "@mui/joy";
 import { SortDirection } from "ka-table";
 import { useMemo, useState } from "react";
 import { fetcher } from "../../api/Fetcher";
@@ -95,10 +95,12 @@ export default function Workflows() {
                         leftElements={additionalLeftToolbarElements}
                         rightElements={additionalRightToolbarElements}    
                     />
-                    <DataTable data={selData} columns={columns} keyAttr="name" name="workflows" minColumnWidth={50}
-                        navigate={(row) => navigateRel(row.name)} 
-    					setToolbarElements={(elements: JSX.Element) => setAdditionalToolbarElements([undefined, elements])}
-                    />
+                    <Box sx={{height: '100%', width: '100%', overflow: 'auto', mb: '1rem'}}>
+                        <DataTable data={selData} columns={columns} keyAttr="name" name="workflows" minColumnWidth={50}
+                            navigate={(row) => navigateRel(row.name)} 
+                            setToolbarElements={(elements: JSX.Element) => setAdditionalToolbarElements([undefined, elements])}
+                        />
+                    </Box>
                 </Sheet>
             ):(<NotFound/>)}
         </>

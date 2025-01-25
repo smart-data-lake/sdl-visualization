@@ -9,6 +9,7 @@ import Attempt, { updateStateFile } from "../../../util/WorkflowsExplorer/Attemp
 import CenteredCircularProgress from "../../Common/CenteredCircularProgress";
 import TabNav from "./Tabs";
 import { useQueryClient } from "react-query";
+import { Sheet } from "@mui/joy";
 
 /**
     The Run component displays information about a specific run of a workflow.
@@ -46,10 +47,12 @@ const Run = () => {
         if (nextLink) nextNavigate = () => navigateContent(`workflows/${flowId}/${nextLink.runId}.${nextLink.attemptId}`);
     }
 
-    return (<>
-        <PageHeader title= {(attempt? flowId + ': ' : '') + 'run ' + runId + ' attempt ' + attemptNb} enablePrevNext={true} prevNavigate={prevNavigate} nextNavigate={nextNavigate} refresh={refreshData} />
-        {attempt ? <TabNav attempt={attempt}/> : <NotFound errorType={500} errorMessage={'run ' + runId + ' attempt ' + attemptNb + " not found!"}/>}
-    </>);
+    return (
+		<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>
+            <PageHeader title= {(attempt? flowId + ': ' : '') + 'run ' + runId + ' attempt ' + attemptNb} enablePrevNext={true} prevNavigate={prevNavigate} nextNavigate={nextNavigate} refresh={refreshData} />
+            {attempt ? <TabNav attempt={attempt}/> : <NotFound errorType={500} errorMessage={'run ' + runId + ' attempt ' + attemptNb + " not found!"}/>}
+        </Sheet>    
+    );
 }
  
 export default Run;

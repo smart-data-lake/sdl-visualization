@@ -159,7 +159,7 @@ export default function WorkflowHistory() {
 		<>
 		{!data || isLoading || isFetching ? <CenteredCircularProgress/> : null}
 		{data ? (
-			<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '5px 15px', gap: '15px', width: '100%', height: '100%' }}>
+			<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>
 				<PageHeader title={flowId!} refresh={refreshData} />    
 				<Sheet>
 					<Sheet sx={{display: 'flex', width: '100%', pb: '0.5rem', gap: '1rem'}}>
@@ -185,10 +185,12 @@ export default function WorkflowHistory() {
 					datetimePicker={true}
                     leftElements={additionalLeftToolbarElements}
                     rightElements={additionalRightToolbarElements}/>
-				<DataTable data={selData} columns={columns} minColumnWidth={50} name="workflowHistory"
-					navigate={(row) => navigateRel(`${row.runId}.${row.attemptId}/timeline`)} keyAttr='path'
-					setToolbarElements={(elements: JSX.Element) => setAdditionalToolbarElements([undefined, elements])}
-				/>
+				<Box sx={{height: '100%', width: '100%', overflow: 'auto', mb: '1rem'}}>
+					<DataTable data={selData} columns={columns} minColumnWidth={50} name="workflowHistory"
+						navigate={(row) => navigateRel(`${row.runId}.${row.attemptId}/timeline`)} keyAttr='path'
+						setToolbarElements={(elements: JSX.Element) => setAdditionalToolbarElements([undefined, elements])}
+					/>
+				</Box>
 			</Sheet>   
 		):(<NotFound errorType={500}/>)
 	}

@@ -1,5 +1,5 @@
 import { ActionsState, Row, StateFile, Run as TimelineRun } from "../../types";
-import { compareFunc } from "../helpers";
+import { compareFunc, compareMultiFunc } from "../helpers";
 import { Filter } from "./StatusInfo";
 
 /**
@@ -51,7 +51,8 @@ export default class Attempt {
             this.runId = stateFile.runId;
             this.attemptId = stateFile.attemptId;
             this.details = stateFile;  
-            this.timelineRows = this.getTimelineRows(stateFile.actionsState).sort(compareFunc('started_at'));
+            this.timelineRows = this.getTimelineRows(stateFile.actionsState)
+                .sort(compareMultiFunc(['startTstmp', 'startTstmpInit', 'startTstmpPrep']));
         } else {
             throw new Error("Error: no statefile found");
         }

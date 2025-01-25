@@ -34,7 +34,7 @@ const TaskListLabel = (props: {item: Row, displayPhases: string[], link?: string
   }
 
   return (
-    <RowLabel type={'task'} isOpen={false} group={false} status={item.status}>
+    <RowLabel $type={'task'} $isOpen={false} $group={false} $status={item.status}>
         <Link to={link!} relative='path' data-testid="tasklistlabel-link">
           <RowLabelContent>
             <RowLabelTaskName
@@ -65,16 +65,15 @@ export default TaskListLabel;
 // Style
 //
 
-const RowLabel = styled.div<{ type: 'step' | 'task'; isOpen?: boolean; group?: boolean; status: string }>`
+const RowLabel = styled.div<{ $type: 'step' | 'task'; $isOpen?: boolean; $group?: boolean; $status: string }>`
   flex: 0 0 15.3125rem;
   max-width: 15.3125rem;
   overflow: hidden;
   cursor: pointer;
-  font-size: ${(p) => (p.type === 'task' ? '0.75rem' : '0.875rem')};
-  font-weight: ${(p) => (p.type === 'step' ? '600' : 'normal')};
+  font-size: ${(p) => (p.$type === 'task' ? '0.75rem' : '0.875rem')};
+  font-weight: ${(p) => (p.$type === 'step' ? '600' : 'normal')};
   line-height: 1.6875rem;
-  border-left: 2px solid ${(p) => colorByStatus(p.theme, p.status)};
-  padding-left: ${(p) => (p.group ? '0' : '0.5rem')};
+  padding-left: ${(p) => (p.$group ? '0' : '0.5rem')};
 
   a {
     display: flex;
@@ -82,11 +81,11 @@ const RowLabel = styled.div<{ type: 'step' | 'task'; isOpen?: boolean; group?: b
     color: ${(p) => p.theme.color.text.dark};
     text-decoration: none;
     max-width: 100%;
-    padding-left: ${(p) => (p.group ? '2.5rem' : '0rem')};
+    padding-left: ${(p) => (p.$group ? '2.5rem' : '0rem')};
     white-space: nowrap;
 
     ${(p) =>
-      !p.group
+      !p.$group
         ? css`
             display: flex;
             justify-content: flex-end;

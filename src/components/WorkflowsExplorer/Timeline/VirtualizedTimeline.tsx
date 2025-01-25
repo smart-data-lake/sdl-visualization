@@ -76,7 +76,8 @@ const VirtualizedTimeline: React.FC<MyTimelineProps> = ({
               endTime: timelineControls.max,
               visibleStartTime: timelineControls.timelineStart,
               visibleEndTime: timelineControls.timelineEnd,
-              groupingEnabled: false
+              groupingEnabled: false,
+              latestAttemptId: rows.map(row => row.attempt_id).reduce((a,b) => Math.max(a,b))
             }}
             onHandleMove={footerHandleUpdate}
             onMove={handleMove}
@@ -97,13 +98,5 @@ const VirtualizedTimelineContainer = styled.div`
   width: 100%;
   user-select: none;
 `;
-
-/* const MyVirtualizedTimelineSubContainer = styled.div`
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-`; */
 
 export default VirtualizedTimeline;

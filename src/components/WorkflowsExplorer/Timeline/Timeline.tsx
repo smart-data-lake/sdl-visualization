@@ -29,6 +29,7 @@ export type TimelineMetrics = {
   visibleEndTime: number;
   visibleStartTime: number;
   groupingEnabled: boolean;
+  latestAttemptId: number;
 };
 
 //

@@ -149,7 +149,7 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
 
   return (
     <Box sx={{
-      flex: 1, minHeight: 0, width: '100%', height: '100%',
+      width: '100%', height: '100%',
       fontFamily: 'Roboto,Helvetica,Arial,sans-serif', fontWeight: '400', fontSize: '0.875rem', // defaults from MuiTypography-root
       '& ka-table-wrapper': { overflow: 'auto' },
       '& .ka-thead-cell-content, .ka-cell-text': { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', height: '25px' },

@@ -3,6 +3,7 @@ import { useMutation, useQuery, UseQueryResult } from "react-query";
 import { fetcher } from "../api/Fetcher";
 import { TstampEntry } from "../types";
 import { useWorkspace } from "./useWorkspace";
+import { sortIfArray } from "../util/helpers";
 
 /**
  * React Query wrapper for fetching data
