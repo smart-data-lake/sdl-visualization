@@ -4,7 +4,7 @@ import PageHeader from "../../layouts/PageHeader";
 import WelcomeCard from "./WelcomeCard";
 
 const info = [
-    {title: 'Configuration', subtitle: 'Explore configuration', image: 'images/config.png', linkType: 'internal', link: 'config'},
+    {title: 'Configuration', subtitle: 'Explore configuration', image: 'images/config.png', linkType: 'internal', link: 'config/dataObjects'},
     {title: 'Workflows', subtitle: 'Explore runtime info', image: 'images/workflow.png', linkType: 'internal', link: 'workflows'},
     {title: 'Documentation', subtitle: 'Learn about SDLB', image: 'images/wwwsdlb.png', linkType: 'external', link: 'https://www.smartdatalake.ch/'},
 ]
@@ -12,10 +12,7 @@ const info = [
 const Home = () => {
     return ( 
         <>
-            <PageHeader 
-                title="Welcome to SDLB UI"
-                noBack={true}
-            />
+            <PageHeader title="Welcome to SDLB UI"/>
             <Sheet sx={{display: 'flex', flexDirection: 'column', overflowY: 'auto', height: '100%', pt: '2rem', ml: '1rem', gap: '2rem '}}>
                 <Typography level="body-md">
                     Start here with Smart Data Lake Builder UI

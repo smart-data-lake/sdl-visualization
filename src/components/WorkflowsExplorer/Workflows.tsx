@@ -13,11 +13,47 @@ import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../
 import ToolBar from "./ToolBar/ToolBar";
 import { FilterParams, filterSearchText } from "./WorkflowHistory";
 
+const columns = [{
+    title: 'Name',
+    property: 'name',
+}, {
+    title: 'Last status',
+    property: 'lastStatus',
+    renderer: cellIconRenderer,
+    width: '100px'
+}, {
+    title: 'Last duration',
+    property: 'lastDuration',
+    renderer: durationRenderer,
+    width: '150px'
+}
+, {
+    title: 'Last attempt',
+    property: 'lastAttemptStartTime',
+    renderer: dateRenderer,
+    width: '175px',
+        sortDirection: SortDirection.Descend
+}, {
+    title: '# runs',
+    property: 'numRuns',
+    width: '100px'
+}, {
+    title: '# attempts',
+    property: 'numAttempts',
+    width: '100px'
+}, {
+    title: '# actions',
+    property: 'lastNumActions',
+    width: '100px'
+}]
+
 export default function Workflows() {
     const userContext = useUser();
     const { data, isLoading, isFetching, refetch } = useFetchWorkflows(!userContext || userContext.authenticated);
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'contains', searchColumn: 'name', additionalFilters: []})
+    const [[additionalLeftToolbarElements, additionalRightToolbarElements], setAdditionalToolbarElements] = useState<[JSX.Element?, JSX.Element?]>([]);
 	const {navigateRel} = useWorkspace();
+    console.log("Workflows")
 
     const selData = useMemo(() => {
         if (data && data.length>0) {
@@ -45,40 +81,6 @@ export default function Workflows() {
 		refetch();
 	}    
 
-    const columns = [{
-        title: 'Name',
-        property: 'name',
-    }, {
-        title: 'Last status',
-        property: 'lastStatus',
-        renderer: cellIconRenderer,
-        width: '100px'
-    }, {
-        title: 'Last duration',
-        property: 'lastDuration',
-        renderer: durationRenderer,
-        width: '150px'
-    }
-    , {
-		title: 'Last attempt',
-		property: 'lastAttemptStartTime',
-		renderer: dateRenderer,
-		width: '175px',
-	        sortDirection: SortDirection.Descend
-	}, {
-        title: '# runs',
-        property: 'numRuns',
-        width: '100px'
-    }, {
-        title: '# attempts',
-        property: 'numAttempts',
-        width: '100px'
-    }, {
-        title: '# actions',
-        property: 'lastNumActions',
-        width: '100px'
-    }]
-
     return (    
         <>
             {data ? (
@@ -90,8 +92,13 @@ export default function Workflows() {
                         updateFilterParams={updateFilterParams}
                         stateFilters={checkFiltersAvailability(data, stateFilters('lastStatus'))}
                         searchPlaceholder="Search by name"
+                        leftElements={additionalLeftToolbarElements}
+                        rightElements={additionalRightToolbarElements}    
                     />
-                    <DataTable data={selData} columns={columns} navigate={(row) => navigateRel(row.name)} keyAttr="name"/>
+                    <DataTable data={selData} columns={columns} keyAttr="name" name="workflows" minColumnWidth={50}
+                        navigate={(row) => navigateRel(row.name)} 
+    					setToolbarElements={(elements: JSX.Element) => setAdditionalToolbarElements([undefined, elements])}
+                    />
                 </Sheet>
             ):(<NotFound/>)}
         </>

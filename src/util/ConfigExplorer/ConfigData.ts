@@ -169,7 +169,7 @@ export class InitialConfigDataLists implements ConfigDataLists {
                 // gather involved connections
                 const selectedConnections: any[] = [];
                 selectedDataObjects.forEach(a => {
-                    if (a.connectionId) selectedConnections.push(this.initialData!.dataObjects[a.connectionId]);
+                    if (a.connectionId) selectedConnections.push(this.initialData!.connections[a.connectionId]);
                 });
                 return {actions: selectedActions, dataObjects: selectedDataObjects.filter(onlyUnique), connections: selectedConnections.filter(onlyUnique)};
             }

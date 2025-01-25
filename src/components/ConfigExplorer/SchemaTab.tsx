@@ -46,7 +46,7 @@ export function tooltipHeadRenderer(msg: string) {
 export function tooltipCellRenderer() {
   return (prop: any) => {
     return (
-      <OverflowTooltip text={prop.rowData[prop.column.key]} maxWidth='500px'/>
+      <OverflowTooltip text={getPropertyByPath(prop.rowData, prop.column.key)} maxWidth='500px'/>
     );
   }
 }
@@ -156,6 +156,7 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
   }, {
     title: 'Description',
     property: 'description',
+    width: '200px',
     renderer: tooltipCellRenderer()
   }];
   const optionalColumns = {

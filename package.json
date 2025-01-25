@@ -57,7 +57,7 @@
     "react-query": "^3.39.3",
     "react-redux": "^9.1.2",
     "react-resizable": "^3.0.5",
-    "react-resizable-panels": "^0.0.63",
+    "react-resizable-panels": "^2.1.7",
     "react-router-dom": "^6.28.2",
     "react-syntax-highlighter": "^15.5.0",
     "react-tooltip": "^4.2.17",

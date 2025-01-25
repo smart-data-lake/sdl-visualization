@@ -1,22 +1,20 @@
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
-import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import { Box, Button, Sheet, Tooltip } from "@mui/joy";
 import Tab from '@mui/joy/Tab';
 import TabList from '@mui/joy/TabList';
 import TabPanel from '@mui/joy/TabPanel';
 import Tabs from '@mui/joy/Tabs';
 import React from 'react';
-import { useNavigate, useParams } from "react-router-dom";
-import DraggableDivider from "../../layouts/DraggableDivider";
+import { useParams } from "react-router-dom";
+import { useFetchDataObjectSchemaEntries, useFetchDataObjectStatsEntries, useFetchDescription } from '../../hooks/useFetchData';
+import { useAppDispatch } from '../../hooks/useRedux';
+import { useWorkspace } from '../../hooks/useWorkspace';
 import { ConfigData } from "../../util/ConfigExplorer/ConfigData";
+import { setLineageTabProps } from '../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
 import './ComponentsStyles.css';
 import ConfigurationTab from "./ConfigurationTab";
 import DescriptionTab from "./DescriptionTab";
-import LineageTabSep from './LineageTab/LineageTabWithSeparateView';
-import { useFetchDataObjectSchemaEntries, useFetchDataObjectStatsEntries, useFetchDescription } from '../../hooks/useFetchData';
 import SchemaTab from './SchemaTab';
-import { useAppDispatch } from '../../hooks/useRedux';
-import { setLineageTabProps } from '../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
 export function getMissingDescriptionFileCmp(elementType: string, elementName: string) {
 	return <Box>
 		There is no detailed description for this element.<br />
@@ -39,14 +37,13 @@ export default function ElementDetails(props: {
   configData?: ConfigData;
   parentCmpRef: React.RefObject<HTMLDivElement>;
   version: string | undefined;
+  openLineage: boolean;
+  setOpenLineage: (boolean) => void;
 }) {
-  const { configData, version } = props;
+  const { configData, version, openLineage, setOpenLineage } = props;
 	const { elementName, elementType, tab } = useParams();
 	const [lastTab, setLastTab] = React.useState('configuration');
-	const [openLineage, setOpenLineage] = React.useState(false);
-	const lineageRef = React.useRef<HTMLDivElement>(null);
-	const navigate = useNavigate();
-	const navigateRel = (subPath: string) => navigate(subPath, { relative: 'path' }); // this navigates Relative to path, not route
+	const {navigateRel} = useWorkspace();
 
 	const configObj = React.useMemo(() => {
 		if (configData && elementType && elementName) {
@@ -100,16 +97,11 @@ export default function ElementDetails(props: {
 						</TabList>
 						{(elementType === "dataObjects" || elementType === "actions") &&
 							(<Sheet>
-								{!openLineage ?
+								{!openLineage &&
 									(
-										<Button size="sm" onClick={() => setOpenLineage(!openLineage)}>
+										<Button size="sm" onClick={() => setOpenLineage(true)}>
 											Open lineage
 											<KeyboardDoubleArrowLeftIcon sx={{ ml: '0.5rem' }} />
-										</Button>
-									) : (
-										<Button variant='soft' size="sm" onClick={() => setOpenLineage(!openLineage)}>
-											Close lineage
-											<KeyboardDoubleArrowRightIcon sx={{ ml: '0.5rem' }} />
 										</Button>
 									)}
 							</Sheet>)
@@ -128,15 +120,6 @@ export default function ElementDetails(props: {
 						</TabPanel>}
 				</Tabs>
 			</Sheet>
-
-			{openLineage &&
-				<>
-					<DraggableDivider id="config-lineage" cmpRef={lineageRef} isRightCmp={true} defaultCmpWidth={500} parentCmpRef={props.parentCmpRef} />
-					<Sheet sx={{ height: '100%', minWidth: '100px' }} ref={lineageRef}>
-						<LineageTabSep />
-					</Sheet>
-				</>
-			}
 		</>
 	);
 } 

@@ -194,33 +194,33 @@ export default function ElementList(props: ElementListProps) {
   }
 
   return (
-    <Box sx={{minWidth: '100px', maxWidth: '500px', height: '100%', overflowY: 'auto'}} ref={props.mainRef}>
+    <Box sx={{display: 'flex', flexDirection: 'column', height: '100%', marginRight: "6px"}} ref={props.mainRef}>
       <Tooltip arrow title={`Search text for type=${elementSearchType} not valid: ${elementSearchTextErr}`} placement='bottom' color="danger" open={(elementSearchTextErr ? true : false)} variant="soft">
-      <Input
-        placeholder="Search element"
-        sx={{paddingRight: '0px', "--Input-minHeight": 0}}
-        slotProps={{endDecorator: {sx: {marginLeft: "0px"}}}}
-        value={elementSearchText}
-        onChange={(e) => setElementSearchText(e.target.value)}
-        error={(elementSearchTextErr ? true : false)}
-        endDecorator={
-          <>
-            <IconButton onClick={() => setElementSearchText('')} disabled={!(elementSearchText?.length>0)} variant='plain' sx={{"--IconButton-size": "20px"}}><ClearIcon /></IconButton>
-            <Divider orientation="vertical" />
-            <Select size="sm" variant="plain" value={elementSearchType} required
-              onChange={(e,value) => {setElementSearchText('');setElementSearchType(value!)}}
-              renderValue={renderSearchType}
-            >
-              <Option key="id" value="id">{getSearchTypeElement('id')}</Option>
-              <Option key="property" value="property">{getSearchTypeElement('property')}</Option>
-              <Option key="feedSel" value="feedSel">{getSearchTypeElement('feedSel')}</Option>
-            </Select>
-          </>
-        }
-      />
+        <Input
+          placeholder="Search element"
+          sx={{paddingRight: '0px', "--Input-minHeight": 0}}
+          slotProps={{endDecorator: {sx: {marginLeft: "0px"}}}}
+          value={elementSearchText}
+          onChange={(e) => setElementSearchText(e.target.value)}
+          error={(elementSearchTextErr ? true : false)}
+          endDecorator={
+            <>
+              <IconButton onClick={() => setElementSearchText('')} disabled={!(elementSearchText?.length>0)} variant='plain' sx={{"--IconButton-size": "20px"}}><ClearIcon /></IconButton>
+              <Divider orientation="vertical" />
+              <Select size="sm" variant="plain" value={elementSearchType} required
+                onChange={(e,value) => {setElementSearchText('');setElementSearchType(value!)}}
+                renderValue={renderSearchType}
+              >
+                <Option key="id" value="id">{getSearchTypeElement('id')}</Option>
+                <Option key="property" value="property">{getSearchTypeElement('property')}</Option>
+                <Option key="feedSel" value="feedSel">{getSearchTypeElement('feedSel')}</Option>
+              </Select>
+            </>
+          }
+        />
       </Tooltip>
 
-      <List size="md" sx={{width: '100%'}}>
+      <List size="md" sx={{flex: 1, width: '100%', paddingTop: 0, marginTop: "6px", marginBottom: "1em", overflowY: 'auto'}}>
         {sectionsDef.map(sectionDef => createSection(sectionDef))}
       </List>
     </Box>

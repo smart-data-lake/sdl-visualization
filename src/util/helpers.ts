@@ -231,3 +231,13 @@ export function sortIfArray<TInput>(v: TInput) {
   if (Array.isArray(v)) return (v as []).sort() as TInput;
   else v;
 }
+
+export function arrayEquals(a?: any[], b?: any[]) {
+  if (!isArray(a) || !isArray(b)) return false; 
+  var i = a.length;
+  if (i != b.length) return false;
+  while (i--) {
+      if (a[i] !== b[i]) return false;
+  }
+  return true;
+}

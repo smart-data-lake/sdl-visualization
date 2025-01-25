@@ -1,6 +1,6 @@
 import React, { createRef, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { getLongestRowDuration, getTaskLineStatus, startAndEndExecPointsOfRows } from '../../../../util/WorkflowsExplorer/row';
+import { getTaskLineStatus, startAndEndExecPointsOfRows } from '../../../../util/WorkflowsExplorer/row';
 import { Row, TaskStatus } from "../../../../types";
 import MinimapRow from './MinimapRow';
 import MinimapActiveSection from './MinimapActiveSection';
@@ -95,7 +95,7 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
       })
       setLines(linegroups.filter((r) => r.start !== 0 && r.end !== 0));
     }
-  , [rows, timeline.groupingEnabled, timeline.sortBy, timeline.startTime, timeline.endTime]);
+  , [rows, timeline.groupingEnabled, timeline.startTime, timeline.endTime]);
 
   useEffect(() => {
     onDraggingStateChange(drag.dragging || handleDrag.dragging);

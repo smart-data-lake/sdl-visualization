@@ -1,6 +1,6 @@
-import { Breadcrumbs, Typography, Link, Box } from "@mui/joy";
-import { capitalize } from "../util/helpers";
+import { Box, Link, Typography } from "@mui/joy";
 import { useWorkspace } from "../hooks/useWorkspace";
+import { capitalize } from "../util/helpers";
 
 /**
  * The BasicBreadcrumbs component is the breadcrumbs of each page. It displays a URL path in a hierarchical manner. It allows the user to quickly navigate back to a parent page.
@@ -26,7 +26,7 @@ const BasicBreadcrumbs = () => {
       <Box sx={{display: "flex", alignContent: "flex-end", flexDirection: "row", gap: 1, flexGrow: 1, overflowX: "hidden"}}>
           {links.map((item, idx) => 
                 // create link for elements except the last
-                (idx < links.length -1 ? <><Link onClick={() => navigateUp(idx)} key={item} sx={{color: 'white'}}>{getItem(item, idx == 0, idx)}</Link> /</> : getItem(item, idx == 0, idx))
+                (idx < links.length -1 ? <Box key={item}><Link onClick={() => navigateUp(idx)} sx={{color: 'white'}}>{getItem(item, idx == 0, idx)}</Link>&nbsp;&nbsp;/</Box> : getItem(item, idx == 0, idx))
           )}
       </Box>            
     );

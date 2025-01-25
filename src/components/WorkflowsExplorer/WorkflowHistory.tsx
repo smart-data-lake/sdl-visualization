@@ -50,6 +50,7 @@ export default function WorkflowHistory() {
     const userContext = useUser();
 	const { data, isLoading, isFetching, refetch } = useFetchWorkflowRuns(flowId!, !userContext || userContext.authenticated);
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'startsWith', searchColumn: 'runId', additionalFilters: []})
+    const [[additionalLeftToolbarElements, additionalRightToolbarElements], setAdditionalToolbarElements] = useState<[JSX.Element?, JSX.Element?]>([]);
 	const {navigateRel} = useWorkspace();
 	const queryClient = useQueryClient();
 		
@@ -165,7 +166,7 @@ export default function WorkflowHistory() {
 						<Tooltip variant="solid" placement="right" title="This chart displays the runs in the current page. You can select a range or jump to a detailed run view by clicking on the corresponding bar.">
 							<Sheet sx={{display: 'flex', gap: '1rem'}}>
 								<Typography level='title-md'>Runs</Typography>
-								<Typography level='body-md' sx={{color: 'gray'}}>{selData.length} runs displayed</Typography>
+								<Typography level='body-md' sx={{color: 'gray'}}>{selData.length} attempts displayed</Typography>
 							</Sheet>
 						</Tooltip>
 						<Box sx={{flex: 1}}/>
@@ -181,8 +182,13 @@ export default function WorkflowHistory() {
 					searchPlaceholder={'Search by Run ID'}
 					stateFilters={checkFiltersAvailability(data, stateFilters('status'))}
 					filterParams={filterParams}
-					datetimePicker={true}/>
-				<DataTable data={selData} columns={columns} navigate={(row) => navigateRel(`${row.runId}.${row.attemptId}/timeline`)} keyAttr='path'/>
+					datetimePicker={true}
+                    leftElements={additionalLeftToolbarElements}
+                    rightElements={additionalRightToolbarElements}/>
+				<DataTable data={selData} columns={columns} minColumnWidth={50} name="workflowHistory"
+					navigate={(row) => navigateRel(`${row.runId}.${row.attemptId}/timeline`)} keyAttr='path'
+					setToolbarElements={(elements: JSX.Element) => setAdditionalToolbarElements([undefined, elements])}
+				/>
 			</Sheet>   
 		):(<NotFound errorType={500}/>)
 	}
