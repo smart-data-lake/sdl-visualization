@@ -12,7 +12,7 @@ import PageHeader from "../../layouts/PageHeader";
 import { Filter, checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
 import CenteredCircularProgress from "../Common/CenteredCircularProgress";
 import { createFeedChip } from "../ConfigExplorer/ConfigurationTab";
-import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
+import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, fallbackRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
 import HistoryBarChart from "./HistoryChart/HistoryBarChart";
 import ToolBar from "./ToolBar/ToolBar";
 import { useQueryClient } from "react-query";
@@ -101,10 +101,12 @@ const columns = [{
 	width: '51px' // min width for sorting
 }, {				
 	title: 'SDLB Version',
-	property: 'buildVersion',
+	property: 'sdlbVersionInfo.version',
+	renderer: fallbackRenderer('buildVersion')
 }, {
 	title: 'App Version',
-	property: 'appVersion',
+	property: 'appVersionInfo.version',
+	renderer: fallbackRenderer('appVersion')
 }]
 
 /**

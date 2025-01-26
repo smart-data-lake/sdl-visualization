@@ -36,6 +36,12 @@ export function durationRenderer(prop: any) {
   return formatDuration(prop.value)
 }
 
+export function fallbackRenderer(fallbackProperty: string) {
+	return (prop: any) => {
+		return  prop.value || prop.rowData[fallbackProperty];
+    }
+}
+
 export function getColumnSelectionMenu(columns: any[], columnsVisible: {}, setColumnsVisible: ({}) => void, tableRef?: ITableInstance) {
   return <>
     <Dropdown>

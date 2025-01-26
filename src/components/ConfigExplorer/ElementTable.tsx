@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import { ConfigDataLists } from "../../util/ConfigExplorer/ConfigData";
+import { isArray } from "../../util/helpers";
 import DataTable from "./DataTable";
 import { tooltipCellRenderer } from "./SchemaTab";
 
@@ -13,6 +14,16 @@ function tableRenderer(prop: any) {
 
 function listRenderer(prop: any) {
 	return (prop.value ? prop.value.join(", ") : prop.value);
+}
+
+function inputsRenderer(prop: any) {
+	const v = prop.rowData.inputId || prop.rowData.inputIds
+	return (isArray(v) ? v.join(", ") : v);
+}	
+
+function outputsRenderer(prop: any) {
+	const v = prop.rowData.outputId || prop.rowData.outputIds
+	return (isArray(v) ? v.join(", ") : v);
 }	
 
 const dataObjectColumns: any[] = [{
@@ -80,13 +91,23 @@ const actionColumns: any[] = [{
 	title: 'Inputs',
 	property: 'inputIds',
 	width: '150px',
-	renderer: listRenderer
+	renderer: inputsRenderer
 }, {
 	title: 'Outputs',
 	property: 'outputIds',
 	width: '150px',
-	renderer: listRenderer
+	renderer: outputsRenderer
 }, {
+	title: 'Execution mode',
+	property: 'executionMode.type',
+	width: '100px',
+	visible: false
+}, {	
+	title: 'Execution condition',
+	property: 'executionCondition.expression',
+	width: '100px',
+	visible: false
+}, {	
 	title: 'Description',
 	property: 'metadata.description',
 	width: '200px',

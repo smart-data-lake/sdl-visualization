@@ -1,8 +1,9 @@
 import { Auth } from "aws-amplify";
-import { fetchAPI } from "./fetchAPI";
-import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { TstampEntry } from "../types";
-import { compareFunc, dateFromNumber, sortIfArray } from "../util/helpers";
+import { ConfigData } from "../util/ConfigExplorer/ConfigData";
+import { dateFromNumber, sortIfArray } from "../util/helpers";
+import { parseUtcDate } from "../util/WorkflowsExplorer/date";
+import { fetchAPI } from "./fetchAPI";
 
 export class fetchAPI_rest implements fetchAPI {
     url: string;
@@ -25,16 +26,39 @@ export class fetchAPI_rest implements fetchAPI {
         return await response.json();
     }
 
-    private processRuns(runs) {
+    private processWorkflows(entries) {
+        return entries.map((entry) => {
+            // convert UTC date strings to date
+            entry.lastAttemptStartTime = parseUtcDate(entry.lastAttemptStartTime);
+            return entry;
+        });
+    }
+
+    private processWorkflowHistory(runs) {
         return runs.map((run) => {
-            // convert date strings to date
-            run.runStartTime = new Date(run.runStartTime);
-            run.attemptStartTime = new Date(run.attemptStartTime);
-            run.attemptStartTimeMillis = new Date(run.attemptStartTime).getTime(); // needed for HistorBarChart
-            run.lastAttemptStartTime = new Date(run.lastAttemptStartTime);
-            run.runEndTime = new Date(run.runEndTime);
+            // convert UTC date strings to date
+            run.runStartTime = parseUtcDate(run.runStartTime);
+            run.attemptStartTime = parseUtcDate(run.attemptStartTime);
+            run.attemptStartTimeMillis = run.attemptStartTime?.getTime(); // needed for HistorBarChart
+            run.runEndTime = parseUtcDate(run.runEndTime);            
             return run;
         });
+    }
+
+    private processRun(run) {
+        // convert UTC date strings to date
+        run.runStartTime = parseUtcDate(run.runStartTime);
+        run.attemptStartTime = parseUtcDate(run.attemptStartTime);
+        run.runEndTime = parseUtcDate(run.runEndTime);            
+        Object.keys(run.actionsState).forEach((k) => {
+            run.actionsState[k].startTstmp = parseUtcDate(run.actionsState[k].startTstmp);            
+            run.actionsState[k].startTstmpInit = parseUtcDate(run.actionsState[k].startTstmpInit);            
+            run.actionsState[k].startTstmpPrepare = parseUtcDate(run.actionsState[k].startTstmpPrepare);            
+            run.actionsState[k].endTstmp = parseUtcDate(run.actionsState[k].endTstmp);            
+            run.actionsState[k].endTstmpInit = parseUtcDate(run.actionsState[k].endTstmpInit);            
+            run.actionsState[k].endTstmpPrepare = parseUtcDate(run.actionsState[k].endTstmpPrepare);            
+        })
+        return run;
     }
 
     private async getRequestInfo(method: string = 'GET', headers?: any): Promise<RequestInit> {
@@ -48,15 +72,12 @@ export class fetchAPI_rest implements fetchAPI {
 
     getWorkflows = (tenant: string, repo: string, env: string) => {
         return this.fetch(`${this.url}/workflows?tenant=${tenant}&repo=${repo}&env=${env}`)
-        .then(runs => this.processRuns(runs))
-        .catch(() => {
-            return [];
-        });
+        .then(runs => this.processWorkflows(runs))
     };  
 
     getWorkflowRuns = (tenant: string, repo: string, env: string, application: string) => {
         return this.fetch(`${this.url}/workflow?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}`)
-        .then(runs => this.processRuns(runs));
+        .then(runs => this.processWorkflowHistory(runs));
     };
     
     getWorkflowRunsByAction = (name: string) => {
@@ -71,6 +92,7 @@ export class fetchAPI_rest implements fetchAPI {
     
     getRun = async (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number) => {
         return this.fetch(`${this.url}/state?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}&runId=${runId}&attemptId=${attemptId}`)
+        .then(runs => this.processRun(runs));
     };
 
     getConfig = async (tenant: string, repo: string, env: string, version: string|undefined) => {
