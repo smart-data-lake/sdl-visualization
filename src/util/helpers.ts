@@ -140,6 +140,12 @@ export function isArray(value) {
   return typeof value == 'object' && Array.isArray(value);
 }
 
+/**
+ * Check if value is a primitive value, e.g. number, string, ...
+ */
+export function isPrimitive(value) {
+  return typeof value !== 'object';
+}
 
 /**
  * check if value is an array of type T

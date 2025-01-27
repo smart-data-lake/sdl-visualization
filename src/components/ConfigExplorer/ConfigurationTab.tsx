@@ -125,11 +125,16 @@ export default function ConfigurationTab(props: ElementProps) {
     return getPropertyByPath(props.data, attributeName);
   }
 
+  function appendSeparator(v?: string) {
+    return (v ? v+"." : '');
+  }
+
   //attributes to be displayed at the top of the page
   let topAttributes: {key: string, func: (x:any) => any}[] = [
     {key: "path", func: (x: any) => x},
     {key: "partitions", func: (cols: any) => <Stack spacing={0.5} direction="row">{(cols as string[]).map((col,idx) => createSimpleChip(col,idx))}</Stack>}, 
-    {key: "table", func: (tbl: any) => (tbl.db || (props.connection && props.connection.db) || "<db?>") + "." + tbl.name},
+    {key: "virtualPartitions", func: (cols: any) => <Stack spacing={0.5} direction="row">{(cols as string[]).map((col,idx) => createSimpleChip(col,idx))}</Stack>}, 
+    {key: "table", func: (tbl: any) => appendSeparator(tbl.catalog || props.connection?.catalog) + (tbl.db || props.connection?.db || "<db?>") + "." + tbl.name},
     {key: "table.primaryKey", func: (cols: any) => <Stack spacing={0.5} direction="row">{(cols as string[]).map(col => createSimpleChip(col))}</Stack>}, 
     {key: "db", func: (x: any) => x},
     {key: "pathPrefix", func: (x: any) => x},

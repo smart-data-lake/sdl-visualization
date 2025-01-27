@@ -3,6 +3,7 @@ import { useWorkspace } from "../../../hooks/useWorkspace";
 import { Row } from "../../../types";
 import { createActionsChip } from "../../ConfigExplorer/ConfigurationTab";
 import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../../ConfigExplorer/DataTable';
+import { useParams } from "react-router-dom";
 
 
 function actionsLinkRenderer(prop: any) {
@@ -78,11 +79,12 @@ const columns = [{
 }];
 
 export const TableView = (props: { rows: Row[], stepName?: string, setToolbarElements: (lrElements: [JSX.Element?, JSX.Element?]) => void}) => {
-	const {navigateRel} = useWorkspace();
+	const {navigateContent} = useWorkspace();
+    const params = useParams();
 
     return <>
         <DataTable data={props.rows} columns={columns} keyAttr='step_name' name="run"
-            navigate={(row) => navigateRel((props.stepName ? `../${row.step_name}` : `${row.step_name}`))} 
+            navigate={(row) => navigateContent(`workflows/${params.flowId}/${params.runIdAttempt}/table/${row.step_name}`)} 
             setToolbarElements={(elements: JSX.Element) => props.setToolbarElements([undefined, elements])}
         />
     </>

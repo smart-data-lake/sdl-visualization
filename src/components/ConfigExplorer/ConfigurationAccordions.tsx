@@ -1,14 +1,11 @@
-import * as React from 'react';
-import './ComponentsStyles.css';
+import { Accordion, AccordionDetails, AccordionGroup, AccordionSummary, Link, Stack, Table } from '@mui/joy';
 import 'github-markdown-css/github-markdown.css';
-import { Button, Link, Table } from '@mui/joy';
-import { createPropertiesComponent } from './PropertiesComponent';
-import CodeViewComponent from './CodeViewComponent';
-import { getPropertyByPath, hoconify, removeAttr } from '../../util/helpers';
-import { Accordion, AccordionDetails, AccordionGroup, AccordionSummary, Chip, Stack } from '@mui/joy';
-import { createSimpleChip } from './ConfigurationTab';
 import { useManifest } from '../../hooks/useManifest';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { getPropertyByPath, hoconify } from '../../util/helpers';
+import CodeViewComponent from './CodeViewComponent';
+import './ComponentsStyles.css';
+import { createSimpleChip } from './ConfigurationTab';
+import { createPropertiesComponent } from './PropertiesComponent';
 
 function getTransformers(action: any | undefined): any[] {
   if (!action) return [];
@@ -29,7 +26,6 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   const getAttribute = (attributeName: string) => getPropertyByPath(props.data, attributeName);
   var accordionSections = new Map<string,[string | JSX.Element,JSX.Element]>();
   const {data: manifest} = useManifest();
-  const navigate = useNavigate();
   
   function foreignKeysAccordion(){
     let foreignKeys = getAttribute('table.foreignKeys');
