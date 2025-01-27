@@ -40,10 +40,18 @@ function compareArrFunc(a: any[], b: any[]) {
  * Transpose an array with objects, all having the same keys, to a table.
  */
 function arrayToRows(arr: object[]) {
-  const cols = Object.keys(arr[0]);
+  const cols = Object.keys(arr[0]).sort();
   const data = arr.map((e) => cols.map(k => e[k])).sort(compareArrFunc);
-  const rows = [cols, ...data].map(([k,v], idx) => createRow(idx, k, v, false));
+  const rows = [cols, ...data].map((vs, idx) => createListRow(idx, vs, true, false));
   return rows;
+}
+
+function createListRow(idx: number, values: any[], nested: boolean, nestedChild?: boolean) {
+  return (
+    <tr key={idx}>
+      {values.map(v => <td style={{whiteSpace: 'nowrap', padding: (nestedChild ? '0px' : '2px 5px'), width: (nested ? '100%' : 'auto')}}>{v}</td>)}
+    </tr>
+  )
 }
   
 function createRow(idx: number, key: string, value, nested: boolean, nestedChild?: boolean, colHeader?: string, colHeaderLength?: number) {
@@ -78,9 +86,12 @@ export default function PropertiesComponent(props: {entries: {key: string, value
         if (value.length === 0) 1; // no-op
         else if (value.every(e => isPrimitive(e))) value = value.join(", ");
         else if (value.every(e => isObject(e) && arrayEquals(Object.keys(e), Object.keys(value[0])))) {
-          value = getTable(arrayToRows(value), true)
-        } else value = value.map((e,idx) => createPropertiesComponent({obj: e, marginTop: (idx===0 ? "0px" : "8px"), nested: true, key: idx}));
-        //nestedChild = true;
+          value = getTable(arrayToRows(value), true);
+          nestedChild = true;
+        } else {
+          value = value.map((e,idx) => createPropertiesComponent({obj: e, marginTop: (idx===0 ? "0px" : "8px"), nested: true, key: idx}));
+          nestedChild = true;
+        }
       // format dates
       } else if (value instanceof Date) {
         value = formatTimestamp(value);
