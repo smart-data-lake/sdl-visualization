@@ -34,8 +34,8 @@ def getRuns(files):
             data = statefile["data"]
             appConfig = data["appConfig"]
             actionsState = data["actionsState"]
-            buildVersion = find("buildVersionInfo.version", data) # ignore if not found
-            appVersion = find("appVersion", data) # ignore if not found
+            buildVersion = find("sdlbVersionInfo.version", data) # ignore if not found
+            appVersion = find("appVersionInfo.version", data) # ignore if not found
             status = getStatus(actionsState)
             runEndTime = getRunEndTime(data)
             actions = {
@@ -70,7 +70,7 @@ def getRuns(files):
 
 def getStatus(actionsState):
     """Get the status of a state file."""
-    prio = ["FAILED", "CANCELLED", "RUNNING", "SUCCEEDED", "SKIPPED", "STARTED", "INITIALIZED", "PREPARED"]
+    prio = ["FAILED", "CANCELLED", "RUNNING", "SUCCEEDED", "SKIPPED", "INITIALIZING", "INITIALIZED", "PREPARING", "PREPARED", "PENDING"]
     minIdx = len(prio) -1
     for action in actionsState.values():
         minIdx = min(minIdx, prio.index(action["state"]))            
