@@ -229,7 +229,7 @@ export default function useTimelineControls(
 
   useEffect(() => {
     const tm = setInterval(() => {
-      if (run.status === 'running' && mode !== 'left') {
+      if (run.status.endsWith('ING') && mode !== 'left') {
         dispatch({ type: 'incrementTimelineLength' });
       }
     }, 1000);

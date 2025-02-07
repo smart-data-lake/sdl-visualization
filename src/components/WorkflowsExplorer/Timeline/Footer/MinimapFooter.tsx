@@ -1,6 +1,6 @@
 import React, { createRef, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { getTaskLineStatus, startAndEndExecPointsOfRows } from '../../../../util/WorkflowsExplorer/row';
+import { aggregateTaskStatus, startAndEndExecPointsOfRows } from '../../../../util/WorkflowsExplorer/row';
 import { Row, TaskStatus } from "../../../../types";
 import MinimapRow from './MinimapRow';
 import MinimapActiveSection from './MinimapActiveSection';
@@ -89,7 +89,7 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
       }
       // Calculate start and end points for each group
       const linegroups = grps.map((grp) => {
-        const status = getTaskLineStatus(grp);
+        const status = aggregateTaskStatus(grp);
         const { start, end } = startAndEndExecPointsOfRows(grp);
         return { status, start, end };
       })

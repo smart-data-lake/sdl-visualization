@@ -1,19 +1,16 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import styled, { css } from 'styled-components';
-import { AsyncStatus, Row } from '../../../../types';
 import TaskListLabel from '../TaskListLabel';
 import { TimelineMetrics } from '../Timeline';
 import LineElement, { BoxGraphicValue } from './LineElement';
+import { Row } from '../../../../types';
 
 type TimelineRowProps = {
 	// Row type and data
 	item?: Row;
 	// Overall timeline state (used to calculate dimensions)
 	timeline: TimelineMetrics;
-	onOpen: () => void;
-	searchStatus?: AsyncStatus;
-	isOpen?: boolean;
 	// Flag row as sticky for some absolute stylings
 	sticky?: boolean;
 	paramsString?: string;

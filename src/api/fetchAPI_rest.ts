@@ -5,6 +5,43 @@ import { dateFromNumber, sortIfArray } from "../util/helpers";
 import { parseUtcDate } from "../util/WorkflowsExplorer/date";
 import { fetchAPI } from "./fetchAPI";
 
+export function processWorkflows(entries) {
+    return entries.map((entry) => {
+        // convert UTC date strings to date
+        entry.lastAttemptStartTime = parseUtcDate(entry.lastAttemptStartTime);
+        return entry;
+    });
+}
+
+export function processWorkflowHistory(runs) {
+    return runs.map((run) => {
+        // convert UTC date strings to date
+        run.runStartTime = parseUtcDate(run.runStartTime);
+        run.attemptStartTime = parseUtcDate(run.attemptStartTime);
+        run.attemptStartTimeMillis = run.attemptStartTime?.getTime(); // needed for HistorBarChart
+        run.runEndTime = parseUtcDate(run.runEndTime);
+        return run;
+    });
+}
+
+export function processRun(run) {
+    // convert UTC date strings to date
+    run.runStartTime = parseUtcDate(run.runStartTime);
+    run.attemptStartTime = parseUtcDate(run.attemptStartTime);
+    run.runEndTime = parseUtcDate(run.runEndTime);  
+    if (run.actionsState) {          
+        Object.keys(run.actionsState).forEach((k) => {
+            run.actionsState[k].startTstmp = parseUtcDate(run.actionsState[k].startTstmp);            
+            run.actionsState[k].startTstmpInit = parseUtcDate(run.actionsState[k].startTstmpInit);            
+            run.actionsState[k].startTstmpPrepare = parseUtcDate(run.actionsState[k].startTstmpPrepare);            
+            run.actionsState[k].endTstmp = parseUtcDate(run.actionsState[k].endTstmp);            
+            run.actionsState[k].endTstmpInit = parseUtcDate(run.actionsState[k].endTstmpInit);            
+            run.actionsState[k].endTstmpPrepare = parseUtcDate(run.actionsState[k].endTstmpPrepare);            
+        })
+    }
+    return run;
+}
+
 export class fetchAPI_rest implements fetchAPI {
     url: string;
     baseUrl: string | undefined;
@@ -26,41 +63,6 @@ export class fetchAPI_rest implements fetchAPI {
         return await response.json();
     }
 
-    private processWorkflows(entries) {
-        return entries.map((entry) => {
-            // convert UTC date strings to date
-            entry.lastAttemptStartTime = parseUtcDate(entry.lastAttemptStartTime);
-            return entry;
-        });
-    }
-
-    private processWorkflowHistory(runs) {
-        return runs.map((run) => {
-            // convert UTC date strings to date
-            run.runStartTime = parseUtcDate(run.runStartTime);
-            run.attemptStartTime = parseUtcDate(run.attemptStartTime);
-            run.attemptStartTimeMillis = run.attemptStartTime?.getTime(); // needed for HistorBarChart
-            run.runEndTime = parseUtcDate(run.runEndTime);            
-            return run;
-        });
-    }
-
-    private processRun(run) {
-        // convert UTC date strings to date
-        run.runStartTime = parseUtcDate(run.runStartTime);
-        run.attemptStartTime = parseUtcDate(run.attemptStartTime);
-        run.runEndTime = parseUtcDate(run.runEndTime);            
-        Object.keys(run.actionsState).forEach((k) => {
-            run.actionsState[k].startTstmp = parseUtcDate(run.actionsState[k].startTstmp);            
-            run.actionsState[k].startTstmpInit = parseUtcDate(run.actionsState[k].startTstmpInit);            
-            run.actionsState[k].startTstmpPrepare = parseUtcDate(run.actionsState[k].startTstmpPrepare);            
-            run.actionsState[k].endTstmp = parseUtcDate(run.actionsState[k].endTstmp);            
-            run.actionsState[k].endTstmpInit = parseUtcDate(run.actionsState[k].endTstmpInit);            
-            run.actionsState[k].endTstmpPrepare = parseUtcDate(run.actionsState[k].endTstmpPrepare);            
-        })
-        return run;
-    }
-
     private async getRequestInfo(method: string = 'GET', headers?: any): Promise<RequestInit> {
         try {
             const currentUserSession = await Auth.currentSession();
@@ -72,12 +74,12 @@ export class fetchAPI_rest implements fetchAPI {
 
     getWorkflows = (tenant: string, repo: string, env: string) => {
         return this.fetch(`${this.url}/workflows?tenant=${tenant}&repo=${repo}&env=${env}`)
-        .then(runs => this.processWorkflows(runs))
+        .then(runs => processWorkflows(runs))
     };  
 
     getWorkflowRuns = (tenant: string, repo: string, env: string, application: string) => {
         return this.fetch(`${this.url}/workflow?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}`)
-        .then(runs => this.processWorkflowHistory(runs));
+        .then(runs => processWorkflowHistory(runs));
     };
     
     getWorkflowRunsByAction = (name: string) => {
@@ -92,7 +94,7 @@ export class fetchAPI_rest implements fetchAPI {
     
     getRun = async (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number) => {
         return this.fetch(`${this.url}/state?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}&runId=${runId}&attemptId=${attemptId}`)
-        .then(runs => this.processRun(runs));
+        .then(runs => processRun(runs));
     };
 
     getConfig = async (tenant: string, repo: string, env: string, version: string|undefined) => {

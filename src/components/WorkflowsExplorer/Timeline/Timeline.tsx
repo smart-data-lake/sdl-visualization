@@ -1,10 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { AutoSizer, List } from 'react-virtualized';
 import styled from 'styled-components';
-import { AsyncStatus, Row } from '../../../types';
 import { toRelativeSize } from '../../../util/WorkflowsExplorer/style';
 import TimelineFooter from './Footer';
 import TimelineRow from './TimelineRow';
+import { Row } from '../../../types';
 
 const listStyle = { transition: 'height 0.25s' };
 
@@ -14,7 +14,6 @@ const listStyle = { transition: 'height 0.25s' };
 type TimelineProps = {
   rows: Row[];
   timeline: TimelineMetrics;
-  searchStatus?: AsyncStatus;
   footerType?: 'minimal' | 'minimap';
   paramsString?: string;
   customMinimumHeight?: number;
@@ -43,7 +42,6 @@ export const ROW_HEIGHT = toRelativeSize(28);
 const Timeline: React.FC<TimelineProps> = ({
   rows,
   timeline,
-  searchStatus,
   footerType = 'minimap',
   paramsString = '',
   onHandleMove = () => null,
@@ -62,12 +60,11 @@ const Timeline: React.FC<TimelineProps> = ({
       createRowRenderer({
         rows,
         timeline,
-        searchStatus,
         paramsString,
         dragging: dragging,
         displayPhases: displayPhases,
       }),
-    [dragging, paramsString, rows, searchStatus, timeline, displayPhases],
+    [dragging, paramsString, rows, timeline, displayPhases],
   );
 
   const autosizerContents = useCallback(
@@ -119,7 +116,6 @@ const Timeline: React.FC<TimelineProps> = ({
 type RowRendererProps = {
   rows: Row[];
   timeline: TimelineMetrics;
-  searchStatus?: AsyncStatus;
   paramsString: string;
   dragging: boolean;
   displayPhases: string[];
@@ -130,7 +126,7 @@ function getUniqueKey(index: number, row: Row) {
    return key + row.task_id;
 }
 
-function createRowRenderer({ rows, timeline, searchStatus, paramsString = '', dragging, displayPhases }: RowRendererProps) {
+function createRowRenderer({ rows, timeline, paramsString = '', dragging, displayPhases }: RowRendererProps) {
   return ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const row = rows[index];
     return (
@@ -138,8 +134,6 @@ function createRowRenderer({ rows, timeline, searchStatus, paramsString = '', dr
         <TimelineRow
           item={row}
           timeline={timeline}
-          searchStatus={searchStatus}
-          onOpen={() => null}
           paramsString={paramsString}
           dragging={dragging}
           displayPhases={displayPhases}

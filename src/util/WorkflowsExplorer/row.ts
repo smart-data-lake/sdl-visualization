@@ -29,7 +29,7 @@ const sortSmallest = (a: Row, b: Row) => {
  */
 export const startAndEndExecPointsOfRows = (rows: Row[]): { start: number; end: number } => {
   const start = Math.min(...(rows.map(row => row.startTstmp!).filter(x => x)));
-  const end =  Math.max(...(rows.map(row => row.endTstmp!).filter(x => x)));
+  const end =  Math.max(...(rows.map(row => row.endTstmp || row.finished_at)));
   return {
     start: (isFinite(start) ? start : 0),
     end: (isFinite(end) ? end : 0),
@@ -37,8 +37,8 @@ export const startAndEndExecPointsOfRows = (rows: Row[]): { start: number; end: 
 };
 
 export const startAndEndOverallPointsOfRows = (rows: Row[]): { start: number; end: number } => {
-  const start = Math.min(...(rows.map(row => row.startTstmpPrepare || row.startTstmpInit || row.startTstmp!).filter(x => x)));
-  const end =  Math.max(...(rows.map(row => row.endTstmp || row.startTstmp || row.endTstmpInit || row.startTstmpInit || row.endTstmpPrepare || row.startTstmpPrepare!).filter(x => x)));
+  const start = Math.min(...(rows.map(row => row.started_at)));
+  const end =  Math.max(...(rows.map(row => row.finished_at)));
   return {
     start: (isFinite(start) ? start : 0),
     end: (isFinite(end) ? end : 0),
@@ -58,16 +58,17 @@ export const getLongestRowDuration = (rows: Row[]): number => {
 /**
  * Get status for group of rows.
  */
-export const getTaskLineStatus = (rows: Row[]): TaskStatus => {
-  const statuses = rows.map((row) => {
-    return row.status || 'UNKNOWN';
-  });
+export const aggregateTaskStatus = (rows: Row[]): TaskStatus => {
+  const statuses = rows.map((row) => row.status || 'UNKNOWN');  
+  if (statuses.indexOf('PREPARING') > -1) return 'PREPARING';
+  if (statuses.indexOf('PREPARED') > -1) return 'PREPARED';
+  if (statuses.indexOf('INITIALIZING') > -1) return 'INITIALIZING';
+  if (statuses.indexOf('INITIALIZED') > -1) return 'INITIALIZED';
   if (statuses.indexOf('RUNNING') > -1) return 'RUNNING';
   if (statuses.indexOf('FAILED') > -1) return 'FAILED';
+  if (statuses.indexOf('SUCCEEDED') > -1) return 'SUCCEEDED';
   if (statuses.indexOf('SKIPPED') > -1) return 'SKIPPED';
-  if (statuses.indexOf('PREPARED') > -1) return 'PREPARED';
-  if (statuses.indexOf('INITIALIZED') > -1) return 'INITIALIZED';
-  return 'SUCCEEDED';
+  return 'UNKNOWN';
 };
 
 /**

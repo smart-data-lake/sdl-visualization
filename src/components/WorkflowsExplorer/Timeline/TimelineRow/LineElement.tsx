@@ -50,13 +50,13 @@ const LineElement: React.FC<LineElementProps> = ({
 	} */
 
 	// Calculate how much box needs to be pushed from (or to) left
-	const valueFromLeft = (boxStartTime: number | undefined) => {
+	const valueFromLeft = (boxStartTime: Date | undefined) => {
 		if (!boxStartTime) return undefined;
-		return (boxStartTime - timeline.visibleStartTime) / visibleDuration * 100;
+		return (boxStartTime.getTime() - timeline.visibleStartTime) / visibleDuration * 100;
 	}
 	const width = (duration: number | null | undefined, valueFromLeft: number | undefined) => {
 		if (valueFromLeft == undefined) return undefined;
-		return duration && status !== 'RUNNING' ? (duration / visibleDuration) * 100 : 100 - valueFromLeft;
+		return duration ? (duration / visibleDuration) * 100 : 100 - valueFromLeft;
 	}
 
 
@@ -96,17 +96,17 @@ const LineElement: React.FC<LineElementProps> = ({
   }
 
 
-  const valueFromLeftExec = valueFromLeft(row.startTstmp);
+  const valueFromLeftExec = valueFromLeft(row.details.startTstmp);
   const widthExec = width(row.getDuration(), valueFromLeftExec);
-  const displayExec = row.startTstmp && displayPhases.includes('Exec');
+  const displayExec = row.details.startTstmp && displayPhases.includes('Exec');
 
-  const valueFromLeftInit = valueFromLeft(row.startTstmpInit);
+  const valueFromLeftInit = valueFromLeft(row.details.startTstmpInit);
   const widthInit = width(row.getDurationInit(), valueFromLeftInit);
-  const displayInit = row.startTstmpInit && displayPhases.includes('Init');
+  const displayInit = row.details.startTstmpInit && displayPhases.includes('Init');
 
-  const valueFromLeftPrepare = valueFromLeft(row.startTstmpPrepare);
+  const valueFromLeftPrepare = valueFromLeft(row.details.startTstmpPrepare);
   const widthPrepare = width(row.getDurationPrepare(), valueFromLeftPrepare);
-  const displayPrepare = row.startTstmpPrepare && displayPhases.includes('Prepare');
+  const displayPrepare = row.details.startTstmpPrepare && displayPhases.includes('Prepare');
 
   return (
     <>
@@ -127,17 +127,17 @@ const LineElement: React.FC<LineElementProps> = ({
 			dragging, 
 			row.getDurationInit(), 
 			grayed, 
-			'INITIALIZED', 
+			(row.details.endTstmpInit ? 'INITIALIZED' : 'INITIALIZING'), 
 			isLastAttempt
 		)}
-		{valueFromLeftInit && displayPrepare && constructLine(
+		{valueFromLeftPrepare && displayPrepare && constructLine(
 			valueFromLeftPrepare, 
 			widthPrepare, 
 			row, 
 			dragging, 
 			row.getDurationPrepare(), 
 			grayed, 
-			'PREPARED', 
+			(row.details.endTstmpPrepare ? 'PREPARED' : 'PREPARING'), 
 			isLastAttempt
 		)}
     </>

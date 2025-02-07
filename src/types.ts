@@ -2,10 +2,8 @@ import { durationMillis } from "./util/WorkflowsExplorer/date";
 
 export interface MetaDataBaseObject {
     flow_id: string;
-    user_name: string;
     ts_epoch: number;
     tags?: string[];
-    system_tags: string[];
   }
 
 export interface RunInfo {
@@ -34,21 +32,12 @@ export class Row implements MetaDataBaseObject {
     task_id: number;
     ts_epoch: number;
     status: TaskStatus;
-    user_name: string;
-    system_tags: string[];
-    started_at: number;
-    finished_at: number;
+    started_at: Date;
+    finished_at: Date;
     duration: number;
     message: string;
     tags?: string[] | undefined;
     task_name?: string;
-    foreach_label?: string;
-    startTstmp?: number;
-    endTstmp?: number;
-    startTstmpPrepare? : number;
-    endTstmpPrepare?: number;
-    startTstmpInit? : number;
-    endTstmpInit?: number;
     details: Action;
    
     constructor(appName: string, action: Action, actionName: string) {
@@ -58,18 +47,10 @@ export class Row implements MetaDataBaseObject {
       this.attempt_id = action.executionId.attemptId;
       this.task_id = 1;
       this.status = action.state as TaskStatus;
-      this.user_name = '';
-      this.system_tags = [];
       this.message = action.msg;
-      this.startTstmp = action.startTstmp ? new Date(action.startTstmp).getTime() : undefined;
-      this.endTstmp = action.endTstmp ? new Date(action.endTstmp).getTime() : undefined;
-      this.startTstmpPrepare = action.startTstmpPrepare ? new Date(action.startTstmpPrepare).getTime() : undefined;
-      this.endTstmpPrepare = action.endTstmpPrepare ? new Date(action.endTstmpPrepare).getTime() : undefined;
-      this.startTstmpInit = action.startTstmpInit ? new Date(action.startTstmpInit).getTime() : undefined;
-      this.endTstmpInit = action.endTstmpInit ? new Date(action.endTstmpInit).getTime() : undefined;
-      this.ts_epoch = (this.startTstmpPrepare || this.startTstmpInit || this.startTstmp)!;
-      this.started_at = this.ts_epoch;
-      this.finished_at = (this.startTstmp ? this.endTstmp : this.startTstmpInit ? this.endTstmpInit : this.endTstmpPrepare) || Date.now();
+      this.ts_epoch = (action.startTstmpPrepare || action.startTstmpInit || action.startTstmp).getTime();
+      this.started_at = new Date(this.ts_epoch);
+      this.finished_at = (action.startTstmp ? action.endTstmp : (action.startTstmpInit ? action.endTstmpInit : action.endTstmpPrepare)) || new Date(Date.now());
       this.duration = durationMillis(action.duration === 'PT0S' ? 'PT0.001S' : action.duration);
       this.details = action;
     }
@@ -86,25 +67,19 @@ export class Row implements MetaDataBaseObject {
      * current time. Note that we are not camparing current time to ts_epoch field, which is just time for task object, not actual task time itself.
      */
     getDuration(): number | null {
-      return this.startTstmp ? ((this.endTstmp || Date.now()) - this.startTstmp) : this.duration;
+      return this.details.startTstmp ? ((this.details.endTstmp?.getTime() || Date.now()) - this.details.startTstmp.getTime()) : this.duration;
     }
 
     getDurationInit(): number | null {
-      return this.startTstmpInit ? ((this.endTstmpInit || Date.now()) - this.startTstmpInit) : null;
+      return this.details.startTstmpInit ? ((this.details.endTstmpInit?.getTime() || Date.now()) - this.details.startTstmpInit.getTime()) : null;
     }
 
     getDurationPrepare(): number | null {
-      return this.startTstmpPrepare ? ((this.endTstmpPrepare || Date.now()) - this.startTstmpPrepare) : null;
+      return this.details.startTstmpPrepare ? ((this.details.endTstmpPrepare?.getTime() || Date.now()) - this.details.startTstmpPrepare.getTime()) : null;
     }
-
-    getTaskEnd(): number | null {
-      if (this.status === 'RUNNING' && this.started_at) return Date.now();      
-      return this.finished_at || this.endTstmpInit || this.endTstmpPrepare || null;
-    }    
   }
   
-  
-  export type TaskStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'SKIPPED' | 'PREPARED' | 'INITIALIZED';
+  export type TaskStatus =  'PREPARING' | 'PREPARED' | 'INITIALIZING' | 'INITIALIZED' | 'RUNNING' | 'FAILED' | 'SUCCEEDED' | 'SKIPPED' | 'UNKNOWN';
 
   export type StateFile = {
     appConfig : {
@@ -134,16 +109,15 @@ export class Row implements MetaDataBaseObject {
       attemptId : number
     },
     state : string,
-    startTstmp : string,
     duration: string,
     msg: string,
     results: Results,
-    actionFinishTime?: number,
-    endTstmp?: string,
-    startTstmpPrepare? : string,
-    endTstmpPrepare?: string,
-    startTstmpInit? : string,
-    endTstmpInit?: string,
+    startTstmp : Date,
+    endTstmp?: Date,
+    startTstmpPrepare? : Date,
+    endTstmpPrepare?: Date,
+    startTstmpInit? : Date,
+    endTstmpInit?: Date,
     inputIds?: string[],
     outputIds?: string[],
   }
@@ -176,41 +150,14 @@ export class Row implements MetaDataBaseObject {
   export interface Run extends MetaDataBaseObject {
     run_number: number;
     run?: string;
-    status: keyof RunStatus;
-    user: string | null;
+    status: TaskStatus;
     finished_at?: number;
     run_id?: string;
     duration?: number;
-  }
-
-  export class Step implements MetaDataBaseObject {
-    run_number: number;
-    run_id?: string;
-    step_name: string;
-    finished_at?: number;
-    duration?: number;
-    task_id: number;
-    flow_id: string;
-    user_name: string;
-    ts_epoch: number;
-    tags?: string[] | undefined;
-    system_tags: string[];
-
-    constructor() {
-      this.run_number = -1;
-      this.step_name = "tmp";
-      this.task_id = -1;
-      this.flow_id = "flowid";
-      this.user_name = "Phill";
-      this.ts_epoch = -1;
-      this.system_tags = [];
-    }
   }
 
   export type QueryParam = string | null;
   
-  export type AsyncStatus = 'NotAsked' | 'Ok' | 'Error' | 'Loading';
-
   /**** Entry of an element with their tstamp  ****/
   export interface TstampEntry {
     key: string;

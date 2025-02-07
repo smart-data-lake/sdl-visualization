@@ -16,11 +16,10 @@ import { useWorkspace } from '../../../hooks/useWorkspace';
 import { PartialDataObjectsAndActions } from "../../../util/ConfigExplorer/Graphs";
 import { onlyUnique } from '../../../util/helpers';
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
+import LineageTab from "../../ConfigExplorer/LineageTab/LineageTab";
 import { filterByGroup, FilterParams, filterSearchText } from '../WorkflowHistory';
 import { TableView } from './TableView';
 import { TimelineView } from './TimelineView';
-import LineageTabSep from "../../ConfigExplorer/LineageTab/LineageTabWithSeparateView";
-import LineageTab from "../../ConfigExplorer/LineageTab/LineageTab";
 
 /**
  * This is a TypeScript function that returns a set of three React components which are rendered inside a parent component. 
@@ -59,8 +58,10 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
         .map(id => new Filter('attempt', id.toString(), row => row['attempt_id'] === id))
     }, [data])
     const timelineRun = useMemo(() => {
-        const attemptActiveFilters = filterParams.additionalFilters.filter(f => f.group === 'attempt');
-        return attempt.getTimelineRun(attemptActiveFilters);    
+        const attemptActiveFilters = filterParams.additionalFilters;
+        const timelineRun = attempt.getTimelineRun(attemptActiveFilters);    
+        console.log("timelineRun", timelineRun)
+        return timelineRun;
     }, [data, filterParams]);
 
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {

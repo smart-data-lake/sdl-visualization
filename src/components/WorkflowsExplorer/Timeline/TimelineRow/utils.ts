@@ -28,24 +28,28 @@ export function statusColor(theme: DefaultTheme, grayed: boolean, state: string,
     return '#c7c7c7';
   } else {
     switch (state.toUpperCase()) {
-      case 'SUCCEEDED':
-        return !isFirst ? lighten(0.3, defaultTheme.color.bg.green) : defaultTheme.color.bg.green;
-      case 'RUNNING':
-        return defaultTheme.color.bg.greenLight;
       case 'PENDING':
         return defaultTheme.color.bg.yellow;
+      case 'PREPARING':
+        return defaultTheme.color.bg.violetLight;
+      case 'PREPARED':
+        return !isFirst ? lighten(0.3, defaultTheme.color.bg.violet) : defaultTheme.color.bg.violet;
+      case 'INITIALIZING':
+        return defaultTheme.color.bg.blueLight;
+      case 'INITIALIZED':
+        return !isFirst ? lighten(0.3, defaultTheme.color.bg.blue) : defaultTheme.color.bg.blue;
+      case 'RUNNING':
+        return defaultTheme.color.bg.greenLight;
+      case 'SUCCEEDED':
+        return !isFirst ? lighten(0.3, defaultTheme.color.bg.green) : defaultTheme.color.bg.green;
       case 'FAILED':
         return !isFirst ? lighten(0.3, defaultTheme.color.bg.red) : defaultTheme.color.bg.red;
       case 'SKIPPED':
         return !isFirst ? lighten(0.3, defaultTheme.color.bg.dark) : defaultTheme.color.bg.dark;
       case 'CANCELLED':
         return !isFirst ? lighten(0.3, defaultTheme.color.bg.teal) : defaultTheme.color.bg.teal;          
-      case 'INITIALIZED':
-        return !isFirst ? lighten(0.3, defaultTheme.color.bg.blue) : defaultTheme.color.bg.blue;
-      case 'PREPARED':
-        return !isFirst ? lighten(0.3, defaultTheme.color.bg.violet) : defaultTheme.color.bg.violet;
       default:
-        return lighten(0.3, defaultTheme.color.bg.dark);
+      return lighten(0.3, defaultTheme.color.bg.dark);
     }
   }
 }

@@ -9,11 +9,14 @@ import { getStatusColor } from '../../components/WorkflowsExplorer/Timeline/Time
 export const getIcon = (status: string, marginLeft: string = '0.5rem', additionalStyle: object = {} ) => {
     const color = getStatusColor(status);
     const statusIconMap = {
-        'SUCCEEDED': CheckCircleOutlineIcon,
-        'RUNNING': RunCircleOutlined,
-        'FAILED': HighlightOffIcon,
-        'INITIALIZED': PendingOutlined,
+        'PENDING': PendingOutlined,
+        'PREPARING': PendingOutlined,
         'PREPARED': PendingOutlined,
+        'INITIALIZING': PendingOutlined,
+        'INITIALIZED': PendingOutlined,
+        'RUNNING': RunCircleOutlined,
+        'SUCCEEDED': CheckCircleOutlineIcon,
+        'FAILED': HighlightOffIcon,
         'SKIPPED': DoNotDisturbAltOutlined,
         'CANCELLED': BlockOutlined
     };
@@ -44,13 +47,16 @@ export class Filter {
 
 export function stateFilters(column: string) {
     return [
-        new Filter('state', 'Succeeded', row => row[column] === 'SUCCEEDED'),
-        new Filter('state', 'Running', row => row[column] === 'RUNNING'),
-        new Filter('state', 'Cancelled', row => row[column] === 'CANCELLED'),
-        new Filter('state', 'Failed', row => row[column] === 'FAILED'),
+        new Filter('state', 'Pending', row => row[column] === 'PENDING'),
+        new Filter('state', 'Preparing', row => row[column] === 'PREPARING'),
         new Filter('state', 'Prepared', row => row[column] === 'PREPARED'),
+        new Filter('state', 'Initializing', row => row[column] === 'INITIALIZING'),
         new Filter('state', 'Initialized', row => row[column] === 'INITIALIZED'),
+        new Filter('state', 'Running', row => row[column] === 'RUNNING'),
+        new Filter('state', 'Succeeded', row => row[column] === 'SUCCEEDED'),
+        new Filter('state', 'Failed', row => row[column] === 'FAILED'),
         new Filter('state', 'Skipped', row => row[column] === 'SKIPPED'),
+        new Filter('state', 'Cancelled', row => row[column] === 'CANCELLED'),
     ]
 };
 

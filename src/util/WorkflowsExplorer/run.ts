@@ -10,17 +10,6 @@ export function getRunId(run: Run): string {
   return run.run ?? run.run_id ?? (run.run_number ?? 0).toString();
 }
 
-/**
- * Safely get username of run
- * @param run - Run object
- */
-export function getUsername(run: Run): string {
-  const tag = (run.system_tags || []).find((t) => t.startsWith('user:'));
-
-  if (!tag) return '';
-
-  return tag.split(':')[1];
-}
 
 /**
  * Safely get start time of run
@@ -43,14 +32,12 @@ export function getRunEndTime(run: Run, timezone?: string): string | null {
  * @param run - Run object
  */
 export function getRunDuration(run: Run): string | null {
-  if (run.status === 'running') {
+  if (run.status.endsWith('ING')) {
     return formatDuration(new Date().getTime() - run.ts_epoch, 0);
   }
 
-  return run.duration
-    ? formatDuration(run.duration, 0)
-    : run.finished_at
-    ? formatDuration(run.finished_at - run.ts_epoch, 0)
+  return run.duration ? formatDuration(run.duration, 0)
+    : run.finished_at ? formatDuration(run.finished_at - run.ts_epoch, 0)
     : null;
 }
 

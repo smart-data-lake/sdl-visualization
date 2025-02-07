@@ -3,6 +3,7 @@ import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { getUrlContent, listConfigFiles, parseTextStrict, readConfigIndexFile } from "../util/ConfigExplorer/HoconParser";
 import { compareFunc, formatFileSize, onlyUnique } from "../util/helpers";
 import { fetchAPI } from "./fetchAPI";
+import { processRun } from "./fetchAPI_rest";
 
 export class fetchAPI_local_statefiles implements fetchAPI {
     
@@ -33,10 +34,9 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         .then(runs => runs
             .map(run => {
                 // convert date strings to date
-                run.runStartTime = new Date(run.runStartTime);
-                run.attemptStartTime = new Date(run.attemptStartTime);
-                run.attemptStartTimeMillis = new Date(run.attemptStartTime).getTime(); // needed for HistoBarChart
-                run.runEndTime = new Date(run.runEndTime);
+                console.log("run", run)
+                run = processRun(run);
+                run.attemptStartTimeMillis = run.attemptStartTime?.getTime(); // needed for HistorBarChart
                 run.duration = run.runEndTime.getTime() - run.attemptStartTime.getTime();
                 // precalc count by status
                 run.actionsStatus = Object.values((run.actions || {}) as object)
@@ -132,6 +132,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
             if (!val) console.log("getRun not found", application, runId, attemptId);            
             return fetch(this.statePath + '/' + val.path)
                     .then(res => res.json())
+                    .then(run => processRun(run))
         })
     };
 

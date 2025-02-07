@@ -1,5 +1,6 @@
 import { ActionsState, Row, StateFile, Run as TimelineRun } from "../../types";
-import { compareFunc, compareMultiFunc } from "../helpers";
+import { compareMultiFunc } from "../helpers";
+import { aggregateTaskStatus, startAndEndOverallPointsOfRows } from "./row";
 import { Filter } from "./StatusInfo";
 
 /**
@@ -59,10 +60,10 @@ export default class Attempt {
     }
 
     /**
-     * Iterate through the statefile's actionsState and create a TaskRow array.
-     * @returns TaskRow[]
+     * Iterate through the statefile's actionsState and create a Row array.
+     * @returns Row[]
      */
-    getTimelineRows(actionsState: ActionsState) {
+    private getTimelineRows(actionsState: ActionsState) {
         const rows : Row[] = [];
         const actionsStateEntries = Object.entries(actionsState);
         actionsStateEntries.forEach((entry) => {
@@ -71,20 +72,19 @@ export default class Attempt {
             const row = new Row(this.details.appConfig.applicationName, action, actionName);
             rows.push(row)
         })
+        console.log("rows", rows);
         return rows;
     }
 
     getTimelineRun(filters: Filter[]): TimelineRun {
         const activeTimelineRows = (filters.length>0 ? this.timelineRows.filter(row => filters.some(f => f.predicate(row))) : this.timelineRows);
+        const {start, end} = startAndEndOverallPointsOfRows(activeTimelineRows);
         return {
             flow_id: this.details.appConfig.applicationName,
             run_number: this.details.runId,
-            status: 'completed',
-            user: 'undefined',
-            user_name: 'undefined',
-            ts_epoch:  Math.min(...(activeTimelineRows.flatMap(row => row.started_at!).filter(x=>x))) - 10, // start 10ms earlier
-            finished_at: Math.max(...(activeTimelineRows.flatMap(row => row.finished_at!).filter(x=>x))),
-            system_tags: [],
+            status: aggregateTaskStatus(activeTimelineRows),
+            ts_epoch:  start - 10, // start 10ms earlier
+            finished_at: end,
         }
     }  
 }

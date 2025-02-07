@@ -3,7 +3,8 @@ import moment from 'moment';
 
 const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-export const parseUtcDate = (date: number|string): Date|undefined => {
+export const parseUtcDate = (date?: number|string): Date|undefined => {
+  if (!date) return undefined;
   if (typeof date === "string") return spacetime(date, 'GMT+0').toNativeDate();
   if (typeof date === "number") return spacetime(date, 'GMT+0').toNativeDate();
 }
