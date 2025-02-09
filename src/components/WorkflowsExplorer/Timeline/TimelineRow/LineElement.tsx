@@ -95,7 +95,6 @@ const LineElement: React.FC<LineElementProps> = ({
 		)
   }
 
-
   const valueFromLeftExec = valueFromLeft(row.details.startTstmp);
   const widthExec = width(row.getDuration(), valueFromLeftExec);
   const displayExec = row.details.startTstmp && displayPhases.includes('Exec');
@@ -120,7 +119,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			status, 
 			isLastAttempt
 		)}
-		{valueFromLeftInit && displayInit && constructLine(
+		{valueFromLeftInit!=undefined && displayInit && constructLine(
 			valueFromLeftInit, 
 			widthInit, 
 			row, 
@@ -130,7 +129,7 @@ const LineElement: React.FC<LineElementProps> = ({
 			(row.details.endTstmpInit ? 'INITIALIZED' : 'INITIALIZING'), 
 			isLastAttempt
 		)}
-		{valueFromLeftPrepare && displayPrepare && constructLine(
+		{valueFromLeftPrepare!=undefined && displayPrepare && constructLine(
 			valueFromLeftPrepare, 
 			widthPrepare, 
 			row, 

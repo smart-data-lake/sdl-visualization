@@ -44,7 +44,7 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
 						timeline={timeline}
 						row={item}
 						isLastAttempt={timeline.latestAttemptId === item.attempt_id}
-						startTimeOfFirstAttempt={item.started_at || 0}
+						startTimeOfFirstAttempt={item.started_at.getTime() || 0}
 						dragging={dragging}
 						displayPhases={displayPhases}
 						paramsString={paramsString}

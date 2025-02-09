@@ -53,7 +53,7 @@ export default class Attempt {
             this.attemptId = stateFile.attemptId;
             this.details = stateFile;  
             this.timelineRows = this.getTimelineRows(stateFile.actionsState)
-                .sort(compareMultiFunc(['startTstmp', 'startTstmpInit', 'startTstmpPrep']));
+                .sort(compareMultiFunc(['details.startTstmp', 'details.startTstmpInit', 'details.startTstmpPrep']));
         } else {
             throw new Error("Error: no statefile found");
         }

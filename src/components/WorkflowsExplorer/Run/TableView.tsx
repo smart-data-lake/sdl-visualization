@@ -39,36 +39,36 @@ const columns = [{
     visible: false
 }, {
     title: 'Prepare Start',
-    property: 'startTstmpPrepare',
+    property: 'details.startTstmpPrepare',
     renderer: (x) => dateRenderer(x),
     width: '175px',
     visible: false
 }, {
     title: 'Prepare Finish',
-    property: 'endTstmpPrepare',
+    property: 'details.endTstmpPrepare',
     renderer: (x) => dateRenderer(x),
     width: '175px',
     visible: false
 }, {
     title: 'Init Start',
-    property: 'startTstmpInit',
+    property: 'details.startTstmpInit',
     renderer: (x) => dateRenderer(x),
     width: '175px',
     visible: false
 }, {
     title: 'Init Finish',
-    property: 'endTstmpInit',
+    property: 'details.endTstmpInit',
     renderer: (x) => dateRenderer(x),
     width: '175px',
     visible: false
 }, {
     title: 'Exec Start',
-    property: 'startTstmp',
+    property: 'details.startTstmp',
     renderer: (x) => dateRenderer(x),
     width: '175px',
 }, {
     title: 'Exec Finish',
-    property: 'endTstmp',
+    property: 'details.endTstmp',
     renderer: (x) => dateRenderer(x),
     width: '175px',
 }, {
