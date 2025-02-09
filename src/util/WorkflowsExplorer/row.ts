@@ -1,10 +1,10 @@
 import { Row, SortType, TaskStatus } from '../../types';
 
 const takeSmallest = (a: Row): number | null =>
-  a.started_at || Number.MAX_VALUE;
+  a.started_at.getTime() || Number.MAX_VALUE;
 
 const takeBiggest = (a: Row): number =>
-  a.finished_at || 0;
+  a.finished_at.getTime() || 0;
 
 /**
  * Sort rows by smallest value
@@ -28,8 +28,8 @@ const sortSmallest = (a: Row, b: Row) => {
  * Find smallest and biggest time value from rows
  */
 export const startAndEndExecPointsOfRows = (rows: Row[]): { start: number; end: number } => {
-  const start = Math.min(...(rows.map(row => row.startTstmp!).filter(x => x)));
-  const end =  Math.max(...(rows.map(row => row.endTstmp || row.finished_at)));
+  const start = Math.min(...(rows.map(row => row.details.startTstmp?.getTime()).filter(x => x)));
+  const end =  Math.max(...(rows.map(row => row.details.endTstmp?.getTime() || row.finished_at.getTime())));
   return {
     start: (isFinite(start) ? start : 0),
     end: (isFinite(end) ? end : 0),
@@ -37,8 +37,8 @@ export const startAndEndExecPointsOfRows = (rows: Row[]): { start: number; end: 
 };
 
 export const startAndEndOverallPointsOfRows = (rows: Row[]): { start: number; end: number } => {
-  const start = Math.min(...(rows.map(row => row.started_at)));
-  const end =  Math.max(...(rows.map(row => row.finished_at)));
+  const start = Math.min(...(rows.map(row => row.started_at?.getTime())));
+  const end =  Math.max(...(rows.map(row => row.finished_at?.getTime())));
   return {
     start: (isFinite(start) ? start : 0),
     end: (isFinite(end) ? end : 0),
@@ -61,10 +61,10 @@ export const getLongestRowDuration = (rows: Row[]): number => {
 export const aggregateTaskStatus = (rows: Row[]): TaskStatus => {
   const statuses = rows.map((row) => row.status || 'UNKNOWN');  
   if (statuses.indexOf('PREPARING') > -1) return 'PREPARING';
-  if (statuses.indexOf('PREPARED') > -1) return 'PREPARED';
   if (statuses.indexOf('INITIALIZING') > -1) return 'INITIALIZING';
-  if (statuses.indexOf('INITIALIZED') > -1) return 'INITIALIZED';
   if (statuses.indexOf('RUNNING') > -1) return 'RUNNING';
+  if (statuses.indexOf('PREPARED') > -1) return 'PREPARED';
+  if (statuses.indexOf('INITIALIZED') > -1) return 'INITIALIZED';
   if (statuses.indexOf('FAILED') > -1) return 'FAILED';
   if (statuses.indexOf('SUCCEEDED') > -1) return 'SUCCEEDED';
   if (statuses.indexOf('SKIPPED') > -1) return 'SKIPPED';

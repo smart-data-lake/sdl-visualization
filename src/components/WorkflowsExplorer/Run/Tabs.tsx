@@ -60,7 +60,6 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
     const timelineRun = useMemo(() => {
         const attemptActiveFilters = filterParams.additionalFilters;
         const timelineRun = attempt.getTimelineRun(attemptActiveFilters);    
-        console.log("timelineRun", timelineRun)
         return timelineRun;
     }, [data, filterParams]);
 

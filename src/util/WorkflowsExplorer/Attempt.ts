@@ -72,7 +72,6 @@ export default class Attempt {
             const row = new Row(this.details.appConfig.applicationName, action, actionName);
             rows.push(row)
         })
-        console.log("rows", rows);
         return rows;
     }
 

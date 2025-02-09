@@ -48,7 +48,7 @@ export class Row implements MetaDataBaseObject {
       this.task_id = 1;
       this.status = action.state as TaskStatus;
       this.message = action.msg;
-      this.ts_epoch = (action.startTstmpPrepare || action.startTstmpInit || action.startTstmp).getTime();
+      this.ts_epoch = (action.startTstmpPrepare || action.startTstmpInit || action.startTstmp || new Date(Date.now())).getTime();
       this.started_at = new Date(this.ts_epoch);
       this.finished_at = (action.startTstmp ? action.endTstmp : (action.startTstmpInit ? action.endTstmpInit : action.endTstmpPrepare)) || new Date(Date.now());
       this.duration = durationMillis(action.duration === 'PT0S' ? 'PT0.001S' : action.duration);
