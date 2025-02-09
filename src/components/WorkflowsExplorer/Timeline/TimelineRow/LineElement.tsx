@@ -84,7 +84,7 @@ const LineElement: React.FC<LineElementProps> = ({
 					}}
 					data-testid="boxgraphic"
 					$dragging={dragging}
-					title={formatDuration(duration) + `${status === 'UNKNOWN' ? ` (unknown status)` : ''}`}				
+					title={formatDuration(duration)}				
 				>
 					<BoxGraphicLine $grayed={grayed} $state={status} $isLastAttempt={isLastAttempt} />
 					<BoxGraphicMarkerStart />
