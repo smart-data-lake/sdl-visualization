@@ -18,6 +18,8 @@ import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
 import { WorkspaceEmpty } from './layouts/RootLayoutSpinner';
 import { amplifyTheme } from './theme';
+import { Provider } from 'react-redux';
+import store from './app/store';
 
 function Routing() {
   const userContext = useUser();
@@ -31,7 +33,10 @@ function Routing() {
       <Route path='workflows/:flowId/:runIdAttempt/:tab?/:stepName?' element={<Run/>}/>
       <Route path='workflows/*' element={<NotFound/>}/>
       {/* <Route path='lineage/*' element={<LineageExplorer/>}/> */}
-      <Route path='config/*' element={<ConfigExplorer/>}/>
+      <Route path='config/*' element={
+        <Provider store={store}>
+          <ConfigExplorer/>
+        </Provider>}/>
     </Route>
   </>);
 

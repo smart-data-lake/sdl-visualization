@@ -7,10 +7,10 @@ import Tabs from '@mui/joy/Tabs';
 import React from 'react';
 import { useParams } from "react-router-dom";
 import { useFetchDataObjectSchemaEntries, useFetchDataObjectStatsEntries, useFetchDescription } from '../../hooks/useFetchData';
-import { useAppDispatch } from '../../hooks/useRedux';
+import { useAppDispatch, useAppSelector } from '../../hooks/useRedux';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { ConfigData } from "../../util/ConfigExplorer/ConfigData";
-import { setLineageTabProps } from '../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
+import { setLineageTabProps, getLineageTabOpen, setLineageTabOpen } from '../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
 import './ComponentsStyles.css';
 import ConfigurationTab from "./ConfigurationTab";
 import DescriptionTab from "./DescriptionTab";
@@ -37,10 +37,8 @@ export default function ElementDetails(props: {
   configData?: ConfigData;
   parentCmpRef: React.RefObject<HTMLDivElement>;
   version: string | undefined;
-  openLineage: boolean;
-  setOpenLineage: (boolean) => void;
 }) {
-  const { configData, version, openLineage, setOpenLineage } = props;
+  const { configData, version } = props;
 	const { elementName, elementType, tab } = useParams();
 	const [lastTab, setLastTab] = React.useState('configuration');
 	const {navigateRel} = useWorkspace();
@@ -77,6 +75,8 @@ export default function ElementDetails(props: {
 
 	const hasSchema = schemaEntries && schemaEntries.length > 0
 
+	const lineageTabOpen = useAppSelector(state => getLineageTabOpen(state));
+
 	return (
 		<>
 			<Sheet sx={{ flex: 1, minWidth: '500px', height: '100%', display: 'flex', flexDirection: 'column', p: '1rem 0rem 1rem 0.5rem' }}>
@@ -97,9 +97,9 @@ export default function ElementDetails(props: {
 						</TabList>
 						{(elementType === "dataObjects" || elementType === "actions") &&
 							(<Sheet>
-								{!openLineage &&
+								{!lineageTabOpen &&
 									(
-										<Button size="sm" onClick={() => setOpenLineage(true)}>
+										<Button size="sm" onClick={() => dispatch(setLineageTabOpen(true))}>
 											Open lineage
 											<KeyboardDoubleArrowLeftIcon sx={{ ml: '0.5rem' }} />
 										</Button>
