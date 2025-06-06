@@ -221,8 +221,8 @@ export const CustomDataNode = ( {data} ) => {
           {createConnectionChip(props.connection.id)} // need distinction on objects without conn.  
         </div> */}
         <Box sx={{flex: 1}}/>      
-        {nodeType === NodeType.ActionNode && selectedNodeAttributes.includes("actionExecutionMode") ? getExecutionMode(executionMode?.type) : null }
-        {nodeType === NodeType.DataNode  && selectedNodeAttributes.includes("dataPartitionState") ? getPartitionStatus(isPartioned) : null}
+        {nodeType === NodeType.ActionNode && selectedNodeAttributes.includes("action-executionMode") ? getExecutionMode(executionMode?.type) : null }
+        {nodeType === NodeType.DataNode  && selectedNodeAttributes.includes("data-partitionState") ? getPartitionStatus(isPartioned) : null}
         {lastRun?.status !== undefined  && (getIcon(lastRun?.status, '0px', {scale: '100%'}))}
 
         {/* <div style={{justifyContent: 'flex-end'}}>

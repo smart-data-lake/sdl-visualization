@@ -307,15 +307,21 @@ function GroupingButton() {
 function NodeAttributeSelector() {
     const dispatch = useAppDispatch();
 
+    // Fetch selected items
+    const selected = useAppSelector(state => getSelectedNodeAttributes(state));
+
+    // Define Callbacks
     const onChange = (selectedValues) => {
         dispatch(setSelectedNodeAttributes(selectedValues))
     }
 
-    const selected = useAppSelector(state => getSelectedNodeAttributes(state));
-
     const handleChange = (_, newValue) => {
         dispatch(setSelectedNodeAttributes(newValue));
     };
+
+    // Divide attributes into data and action node attributes
+    const dataNodeAttributes = nodeAttributes.filter(attr => attr.value.startsWith("data"))
+    const actionNodeAttributes = nodeAttributes.filter(attr => attr.value.startsWith("action"))
 
     return (
         <Tooltip
@@ -341,7 +347,14 @@ function NodeAttributeSelector() {
                     }
                 }}
             >
-                {nodeAttributes.map(attr => (
+                {dataNodeAttributes.map(attr => (
+                    <Option key={attr.value} value={attr.value} >
+                        <Checkbox checked={selected.includes(attr.value)} />
+                        {attr.label}
+                    </Option>
+                ))}
+                <Divider/>
+                {actionNodeAttributes.map(attr => (
                     <Option key={attr.value} value={attr.value} >
                         <Checkbox checked={selected.includes(attr.value)} />
                         {attr.label}

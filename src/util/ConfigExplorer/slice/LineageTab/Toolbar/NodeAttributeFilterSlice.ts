@@ -2,8 +2,8 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import type { RootState } from '../../../../../app/store'
 
 export const nodeAttributes = [
-    { label: "Action Execution Mode", value: "actionExecutionMode" },
-    { label: "Data Partition State", value: "dataPartitionState" },
+    { label: "Action Execution Mode", value: "action-executionMode" },
+    { label: "Data Partition State", value: "data-partitionState" },
 ];
 
 interface nodeAttributeFilterState {
