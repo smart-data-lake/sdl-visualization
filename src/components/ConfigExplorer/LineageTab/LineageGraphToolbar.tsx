@@ -1,4 +1,4 @@
-import { Abc, AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull, Search, Send } from '@mui/icons-material';
+import { Abc, AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull, Search, Send, FilterList } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
@@ -10,7 +10,7 @@ import WorkspacesIcon from '@mui/icons-material/Workspaces';
 import ToggleButtonGroup from '@mui/joy/ToggleButtonGroup';
 import * as React from 'react';
 
-import { Autocomplete, Button, Divider, Dropdown, IconButton, Input, ListItemDecorator, Menu, MenuButton, MenuItem, Tooltip } from '@mui/joy';
+import { Autocomplete, Button, Divider, Dropdown, IconButton, Input, ListItemDecorator, Menu, MenuButton, MenuItem, Tooltip, Checkbox, Select, Option } from '@mui/joy';
 // import Option from '@mui/joy/Option';
 import Box from '@mui/material/Box';
 import { toPng } from 'html-to-image';
@@ -28,6 +28,7 @@ import { getGraphView, setGraphView } from '../../../util/ConfigExplorer/slice/L
 import { setGroupingState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GroupingSlice';
 import { getLayout, setLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
 import { nodeHeight, nodeWidth } from './LineageTabWithSeparateView';
+import { nodeAttributes, getSelectedNodeAttributes, setSelectedNodeAttributes } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/NodeAttributeFilterSlice';
 
 /*
   Styling
@@ -107,7 +108,7 @@ function LayoutButton() {
         <IconButton color={'neutral'} onClick={() => dispatch(setLayout(layout === 'TB' ? 'LR' : 'TB'))}>
             {layout === 'TB' ? <AlignVerticalTop /> : <AlignHorizontalLeft />}
         </IconButton>
-    </Tooltip>    
+    </Tooltip>
 }
 
 function GraphExpansionButton() {
@@ -185,7 +186,7 @@ function recomputeLayout(rfi: any, layoutDirection: any) {
     const nonParentNodes = getNonParentNodesFromArray(rfNodes);
     const parentNodes = getParentNodesFromArray(rfNodes);
     const rfEdges = rfi.getEdges();
-    
+
     var layoutedNonParentNodes = dagreLayoutRf(nonParentNodes, rfEdges, layoutDirection, nodeWidth, nodeHeight);
     var layoutedParentNodes = computeParentNodePositionFromArray(layoutedNonParentNodes, parentNodes);
     layoutedNonParentNodes = computeNodePositionFromParent(layoutedNonParentNodes, layoutedParentNodes);
@@ -268,21 +269,21 @@ function GroupingButton() {
             <Menu sx={{'--ListItemDecorator-size': '20px', overflow: 'visible' }}>
                 {/* this is a normal button to avoid closing the dropdown */}
                 <Button className='byName' onClick={() => setShowByNameSelector(true)} sx={{backgroundColor: (groupingOption=='byName' ? '#e6eef7' : 'white')}}>
-                    <Tooltip arrow title='group by name' enterDelay={500} enterNextDelay={500} placement='right'>                            
+                    <Tooltip arrow title='group by name' enterDelay={500} enterNextDelay={500} placement='right'>
                         <ListItemDecorator>
                             <Abc />
                         </ListItemDecorator>
                     </Tooltip>
                 </Button>
                 {/* this is an improvised "submenu" showing an input box for the name */}
-                {showByNameSelector && 
+                {showByNameSelector &&
                     <Box position="absolute" top={5} left={55} >
                         <form onSubmit={ev => handleApplyByName(ev)}>
                             <Input id="name" size="sm" sx={{width: 200}} autoFocus placeholder='Name substring...' endDecorator={<IconButton type="submit" size="sm"><Send/></IconButton>}/>
                         </form>
                     </Box>
                 }
-                <Tooltip arrow title='group by feed (only enabled if "action graph view" is selected)' enterDelay={500} enterNextDelay={500} placement='right'>                            
+                <Tooltip arrow title='group by feed (only enabled if "action graph view" is selected)' enterDelay={500} enterNextDelay={500} placement='right'>
                     <span>{/* <span> is used to show tooltip also if MenuItem is disabled */}
                         <MenuItem className='byFeed' selected={groupingOption === 'byFeed'} onClick={handleApplyByFeed} disabled={graphView !== 'action'} sx={{ outline: '0 !important' }}>
                             <ListItemDecorator>
@@ -301,6 +302,54 @@ function GroupingButton() {
             </Menu>
         </Dropdown>
     )
+}
+
+function NodeAttributeSelector() {
+    const dispatch = useAppDispatch();
+
+    const onChange = (selectedValues) => {
+        dispatch(setSelectedNodeAttributes(selectedValues))
+    }
+
+    const selected = useAppSelector(state => getSelectedNodeAttributes(state));
+
+    const handleChange = (_, newValue) => {
+        dispatch(setSelectedNodeAttributes(newValue));
+    };
+
+    return (
+        <Tooltip
+            arrow
+            title={<>Select which attributes should be shown for the displayed nodes.</>}
+            enterDelay={500}
+            enterNextDelay={500}
+            placement='top'
+        >
+            <Select
+                multiple
+                value={selected}
+                onChange={handleChange}
+                startDecorator={<FilterList />}
+                variant="plain" // Do not show shadow box
+                placeholder=""
+                renderValue={() => null} // Do not display selected items
+                className = 'attribute-selection-dropdown-parent'
+                slotProps={{
+                    // Set class on <ul> for CSS selector
+                    listbox: {
+                        className: 'attribute-selection-dropdown',
+                    }
+                }}
+            >
+                {nodeAttributes.map(attr => (
+                    <Option key={attr.value} value={attr.value} >
+                        <Checkbox checked={selected.includes(attr.value)} />
+                        {attr.label}
+                    </Option>
+                ))}
+            </Select>
+        </Tooltip>
+    );
 }
 
 
@@ -377,7 +426,7 @@ export const NodeSearchButton = () => {
             const rfNode = rfi.getNode(suggestion.id);
             resetViewPortCentered(rfi, [rfNode]);
             setOpen(false);
-        }        
+        }
     };
 
     const [open, setOpen] = React.useState(false);
@@ -393,7 +442,7 @@ export const NodeSearchButton = () => {
                 </Tooltip>
             </MenuButton>
             <Menu placement="bottom-start" sx={{border: "none", padding: '0px', backgroundColor: 'transparent'}}>
-                <Autocomplete 
+                <Autocomplete
                     sx={{ width: 390 }}
                     freeSolo
                     placeholder="Search node"
@@ -418,8 +467,8 @@ export default function LineageGraphToolbar() {
     return (
         <Draggable bounds="parent" nodeRef={nodeRef}>
             <Box ref={nodeRef} sx={{ zIndex: componentZIndex, position: 'absolute', left: 0, top: 0, padding: 0.1, gap: 0.2, display: 'flex', flexDirection: 'row',                    
-                    border: '1px solid', borderColor: 'divider', borderRadius: '10px', bgcolor: 'white',
-                }}
+                border: '1px solid', borderColor: 'divider', borderRadius: '10px', bgcolor: 'white',
+            }}
             >
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <NodeSearchButton/>
@@ -429,6 +478,7 @@ export default function LineageGraphToolbar() {
                     {isPropsConfigDefined && <GraphExpansionButton />}
                     <GraphViewSelector />
                     <GroupingButton />
+                    <NodeAttributeSelector />
                 </ToggleButtonGroup>
                 <Divider orientation="vertical" />
                 <ToggleButtonGroup variant="plain" spacing={0.1}>

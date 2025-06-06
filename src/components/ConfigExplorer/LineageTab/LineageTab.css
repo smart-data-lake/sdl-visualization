@@ -12,7 +12,7 @@
 .react-flow__handle-top {
   top: -15px;
 }
- 
+
 .react-flow__handle-bottom {
   bottom: -15px;
 }
@@ -20,7 +20,52 @@
 .react-flow__handle-left {
   left: -15px;
 }
- 
+
 .react-flow__handle-right {
   right: -15px;
+}
+
+/* CSS variables for the attribute selection */
+.node-attributes{
+  --letter-background: #17a2b8;
+}
+
+/* Node Attribution Selection */
+.attribute-selection-dropdown-parent{
+   >.MuiSelect-indicator {
+      margin-left: -10px;
+    }
+}
+
+.attribute-selection-dropdown li{
+  background: transparent !important;
+
+}
+
+/* Letter styling for the ActionNode ExecutionMode 'icon'*/
+.circle-letter-parent {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 24px;
+    width: 24px;
+}
+
+.circle-letter {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--letter-background);
+    width: 20px;
+    height: 20px;
+    color: white;
+    font-weight: bold;
+    border-radius: 50%;
+}
+
+/* Styling for the DataNode PartitionState icon */
+svg.data-node-partition-state-icon {
+  color: var(--letter-background);
+  scale: 80%;
+  z-index: 0;
 }

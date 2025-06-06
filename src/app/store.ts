@@ -2,6 +2,7 @@ import { combineReducers, configureStore, Store} from '@reduxjs/toolkit'
 import graphViewButtonReducer from '../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
 import layoutReducer from '../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice'
 import graphExpansionReducer from '../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice'
+import NodeAttributeFilterReducer from '../util/ConfigExplorer/slice/LineageTab/Toolbar/NodeAttributeFilterSlice'
 import reactFlowReducer from '../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice'
 import lineageTabReducer from '../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice'
 
@@ -16,6 +17,7 @@ const rootReducer = combineReducers({
     graphViewSelector: graphViewButtonReducer,
     layoutSelector: layoutReducer,
     graphExpansion: graphExpansionReducer,
+    nodeAttributeFilter: NodeAttributeFilterReducer,
     reactFlow: reactFlowReducer,
     lineage: lineageTabReducer
  })

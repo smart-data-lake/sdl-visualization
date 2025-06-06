@@ -113,7 +113,6 @@ function ConfigExplorer() {
 			{!configData || isFetching ? (
           		<CenteredCirularProgress />
         	) : ( 
-					<Provider store={store}>
             <PanelGroup direction="horizontal">
               <Panel defaultSize={15} minSize={8} collapsible={true}>
                 <ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
@@ -146,7 +145,6 @@ function ConfigExplorer() {
                 </>
               }
             </PanelGroup>
-        </Provider>
        		 )}
 			</Sheet>
 		</Sheet>
