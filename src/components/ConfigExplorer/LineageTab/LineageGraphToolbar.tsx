@@ -1,7 +1,7 @@
 import { Abc, AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull, Search, Send, FilterList } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
-import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import {CloudDownload, Close} from '@mui/icons-material';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import SchemaIcon from '@mui/icons-material/Schema';
@@ -9,6 +9,7 @@ import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
 import WorkspacesIcon from '@mui/icons-material/Workspaces';
 import ToggleButtonGroup from '@mui/joy/ToggleButtonGroup';
 import * as React from 'react';
+import { ReactElement } from 'react';
 
 import { Autocomplete, Button, Divider, Dropdown, IconButton, Input, ListItemDecorator, Menu, MenuButton, MenuItem, Tooltip, Checkbox, Select, Option } from '@mui/joy';
 // import Option from '@mui/joy/Option';
@@ -22,7 +23,7 @@ import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
 import { dagreLayoutRf } from '../../../util/ConfigExplorer/Graphs';
 import { computeNodePositionFromParent, computeParentNodePositionFromArray, getGraphFromConfig, getNonParentNodesFromArray, getParentNodesFromArray, groupByFeed, groupBySubstring, prioritizeParentNodes, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { getGroupedState, getGroupingRoutine, getRFI, setGroupingRoutine } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
-import { getConfigData } from '../../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
+import { getConfigData, getLineageTabOpen, setLineageTabOpen } from '../../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
 import { getExpansionState, setExpansionState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
 import { getGraphView, setGraphView } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
 import { setGroupingState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GroupingSlice';
@@ -52,18 +53,9 @@ function GraphViewSelector() {
     const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
     const options = {
-        full:
-            <Tooltip arrow title='show full graph' enterDelay={500} enterNextDelay={500} placement='right'>
-                <SchemaIcon />
-            </Tooltip>,
-        data:
-            <Tooltip arrow title='show data graph' enterDelay={500} enterNextDelay={500} placement='right'>
-                <TableViewTwoTone />
-            </Tooltip>,
-        action:
-            <Tooltip arrow title='show action graph' enterDelay={500} enterNextDelay={500} placement='right'>
-                <RocketLaunchOutlined />
-            </Tooltip>
+        full: {title: 'show full graph', icon: SchemaIcon},
+        data: {title: 'show data graph', icon: TableViewTwoTone},
+        action: {title: 'show action graph', icon: RocketLaunchOutlined},
     }
 
     const handleSelect = (value) => {
@@ -71,23 +63,34 @@ function GraphViewSelector() {
         dispatch(setGraphView(value));
     };
 
+    const createTooltip = (identifier, index, options) => {
+        const title = options[identifier]['title']
+        const Icon = options[identifier]['icon']
+
+        return (
+            <MenuItem selected={selectedIndex === index} onClick={() => { handleSelect(identifier); }}>
+                <ListItemDecorator>
+                    <Tooltip arrow title={title} enterDelay={500} enterNextDelay={500} placement='right'>
+                        <Icon />
+                    </Tooltip>
+                </ListItemDecorator>
+            </MenuItem>
+        )
+    }
+
+    const ToolbarIcon = options[graphView]?.icon
+
     return (
         <Dropdown >
             <MenuButton endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1 }}>
-                <Tooltip arrow title='Show graph view options' enterDelay={500} enterNextDelay={500} placement='right'>
-                    {options[graphView]}
+                <Tooltip arrow title='Show graph view options' enterDelay={500} enterNextDelay={500} placement='top'>
+                    <ToolbarIcon />
                 </Tooltip>
             </MenuButton>
             <Menu sx={{ '--ListItemDecorator-size': '20px' }}>
-                <MenuItem selected={selectedIndex === 0} onClick={() => { handleSelect('full'); }}>
-                    <ListItemDecorator>{options['full']}</ListItemDecorator>
-                </MenuItem>
-                <MenuItem selected={selectedIndex === 1} onClick={() => { handleSelect('data'); }} >
-                    <ListItemDecorator>{options['data']}</ListItemDecorator>
-                </MenuItem>
-                <MenuItem selected={selectedIndex === 2} onClick={() => { handleSelect('action'); }} >
-                    <ListItemDecorator>{options['action']}</ListItemDecorator>
-                </MenuItem>
+                {createTooltip('full', 0, options)}
+                {createTooltip('data', 1, options)}
+                {createTooltip('action', 2, options)}
             </Menu>
         </Dropdown>
     )
@@ -104,7 +107,7 @@ function LayoutButton() {
         className="controls"
         style={styles}
     >*/
-    return <Tooltip arrow title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'} enterDelay={500} enterNextDelay={500} placement='right'>
+    return <Tooltip arrow title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'} enterDelay={500} enterNextDelay={500} placement='top'>
         <IconButton color={'neutral'} onClick={() => dispatch(setLayout(layout === 'TB' ? 'LR' : 'TB'))}>
             {layout === 'TB' ? <AlignVerticalTop /> : <AlignHorizontalLeft />}
         </IconButton>
@@ -115,7 +118,7 @@ function GraphExpansionButton() {
     const dispatch = useAppDispatch();
     const isExpanded = useAppSelector((state) => getExpansionState(state));
 
-    return <Tooltip arrow title={isExpanded ? 'Collapse graph' : 'Expand graph'} enterDelay={500} enterNextDelay={500} placement='right'>
+    return <Tooltip arrow title={isExpanded ? 'Collapse graph' : 'Expand graph'} enterDelay={500} enterNextDelay={500} placement='top'>
         <IconButton
             color='neutral'
             onClick={() => dispatch(setExpansionState({ isExpanded: !isExpanded }))}
@@ -140,15 +143,31 @@ function DownloadLineageButton() {
     };
 
     return (
-        <Tooltip arrow title='Download image as PNG file' enterDelay={500} enterNextDelay={500} placement='right'>
+        <Tooltip arrow title='Download image as PNG file' enterDelay={500} enterNextDelay={500} placement='top'>
             <IconButton sx={{ display: "flex", flexDirection: "column" }}
                 color='neutral'
                 onClick={download}>
-                <CloudDownloadIcon />
+                <CloudDownload />
                 {/* <Typography variant='plain' sx={{ fontSize: '0.55rem' }}>download</Typography> */}
             </IconButton>
         </Tooltip>
     );
+}
+
+function CloseLineageButton() {
+    const dispatch = useAppDispatch();
+    const closeLineage = () => {
+        dispatch(setLineageTabOpen(false))
+    }
+    return (
+        <Tooltip arrow title='Close lineage' enterDelay={500} enterNextDelay={500} placement='top'>
+            <IconButton sx={{ display: "flex", flexDirection: "column"}}
+                color='neutral'
+                onClick={closeLineage}>
+                <Close />
+            </IconButton>
+        </Tooltip>
+    )
 }
 
 function ShowAllButton() {
@@ -158,7 +177,7 @@ function ShowAllButton() {
     }
 
     return (
-        <Tooltip arrow title='Show all' enterDelay={500} enterNextDelay={500} placement='right'>
+        <Tooltip arrow title='Show all' enterDelay={500} enterNextDelay={500} placement='top'>
             <IconButton onClick={handleOnClick}>
                 <FitScreen />
             </IconButton>
@@ -173,7 +192,7 @@ function CenterFocusButton() {
         resetViewPortCentered(rfi, nodes);
     }
     return (
-        <Tooltip arrow title='Focus on central node' enterDelay={500} enterNextDelay={500} placement='right'>
+        <Tooltip arrow title='Focus on central node' enterDelay={500} enterNextDelay={500} placement='top'>
             <IconButton onClick={handleOnClick}>
                 <FilterCenterFocusIcon />
             </IconButton>
@@ -205,7 +224,7 @@ function RecomputeLayoutButton() {
     }
 
     return (
-        <Tooltip arrow title='Recompute layout' enterDelay={500} enterNextDelay={500} placement='right'>
+        <Tooltip arrow title='Recompute layout' enterDelay={500} enterNextDelay={500} placement='top'>
             <IconButton onClick={handleOnClick}>
                 <Apps />
             </IconButton>
@@ -262,7 +281,7 @@ function GroupingButton() {
     return (
         <Dropdown open={open} onOpenChange={handleOpenChange}>
             <MenuButton  endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1, outline: '0 !important' }}>
-                <Tooltip arrow title='EXPERIMENTAL: Show grouping options' enterDelay={500} enterNextDelay={500} placement='right'>
+                <Tooltip arrow title='EXPERIMENTAL: Show grouping options' enterDelay={500} enterNextDelay={500} placement='top'>
                     <WorkspacesIcon />
                 </Tooltip>
             </MenuButton>
@@ -450,7 +469,7 @@ export const NodeSearchButton = () => {
     return (
         <Dropdown open={open} onOpenChange={handleOpenChange} >
             <MenuButton endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1, outline: '0 !important' }}>
-                <Tooltip arrow title={<>Search node. By default node name must contain search expr,<br/> but you can add 'prefix:' or 'suffix:' at the start to modify behaviour.</>} enterDelay={500} enterNextDelay={500} placement='right'>
+                <Tooltip arrow title={<>Search node. By default node name must contain search expr,<br/> but you can add 'prefix:' or 'suffix:' at the start to modify behaviour.</>} enterDelay={500} enterNextDelay={500} placement='top'>
                     <Search />
                 </Tooltip>
             </MenuButton>
@@ -503,6 +522,7 @@ export default function LineageGraphToolbar() {
                 <Divider orientation="vertical" />
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <DownloadLineageButton />
+                    <CloseLineageButton />
                 </ToggleButtonGroup>
             </Box>
         </Draggable>
