@@ -3,16 +3,18 @@ import type { RootState } from '../../../../../app/store'
 import { flowProps } from '../../../LineageTabUtils'
 
 
-interface LinageTabState {
+interface LineageTabState {
     lineageTabProps: flowProps
+    lineageTabOpen: boolean
 }
-const initialState: LinageTabState = {
+const initialState: LineageTabState = {
     lineageTabProps: {
         elementName: '',
         elementType: '',
         configData: undefined,
         runContext: undefined
-    }
+    },
+    lineageTabOpen: false
 }
 
 const LineageTabSlice = createSlice({
@@ -21,11 +23,15 @@ const LineageTabSlice = createSlice({
     reducers: {
         setLineageTabProps: (state, newState: PayloadAction<flowProps>) => {
             state.lineageTabProps = newState.payload;
+        },
+        setLineageTabOpen: (state, action: PayloadAction<boolean>) => {
+            state.lineageTabOpen = action.payload;
         }
     }
 })
 
-export const {setLineageTabProps} = LineageTabSlice.actions;
+export const {setLineageTabProps, setLineageTabOpen} = LineageTabSlice.actions;
 export const getConfigData = (state: RootState) => state.lineage.lineageTabProps.configData;
 export const getLineageTabProps = (state: RootState) => state.lineage.lineageTabProps;
+export const getLineageTabOpen = (state: RootState) => state.lineage.lineageTabOpen;
 export default LineageTabSlice.reducer;

@@ -1,5 +1,3 @@
-import { Provider } from 'react-redux';
-
 import { Box, Option, Select, Sheet, Typography } from '@mui/joy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, PanelGroup } from "react-resizable-panels";
@@ -18,6 +16,8 @@ import ElementList from './ElementList';
 import ElementTable from './ElementTable';
 import GlobalConfigView from './GlobalConfigView';
 import LineageTabSep from './LineageTab/LineageTabWithSeparateView';
+import { useAppSelector } from '../../hooks/useRedux';
+import { getLineageTabOpen } from '../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
 
 interface SearchFilterDef {
 	text: string;
@@ -86,7 +86,6 @@ function ConfigExplorer() {
 	const parentRef = useRef<HTMLDivElement>(null);  
 	const [filter, setFilter] = useState<SearchFilterDef>();
   const isFetching = isFetchingConfig || isFetchingConfigVersion;
-	const [openLineage, setOpenLineage] = useState(false);
 
 	const configDataLists = useMemo(() => {
 		if (configData) {
@@ -104,6 +103,8 @@ function ConfigExplorer() {
 		return configDataLists;
 	}, [filter, configDataLists]);
 
+  const lineageTabOpen = useAppSelector(state => getLineageTabOpen(state));
+
 	return (
 		<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>
      	<PageHeader
@@ -113,41 +114,39 @@ function ConfigExplorer() {
 			{!configData || isFetching ? (
           		<CenteredCirularProgress />
         	) : ( 
-					<Provider store={store}>
-            <PanelGroup direction="horizontal">
-              <Panel defaultSize={15} minSize={8} collapsible={true}>
-                <ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
+          <PanelGroup direction="horizontal">
+            <Panel defaultSize={15} minSize={8} collapsible={true}>
+              <ElementList configData={configData} configDataLists={filteredConfigDataLists!} mainRef={listRef} setFilter={setFilter} />
+            </Panel>
+            <PanelResizer/>
+            <Panel>
+            <Routes>
+              <Route path=":elementType" 
+                element={<ElementTable dataLists={filteredConfigDataLists!} />} 
+                errorElement={<ErrorBoundary/>}
+              />
+              <Route
+                path=":elementType/:elementName/:tab?"
+                element={<ElementDetails configData={configData} parentCmpRef={parentRef} version={version} />}
+                errorElement={<ErrorBoundary />}
+              />
+              <Route path="globalOptions" 
+                element={<GlobalConfigView data={configData?.global}/>} 
+                errorElement={<ErrorBoundary/>} 
+              />
+            </Routes>
+            </Panel>
+            {lineageTabOpen && <>
+              <PanelResizer style={{marginLeft: "6px"}}/>
+              <Panel minSize={7} collapsible={true}>
+                <Sheet sx={{ height: '100%', minWidth: '100px', marginLeft: "6px" }}>
+                  <LineageTabSep />
+                </Sheet>
               </Panel>
-              <PanelResizer/>
-              <Panel>
-              <Routes>
-                <Route path=":elementType" 
-                  element={<ElementTable dataLists={filteredConfigDataLists!} />} 
-                  errorElement={<ErrorBoundary/>}
-                />
-                <Route
-                  path=":elementType/:elementName/:tab?"
-                  element={<ElementDetails configData={configData} parentCmpRef={parentRef} version={version} openLineage={openLineage} setOpenLineage={setOpenLineage} />}
-                  errorElement={<ErrorBoundary />}
-                />
-                <Route path="globalOptions" 
-                  element={<GlobalConfigView data={configData?.global}/>} 
-                  errorElement={<ErrorBoundary/>} 
-                />
-              </Routes>
-              </Panel>
-              {openLineage && <>
-                <PanelResizer style={{marginLeft: "6px"}}/>
-                <Panel minSize={7} collapsible={true}>
-                  <Sheet sx={{ height: '100%', minWidth: '100px', marginLeft: "6px" }}>
-                    <LineageTabSep />
-                  </Sheet>
-                </Panel>
-                </>
-              }
-            </PanelGroup>
-        </Provider>
-       		 )}
+              </>
+            }
+          </PanelGroup>
+          )}
 			</Sheet>
 		</Sheet>
 	);
