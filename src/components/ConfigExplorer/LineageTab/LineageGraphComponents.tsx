@@ -20,14 +20,17 @@ import { Chip, IconButton, Tooltip } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
+import { useAppSelector } from '../../../hooks/useRedux';
 
 import { Position } from 'reactflow';
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { flowProps, graphNodeProps, ReactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { getIcon } from '../../../util/WorkflowsExplorer/StatusInfo';
+import { getIcon, getPartitionStatus, getExecutionMode } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
 import { useWorkspace } from '../../../hooks/useWorkspace';
+import { getSelectedNodeAttributes} from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/NodeAttributeFilterSlice';
+
 
 /*
   Styles to refactor (for the entire LineageTab folder)
@@ -148,6 +151,8 @@ export const CustomDataNode = ( {data} ) => {
   const nodeTypeName: string = nodeType === NodeType.ActionNode  ? "actions" :
                                nodeType === NodeType.DataNode ? "dataObjects" :
                                "";
+  const executionMode = jsonObject?.executionMode
+  const isPartioned = jsonObject?.partitions !== undefined && jsonObject?.partitions.length >= 1
   const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, ''); // take the capital letters and the first letter of the camelCase name
   const { data: runs} = useFetchWorkflowRunsByElement(nodeTypeName, label);
   const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
@@ -198,6 +203,8 @@ export const CustomDataNode = ( {data} ) => {
 
   function showObjectTitle(){    
     const objectType = nodeType === NodeType.ActionNode ? "Action Object" : "Data Object";
+    const selectedNodeAttributes = useAppSelector(state => getSelectedNodeAttributes(state));
+
     return (
       <Box sx={{display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
         <Tooltip title={objectType} arrow disableInteractive placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
@@ -213,7 +220,9 @@ export const CustomDataNode = ( {data} ) => {
         {/* <div>
           {createConnectionChip(props.connection.id)} // need distinction on objects without conn.  
         </div> */}
-        <Box sx={{flex: 1}}/>
+        <Box sx={{flex: 1}}/>      
+        {nodeType === NodeType.ActionNode && selectedNodeAttributes.includes("action-executionMode") ? getExecutionMode(executionMode?.type) : null }
+        {nodeType === NodeType.DataNode  && selectedNodeAttributes.includes("data-partitionState") ? getPartitionStatus(isPartioned) : null}
         {lastRun?.status !== undefined  && (getIcon(lastRun?.status, '0px', {scale: '100%'}))}
 
         {/* <div style={{justifyContent: 'flex-end'}}>
