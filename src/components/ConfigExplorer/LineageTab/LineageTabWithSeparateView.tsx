@@ -74,6 +74,9 @@ function LineageTabCore() {
   const {navigateContent} = useWorkspace(); // handlers for navigating dataObjects and actions
   const dispatch = useDispatch();
 
+  // State for the blocker during the download of the lineage graph
+  const [isDownloadingLineageGraph, setIsDownloadingLineageGraph] = useState(false);
+
   // to save the zoom level before re-creating a new ReactFlow component
   const [previousZoom, setPreviousZoom] = useState<number>();
   // workaround to wait for reactflow div mounted, in order to get container width/height
@@ -128,8 +131,12 @@ function LineageTabCore() {
   }, [rfContainer])
 
   return (
-
-    <Box ref={rfContainer} sx={{ height: '100%' }}>
+    <Box ref={rfContainer} sx={{
+      height: '100%',
+      opacity: isDownloadingLineageGraph ? 0.5 : 1,
+      pointerEvents: isDownloadingLineageGraph ? "none" : "auto", // disables interaction
+      transition: "opacity 0.3s"
+    }}>
       {rfContainerMounted && // need to wait for rfContainer ready in order to get width/height.
         <ReactFlow
           key={reactFlowKey}
@@ -143,15 +150,19 @@ function LineageTabCore() {
           connectOnClick={false}
           minZoom={0.02}
           maxZoom={1}
+          nodesDraggable={!isDownloadingLineageGraph}
+          elementsSelectable={!isDownloadingLineageGraph}
+          panOnDrag={!isDownloadingLineageGraph}
+          zoomOnDoubleClick={!isDownloadingLineageGraph}
           fitView
           fitViewOptions={{maxZoom: previousZoom, nodes: nodes.filter((node) => node.data.graphNodeProps.isCenterNode)}}
         >
           <Controls showFitView={false} showInteractive={false} />
           <Background /> {/* Background macht fehler "<pattern> attribute x: Expected length, "NaN"!*/}
-          <LineageGraphToolbar/>
+          <LineageGraphToolbar setIsDownloading={setIsDownloadingLineageGraph} />
         </ReactFlow>
       }
-      {!rfContainerMounted && <CenteredCirularProgress/>}
+      {!rfContainerMounted && <CenteredCirularProgress />}
     </Box>
   )
 }
