@@ -11,14 +11,14 @@ import ToggleButtonGroup from '@mui/joy/ToggleButtonGroup';
 import * as React from 'react';
 import { ReactElement } from 'react';
 
-import { Autocomplete, Button, Divider, Dropdown, IconButton, Input, ListItemDecorator, Menu, MenuButton, MenuItem, Tooltip, Checkbox, Select, Option } from '@mui/joy';
+import { Autocomplete, Button, Divider, Dropdown, IconButton, Input, ListItemDecorator, Menu, MenuButton, MenuItem, Tooltip, Checkbox, Select, Option, Modal, Typography } from '@mui/joy';
 // import Option from '@mui/joy/Option';
 import Box from '@mui/material/Box';
-import { toPng } from 'html-to-image';
+import { toSvg } from 'html-to-image';
 
 import { useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
-import { ReactFlowInstance, Node as ReactFlowNode } from 'reactflow';
+import { ReactFlowInstance, Node as ReactFlowNode, useViewport } from 'reactflow';
 import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
 import { dagreLayoutRf } from '../../../util/ConfigExplorer/Graphs';
 import { computeNodePositionFromParent, computeParentNodePositionFromArray, getGraphFromConfig, getNonParentNodesFromArray, getParentNodesFromArray, groupByFeed, groupBySubstring, prioritizeParentNodes, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
@@ -42,7 +42,7 @@ const styles = { zIndex: componentZIndex, cursor: 'pointer' }
 */
 function downloadImage(dataUrl: string) {
     const a = document.createElement('a');
-    a.setAttribute('download', 'lineage.png');
+    a.setAttribute('download', 'lineage.svg');
     a.setAttribute('href', dataUrl);
     a.click();
 }
@@ -128,29 +128,93 @@ function GraphExpansionButton() {
     </Tooltip>
 }
 
-function DownloadLineageButton() {
-    const download = () => {
-        toPng(document.querySelector('.react-flow') as HTMLElement, {
-            filter: (node) => {
-                // don't include minimap, the controls and the MUI Buttons.
-                return (
-                    !node?.classList?.contains('react-flow__minimap') &&
-                    !node?.classList?.contains('react-flow__controls') &&
-                    !node?.classList?.contains('MuiSvgIcon-root') &&
-                    !node?.classList?.contains('MuiButtonBase-root'))
-            },
-        }).then(downloadImage);
+function DownloadLineageButton(props: { setIsDownloading }) {
+    // Confirmation Dialog
+    const [open, setOpen] = useState(false);
+
+    const handleClick = () => setOpen(true);
+    const handleClose = () => setOpen(false);
+    const handleConfirm = () => {
+        setOpen(false);
+        download();
+    };
+
+    // Download utils
+    const rfi: ReactFlowInstance = useAppSelector(state => getRFI(state));
+    const dispatch = useAppDispatch();
+
+    const download = async () => {
+        try {
+            props.setIsDownloading(true); // Start blocking UI
+
+            // Expand the view
+            dispatch(setExpansionState({ isExpanded: true }));
+            await new Promise(resolve => setTimeout(resolve, 100)); // Wait for DOM update
+
+            rfi.fitView(); // Fit the view after expansion
+            await new Promise(resolve => setTimeout(resolve, 100)); // Wait for centering
+
+            // Generate and download SVG
+            const svgElement = document.querySelector('.react-flow') as HTMLElement;
+            const svg = await toSvg(svgElement, {
+                filter: (node) => {
+                    return (
+                        !node?.classList?.contains("lineage-graph-toolbar") && // exclude toolbar
+                        !node?.classList?.contains('react-flow__minimap') && // exclude minimap
+                        !node?.classList?.contains('react-flow__controls') // exclude controls (zoom)
+                    );
+                },
+            });
+            downloadImage(svg);
+
+            // Collapse view
+            dispatch(setExpansionState({ isExpanded: false }));
+        } catch (error) {
+            console.error("Download failed:", error);
+        } finally {
+            props.setIsDownloading(false); // Stop UI blocking
+        }
     };
 
     return (
-        <Tooltip arrow title='Download image as PNG file' enterDelay={500} enterNextDelay={500} placement='top'>
-            <IconButton sx={{ display: "flex", flexDirection: "column" }}
-                color='neutral'
-                onClick={download}>
-                <CloudDownload />
-                {/* <Typography variant='plain' sx={{ fontSize: '0.55rem' }}>download</Typography> */}
-            </IconButton>
-        </Tooltip>
+        <>
+            <Tooltip arrow title="Download graph as SVG file" enterDelay={500} enterNextDelay={500} placement="top">
+                <IconButton sx={{ display: "flex", flexDirection: "column" }}
+                    color="neutral"
+                    onClick={handleClick}>
+                    <CloudDownload />
+                </IconButton>
+            </Tooltip>
+            <Modal open={open} onClose={handleClose}>
+                <Box
+                    sx={{
+                        maxWidth: 400,
+                        mx: "auto",
+                        mt: "15vh",
+                        bgcolor: "background.body",
+                        borderRadius: "md",
+                        boxShadow: "lg",
+                        p: 2,
+                        outline: 'none',
+                    }}
+                >
+                    <Typography level="h4" component="h2" gutterBottom>
+                        Confirm Download
+                    </Typography>
+                    <Typography>
+                        When downloading, the current expansion level and view will be reset. Are you sure you want to continue?
+                    </Typography>
+                    <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, mt: 3 }}>
+                        <Button variant="soft" color="neutral" onClick={handleClose}>
+                            Cancel
+                        </Button>
+                        <Button variant="solid" color="primary" onClick={handleConfirm} autoFocus>
+                            Download
+                        </Button>
+                    </Box>
+                </Box>
+            </Modal>
+        </>
     );
 }
 
@@ -491,14 +555,15 @@ export const NodeSearchButton = () => {
     );
 };
 
-export default function LineageGraphToolbar() {
+export default function LineageGraphToolbar(props: { setIsDownloading }) {
     const isPropsConfigDefined = useAppSelector(state => getConfigData(state)) !== undefined;
     // avoid DOM warning for Draggable, see https://github.com/react-grid-layout/react-draggable/blob/v4.4.2/lib/DraggableCore.js#L159-L171
     const nodeRef = useRef(null);
 
     return (
         <Draggable bounds="parent" nodeRef={nodeRef}>
-            <Box ref={nodeRef} sx={{ zIndex: componentZIndex, position: 'absolute', left: 0, top: 0, padding: 0.1, gap: 0.2, display: 'flex', flexDirection: 'row',                    
+            <Box className={"lineage-graph-toolbar"} ref={nodeRef} sx={{
+                zIndex: componentZIndex, position: 'absolute', left: 0, top: 0, padding: 0.1, gap: 0.2, display: 'flex', flexDirection: 'row',
                 border: '1px solid', borderColor: 'divider', borderRadius: '10px', bgcolor: 'white',
             }}
             >
@@ -521,7 +586,7 @@ export default function LineageGraphToolbar() {
                 </ToggleButtonGroup>
                 <Divider orientation="vertical" />
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
-                    <DownloadLineageButton />
+                    <DownloadLineageButton setIsDownloading={props.setIsDownloading} />
                     <CloseLineageButton />
                 </ToggleButtonGroup>
             </Box>
