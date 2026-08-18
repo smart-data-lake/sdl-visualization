@@ -1,0 +1,43 @@
+{
+  "schema" : [ {
+    "name" : "estdepartureairport",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "estarrivalairport",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "arr_name",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "arr_latitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "arr_longitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "dep_name",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "dep_latitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "dep_longitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "distance",
+    "dataType" : "double",
+    "nullable" : true
+  }, {
+    "name" : "could_be_done_by_rail",
+    "dataType" : "boolean",
+    "nullable" : true
+  } ]
+}

@@ -1,0 +1,59 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'develop'
+  pull_request:
+    branches:
+      - 'develop'
+    types: [opened, synchronize]
+
+  workflow_dispatch:
+
+jobs:
+  e2e:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Git Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: yarn
+
+    - run: yarn install
+
+    - name: Run unit tests
+      run: yarn test:ci
+
+    - name: Get playwright version
+      id: playwright-version
+      run: echo "version=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_OUTPUT
+
+    - name: Cache playwright browsers
+      uses: actions/cache@v4
+      id: playwright-cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+    - name: Install playwright chromium
+      run: npx playwright install --with-deps chromium
+
+    - name: Run end-to-end tests
+      run: yarn test:e2e
+
+    - name: Upload playwright report
+      uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 7

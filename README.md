@@ -75,3 +75,36 @@ In `public/manifest.json` you can set various configurations for the UI:
 - `baseUrl`: website base url if not "/"
 - `env`: when parsing hocon config files, `env` is used to get the environment configuration file from `envConfig/{env}.conf`
 - `configSourceUrl`: configure a url template to link to configuration source files similar to "https://github.com/smart-data-lake/getting-started/blob/master/config/{filename}#L{lineNumber}"
+
+# Testing
+
+## Unit tests
+
+Vitest, see `tests/*.test.ts`:
+````
+$ yarn test        # watch mode
+$ yarn test:ci     # single run
+````
+
+## End-to-end tests
+
+Playwright drives the app in a real browser, see `tests/e2e/`. A real browser is
+needed because the lineage graph (ReactFlow) and the HOCON parser (a Node
+library polyfilled for the browser) do not work outside one.
+
+````
+$ npx playwright install chromium   # once
+$ yarn test:e2e                     # run all specs
+$ yarn test:e2e:ui                  # interactive runner
+````
+
+The tests do not use `public/config` and `public/state` (those hold your local
+data and are gitignored). They run against the config and state files of the
+[getting-started](https://github.com/smart-data-lake/getting-started) project,
+committed under `tests/e2e/fixtures/` and served by a middleware in
+`vite.config.e2e.ts`. Refresh them with `tests/e2e/fixtures/update-fixtures.sh`.
+
+Two fixture variants are served, because the config can come from two sources:
+`hocon` (parsed from `config/*.conf` plus `envConfig/dev.conf`, port 3000) and
+`exported` (read from `exportedConfig.json` as the deployed getting-started
+visualizer does, port 3001). Playwright starts both dev servers itself.

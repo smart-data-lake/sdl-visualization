@@ -1,0 +1,19 @@
+{
+  "schema" : [ {
+    "name" : "ident",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "name",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "latitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "longitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  } ]
+}

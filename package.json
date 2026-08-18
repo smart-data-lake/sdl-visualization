@@ -95,7 +95,11 @@
     "type-check": "tsc",
     "postinstall": "patch-package",
     "test": "vitest",
-    "coverage": "vitest --coverage"
+    "test:ci": "vitest run",
+    "coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "eslintConfig": {
     "extends": [
@@ -116,6 +120,7 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@types/dagre": "^0.7.47",
     "immer": "^10.1.1",
