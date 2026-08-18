@@ -18,8 +18,7 @@ import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
 import { WorkspaceEmpty } from './layouts/RootLayoutSpinner';
 import { amplifyTheme } from './theme';
-import { Provider } from 'react-redux';
-import store from './app/store';
+import { LineageProvider } from './hooks/useLineage';
 
 function Routing() {
   const userContext = useUser();
@@ -33,10 +32,7 @@ function Routing() {
       <Route path='workflows/:flowId/:runIdAttempt/:tab?/:stepName?' element={<Run/>}/>
       <Route path='workflows/*' element={<NotFound/>}/>
       {/* <Route path='lineage/*' element={<LineageExplorer/>}/> */}
-      <Route path='config/*' element={
-        <Provider store={store}>
-          <ConfigExplorer/>
-        </Provider>}/>
+      <Route path='config/*' element={<ConfigExplorer/>}/>
     </Route>
   </>);
 
@@ -49,14 +45,17 @@ function Routing() {
     <Route path="*" element={<WorkspaceEmpty/>}/>
   </>);
 
+  // the lineage state is kept above the routes, so that it survives navigating away from the config explorer
   return (
-    <Routes>
-      <Route element={<RootLayout />} errorElement={<ErrorBoundary/>}>
-      {userContext?.loginElement ? <Route path='*' element={userContext.loginElement}/> : 
-        workspace.tenant ? workspaceRouting() : contentRouting()
-      }
-      </Route>
-    </Routes>    
+    <LineageProvider>
+      <Routes>
+        <Route element={<RootLayout />} errorElement={<ErrorBoundary/>}>
+        {userContext?.loginElement ? <Route path='*' element={userContext.loginElement}/> : 
+          workspace.tenant ? workspaceRouting() : contentRouting()
+        }
+        </Route>
+      </Routes>
+    </LineageProvider>
   )
 };
 

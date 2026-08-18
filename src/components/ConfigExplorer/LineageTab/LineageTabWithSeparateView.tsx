@@ -31,20 +31,13 @@ import 'reactflow/dist/style.css';
 import Box from '@mui/material/Box';
 
 // local imports
-import { Provider, useDispatch } from 'react-redux';
-import store from '../../../app/store';
-import { useAppSelector } from '../../../hooks/useRedux';
+import { useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
 import { dagreLayoutRf } from '../../../util/ConfigExplorer/Graphs';
 import {
   prepareAndRenderGraph,
   resetEdgeStyles, resetNodeStyles,
   setEdgeStylesOnEdgeClick, setNodeStylesOnEdgeClick
 } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { setRFI, setSelectedEdge } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
-import { getLineageTabProps } from '../../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
-import { getExpansionState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
-import { getGraphView } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
-import { getLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
 import CenteredCirularProgress from '../../Common/CenteredCircularProgress';
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
 import LineageGraphToolbar from './LineageGraphToolbar';
@@ -70,26 +63,18 @@ export const nodeHeight = 36;
   edge labels will be replaced by action nodes in the full graph view
 */
 function LineageTabCore() {
-  const props = useAppSelector(state => getLineageTabProps(state))
+  const { lineageTabProps: props } = useLineagePanel();
   const {navigateContent} = useWorkspace(); // handlers for navigating dataObjects and actions
-  const dispatch = useDispatch();
 
   // to save the zoom level before re-creating a new ReactFlow component
   const [previousZoom, setPreviousZoom] = useState<number>();
   // workaround to wait for reactflow div mounted, in order to get container width/height
   const [rfContainerMounted, setRfContainerMounted] = useState(false);
 
-  const graphView = useAppSelector((state) => getGraphView(state));
-  const isExpanded = useAppSelector((state) => getExpansionState(state));
-  const layout = useAppSelector((state) => getLayout(state));
+  const { graphView, isExpanded, layout } = useLineageGraph();
 
   const reactFlow = useReactFlow();
   const [reactFlowKey, setReactFlowKey] = useState(0);
-  useEffect(() => {
-    if (reactFlow) {
-      dispatch(setRFI(Object.assign({}, reactFlow)));
-    }
-  }, [reactFlow, dispatch]); // though https://github.com/reduxjs/react-redux/issues/1468
 
   const rfContainer = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
 
@@ -98,11 +83,11 @@ function LineageTabCore() {
     // save current zoom to initialize new react flow component
     setPreviousZoom(previousZoom ? reactFlow.getZoom() : 0.5); // initialize with 0.5
     setRfContainerMounted(false); // workaround to make changing layout work correctly
-    var [nodes_init, edges_init] = prepareAndRenderGraph(navigateContent);
+    var [nodes_init, edges_init] = prepareAndRenderGraph(reactFlow, navigateContent, {graphView, props, layout, isExpanded});
     nodes_init = dagreLayoutRf(nodes_init, edges_init, layout, nodeWidth, nodeHeight);
     setReactFlowKey(reactFlowKey + 1); // change key to re-create react flow component (and initialize it through default nodes)
     return [nodes_init, edges_init];
-  }, [isExpanded, props.elementName, props.elementType, graphView, layout]);
+  }, [isExpanded, props.elementName, props.elementType, props.configData, graphView, layout]);
 
   useEffect(() => {
     setRfContainerMounted(true); // workaround to make changing layout work correctly
@@ -111,7 +96,6 @@ function LineageTabCore() {
   const onPaneClick = () => {
     resetEdgeStyles(reactFlow);
     resetNodeStyles(reactFlow);
-    dispatch(setSelectedEdge(undefined));
   }
 
   // highlight edge and src, target nodes' border
@@ -120,7 +104,6 @@ function LineageTabCore() {
     resetNodeStyles(reactFlow);
     setNodeStylesOnEdgeClick(reactFlow, edge);
     setEdgeStylesOnEdgeClick(reactFlow, edge);
-    dispatch(setSelectedEdge(edge));
   }
 
   useEffect(() => {
@@ -160,9 +143,7 @@ function LineageTabCore() {
 function LineageTabSep() {
   return (
     <ReactFlowProvider>
-      <Provider store={store}>
-        <LineageTabCore />
-      </Provider>
+      <LineageTabCore />
     </ReactFlowProvider>
   )
 }

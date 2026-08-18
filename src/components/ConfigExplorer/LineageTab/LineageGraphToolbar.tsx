@@ -18,18 +18,11 @@ import { toPng } from 'html-to-image';
 
 import { useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
-import { ReactFlowInstance, Node as ReactFlowNode } from 'reactflow';
-import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
+import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
+import { nodeAttributes, useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
 import { dagreLayoutRf } from '../../../util/ConfigExplorer/Graphs';
 import { computeNodePositionFromParent, computeParentNodePositionFromArray, getGraphFromConfig, getNonParentNodesFromArray, getParentNodesFromArray, groupByFeed, groupBySubstring, prioritizeParentNodes, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { getGroupedState, getGroupingRoutine, getRFI, setGroupingRoutine } from '../../../util/ConfigExplorer/slice/LineageTab/Common/ReactFlowSlice';
-import { getConfigData, getLineageTabOpen, setLineageTabOpen } from '../../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
-import { getExpansionState, setExpansionState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphExpansionSlice';
-import { getGraphView, setGraphView } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GraphViewSlice';
-import { setGroupingState } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/GroupingSlice';
-import { getLayout, setLayout } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/LayoutSlice';
 import { nodeHeight, nodeWidth } from './LineageTabWithSeparateView';
-import { nodeAttributes, getSelectedNodeAttributes, setSelectedNodeAttributes } from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/NodeAttributeFilterSlice';
 
 /*
   Styling
@@ -48,8 +41,7 @@ function downloadImage(dataUrl: string) {
 }
 
 function GraphViewSelector() {
-    const dispatch = useAppDispatch();
-    const graphView = useAppSelector(state => getGraphView(state));
+    const { graphView, setGraphView } = useLineageGraph();
     const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
     const options = {
@@ -60,7 +52,7 @@ function GraphViewSelector() {
 
     const handleSelect = (value) => {
         setSelectedIndex(value === 'full' ? 0 : value === 'data' ? 1 : value === 'action' ? 2 : 0);
-        dispatch(setGraphView(value));
+        setGraphView(value);
     };
 
     const createTooltip = (identifier, index, options) => {
@@ -98,8 +90,7 @@ function GraphViewSelector() {
 
 
 function LayoutButton() {
-    const layout = useAppSelector((state) => getLayout(state));
-    const dispatch = useAppDispatch();
+    const { layout, setLayout } = useLineageGraph();
 
     /*
     return <div
@@ -108,20 +99,19 @@ function LayoutButton() {
         style={styles}
     >*/
     return <Tooltip arrow title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'} enterDelay={500} enterNextDelay={500} placement='top'>
-        <IconButton color={'neutral'} onClick={() => dispatch(setLayout(layout === 'TB' ? 'LR' : 'TB'))}>
+        <IconButton color={'neutral'} onClick={() => setLayout(layout === 'TB' ? 'LR' : 'TB')}>
             {layout === 'TB' ? <AlignVerticalTop /> : <AlignHorizontalLeft />}
         </IconButton>
     </Tooltip>
 }
 
 function GraphExpansionButton() {
-    const dispatch = useAppDispatch();
-    const isExpanded = useAppSelector((state) => getExpansionState(state));
+    const { isExpanded, setIsExpanded } = useLineageGraph();
 
     return <Tooltip arrow title={isExpanded ? 'Collapse graph' : 'Expand graph'} enterDelay={500} enterNextDelay={500} placement='top'>
         <IconButton
             color='neutral'
-            onClick={() => dispatch(setExpansionState({ isExpanded: !isExpanded }))}
+            onClick={() => setIsExpanded(!isExpanded)}
         >
             {isExpanded ? <CloseFullscreenIcon /> : <OpenInFull />}
         </IconButton>
@@ -155,9 +145,9 @@ function DownloadLineageButton() {
 }
 
 function CloseLineageButton() {
-    const dispatch = useAppDispatch();
+    const { setLineageTabOpen } = useLineagePanel();
     const closeLineage = () => {
-        dispatch(setLineageTabOpen(false))
+        setLineageTabOpen(false)
     }
     return (
         <Tooltip arrow title='Close lineage' enterDelay={500} enterNextDelay={500} placement='top'>
@@ -171,7 +161,7 @@ function CloseLineageButton() {
 }
 
 function ShowAllButton() {
-    const rfi: ReactFlowInstance = useAppSelector(state => getRFI(state));
+    const rfi = useReactFlow();
     const handleOnClick = () => {
         resetViewPort(rfi);
     }
@@ -186,7 +176,7 @@ function ShowAllButton() {
 }
 
 function CenterFocusButton() {
-    const rfi: ReactFlowInstance = useAppSelector(state => getRFI(state));
+    const rfi = useReactFlow();
     const handleOnClick = () => {
         const nodes = rfi.getNodes();
         resetViewPortCentered(rfi, nodes);
@@ -215,8 +205,8 @@ function recomputeLayout(rfi: any, layoutDirection: any) {
 }
 
 function RecomputeLayoutButton() {
-    const rfi = useAppSelector((state) => getRFI(state));
-    const layoutDirection = useAppSelector((state) => getLayout(state));
+    const rfi = useReactFlow();
+    const { layout: layoutDirection } = useLineageGraph();
 
     // recomputes the layout from the current nodes in the flow instance (rfi)
     const handleOnClick = () => {
@@ -233,24 +223,21 @@ function RecomputeLayoutButton() {
 }
 
 function GroupingButton() {
-    const dispatch = useAppDispatch();
-    const rfi: ReactFlowInstance = useAppSelector(state => getRFI(state));
-    const grouped = useAppSelector(state => getGroupedState(state));
-    const graphView = useAppSelector(state => getGraphView(state));
-    const configData = useAppSelector(state => getConfigData(state));
-    const routine = useAppSelector(state => getGroupingRoutine(state));
-    const layout = useAppSelector(state => getLayout(state));
-    const expansionState = useAppSelector(state => getExpansionState(state));
+    const rfi = useReactFlow();
+    const { lineageTabProps } = useLineagePanel();
+    const { graphView, layout, isExpanded } = useLineageGraph();
+    const configData = lineageTabProps.configData;
 
     const [showByNameSelector, setShowByNameSelector] = useState(false);
     const [groupingOption, setGroupingOption] = useState<string>();
+    const [groupingRoutine, setGroupingRoutine] = useState<'components' | 'subgroups'>();
 
     // TODO: consider interaction with other buttons
     const handleReset = () => {
-        routine === 'components' ? restoreGroupSettings(rfi) : restoreGroupSettingsBySubgroup(rfi);
+        groupingRoutine === 'components' ? restoreGroupSettings(rfi)
+                                         : restoreGroupSettingsBySubgroup(rfi, {graphView, props: lineageTabProps, layout, isExpanded});
         setGroupingOption(undefined);
-        dispatch(setGroupingRoutine(undefined));
-        dispatch(setGroupingState(false));
+        setGroupingRoutine(undefined);
         recomputeLayout(rfi, layout);
     }
 
@@ -260,7 +247,6 @@ function GroupingButton() {
         if (name && name.length>0) {
             setGroupingOption('byName');
             groupBySubstring(rfi, getGraphFromConfig(configData, graphView), {substring: name});
-            dispatch(setGroupingState(true));
         }
         setOpen(false);
         setShowByNameSelector(false);
@@ -268,8 +254,7 @@ function GroupingButton() {
 
     const handleApplyByFeed = () => {
         setGroupingOption('byFeed');
-        groupByFeed(rfi, getGraphFromConfig(configData, graphView));
-        dispatch(setGroupingState(true));
+        groupByFeed(rfi, getGraphFromConfig(configData, graphView), layout);
     }
 
     const [open, setOpen] = React.useState(false);
@@ -324,18 +309,10 @@ function GroupingButton() {
 }
 
 function NodeAttributeSelector() {
-    const dispatch = useAppDispatch();
-
-    // Fetch selected items
-    const selected = useAppSelector(state => getSelectedNodeAttributes(state));
-
-    // Define Callbacks
-    const onChange = (selectedValues) => {
-        dispatch(setSelectedNodeAttributes(selectedValues))
-    }
+    const { selectedNodeAttributes: selected, setSelectedNodeAttributes } = useLineageGraph();
 
     const handleChange = (_, newValue) => {
-        dispatch(setSelectedNodeAttributes(newValue));
+        setSelectedNodeAttributes(newValue);
     };
 
     // Divide attributes into data and action node attributes
@@ -386,7 +363,7 @@ function NodeAttributeSelector() {
 
 
 export const NodeSearchButton = () => {
-    const rfi = useAppSelector((state) => getRFI(state));
+    const rfi = useReactFlow();
     const [elementSearchText, setElementSearchText] = useState("");
     const [suggestions, setSuggestions] = useState<any>([]);
 
@@ -455,7 +432,7 @@ export const NodeSearchButton = () => {
 
     const handleSuggestionClick = (_, suggestion) => {
         if (suggestion) {
-            const rfNode = rfi.getNode(suggestion.id);
+            const rfNode = rfi.getNode(suggestion.id)!;
             resetViewPortCentered(rfi, [rfNode]);
             setOpen(false);
         }
@@ -492,7 +469,8 @@ export const NodeSearchButton = () => {
 };
 
 export default function LineageGraphToolbar() {
-    const isPropsConfigDefined = useAppSelector(state => getConfigData(state)) !== undefined;
+    const { lineageTabProps } = useLineagePanel();
+    const isPropsConfigDefined = lineageTabProps.configData !== undefined;
     // avoid DOM warning for Draggable, see https://github.com/react-grid-layout/react-draggable/blob/v4.4.2/lib/DraggableCore.js#L159-L171
     const nodeRef = useRef(null);
 

@@ -7,10 +7,9 @@ import Tabs from '@mui/joy/Tabs';
 import React from 'react';
 import { useParams } from "react-router-dom";
 import { useFetchDataObjectSchemaEntries, useFetchDataObjectStatsEntries, useFetchDescription } from '../../hooks/useFetchData';
-import { useAppDispatch, useAppSelector } from '../../hooks/useRedux';
+import { useLineagePanel } from '../../hooks/useLineage';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { ConfigData } from "../../util/ConfigExplorer/ConfigData";
-import { setLineageTabProps, getLineageTabOpen, setLineageTabOpen } from '../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
 import './ComponentsStyles.css';
 import ConfigurationTab from "./ConfigurationTab";
 import DescriptionTab from "./DescriptionTab";
@@ -66,16 +65,16 @@ export default function ElementDetails(props: {
 	const { data: schemaEntries, isLoading: schemaEntriesLoading } = useFetchDataObjectSchemaEntries(elementType, elementName);
 	const { data: statsEntries } = useFetchDataObjectStatsEntries(elementType, elementName);
 
-	const dispatch = useAppDispatch();
-	dispatch(setLineageTabProps({
-		configData: configData,
-		elementName: elementName as string,
-		elementType: elementType as string
-	}));
+	const { lineageTabOpen, setLineageTabOpen, setLineageTabProps } = useLineagePanel();
+	React.useEffect(() => {
+		setLineageTabProps({
+			configData: configData,
+			elementName: elementName as string,
+			elementType: elementType as string
+		});
+	}, [configData, elementName, elementType]);
 
 	const hasSchema = schemaEntries && schemaEntries.length > 0
-
-	const lineageTabOpen = useAppSelector(state => getLineageTabOpen(state));
 
 	return (
 		<>
@@ -99,7 +98,7 @@ export default function ElementDetails(props: {
 							(<Sheet>
 								{!lineageTabOpen &&
 									(
-										<Button size="sm" onClick={() => dispatch(setLineageTabOpen(true))}>
+										<Button size="sm" onClick={() => setLineageTabOpen(true)}>
 											Open lineage
 											<KeyboardDoubleArrowLeftIcon sx={{ ml: '0.5rem' }} />
 										</Button>
