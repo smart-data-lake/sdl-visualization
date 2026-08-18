@@ -2,7 +2,6 @@ import { Box, Option, Select, Sheet, Typography } from '@mui/joy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, PanelGroup } from "react-resizable-panels";
 import { Route, Routes } from "react-router-dom";
-import store from '../../app/store';
 import { useFetchConfig, useFetchConfigVersions } from '../../hooks/useFetchData';
 import { useUser } from '../../hooks/useUser';
 import ErrorBoundary from '../../layouts/ErrorBoundary';
@@ -16,8 +15,7 @@ import ElementList from './ElementList';
 import ElementTable from './ElementTable';
 import GlobalConfigView from './GlobalConfigView';
 import LineageTabSep from './LineageTab/LineageTabWithSeparateView';
-import { useAppSelector } from '../../hooks/useRedux';
-import { getLineageTabOpen } from '../../util/ConfigExplorer/slice/LineageTab/Core/LineageTabCoreSlice';
+import { useLineagePanel } from '../../hooks/useLineage';
 
 interface SearchFilterDef {
 	text: string;
@@ -103,7 +101,7 @@ function ConfigExplorer() {
 		return configDataLists;
 	}, [filter, configDataLists]);
 
-  const lineageTabOpen = useAppSelector(state => getLineageTabOpen(state));
+  const { lineageTabOpen } = useLineagePanel();
 
 	return (
 		<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>

@@ -20,7 +20,6 @@ import { Chip, IconButton, Tooltip } from '@mui/joy';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
-import { useAppSelector } from '../../../hooks/useRedux';
 
 import { Position } from 'reactflow';
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
@@ -29,7 +28,7 @@ import { flowProps, graphNodeProps, ReactFlowNodeProps } from '../../../util/Con
 import { getIcon, getPartitionStatus, getExecutionMode } from '../../../util/WorkflowsExplorer/StatusInfo';
 import './LineageTab.css';
 import { useWorkspace } from '../../../hooks/useWorkspace';
-import { getSelectedNodeAttributes} from '../../../util/ConfigExplorer/slice/LineageTab/Toolbar/NodeAttributeFilterSlice';
+import { useLineageGraph } from '../../../hooks/useLineage';
 
 
 /*
@@ -159,6 +158,7 @@ export const CustomDataNode = ( {data} ) => {
 
   // handlers
   const {navigateContent} = useWorkspace();
+  const { selectedNodeAttributes } = useLineageGraph();
   const handleOnExpandButtonClick = (direction) => {
     if(direction === 'forward'){
       setIsExpandedForward(!isExpandedForward); 
@@ -203,7 +203,6 @@ export const CustomDataNode = ( {data} ) => {
 
   function showObjectTitle(){    
     const objectType = nodeType === NodeType.ActionNode ? "Action Object" : "Data Object";
-    const selectedNodeAttributes = useAppSelector(state => getSelectedNodeAttributes(state));
 
     return (
       <Box sx={{display: 'flex', flexDirection: 'row', alignItems: 'center'}}>

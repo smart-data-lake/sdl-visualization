@@ -6,8 +6,7 @@ import { ConfigData } from './ConfigData';
 import assert from 'assert';
 
 import {Node as ReactFlowNode, Edge as ReactFlowEdge, ReactFlowInstance} from 'reactflow'
-import store from '../../app/store';
-import { getRFI, setRFINodeData } from './slice/LineageTab/Common/ReactFlowSlice';
+import { getPropertyByPath } from '../helpers';
 
 
 
@@ -525,8 +524,47 @@ function getBwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEd
     return edges.filter(e => e.target === node.data.label)
 }
 
-export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'backward'): [string[], string[]] {
-    const rfi = store.getState().reactFlow.rfi;
+export interface RfNodeDataUpdate {
+    path: string,
+    value: any,
+    nodeId?: string,
+    fromOwnProps?: string,
+    combine?: (arg1, arg2) => any
+}
+
+/**
+ * Update a single property of a node's data in the given ReactFlow instance.
+ * The new value is either the given value, or - if fromOwnProps is set - derived from
+ * the node's own property at that path, optionally combined with the given value.
+ */
+export function setRfNodeData(rfi: ReactFlowInstance, update: RfNodeDataUpdate) {
+    const { value, path, nodeId, fromOwnProps, combine } = update;
+    var node = rfi.getNode(nodeId as string)!;
+    const nodeIndex = rfi.getNodes().findIndex(node => node.id === nodeId)!;
+    var newNodes: ReactFlowNode[] = [...rfi.getNodes()];
+    var newVal;
+
+    if (fromOwnProps) {
+        // node.<path> = combine(node.<fromOwnProps>, value)
+        newVal = combine ? combine(getPropertyByPath(node, fromOwnProps), value)
+                         : getPropertyByPath(node, fromOwnProps);
+    } else {
+        // node.<path> = value
+        newVal = value;
+    }
+
+    node = {
+        ...node,
+        data: {
+            ...node.data,
+            [path]: newVal
+        }
+    };
+    newNodes[nodeIndex] = node;
+    rfi.setNodes(newNodes);
+}
+
+export function dfsRemoveRfElems(rfi: ReactFlowInstance, node: ReactFlowNode, direction: 'forward' | 'backward'): [string[], string[]] {
     const edges = rfi.getEdges();
     const nodeIds: Set<string> = new Set();
     const edgeIds: Set<string> = new Set();
@@ -541,32 +579,28 @@ export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'ba
 
             if(isFwd){
                 // currNode.data.numFwdActiveEdges -= 1;
-                store.dispatch(setRFINodeData(
-                    {
-                        nodeId: currNode.id,
-                        path: 'numFwdActiveEdges',
-                        value: -1,
-                        fromOwnProps: 'data.numFwdActiveEdges',
-                        combine: add
-                    }
-                ));
+                setRfNodeData(rfi, {
+                    nodeId: currNode.id,
+                    path: 'numFwdActiveEdges',
+                    value: -1,
+                    fromOwnProps: 'data.numFwdActiveEdges',
+                    combine: add
+                });
 
                 // sanity check
-                if(rfi.getNode(currNode.id).data.numFwdActiveEdges < 0){
+                if(rfi.getNode(currNode.id)!.data.numFwdActiveEdges < 0){
                     console.log("FWD WARNING: node ", currNode.id, " has NEGATIVE numFwdActiveEdges: ", currNode.data.numFwdActiveEdges);
                 }
                 const nextNodeId = edge.target;
                 
                 // nextNode.data.numBwdActiveEdges -= 1;
-                store.dispatch(setRFINodeData(
-                    {
-                        nodeId: nextNodeId,
-                        path: 'numBwdActiveEdges',
-                        value: -1,
-                        fromOwnProps: 'data.numBwdActiveEdges',
-                        combine: add
-                    }
-                ));
+                setRfNodeData(rfi, {
+                    nodeId: nextNodeId,
+                    path: 'numBwdActiveEdges',
+                    value: -1,
+                    fromOwnProps: 'data.numBwdActiveEdges',
+                    combine: add
+                });
                 const nextNode = rfi.getNode(nextNodeId)!;
                 if( nextNode.data.numBwdActiveEdges === 0){
                     nodeIds.add(nextNodeId);
@@ -574,32 +608,28 @@ export function dfsRemoveRfElems(node: ReactFlowNode, direction: 'forward' | 'ba
                 }
             } else {
                 // currNode.data.numBwdActiveEdges -= 1;
-                store.dispatch(setRFINodeData(
-                    {
-                        nodeId: currNode.id,
-                        path: 'numBwdActiveEdges',
-                        value: -1,
-                        fromOwnProps: 'data.numBwdActiveEdges',
-                        combine: add
-                    }
-                ));
+                setRfNodeData(rfi, {
+                    nodeId: currNode.id,
+                    path: 'numBwdActiveEdges',
+                    value: -1,
+                    fromOwnProps: 'data.numBwdActiveEdges',
+                    combine: add
+                });
 
                 // sanity check
-                if(rfi.getNode(currNode.id).data.numBwdActiveEdges < 0){
+                if(rfi.getNode(currNode.id)!.data.numBwdActiveEdges < 0){
                     console.log("BWD WARNING: node ", currNode.id, " has NEGATIVE numBwdActiveEdges: ", currNode.data.numBwdActiveEdges);
                 }
                 const nextNodeId = edge.source;
                 
                 // nextNode.data.numFwdActiveEdges -= 1;
-                store.dispatch(setRFINodeData(
-                    {
-                        nodeId: nextNodeId,
-                        path: 'numFwdActiveEdges',
-                        value: -1,
-                        fromOwnProps: 'data.numFwdActiveEdges',
-                        combine: add
-                    }
-                ));
+                setRfNodeData(rfi, {
+                    nodeId: nextNodeId,
+                    path: 'numFwdActiveEdges',
+                    value: -1,
+                    fromOwnProps: 'data.numFwdActiveEdges',
+                    combine: add
+                });
 
                 const nextNode = rfi.getNode(nextNodeId)!;
                 if( nextNode.data.numFwdActiveEdges === 0){
