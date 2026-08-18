@@ -71,7 +71,7 @@ export default function Setting() {
         flexDirection: "column",
       }}
     >
-      <PageHeader title={"Setting"} corner={<TenantLicenses />} noBack={true} />
+      <PageHeader title={"Setting"} corner={<TenantLicenses />} />
       <Sheet sx={{ display: "flex", width: "100%", minHeight: 0, flexGrow: 1 }}>
         <Grid container height="100%">
           <Grid xs={2}>

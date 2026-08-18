@@ -30,6 +30,12 @@ jobs:
 
     - run: yarn install
 
+    - name: Lint
+      run: yarn lint
+
+    - name: Type check
+      run: yarn type-check
+
     - name: Run unit tests
       run: yarn test:ci
 

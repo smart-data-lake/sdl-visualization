@@ -44,24 +44,22 @@ export function randomAction(runStartTime : Date) {
         },
         state : state,
         msg: 'This is a random action :)',
-        startTstmp : new Date(runStartTime.getTime() + Math.round(Math.random() * 50000) + 100).toISOString(),
+        startTstmp : new Date(runStartTime.getTime() + Math.round(Math.random() * 50000) + 100),
         duration : 'PT' + (Math.random() * 60).toFixed(3) + 'S',
+        // a result carries the subFeed attributes directly, it does not wrap them in a subFeed object
         results : [{
-            subFeed : state === 'SUCCEEDED' ? {
-                type : uniqueNamesGenerator({ dictionaries: [languages] }),
-                dataObjectId : uniqueNamesGenerator({ dictionaries: [countries] }),
-                partitionValues : [uniqueNamesGenerator({ dictionaries: [animals] })],
-                isDAGStart : true,
-                isSkipped : true,
-                isDummy : true,
-            } : undefined,
+            type : uniqueNamesGenerator({ dictionaries: [languages] }),
+            dataObjectId : uniqueNamesGenerator({ dictionaries: [countries] }),
+            partitionValues : [uniqueNamesGenerator({ dictionaries: [animals] })],
+            isDAGStart : true,
+            isSkipped : state === 'SKIPPED',
+            isDummy : false,
             metrics : state === 'SUCCEEDED' ? {
                 stage : uniqueNamesGenerator({ dictionaries: [starWars] }),
                 num_tasks : Math.round(Math.random()),
                 records_written : Math.round(Math.random()*1000000),
                 stage_duration : 'PT' + (Math.random() * 60).toFixed(3) + 'S',
                 bytes_written : Math.round(Math.random()*1000000),
-
             } : undefined
         }]
     }

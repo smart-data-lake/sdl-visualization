@@ -10,7 +10,7 @@ import { sortIfArray } from "../util/helpers";
  **/
 
 
-function handleError<TData>(result: UseQueryResult<TData, unknown>): UseQueryResult<TData, unknown> {
+function handleError<TData, TError>(result: UseQueryResult<TData, TError>): UseQueryResult<TData, TError> {
   if (result.isError) throw new Error((result.error as Error).message || String(result.error));
   else return result;
 }

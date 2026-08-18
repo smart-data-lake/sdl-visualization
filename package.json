@@ -71,7 +71,7 @@
     "styled-components": "^6.1.14",
     "tinyduration": "^3.2.4",
     "turbo": "^1.13.0",
-    "typescript": "^4.9.5",
+    "typescript": "5.9.3",
     "unique-names-generator": "^4.7.1",
     "url": "^0.11.3",
     "use-query-params": "^1.2.3",
@@ -89,7 +89,8 @@
     "start": "vite --force",
     "build": "vite build",
     "serve": "vite preview",
-    "lint": "npx eslint src --ext .js,.jsx,.ts,.tsx --max-warnings=0",
+    "lint": "eslint src tests",
+    "lint:fix": "eslint src tests --fix",
     "eject": "react-scripts eject",
     "scriptIlias": "cd src/components/util && node markdown_parser.js && npm run start",
     "type-check": "tsc",
@@ -100,12 +101,6 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [
@@ -120,11 +115,18 @@
     ]
   },
   "devDependencies": {
+    "@eslint/js": "9.39.5",
     "@playwright/test": "^1.62.1",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@types/dagre": "^0.7.47",
+    "eslint": "9.39.5",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.11.0",
     "immer": "^10.1.1",
     "patch-package": "^8.0.0",
+    "typescript-eslint": "8.67.0",
     "vitest": "^3.0.3"
   },
   "peerDependencies": {

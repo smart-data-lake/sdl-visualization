@@ -27,7 +27,7 @@ yarn test:e2e:ui      # playwright interactive runner
 npx playwright test tests/e2e/lineage.spec.ts --project hocon
 ```
 
-Note: `yarn type-check` currently reports pre-existing errors on develop.
+Lint uses ESLint 9 flat config (`eslint.config.js`), rebuilt from the maintained plugins after the unmaintained CRA `react-app` config was dropped. Rules with pre-existing violations are set to `warn` and annotated with their count; `yarn lint` fails on errors only, so those 136 warnings are a visible cleanup backlog rather than a blocker.
 
 Local data setup (needed before anything is visible): put config files in `public/config` and state files in `public/state`, then `./build_index.sh <path-to-statefiles> <path-to-configfiles>` (Python 3; creates a venv, writes JSON-Lines `index` files). `backendConfig` in `public/manifest.json` must be `local;`.
 
