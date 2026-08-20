@@ -79,23 +79,35 @@ export class Row implements MetaDataBaseObject {
     }
   }
   
-  export type TaskStatus =  'PREPARING' | 'PREPARED' | 'INITIALIZING' | 'INITIALIZED' | 'RUNNING' | 'FAILED' | 'SUCCEEDED' | 'SKIPPED' | 'UNKNOWN';
+  export type TaskStatus =  'PENDING' | 'PREPARING' | 'PREPARED' | 'INITIALIZING' | 'INITIALIZED' | 'RUNNING' | 'FAILED' | 'SUCCEEDED' | 'SKIPPED' | 'CANCELLED' | 'UNKNOWN';
 
+  /**
+   * A state file as delivered by fetchAPI.getRun.
+   * Timestamps are parsed into Date by the fetchAPI implementation (see processRun).
+   */
   export type StateFile = {
     appConfig : {
       feedSel : string,
       applicationName : string,
-      configuration : string,
+      configuration : string | string[],
+      master?: string,
+      deployMode?: string,
       parallelism : number,
       statePath : string,
       streaming : boolean
     },
     runId : number,
     attemptId : number,
-    runStartTime : string,
-    attemptStartTime : string,
+    runStartTime : Date,
+    attemptStartTime : Date,
+    runEndTime?: Date,
     actionsState: ActionsState,
-    runStateFormatVersion?: number
+    isFinal?: boolean,
+    runStateFormatVersion?: number,
+    sdlbVersionInfo?: VersionInfo,
+    appVersionInfo?: VersionInfo,
+    buildVersionInfo?: VersionInfo,
+    appVersion?: string
   } 
   
   export type ActionsState = {
@@ -138,6 +150,76 @@ export class Row implements MetaDataBaseObject {
       bytes_written?: number,
     }
   }]
+
+  /**** Workflows and their runs as delivered by fetchAPI ****/
+
+  /** Version information of SDLB or of the application, as recorded in a state file */
+  export interface VersionInfo {
+    version?: string;
+  }
+
+  /**
+   * Summary of a workflow (SDLB application), as delivered by fetchAPI.getWorkflows.
+   * The "last..." attributes describe the most recent attempt of the workflow.
+   */
+  export interface Workflow {
+    name: string;
+    numRuns: number;
+    numAttempts: number;
+    lastStatus?: TaskStatus;
+    lastAttemptStartTime?: Date;
+    lastDuration?: number; // milliseconds
+    lastNumActions?: number;
+  }
+
+  /** Summary of an action of a WorkflowRun */
+  export interface WorkflowRunAction {
+    state: TaskStatus;
+    dataObjects: string[]; // ids of the data objects written by this action
+  }
+
+  /**
+   * One attempt of a workflow run, as delivered by fetchAPI.getWorkflowRuns,
+   * getWorkflowRunsByAction and getWorkflowRunsByDataObject.
+   * It is a summary of the corresponding state file (see StateFile), enriched with
+   * attributes precalculated for the UI.
+   */
+  export interface WorkflowRun {
+    name: string; // workflow name, e.g. appConfig.applicationName of the state file
+    runId: number;
+    attemptId: number;
+    feedSel?: string;
+    status?: TaskStatus; // status of the attempt, aggregated over all its actions
+    runStartTime?: Date;
+    attemptStartTime?: Date;
+    runEndTime?: Date;
+    actions?: { [actionName: string]: WorkflowRunAction };
+    sdlbVersionInfo?: VersionInfo;
+    appVersionInfo?: VersionInfo;
+    buildVersion?: string | null; // fallback if sdlbVersionInfo is missing
+    appVersion?: string | null; // fallback if appVersionInfo is missing
+    path?: string; // relative path of the state file, used by the local state files backend
+    /**** attributes precalculated for the UI ****/
+    duration?: number; // milliseconds between attemptStartTime and runEndTime
+    attemptStartTimeMillis?: number; // needed for HistoryBarChart
+    actionsStatus?: Partial<Record<TaskStatus, number>>; // number of actions per state
+    dataObjects?: string[]; // ids of all data objects written by this attempt
+  }
+
+  /**** Tenant administration ****/
+
+  /** A user having access to a tenant, as delivered by fetchAPI.getUsers */
+  export interface User {
+    user_id: string;
+    email: string;
+    permissions: string[]; // see Permission in components/Settings/model/enums
+  }
+
+  /** License information of a tenant, as delivered by fetchAPI.getLicenses */
+  export interface LicenseInfo {
+    licensedRepos?: number;
+    currentRepos?: number;
+  }
 
   export type Flow = MetaDataBaseObject;
   

@@ -1,30 +1,34 @@
 import { Auth } from "aws-amplify";
-import { TstampEntry } from "../types";
+import { LicenseInfo, SchemaData, StateFile, Stats, TstampEntry, User, Workflow, WorkflowRun } from "../types";
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { dateFromNumber, sortIfArray } from "../util/helpers";
 import { parseUtcDate } from "../util/WorkflowsExplorer/date";
 import { fetchAPI } from "./fetchAPI";
 
-export function processWorkflows(entries) {
+export function processWorkflows(entries: any[]): Workflow[] {
     return entries.map((entry) => {
         // convert UTC date strings to date
         entry.lastAttemptStartTime = parseUtcDate(entry.lastAttemptStartTime);
-        return entry;
+        return entry as Workflow;
     });
 }
 
-export function processWorkflowHistory(runs) {
+export function processWorkflowHistory(runs: any[]): WorkflowRun[] {
     return runs.map((run) => {
         // convert UTC date strings to date
         run.runStartTime = parseUtcDate(run.runStartTime);
         run.attemptStartTime = parseUtcDate(run.attemptStartTime);
         run.attemptStartTimeMillis = run.attemptStartTime?.getTime(); // needed for HistorBarChart
         run.runEndTime = parseUtcDate(run.runEndTime);
-        return run;
+        return run as WorkflowRun;
     });
 }
 
-export function processRun(run) {
+/**
+ * Convert the UTC date strings of a state file, or of a run entry of the state index, to Date.
+ * @returns the same object, typed as StateFile (default) or WorkflowRun
+ */
+export function processRun<T extends StateFile | WorkflowRun = StateFile>(run: any): T {
     // convert UTC date strings to date
     run.runStartTime = parseUtcDate(run.runStartTime);
     run.attemptStartTime = parseUtcDate(run.attemptStartTime);
@@ -39,7 +43,7 @@ export function processRun(run) {
             run.actionsState[k].endTstmpPrepare = parseUtcDate(run.actionsState[k].endTstmpPrepare);            
         })
     }
-    return run;
+    return run as T;
 }
 
 export class fetchAPI_rest implements fetchAPI {
@@ -72,29 +76,29 @@ export class fetchAPI_rest implements fetchAPI {
         }
     }
 
-    getWorkflows = (tenant: string, repo: string, env: string) => {
+    getWorkflows = (tenant: string, repo: string, env: string): Promise<Workflow[]> => {
         return this.fetch(`${this.url}/workflows?tenant=${tenant}&repo=${repo}&env=${env}`)
         .then(runs => processWorkflows(runs))
     };  
 
-    getWorkflowRuns = (tenant: string, repo: string, env: string, application: string) => {
+    getWorkflowRuns = (tenant: string, repo: string, env: string, application: string): Promise<WorkflowRun[]> => {
         return this.fetch(`${this.url}/workflow?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}`)
         .then(runs => processWorkflowHistory(runs));
     };
     
-    getWorkflowRunsByAction = (name: string) => {
+    getWorkflowRunsByAction = (name: string): Promise<WorkflowRun[]> => {
         // TODO
         return Promise.resolve([])
     };    
 
-    getWorkflowRunsByDataObject = (name: string) => {
+    getWorkflowRunsByDataObject = (name: string): Promise<WorkflowRun[]> => {
         // TODO
         return Promise.resolve([])
     };        
     
-    getRun = async (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number) => {
+    getRun = async (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number): Promise<StateFile> => {
         return this.fetch(`${this.url}/state?tenant=${tenant}&repo=${repo}&env=${env}&application=${application}&runId=${runId}&attemptId=${attemptId}`)
-        .then(runs => processRun(runs));
+        .then(runs => processRun<StateFile>(runs));
     };
 
     getConfig = async (tenant: string, repo: string, env: string, version: string|undefined) => {
@@ -114,7 +118,7 @@ export class fetchAPI_rest implements fetchAPI {
         repo: string,
         env: string,
         version: string | undefined,
-    ) => {
+    ): Promise<string | undefined> => {
         const filename = `${elementType}/${elementName}.md`;
         const description = await this.getDescriptionFile(filename, tenant, repo, env, version);
         if (description) return this.resolveDescriptionImageUrls((await description!.json()).content, tenant, repo, env, version);
@@ -208,7 +212,7 @@ export class fetchAPI_rest implements fetchAPI {
         });
     }
 
-    getSchema = async (schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => {
+    getSchema = async (schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<SchemaData | undefined> => {
         if (!schemaTstampEntry?.elementName || !schemaTstampEntry?.tstamp) return Promise.resolve(undefined);
         return this.fetch(`${this.url}/dataobject/schema/${schemaTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${schemaTstampEntry.ts}`)
         .catch((error) => {
@@ -217,7 +221,7 @@ export class fetchAPI_rest implements fetchAPI {
         });
     }
 
-    getStats = async (statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => {
+    getStats = async (statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<Stats | undefined> => {
         if (!statsTstampEntry?.elementName || !statsTstampEntry?.tstamp) return Promise.resolve(undefined);
         return this.fetch(`${this.url}/dataobject/stats/${statsTstampEntry!.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${statsTstampEntry.ts}`)
         .then((parsedJson) => parsedJson.stats)
@@ -229,36 +233,36 @@ export class fetchAPI_rest implements fetchAPI {
 
     clearCache = () => undefined    
 
-    getUsers = async (tenant: string) => {
+    getUsers = async (tenant: string): Promise<User[]> => {
         return this.fetch(`${this.url}/users?tenant=${tenant}`);
     };
     
-    addUser = async (tenant: string, email: string, access: string) => {
+    addUser = async (tenant: string, email: string, access: string): Promise<void> => {
         const requestInfo = await this.getRequestInfo("POST", { "Content-Type": "application/json" });
         requestInfo.body = JSON.stringify({ email, access });
         return this.fetch(`${this.url}/users?tenant=${tenant}`, Promise.resolve(requestInfo));
     };
     
-    removeUser = async (tenant: string, email: string) => {
+    removeUser = async (tenant: string, email: string): Promise<void> => {
         return this.fetch(
             `${this.url}/users?tenant=${tenant}&email=${email}`,
             this.getRequestInfo("DELETE", { "Content-Type": "application/json" })
         );
     };
 
-    getTenants = async () => {
+    getTenants = async (): Promise<string[]> => {
         return this.fetch(`${this.url}/tenants`).then(x => sortIfArray(x));
     }
 
-    getRepos = async (tenant: string) => {
+    getRepos = async (tenant: string): Promise<string[]> => {
         return this.fetch(`${this.url}/repo?tenant=${tenant}`).then(x => sortIfArray(x))
     }
 
-    getEnvs = async (tenant: string, repo: string) => {
+    getEnvs = async (tenant: string, repo: string): Promise<string[]> => {
         return this.fetch(`${this.url}/envs?tenant=${tenant}&repo=${repo}`).then(x => sortIfArray(x))
     }
     
-    getLicenses = async (tenant: string): Promise<any[]> => {
+    getLicenses = async (tenant: string): Promise<LicenseInfo> => {
         return this.fetch(`${this.url}/license?tenant=${tenant}`);
     }
 }

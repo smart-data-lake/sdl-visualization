@@ -120,9 +120,11 @@ export default function Users() {
           await queryClient.invalidateQueries(["users", tenant]);
           break;
         case ActionType.DeleteRow:
-          const userEmail = data?.find((user) => user["user_id"] === rowKeyValue)["email"];
-          await removeUserAsync({ email: userEmail });
-          await queryClient.invalidateQueries(["users", tenant]);
+          const userEmail = data?.find((user) => user.user_id === rowKeyValue)?.email;
+          if (userEmail) {
+            await removeUserAsync({ email: userEmail });
+            await queryClient.invalidateQueries(["users", tenant]);
+          }
           break;
       }
     },

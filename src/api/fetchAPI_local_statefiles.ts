@@ -1,4 +1,4 @@
-import { SchemaData, Stats, TstampEntry } from "../types";
+import { LicenseInfo, SchemaData, StateFile, Stats, TaskStatus, TstampEntry, User, Workflow, WorkflowRun } from "../types";
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { getUrlContent, listConfigFiles, parseTextStrict, readConfigIndexFile } from "../util/ConfigExplorer/HoconParser";
 import { compareFunc, formatFileSize, onlyUnique } from "../util/helpers";
@@ -17,13 +17,13 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         this.env = env;
     }
 
-    getUsers(tenant: string) {
-        return new Promise((r) => r([]));
+    getUsers(tenant: string): Promise<User[]> {
+        return Promise.resolve([]);
     };
 
     // cache index for reuse in getRun
-    _index: Promise<any[]> | undefined;
-    getIndex() {
+    _index: Promise<WorkflowRun[]> | undefined;
+    getIndex(): Promise<WorkflowRun[]> {
         const indexPath = this.statePath + "/index.json";
         this._index = fetch(indexPath)
         // note that index.json is json lines file
@@ -32,22 +32,22 @@ export class fetchAPI_local_statefiles implements fetchAPI {
                         .filter(obj => obj.trim().length > 0)
                         .map(obj => JSON.parse(obj)))
         .then(runs => runs
-            .map(run => {
+            .map(raw => {
                 // convert date strings to date
-                console.log("run", run)
-                run = processRun(run);
+                console.log("run", raw)
+                const run = processRun<WorkflowRun>(raw);
                 run.attemptStartTimeMillis = run.attemptStartTime?.getTime(); // needed for HistorBarChart
-                run.duration = run.runEndTime.getTime() - run.attemptStartTime.getTime();
+                run.duration = run.runEndTime!.getTime() - run.attemptStartTime!.getTime();
                 // precalc count by status
-                run.actionsStatus = Object.values((run.actions || {}) as object)
+                run.actionsStatus = Object.values(run.actions || {})
                 .map(action => action.state)
-                .reduce((group: {[key: string]: number}, state) => {
+                .reduce((group: Partial<Record<TaskStatus, number>>, state) => {
                     if (!group[state]) group[state] = 1;
                     else group[state] += 1;
                     return group;
                 }, {})
                 // precalc list of dataObjects written
-                run.dataObjects = Object.values((run.actions || {}) as object)
+                run.dataObjects = Object.values(run.actions || {})
                 .map(action => action.dataObjects).flat()
                 return run;
             })
@@ -60,20 +60,20 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         return this._index;
     }
     
-    reuseIndex() {
+    reuseIndex(): Promise<WorkflowRun[]> {
         if (this._index) return this._index;
         else return this.getIndex()
     }
 
-    groupByWorkflowName(data: any[]) {
-        return data.reduce((group: {[key: string]: any[]}, run) => {
+    groupByWorkflowName(data: WorkflowRun[]): {[workflowName: string]: WorkflowRun[]} {
+        return data.reduce((group: {[key: string]: WorkflowRun[]}, run) => {
             if (!group[run.name]) group[run.name] = [];
             group[run.name].push(run);
             return group;
         }, {});
     }
 
-    getWorkflows = async (tenant: string, repo: string, env: string) => {
+    getWorkflows = async (tenant: string, repo: string, env: string): Promise<Workflow[]> => {
         return this.reuseIndex()
         .then(data => {
             const workflows = this.groupByWorkflowName(data);
@@ -94,7 +94,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     };
     
     
-    getWorkflowRuns = async (tenant: string, repo: string, env: string, application: string) => {
+    getWorkflowRuns = async (tenant: string, repo: string, env: string, application: string): Promise<WorkflowRun[]> => {
         return this.reuseIndex()
         .then(data => {
             const runs = data
@@ -105,7 +105,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
     };
 
 
-    getWorkflowRunsByAction = async (name: string) => {
+    getWorkflowRunsByAction = async (name: string): Promise<WorkflowRun[]> => {
         return this.reuseIndex()
         .then(data => {
             const runs = data
@@ -115,24 +115,24 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         })
     };        
 
-    getWorkflowRunsByDataObject = async (name: string) => {
+    getWorkflowRunsByDataObject = async (name: string): Promise<WorkflowRun[]> => {
         return this.reuseIndex()
         .then(data => {
             const runs = data
-            .filter(run => (run.dataObjects as any[]).some(x => x === name))
+            .filter(run => (run.dataObjects || []).some(x => x === name))
             .sort(compareFunc('attemptStartTime'));
             return runs
         })
     };    
     
-    getRun = async (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number) => {            
+    getRun = async (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number): Promise<StateFile> => {            
         return this.reuseIndex()
         .then(data => data.filter(run => (run.name === application && run.runId === runId && run.attemptId === attemptId))[0])
         .then(val => { 
             if (!val) console.log("getRun not found", application, runId, attemptId);            
             return fetch(this.statePath + '/' + val.path)
                     .then(res => res.json())
-                    .then(run => processRun(run))
+                    .then(run => processRun<StateFile>(run))
         })
     };
 
@@ -198,9 +198,9 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         repo: string,
         env: string,
         version: string | undefined
-    ) {
+    ): Promise<string | undefined> {
         const filename = "/description/" + elementType + "/" + elementName + ".md"; //file must be in public/description/elementType folder
-        return getUrlContent(filename).catch((error) => console.log(error));
+        return getUrlContent(filename).catch((error) => { console.log(error); return undefined; });
     }
     
     getTstampFromFilename(filename: string): Date {
@@ -227,7 +227,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
             .catch((error) => { console.log(error, filename); return undefined; });
     }
 
-    getSchema(schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) {
+    getSchema(schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<SchemaData | undefined> {
         if (!schemaTstampEntry?.key) return Promise.resolve(undefined);
         const filename = "/schema/" + schemaTstampEntry!.key; //file must be in public/schema folder
         return getUrlContent(filename)
@@ -235,7 +235,7 @@ export class fetchAPI_local_statefiles implements fetchAPI {
             .catch((error) => { console.log(error); return undefined; });
     }
 
-    getStats(statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) {
+    getStats(statsTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<Stats | undefined> {
         if (!statsTstampEntry?.key) return Promise.resolve(undefined);
         const filename = "/schema/"+ statsTstampEntry!.key; //file must be in public/schema folder
         return getUrlContent(filename)
@@ -254,27 +254,27 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         this._index = undefined;
     };
     
-    addUser(tenant: string, email: string, access: string) {
-        return new Promise((r) => r({}));
+    addUser(tenant: string, email: string, access: string): Promise<void> {
+        return Promise.resolve();
     }
 
-    removeUser(tenant: string, email: string) {
-        return new Promise((r) => r({}));
+    removeUser(tenant: string, email: string): Promise<void> {
+        return Promise.resolve();
     }
 
     getTenants() {
         return new Promise<string[]>(r => r([]))
     }
 
-    getRepos(tenant: string): Promise<any[]> {
-        return new Promise((r) => r([]));
+    getRepos(tenant: string): Promise<string[]> {
+        return Promise.resolve([]);
     }
   
-    getEnvs(tenant: string, repo: string): Promise<any[]> {
-        return new Promise((r) => r([]));
+    getEnvs(tenant: string, repo: string): Promise<string[]> {
+        return Promise.resolve([]);
     }
     
-    getLicenses(tenant: string): Promise<any> {
-        return new Promise((r) => r({}));
+    getLicenses(tenant: string): Promise<LicenseInfo> {
+        return Promise.resolve({});
     }
 }

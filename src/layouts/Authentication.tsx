@@ -59,7 +59,7 @@ function RepoSelector() {
   const { data: repos = [], isFetching: isFetchingRepos, isError } = useFetchRepos(tenant!);
 
   useEffect(() => {
-    if (!isError && tenant && !isFetchingRepos && Array.isArray(repos) && !repos.includes(repo)) {
+    if (!isError && tenant && !isFetchingRepos && Array.isArray(repos) && !repos.includes(repo!)) {
       if (repos) setRepo(repos[0]);
       else setRepo();
     }
@@ -82,7 +82,7 @@ function EnvSelector() {
   const { data: envs = [], isFetching: isFetchingEnvs, isError: isErrorEnvs } = useFetchEnvs(tenant!, repo);
 
   useEffect(() => {
-    if (!isErrorRepos && !isFetchingRepos && Array.isArray(repos) && repos.includes(repo) && !isErrorEnvs && !isFetchingEnvs && Array.isArray(envs) && !envs.includes(env)) {
+    if (!isErrorRepos && !isFetchingRepos && Array.isArray(repos) && repos.includes(repo!) && !isErrorEnvs && !isFetchingEnvs && Array.isArray(envs) && !envs.includes(env!)) {
       if (envs) setEnv(envs[0]);
       else setEnv();
     }
