@@ -57,6 +57,31 @@ test.describe('workflows explorer', () => {
     expect(ids.sort()).toEqual([...ACTIONS].sort());
   });
 
+  test('the run graph toolbar leaves out the config graph options', async ({ page }) => {
+    await page.goto(`/#/workflows/${WORKFLOW}/24.1/graph`);
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
+
+    // the whole graph of one attempt is shown, so there is nothing to expand, switch or close
+    await expect(page.getByRole('button', { name: 'Expand graph' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Close lineage' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Focus on central node' })).toBeHidden();
+    // the graph view selector and the grouping dropdown are the MenuButtons after the node search
+    await expect(page.locator('.react-flow .MuiMenuButton-root')).toHaveCount(1);
+    // what is left acts on the viewport only
+    await expect(page.getByRole('button', { name: 'Show all' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Recompute layout' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /switch to (horizontal|vertical) layout/ })).toBeVisible();
+  });
+
+  test('clicking an action in the run graph opens its details', async ({ page }) => {
+    await page.goto(`/#/workflows/${WORKFLOW}/24.1/graph`);
+
+    await page.locator('.react-flow__node').filter({ hasText: ACTIONS[0] }).getByText(ACTIONS[0]).click();
+
+    await expect(page).toHaveURL(new RegExp(`/workflows/${WORKFLOW}/24.1/graph/${ACTIONS[0]}$`));
+    await expect(page.getByRole('heading', { name: `Metrics for ${ACTIONS[0]}` })).toBeVisible();
+  });
+
   test('navigates between the attempts of a run', async ({ page }) => {
     await page.goto(`/#/workflows/${WORKFLOW}/24.1`);
 

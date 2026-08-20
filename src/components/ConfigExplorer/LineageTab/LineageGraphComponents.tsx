@@ -121,10 +121,10 @@ function createConnectionChip(name: string){
 export const CustomDataNode = ( {data} ) => {
   // destruct data
   const { props, label, nodeType,
-          targetPosition, sourcePosition, 
+          targetPosition, sourcePosition,
           progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
           numBwdActiveEdges, numFwdActiveEdges,
-          expandNodeFunc, graphNodeProps, highlighted
+          expandNodeFunc, graphNodeProps, highlighted, runContext
   }: ReactFlowNodeProps = data;
   const {isSink,  isSource,  
          isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode
@@ -146,17 +146,20 @@ export const CustomDataNode = ( {data} ) => {
 
   const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; 
 
-  const nodeSubTypeName: string = jsonObject !== undefined ? jsonObject.type : label;
+  // the nodes of a run graph are built from the state file, they have no config object behind them
+  const nodeSubTypeName: string | undefined = jsonObject?.type;
   const nodeTypeName: string = nodeType === NodeType.ActionNode  ? "actions" :
                                nodeType === NodeType.DataNode ? "dataObjects" :
                                "";
   const executionMode = jsonObject?.executionMode
   const isPartioned = jsonObject?.partitions !== undefined && jsonObject?.partitions.length >= 1
-  const abbr = nodeSubTypeName.replace(/(?!^)[^A-Z\d]/g, ''); // take the capital letters and the first letter of the camelCase name
-  const { data: runs} = useFetchWorkflowRunsByElement(nodeTypeName, label);
+  const abbr = nodeSubTypeName?.replace(/(?!^)[^A-Z\d]/g, ''); // take the capital letters and the first letter of the camelCase name
+  // the runs of an element are only shown in the config explorer, the run view shows a single run
+  const { data: runs} = useFetchWorkflowRunsByElement(runContext ? "" : nodeTypeName, label);
   const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
 
   // handlers
+  const urlParams = useParams();
   const {navigateContent} = useWorkspace();
   const { selectedNodeAttributes } = useLineageGraph();
   const handleOnExpandButtonClick = (direction) => {
@@ -172,11 +175,13 @@ export const CustomDataNode = ( {data} ) => {
   // navigate to object and show details on label click
   const handleDetailsClick = (props: flowProps, nodeId: string, nodeType: NodeType) => {
 
-    let propsHasConfigData = props.configData;
+    if (runContext) {
+      // show the details of the action within the run attempt instead of its configuration
+      navigateContent(`workflows/${urlParams.flowId}/${urlParams.runIdAttempt}/${urlParams.tab}/${nodeId}`);
 
-    if(nodeType === NodeType.DataNode){
-        navigateContent(`config/dataObjects/${nodeId}`); 
-      
+    } else if(nodeType === NodeType.DataNode){
+        navigateContent(`config/dataObjects/${nodeId}`);
+
     } else if (nodeType === NodeType.ActionNode){
         navigateContent(`config/actions/${nodeId}`);
     } else {
@@ -209,19 +214,22 @@ export const CustomDataNode = ( {data} ) => {
         <Tooltip title={objectType} arrow disableInteractive placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
           {nodeType === NodeType.ActionNode ? <RocketLaunchOutlined sx={{height: '18px'}}/> : <TableViewIcon sx={{height: '18px'}}/>}
         </Tooltip>
-        <Tooltip title={nodeSubTypeName} arrow disableInteractive placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
-          <Typography level="body-xs"
-            sx={{marginLeft:'3px', fontSize: 14, fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap'}}
-            >
-          {abbr}
-          </Typography>
-        </Tooltip>
+        {nodeSubTypeName &&
+          <Tooltip title={nodeSubTypeName} arrow disableInteractive placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
+            <Typography level="body-xs"
+              sx={{marginLeft:'3px', fontSize: 14, fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap'}}
+              >
+            {abbr}
+            </Typography>
+          </Tooltip>
+        }
         {/* <div>
           {createConnectionChip(props.connection.id)} // need distinction on objects without conn.  
         </div> */}
         <Box sx={{flex: 1}}/>      
-        {nodeType === NodeType.ActionNode && selectedNodeAttributes.includes("action-executionMode") ? getExecutionMode(executionMode?.type) : null }
-        {nodeType === NodeType.DataNode  && selectedNodeAttributes.includes("data-partitionState") ? getPartitionStatus(isPartioned) : null}
+        {/* the node attributes come from the configuration, which the run view does not have */}
+        {!runContext && nodeType === NodeType.ActionNode && selectedNodeAttributes.includes("action-executionMode") ? getExecutionMode(executionMode?.type) : null }
+        {!runContext && nodeType === NodeType.DataNode  && selectedNodeAttributes.includes("data-partitionState") ? getPartitionStatus(isPartioned) : null}
         {lastRun?.status !== undefined  && (getIcon(lastRun?.status, '0px', {scale: '100%'}))}
 
         {/* <div style={{justifyContent: 'flex-end'}}>

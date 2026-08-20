@@ -34,6 +34,7 @@ import Box from '@mui/material/Box';
 import { useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
 import { dagreLayoutRf } from '../../../util/ConfigExplorer/Graphs';
 import {
+  flowProps,
   prepareAndRenderGraph,
   resetEdgeStyles, resetNodeStyles,
   setEdgeStylesOnEdgeClick, setNodeStylesOnEdgeClick
@@ -61,9 +62,14 @@ export const nodeHeight = 36;
 /*
   Implements the Lineage tab for separated action and dataObject view
   edge labels will be replaced by action nodes in the full graph view
+
+  The graph to show is taken from the lineage panel state, unless it is passed in through graphProps.
+  The run view does the latter: it shows the action graph of a run attempt as a whole, so there is
+  neither a graph view to select nor a center node to expand around.
 */
-function LineageTabCore() {
-  const { lineageTabProps: props } = useLineagePanel();
+function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
+  const { lineageTabProps } = useLineagePanel();
+  const props = graphProps ? graphProps : lineageTabProps;
   const {navigateContent} = useWorkspace(); // handlers for navigating dataObjects and actions
 
   // to save the zoom level before re-creating a new ReactFlow component
@@ -71,7 +77,9 @@ function LineageTabCore() {
   // workaround to wait for reactflow div mounted, in order to get container width/height
   const [rfContainerMounted, setRfContainerMounted] = useState(false);
 
-  const { graphView, isExpanded, layout } = useLineageGraph();
+  const { graphView: selectedGraphView, isExpanded, layout } = useLineageGraph();
+  // a graph passed in through the props is always shown as an action graph, the view cannot be switched
+  const graphView = props.graph ? 'action' : selectedGraphView;
 
   const reactFlow = useReactFlow();
   const [reactFlowKey, setReactFlowKey] = useState(0);
@@ -86,7 +94,7 @@ function LineageTabCore() {
     const prepared = prepareAndRenderGraph(reactFlow, {graphView, props, layout, isExpanded});
     setReactFlowKey(reactFlowKey + 1); // change key to re-create react flow component (and initialize it through default nodes)
     return {...prepared, nodes: dagreLayoutRf(prepared.nodes, prepared.edges, layout, nodeWidth, nodeHeight)};
-  }, [isExpanded, props.elementName, props.elementType, props.configData, graphView, layout]);
+  }, [isExpanded, props.elementName, props.elementType, props.configData, props.graph, graphView, layout]);
 
   // the selected element does not exist in the selected graph view, so switch to one that does.
   // This has to happen after rendering, navigating from within the memo above would update the router
@@ -98,6 +106,10 @@ function LineageTabCore() {
   useEffect(() => {
     setRfContainerMounted(true); // workaround to make changing layout work correctly
   }, [nodes])
+
+  // without a center node - the run view shows the whole graph - the view is fitted on all nodes,
+  // and up to the maximum zoom, as there is no previously centered element to keep the zoom of
+  const centerNodes = nodes.filter((node) => node.data.graphNodeProps.isCenterNode);
 
   const onPaneClick = () => {
     resetEdgeStyles(reactFlow);
@@ -133,11 +145,11 @@ function LineageTabCore() {
           minZoom={0.02}
           maxZoom={1}
           fitView
-          fitViewOptions={{maxZoom: previousZoom, nodes: nodes.filter((node) => node.data.graphNodeProps.isCenterNode)}}
+          fitViewOptions={centerNodes.length > 0 ? {maxZoom: previousZoom, nodes: centerNodes} : {nodes}}
         >
           <Controls showFitView={false} showInteractive={false} />
           <Background /> {/* Background macht fehler "<pattern> attribute x: Expected length, "NaN"!*/}
-          <LineageGraphToolbar/>
+          <LineageGraphToolbar props={props}/>
         </ReactFlow>
       }
       {!rfContainerMounted && <CenteredCirularProgress/>}
@@ -146,10 +158,10 @@ function LineageTabCore() {
 }
 
 
-function LineageTabSep() {
+function LineageTabSep({graphProps}: {graphProps?: flowProps}) {
   return (
     <ReactFlowProvider>
-      <LineageTabCore />
+      <LineageTabCore graphProps={graphProps}/>
     </ReactFlowProvider>
   )
 }
