@@ -35,8 +35,15 @@ export class Row implements MetaDataBaseObject {
     tags?: string[] | undefined;
     task_name?: string;
     details: Action;
-   
-    constructor(appName: string, action: Action, actionName: string) {
+    /**
+     * Where an unfinished phase is taken to end. Undefined while the attempt is still in flight,
+     * in which case an unfinished phase runs up to now; for a finalised attempt it is the last
+     * moment the state file has any evidence for (see Attempt). Without it, an action that was
+     * cancelled before it could record an end timestamp appears to have run until today.
+     */
+    endAnchor?: number;
+
+    constructor(appName: string, action: Action, actionName: string, endAnchor?: number) {
       this.flow_id = appName;
       this.step_name = actionName;
       this.run_number = action.executionId.runId;
@@ -46,9 +53,12 @@ export class Row implements MetaDataBaseObject {
       this.message = action.msg;
       this.ts_epoch = (action.startTstmpPrepare || action.startTstmpInit || action.startTstmp || new Date(Date.now())).getTime();
       this.started_at = new Date(this.ts_epoch);
-      this.finished_at = (action.startTstmp ? action.endTstmp : (action.startTstmpInit ? action.endTstmpInit : action.endTstmpPrepare)) || new Date(Date.now());
+      this.finished_at =
+        (action.startTstmp ? action.endTstmp : action.startTstmpInit ? action.endTstmpInit : action.endTstmpPrepare) ||
+        new Date(endAnchor ?? Date.now());
       this.duration = durationMillis(action.duration === 'PT0S' ? 'PT0.001S' : action.duration);
       this.details = action;
+      this.endAnchor = endAnchor;
     }
 
     /**
@@ -59,19 +69,30 @@ export class Row implements MetaDataBaseObject {
     }
 
     /**
-     * Return task duration with handling for running state. If task is in running state, we want to compare its start time to
-     * current time. Note that we are not camparing current time to ts_epoch field, which is just time for task object, not actual task time itself.
+     * Where a phase that recorded no end is taken to stop: the attempt's anchor if it is
+     * finalised, otherwise now, so a phase of a live run keeps growing.
+     */
+    private phaseEnd(recorded?: Date): number {
+      return recorded?.getTime() ?? this.endAnchor ?? Date.now();
+    }
+
+    /**
+     * Duration of the exec phase. A phase still in flight is measured up to now; one that was
+     * abandoned without an end timestamp is measured up to the attempt's last known timestamp.
      */
     getDuration(): number | null {
-      return this.details.startTstmp ? ((this.details.endTstmp?.getTime() || Date.now()) - this.details.startTstmp.getTime()) : this.duration;
+      const { startTstmp, endTstmp } = this.details;
+      return startTstmp ? this.phaseEnd(endTstmp) - startTstmp.getTime() : this.duration;
     }
 
     getDurationInit(): number | null {
-      return this.details.startTstmpInit ? ((this.details.endTstmpInit?.getTime() || Date.now()) - this.details.startTstmpInit.getTime()) : null;
+      const { startTstmpInit, endTstmpInit } = this.details;
+      return startTstmpInit ? this.phaseEnd(endTstmpInit) - startTstmpInit.getTime() : null;
     }
 
     getDurationPrepare(): number | null {
-      return this.details.startTstmpPrepare ? ((this.details.endTstmpPrepare?.getTime() || Date.now()) - this.details.startTstmpPrepare.getTime()) : null;
+      const { startTstmpPrepare, endTstmpPrepare } = this.details;
+      return startTstmpPrepare ? this.phaseEnd(endTstmpPrepare) - startTstmpPrepare.getTime() : null;
     }
   }
   

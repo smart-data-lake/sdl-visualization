@@ -39,6 +39,37 @@ export function updateStateFile(data: any): StateFile {
     return data;
 }
 
+const PHASE_TIMESTAMPS = [
+    'startTstmpPrepare', 'endTstmpPrepare',
+    'startTstmpInit', 'endTstmpInit',
+    'startTstmp', 'endTstmp',
+] as const;
+
+/**
+ * Where phases that recorded no end timestamp should be taken to stop.
+ *
+ * `undefined` while the attempt is still in flight: such a phase really is still running, so it
+ * should be measured up to now and keep growing. Once the attempt is final, an action that never
+ * recorded an end never will - typically because it was cancelled when a sibling failed - and
+ * measuring it up to now makes a long-finished run appear to still be going, stretching the
+ * timeline over the years since. The last timestamp the state file has any evidence for is the
+ * honest bound; the resulting bars are short because those actions really did stop straight away.
+ *
+ * `isFinal` is authoritative. Older state files may not carry it, so fall back to the same
+ * "status ends in ING" heuristic used elsewhere for liveness.
+ */
+export function endAnchorOf(stateFile: StateFile): number | undefined {
+    const actions = Object.values(stateFile.actionsState ?? {});
+    const isFinal = stateFile.isFinal ?? !actions.some((a) => a.state?.toUpperCase().endsWith('ING'));
+    if (!isFinal) return undefined;
+    if (stateFile.runEndTime) return stateFile.runEndTime.getTime();
+
+    const known = actions.flatMap((action) =>
+        PHASE_TIMESTAMPS.map((field) => action[field]?.getTime()).filter((t): t is number => !!t),
+    );
+    return known.length > 0 ? Math.max(...known) : undefined;
+}
+
 export default class Attempt {
     appName: string;
     runId: number;
@@ -52,7 +83,7 @@ export default class Attempt {
             this.runId = stateFile.runId;
             this.attemptId = stateFile.attemptId;
             this.details = stateFile;  
-            this.timelineRows = this.getTimelineRows(stateFile.actionsState)
+            this.timelineRows = this.getTimelineRows(stateFile.actionsState, endAnchorOf(stateFile))
                 .sort(compareMultiFunc(['details.startTstmp', 'details.startTstmpInit', 'details.startTstmpPrepare']));
         } else {
             throw new Error("Error: no statefile found");
@@ -63,13 +94,13 @@ export default class Attempt {
      * Iterate through the statefile's actionsState and create a Row array.
      * @returns Row[]
      */
-    private getTimelineRows(actionsState: ActionsState) {
+    private getTimelineRows(actionsState: ActionsState, endAnchor?: number) {
         const rows : Row[] = [];
         const actionsStateEntries = Object.entries(actionsState);
         actionsStateEntries.forEach((entry) => {
             const actionName = entry[0];
             const action = entry[1];
-            const row = new Row(this.details.appConfig.applicationName, action, actionName);
+            const row = new Row(this.details.appConfig.applicationName, action, actionName, endAnchor);
             rows.push(row)
         })
         return rows;

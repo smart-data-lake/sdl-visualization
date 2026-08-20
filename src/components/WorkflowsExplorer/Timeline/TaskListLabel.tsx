@@ -3,23 +3,29 @@ import { styled } from '@mui/joy/styles';
 import { Link } from 'react-router-dom';
 import { Row } from '../../../types';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
+import { phasesOf } from '../../../util/WorkflowsExplorer/phases';
 import { LABEL_COLUMN_WIDTH } from './constants';
 
-/** Duration getters keyed by the phase names used in the phase filter. */
-const PHASE_DURATION: Record<string, (row: Row) => number | null> = {
-  Exec: (row) => row.getDuration(),
-  Init: (row) => row.getDurationInit(),
-  Prepare: (row) => row.getDurationPrepare(),
-};
-
-/** Combined duration of the phases the user currently has enabled. */
-function totalDuration(row: Row, displayPhases: string[]): number {
-  return displayPhases.reduce((sum, phase) => sum + (PHASE_DURATION[phase]?.(row) || 0), 0);
+/**
+ * Combined duration of the phases the user currently has enabled, and whether any of them has no
+ * end timestamp - in which case the total is a lower bound and is shown with a leading "\u2265".
+ */
+function totalDuration(row: Row, displayPhases: string[]): { total: number; isLowerBound: boolean } {
+  return phasesOf(row)
+    .filter((phase) => phase.startedAt && displayPhases.includes(phase.name))
+    .reduce<{ total: number; isLowerBound: boolean }>(
+      (acc, phase) => ({
+        total: acc.total + (phase.duration ?? 0),
+        isLowerBound: acc.isLowerBound || phase.isOpenEnded,
+      }),
+      { total: 0, isLowerBound: false },
+    );
 }
 
 /** The left-hand column of a timeline row: the action name, and its duration. */
 const TaskListLabel = (props: { item: Row; displayPhases: string[]; link?: string }) => {
   const { item, displayPhases, link } = props;
+  const { total, isLowerBound } = totalDuration(item, displayPhases);
 
   return (
     <LabelColumn>
@@ -29,7 +35,8 @@ const TaskListLabel = (props: { item: Row; displayPhases: string[]; link?: strin
             <ActionName data-testid="tasklistlabel-text">{item.step_name}</ActionName>
           </Tooltip>
           <Duration data-testid="tasklistlabel-duration">
-            {formatDuration(totalDuration(item, displayPhases))}
+            {isLowerBound && '\u2265 '}
+            {formatDuration(total)}
           </Duration>
         </LabelContent>
       </Link>

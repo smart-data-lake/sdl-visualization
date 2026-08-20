@@ -10,8 +10,16 @@ export type Phase = {
   name: (typeof PHASES)[number];
   /** Undefined when the state file recorded no such phase for this action. */
   startedAt?: Date;
-  /** Milliseconds; for a phase still in flight this counts up to now. */
+  /**
+   * Milliseconds. Bounded by the attempt's end anchor, so this is a lower bound rather than an
+   * exact figure when `isOpenEnded` is set.
+   */
   duration: number | null;
+  /**
+   * The phase started but recorded no end timestamp - either it is still running, or the attempt
+   * ended without one being written. Either way the duration is "at least", not "exactly".
+   */
+  isOpenEnded: boolean;
   status: string;
 };
 
@@ -31,18 +39,21 @@ export function phasesOf(row: Row): Phase[] {
       name: 'Exec',
       startedAt: row.details.startTstmp,
       duration: row.getDuration(),
+      isOpenEnded: !!row.details.startTstmp && !row.details.endTstmp,
       status: getRowStatus(row),
     },
     {
       name: 'Init',
       startedAt: row.details.startTstmpInit,
       duration: row.getDurationInit(),
+      isOpenEnded: !!row.details.startTstmpInit && !row.details.endTstmpInit,
       status: row.details.endTstmpInit ? 'INITIALIZED' : 'INITIALIZING',
     },
     {
       name: 'Prepare',
       startedAt: row.details.startTstmpPrepare,
       duration: row.getDurationPrepare(),
+      isOpenEnded: !!row.details.startTstmpPrepare && !row.details.endTstmpPrepare,
       status: row.details.endTstmpPrepare ? 'PREPARED' : 'PREPARING',
     },
   ];
