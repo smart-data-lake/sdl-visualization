@@ -21,30 +21,66 @@ jobs:
     steps:
 
     - name: Git Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
         token: ${{ secrets.PAT_ACTIONS }}
 
     - name: Setup node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
-        node-version: 20
+        node-version: 24
+        cache: yarn
 
     - name: Get-npm-version
       id: package-version
       uses: martinbeentjes/npm-get-version-action@main
 
     - run: yarn install
+
     - run: yarn build
       env:
         CI: '' # disable CI mode as it makes build fail on warnings
+
+    - name: Lint
+      run: yarn lint
+
+    - name: Type check
+      run: yarn type-check
+
+    - name: Run unit tests
+      run: yarn test:ci
+
+    - name: Get playwright version
+      id: playwright-version
+      run: echo "version=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_OUTPUT
+
+    - name: Cache playwright browsers
+      uses: actions/cache@v6
+      id: playwright-cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+    - name: Install playwright chromium
+      run: npx playwright install --with-deps chromium
+
+    - name: Run end-to-end tests
+      run: yarn test:e2e
+
+    - name: Upload playwright report
+      uses: actions/upload-artifact@v7
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 7
 
     - name: Add additional files to build
       run: cp build_index.* requirements.txt build 
 
     - name: Upload build to artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: sdl-visualizer
         path: |
@@ -68,7 +104,7 @@ jobs:
 
     - name: 'If build on master branch, download artifact'
       if: ${{ github.ref_name == 'master' }}
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         path: artifact
         name: sdl-visualizer
