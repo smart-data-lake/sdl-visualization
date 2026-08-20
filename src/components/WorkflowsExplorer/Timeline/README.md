@@ -37,7 +37,10 @@ The component was later simplified and brought in line with the rest of the app:
   the virtualized list plus the footer.
 - `TimelineRow.tsx` - one action: its label column and its bars.
 - `TaskListLabel.tsx` - the left-hand column: action name and summed duration.
-- `LineElement.tsx` - the bars themselves, one per enabled phase.
+- `LineElement.tsx` - the bars themselves, one per enabled phase. A phase that recorded no end timestamp is drawn
+  with a faded trailing edge and no end tick, and its duration is reported as a lower bound (`≥ 4.2s`). Such a
+  phase is measured up to the attempt's end anchor (`endAnchorOf` in `Attempt.ts`) rather than up to now, so an
+  action that was cancelled when a sibling failed no longer appears to have run until today.
 - `useTimelineControls.ts` - reducer for panning and zooming the window. The window is fitted to the range the
   *selected phases* cover (`startAndEndPointsOfPhases`), not the run's overall span, so showing only Exec does not
   leave the prepare/init period as empty space on the left. Changing the phase filter re-fits and drops any manual

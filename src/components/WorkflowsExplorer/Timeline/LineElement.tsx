@@ -30,7 +30,7 @@ const LineElement: React.FC<LineElementProps> = ({
 
   return (
     <>
-      {phasesOf(row).map(({ name, startedAt, duration, status }) => {
+      {phasesOf(row).map(({ name, startedAt, duration, status, isOpenEnded }) => {
         // A phase is drawn only if the state file recorded a start for it and it is enabled.
         if (!startedAt || !displayPhases.includes(name)) return null;
 
@@ -49,11 +49,17 @@ const LineElement: React.FC<LineElementProps> = ({
              * The tooltip anchors to the bar itself, not to BarContainer: the container spans the
              * full row width, so anchoring there pushed the tooltip far to the right of the bar.
              */}
-            <Tooltip arrow title={`${name}: ${formatDuration(duration)}`} enterDelay={500} enterNextDelay={500}>
+            <Tooltip
+              arrow
+              title={`${name}: ${isOpenEnded ? '\u2265 ' : ''}${formatDuration(duration)}`}
+              enterDelay={500}
+              enterNextDelay={500}
+            >
               <Bar style={{ width: `${width}%` }} $dragging={dragging} data-testid="boxgraphic">
-                <BarLine $status={status} $isLastAttempt={isLastAttempt} />
+                <BarLine $status={status} $isLastAttempt={isLastAttempt} $openEnded={isOpenEnded} />
                 <BarTickStart />
-                {status !== 'RUNNING' && <BarTickEnd />}
+                {/* The end tick marks a known stopping point, so a phase without one omits it. */}
+                {!isOpenEnded && <BarTickEnd />}
               </Bar>
             </Tooltip>
           </BarContainer>
@@ -78,7 +84,7 @@ const Bar = styled('div')<{ $dragging: boolean }>`
   transition: ${(p) => (p.$dragging ? 'none' : '0.5s width')};
 `;
 
-const BarLine = styled('div')<{ $status: string; $isLastAttempt: boolean }>`
+const BarLine = styled('div')<{ $status: string; $isLastAttempt: boolean; $openEnded: boolean }>`
   position: absolute;
   background: ${(p) => statusColor(p.$status, p.$isLastAttempt)};
   width: 100%;
@@ -87,6 +93,13 @@ const BarLine = styled('div')<{ $status: string; $isLastAttempt: boolean }>`
   transform: translateY(-50%);
   transition: background 0.15s;
   overflow: hidden;
+
+  /* No end was recorded, so the bar trails off rather than stopping at a definite edge. */
+  ${(p) =>
+    p.$openEnded
+      ? `mask-image: linear-gradient(to right, #000 55%, transparent 100%);
+         -webkit-mask-image: linear-gradient(to right, #000 55%, transparent 100%);`
+      : ''}
 `;
 
 /** Thin ticks marking the exact start and end of a phase, under the coloured bar. */
