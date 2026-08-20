@@ -48,4 +48,7 @@ The component was later simplified and brought in line with the rest of the app:
   `originOfRows` - the run's first timestamp - rather than from the window, so the time axis is absolute and
   stays put as phases are toggled: Prepare reads 0.0s-5.4s, Init 5.4s-8.7s, Exec 8.7s onwards.
 - `constants.ts` - shared geometry (row height, label column width, the time-window helpers).
-- `Footer/` - the minimap: aggregated lines, the draggable viewport rectangle and its handles.
+- `Footer/` - the minimap: aggregated lines, the draggable viewport rectangle and its handles. Each line is split
+  per phase (`phaseSegmentsOfRows`) so its colours match the bars above it - violet under Prepare, blue under
+  Init, the action's own outcome under Exec. One span per row group taking the overall status used to paint the
+  prepare and init stretches green on a successful run.

@@ -1,8 +1,7 @@
 import { styled } from '@mui/joy/styles';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Row, TaskStatus } from '../../../../types';
-import { startAndEndPointsOfPhases } from '../../../../util/WorkflowsExplorer/phases';
-import { aggregateTaskStatus } from '../../../../util/WorkflowsExplorer/row';
+import { Row } from '../../../../types';
+import { PhaseSegment, phaseSegmentsOfRows } from '../../../../util/WorkflowsExplorer/phases';
 import { MINIMAP_GROUPS, TimelineMetrics } from '../constants';
 import MinimapActiveSection from './MinimapActiveSection';
 import MinimapRow from './MinimapRow';
@@ -17,8 +16,6 @@ export type MinimapFooterProps = {
   onHandleMove: (which: 'left' | 'right', to: number) => void;
   onDraggingStateChange: (dragging: boolean) => void;
 };
-
-type LineData = { start: number; end: number; status: TaskStatus };
 
 /** Overview strip under the timeline, with a draggable window for panning and zooming. */
 const MinimapFooter: React.FC<MinimapFooterProps> = ({
@@ -70,15 +67,15 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
   };
 
   // Rows are bucketed into a fixed number of lines, since more than that will not fit.
-  const lines: LineData[] = useMemo(() => {
+  const lines: PhaseSegment[][] = useMemo(() => {
     const perGroup = Math.ceil(rows.length / MINIMAP_GROUPS);
     const groups: Row[][] = [];
     for (let i = 0; i < Math.min(rows.length, MINIMAP_GROUPS); i++) {
       groups.push(rows.slice(perGroup * i, perGroup * i + perGroup));
     }
     return groups
-      .map((group) => ({ status: aggregateTaskStatus(group), ...startAndEndPointsOfPhases(group, displayPhases) }))
-      .filter((line) => line.start !== 0 && line.end !== 0);
+      .map((group) => phaseSegmentsOfRows(group, displayPhases))
+      .filter((segments) => segments.length > 0);
   }, [rows, displayPhases]);
 
   useEffect(() => {
@@ -95,14 +92,12 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
           startHandleMove={startHandleDrag}
         />
         <LineContainer ref={container}>
-          {lines.map((line) => (
+          {lines.map((segments) => (
             <MinimapRow
-              key={`${line.start}-${line.end}-${line.status}`}
+              key={segments.map((segment) => `${segment.phase}${segment.start}`).join('-')}
+              segments={segments}
               startTime={timeline.startTime}
               endTime={timeline.endTime}
-              started={line.start}
-              finished={line.end}
-              status={line.status}
             />
           ))}
         </LineContainer>

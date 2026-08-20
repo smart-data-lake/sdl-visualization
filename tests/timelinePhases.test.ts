@@ -6,7 +6,9 @@
  * only Prepare left the entire execution period empty on the right.
  */
 import { expect, test } from 'vitest';
-import { originOfRows, startAndEndPointsOfPhases } from '../src/util/WorkflowsExplorer/phases.ts';
+import { originOfRows, phaseSegmentsOfRows, startAndEndPointsOfPhases } from '../src/util/WorkflowsExplorer/phases.ts';
+import { aggregateStatuses } from '../src/util/WorkflowsExplorer/row.ts';
+import { getStatusColor } from '../src/util/WorkflowsExplorer/statusColors.ts';
 
 const t = (iso: string) => new Date(iso).getTime();
 
@@ -119,4 +121,84 @@ test('the origin is the earliest start across all rows', () => {
 
 test('no rows yields no origin, so callers can fall back', () => {
   expect(originOfRows([])).toBe(0);
+});
+
+/**
+ * Minimap colouring. Each line is split per phase so its colours match the bars above it: the
+ * prepare stretch carries PREPARED (violet) and the init stretch INITIALIZED (blue), while the
+ * exec stretch keeps the action's real outcome. One span per row group taking the overall status
+ * painted the prepare and init stretches green on a successful run.
+ */
+
+/** A row whose prepare phase started but never finished. */
+const stillPreparing = () =>
+  ({
+    status: 'PREPARING',
+    finished_at: undefined,
+    details: {
+      startTstmpPrepare: new Date('2024-03-17T22:12:19.000Z'),
+      endTstmpPrepare: undefined,
+      startTstmpInit: undefined,
+      endTstmpInit: undefined,
+      startTstmp: undefined,
+      endTstmp: undefined,
+    },
+    getDurationPrepare: () => 500,
+    getDurationInit: () => null,
+    getDuration: () => null,
+  }) as any;
+
+test('a segment per displayed phase, each carrying that phase status', () => {
+  const segments = phaseSegmentsOfRows([row(ACTION)], ['Prepare', 'Init', 'Exec']);
+  expect(segments.map((s) => s.phase)).toEqual(['Prepare', 'Init', 'Exec']);
+  expect(segments.map((s) => s.status)).toEqual(['PREPARED', 'INITIALIZED', 'SUCCEEDED']);
+});
+
+test('those statuses are what make the prepare span violet and the init span blue', () => {
+  expect(getStatusColor('PREPARED')).toBe('#a023e8');
+  expect(getStatusColor('INITIALIZED')).toBe('#096bde');
+  // and the exec span keeps the action's own outcome rather than a flat phase colour
+  expect(getStatusColor('SUCCEEDED')).toBe('#20AF2E');
+  expect(getStatusColor('FAILED')).toBe('#EB3428');
+});
+
+test('each segment spans only its own phase', () => {
+  const [prepare, init, exec] = phaseSegmentsOfRows([row(ACTION)], ['Prepare', 'Init', 'Exec']);
+  expect([prepare.start, prepare.end]).toEqual([t(ACTION.prepare[0]), t(ACTION.prepare[1])]);
+  expect([init.start, init.end]).toEqual([t(ACTION.init[0]), t(ACTION.init[1])]);
+  expect([exec.start, exec.end]).toEqual([t(ACTION.exec[0]), t(ACTION.exec[1])]);
+});
+
+test('only the displayed phases produce segments', () => {
+  expect(phaseSegmentsOfRows([row(ACTION)], ['Init']).map((s) => s.phase)).toEqual(['Init']);
+  expect(phaseSegmentsOfRows([row(ACTION)], [])).toEqual([]);
+});
+
+test('a phase absent from every row in the group produces no segment', () => {
+  const execOnly = row({ exec: ACTION.exec });
+  expect(phaseSegmentsOfRows([execOnly], ['Prepare', 'Init', 'Exec']).map((s) => s.phase)).toEqual(['Exec']);
+});
+
+test('a segment spans its phase across every row in the group', () => {
+  const later = row({ prepare: ['2024-03-17T22:12:22.000Z', '2024-03-17T22:12:28.000Z'] });
+  const [prepare] = phaseSegmentsOfRows([row(ACTION), later], ['Prepare']);
+  expect(prepare.start).toBe(t(ACTION.prepare[0]));
+  expect(prepare.end).toBe(t('2024-03-17T22:12:28.000Z'));
+});
+
+test('an unfinished phase in the group outranks the finished ones', () => {
+  const [prepare] = phaseSegmentsOfRows([row(ACTION), stillPreparing()], ['Prepare']);
+  expect(prepare.status).toBe('PREPARING');
+});
+
+test('aggregateStatuses ranks in-progress over settled, and failure over success', () => {
+  expect(aggregateStatuses(['SUCCEEDED', 'RUNNING'])).toBe('RUNNING');
+  expect(aggregateStatuses(['SUCCEEDED', 'FAILED'])).toBe('FAILED');
+  expect(aggregateStatuses(['PREPARED', 'PREPARING'])).toBe('PREPARING');
+  // CANCELLED and PENDING were missing from the chain, so these used to fall through to UNKNOWN
+  expect(aggregateStatuses(['CANCELLED'])).toBe('CANCELLED');
+  expect(aggregateStatuses(['CANCELLED', 'SUCCEEDED'])).toBe('CANCELLED');
+  expect(aggregateStatuses(['PENDING'])).toBe('PENDING');
+  expect(aggregateStatuses(['FAILED', 'CANCELLED'])).toBe('FAILED');
+  expect(aggregateStatuses([])).toBe('UNKNOWN');
 });

@@ -10,17 +10,31 @@ export const startAndEndOverallPointsOfRows = (rows: Row[]): { start: number; en
 };
 
 /**
+ * Statuses in the order they win when several are combined: anything still in progress outranks
+ * anything settled, and a failure outranks a success. CANCELLED and PENDING used to be missing,
+ * so a group of only-cancelled actions aggregated to UNKNOWN and rendered grey.
+ */
+const STATUS_PRIORITY: TaskStatus[] = [
+  'PREPARING',
+  'INITIALIZING',
+  'RUNNING',
+  'PREPARED',
+  'INITIALIZED',
+  'FAILED',
+  'CANCELLED',
+  'SUCCEEDED',
+  'SKIPPED',
+  'PENDING',
+];
+
+/** Single status standing in for a set of them. */
+export const aggregateStatuses = (statuses: string[]): TaskStatus => {
+  const present = statuses.map((status) => (status || 'UNKNOWN').toUpperCase());
+  return STATUS_PRIORITY.find((status) => present.includes(status)) ?? 'UNKNOWN';
+};
+
+/**
  * Get status for group of rows.
  */
-export const aggregateTaskStatus = (rows: Row[]): TaskStatus => {
-  const statuses = rows.map((row) => row.status || 'UNKNOWN');  
-  if (statuses.indexOf('PREPARING') > -1) return 'PREPARING';
-  if (statuses.indexOf('INITIALIZING') > -1) return 'INITIALIZING';
-  if (statuses.indexOf('RUNNING') > -1) return 'RUNNING';
-  if (statuses.indexOf('PREPARED') > -1) return 'PREPARED';
-  if (statuses.indexOf('INITIALIZED') > -1) return 'INITIALIZED';
-  if (statuses.indexOf('FAILED') > -1) return 'FAILED';
-  if (statuses.indexOf('SUCCEEDED') > -1) return 'SUCCEEDED';
-  if (statuses.indexOf('SKIPPED') > -1) return 'SKIPPED';
-  return 'UNKNOWN';
-};
+export const aggregateTaskStatus = (rows: Row[]): TaskStatus =>
+  aggregateStatuses(rows.map((row) => row.status));
