@@ -1,4 +1,5 @@
-import { Row } from '../../types';
+import { Row, TaskStatus } from '../../types';
+import { aggregateStatuses } from './row';
 
 /**
  * The SDLB execution phases of an action, in the order they run. The names are the ones the
@@ -97,4 +98,39 @@ export function startAndEndPointsOfPhases(
  */
 export function originOfRows(rows: Row[]): number {
   return startAndEndPointsOfPhases(rows, PHASES).start;
+}
+
+export type PhaseSegment = {
+  phase: Phase['name'];
+  start: number;
+  end: number;
+  status: TaskStatus;
+};
+
+/**
+ * One span per displayed phase across a set of rows, carrying that phase's aggregated status.
+ *
+ * The minimap draws these instead of a single span per row group, so its colours line up with the
+ * bars above it: the stretch under Prepare reads violet and the stretch under Init blue, because
+ * those phases carry the PREPARED/INITIALIZED statuses, while the exec stretch keeps the action's
+ * real outcome. Previously one span covered every displayed phase and took the actions' overall
+ * status, painting the prepare and init stretches green on a successful run.
+ */
+export function phaseSegmentsOfRows(rows: Row[], displayPhases: readonly string[]): PhaseSegment[] {
+  return PHASES.filter((name) => displayPhases.includes(name))
+    .map((name) => {
+      const phases = rows
+        .map((row) => phasesOf(row).find((phase) => phase.name === name))
+        .filter((phase): phase is Phase => !!phase && !!phase.startedAt);
+      if (phases.length === 0) return undefined;
+
+      const starts = phases.map((phase) => phase.startedAt!.getTime());
+      return {
+        phase: name,
+        start: Math.min(...starts),
+        end: Math.max(...phases.map((phase, i) => starts[i] + (phase.duration ?? 0))),
+        status: aggregateStatuses(phases.map((phase) => phase.status)),
+      };
+    })
+    .filter((segment): segment is PhaseSegment => !!segment);
 }
