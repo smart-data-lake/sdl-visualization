@@ -56,7 +56,10 @@ export function phasesOf(row: Row): Phase[] {
  * left - and with only Prepare selected, the whole execution period would be empty space at the
  * right. Returns `{start: 0, end: 0}` when the selection covers nothing.
  */
-export function startAndEndPointsOfPhases(rows: Row[], displayPhases: string[]): { start: number; end: number } {
+export function startAndEndPointsOfPhases(
+  rows: Row[],
+  displayPhases: readonly string[],
+): { start: number; end: number } {
   let start = Infinity;
   let end = -Infinity;
 
@@ -71,4 +74,16 @@ export function startAndEndPointsOfPhases(rows: Row[], displayPhases: string[]):
   );
 
   return { start: isFinite(start) ? start : 0, end: isFinite(end) ? end : 0 };
+}
+
+/**
+ * The run's own starting point: the earliest timestamp of any phase, which is the first prepare
+ * timestamp whenever the actions have one.
+ *
+ * Deliberately independent of the phase selection. The minimap's handle labels are measured from
+ * here, so the time axis stays put when phases are toggled - otherwise "0.0s" would silently mean
+ * "start of exec" with only Exec shown, and the axis would shift under the user.
+ */
+export function originOfRows(rows: Row[]): number {
+  return startAndEndPointsOfPhases(rows, PHASES).start;
 }

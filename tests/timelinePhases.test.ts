@@ -6,7 +6,7 @@
  * only Prepare left the entire execution period empty on the right.
  */
 import { expect, test } from 'vitest';
-import { startAndEndPointsOfPhases } from '../src/util/WorkflowsExplorer/phases.ts';
+import { originOfRows, startAndEndPointsOfPhases } from '../src/util/WorkflowsExplorer/phases.ts';
 
 const t = (iso: string) => new Date(iso).getTime();
 
@@ -93,4 +93,30 @@ test('a phase still running extends the range to now', () => {
   // duration counts up to now, so the range reaches roughly the current time
   expect(end).toBeGreaterThan(t('2024-03-17T22:12:30.000Z'));
   expect(Math.abs(end - Date.now())).toBeLessThan(5000);
+});
+
+test('the axis origin is the run start, whichever phases are selected', () => {
+  const rows = [row(ACTION)];
+  // The origin is what the minimap handle labels are measured from, so it must not move when the
+  // phase filter changes - unlike the window itself.
+  expect(originOfRows(rows)).toBe(t(ACTION.prepare[0]));
+  expect(startAndEndPointsOfPhases(rows, ['Exec']).start).toBe(t(ACTION.exec[0]));
+  expect(startAndEndPointsOfPhases(rows, ['Prepare']).start).toBe(t(ACTION.prepare[0]));
+});
+
+test('the origin falls back to the earliest phase an action actually has', () => {
+  // An action with no prepare phase: the run still starts at its earliest recorded timestamp.
+  const noPrepare = row({ init: ACTION.init, exec: ACTION.exec });
+  expect(originOfRows([noPrepare])).toBe(t(ACTION.init[0]));
+  const execOnly = row({ exec: ACTION.exec });
+  expect(originOfRows([execOnly])).toBe(t(ACTION.exec[0]));
+});
+
+test('the origin is the earliest start across all rows', () => {
+  const later = row({ prepare: ['2024-03-17T22:12:24.000Z', '2024-03-17T22:12:25.000Z'] });
+  expect(originOfRows([later, row(ACTION)])).toBe(t(ACTION.prepare[0]));
+});
+
+test('no rows yields no origin, so callers can fall back', () => {
+  expect(originOfRows([])).toBe(0);
 });
