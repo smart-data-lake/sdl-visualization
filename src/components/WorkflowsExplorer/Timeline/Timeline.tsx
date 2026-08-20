@@ -4,6 +4,7 @@ import { AutoSizer, List } from 'react-virtualized';
 import { Row, Run } from '../../../types';
 import MinimapFooter from './Footer/MinimapFooter';
 import TimelineRow from './TimelineRow';
+import { originOfRows } from '../../../util/WorkflowsExplorer/phases';
 import { LABEL_COLUMN_WIDTH, ROW_HEIGHT, SPACE_UNDER_TIMELINE, TimelineMetrics } from './constants';
 import useTimelineControls from './useTimelineControls';
 
@@ -23,15 +24,19 @@ const Timeline: React.FC<TimelineProps> = ({ run, rows, displayPhases }) => {
   const { timelineControls, dispatch } = useTimelineControls(run, rows, displayPhases);
   const [dragging, setDragging] = useState(false);
 
+  // Independent of displayPhases on purpose - see originOfRows.
+  const originTime = useMemo(() => originOfRows(rows), [rows]);
+
   const timeline: TimelineMetrics = useMemo(
     () => ({
       startTime: timelineControls.min,
       endTime: timelineControls.max,
+      originTime: originTime || timelineControls.min,
       visibleStartTime: timelineControls.timelineStart,
       visibleEndTime: timelineControls.timelineEnd,
       latestAttemptId: rows.reduce((latest, row) => Math.max(latest, row.attempt_id), 0),
     }),
-    [timelineControls, rows],
+    [timelineControls, rows, originTime],
   );
 
   const handleMove = useCallback((value: number) => dispatch({ type: 'move', value }), [dispatch]);

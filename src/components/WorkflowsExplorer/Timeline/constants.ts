@@ -58,6 +58,11 @@ export type TimelineMetrics = {
   startTime: number;
   /** End of the whole run. */
   endTime: number;
+  /**
+   * Fixed zero point for the minimap's time axis: the run's first timestamp, regardless of which
+   * phases are shown. `startTime` moves with the phase selection, so it cannot serve as the origin.
+   */
+  originTime: number;
   /** Start of the zoomed-in section the user is looking at. */
   visibleStartTime: number;
   /** End of the zoomed-in section the user is looking at. */

@@ -41,6 +41,8 @@ The component was later simplified and brought in line with the rest of the app:
 - `useTimelineControls.ts` - reducer for panning and zooming the window. The window is fitted to the range the
   *selected phases* cover (`startAndEndPointsOfPhases`), not the run's overall span, so showing only Exec does not
   leave the prepare/init period as empty space on the left. Changing the phase filter re-fits and drops any manual
-  zoom; changing the row filters re-fits but keeps it.
+  zoom; changing the row filters re-fits but keeps it. The minimap's handle labels are measured from
+  `originOfRows` - the run's first timestamp - rather than from the window, so the time axis is absolute and
+  stays put as phases are toggled: Prepare reads 0.0s-5.4s, Init 5.4s-8.7s, Exec 8.7s onwards.
 - `constants.ts` - shared geometry (row height, label column width, the time-window helpers).
 - `Footer/` - the minimap: aggregated lines, the draggable viewport rectangle and its handles.

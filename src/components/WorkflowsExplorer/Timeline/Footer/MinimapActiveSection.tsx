@@ -28,21 +28,22 @@ const MinimapActiveSection: React.FC<ActiveSectionProps> = ({ timeline, dragging
       onMouseDown={(e) => startMove(e.clientX)}
       onTouchStart={(e) => startMove(e.touches[0].clientX)}
     >
+      {/*
+        * Both labels are measured from the run's first timestamp, not from the start of the
+        * window, so the axis reads the same whichever phases are selected. formatDuration already
+        * renders 0 as '0.0s' and clamps negatives.
+        */}
       <MinimapHandle
         which="left"
         isZoomed={width < 20}
-        label={
-          timeline.visibleStartTime <= timeline.startTime
-            ? '0.0s'
-            : formatDuration(timeline.visibleStartTime - timeline.startTime)
-        }
+        label={formatDuration(timeline.visibleStartTime - timeline.originTime)}
         onDragStart={() => startHandleMove('left')}
       />
       <MinimapHandle
         which="right"
         isZoomed={width < 20}
         stackText={width + left > 90}
-        label={formatDuration(timeline.visibleEndTime - timeline.startTime)}
+        label={formatDuration(timeline.visibleEndTime - timeline.originTime)}
         onDragStart={() => startHandleMove('right')}
       />
     </ActiveSection>
