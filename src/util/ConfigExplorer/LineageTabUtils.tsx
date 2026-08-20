@@ -72,6 +72,14 @@ export interface flowProps {
     runContext?: boolean;
 }
 
+export interface preparedGraph {
+    nodes: ReactFlowNode[];
+    edges: ReactFlowEdge[];
+    // set if the selected element does not exist in the selected graph view. The caller has to
+    // navigate to this path - doing it here would update the router while the graph is rendering.
+    navigateTo?: string;
+}
+
 // the lineage graph settings needed to (re-)create the graph, see useLineage
 export interface lineageGraphState {
     graphView: GraphView;
@@ -294,11 +302,11 @@ function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: Gra
     }
 }
 
-export function prepareAndRenderGraph(rfi: ReactFlowInstance, navigate, lineageState: lineageGraphState): [ReactFlowNode[], ReactFlowEdge[]] {
+export function prepareAndRenderGraph(rfi: ReactFlowInstance, lineageState: lineageGraphState): preparedGraph {
     const { graphView, props, layout, isExpanded } = lineageState;
 
     var doa: DAGraph; // data objects and actions
-    var centralNodeId: string = props.elementName;
+    var navigateTo: string | undefined;
 
     // get the right central node for the graph
     if (graphView === 'full') {
@@ -308,23 +316,26 @@ export function prepareAndRenderGraph(rfi: ReactFlowInstance, navigate, lineageS
         if (props.elementType === 'actions') {
             // switch to data graph when an action is selected -> navigate to first direct neighbour
             const [neighours,] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
-            centralNodeId = neighours[0].id;
-            navigate(`config/dataObjects/${centralNodeId}`);
+            navigateTo = `config/dataObjects/${neighours[0].id}`;
         }
     } else if (graphView === 'action') {
         doa = props.configData!.actionGraph!;
         if (props.elementType === 'dataObjects') {
             // switch to action graph when a data object is selected -> navigate to first direct neighbour
             const [neighours,] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
-            centralNodeId = neighours[0].id;
-            navigate(`config/actions/${centralNodeId}`);
+            navigateTo = `config/actions/${neighours[0].id}`;
         }
     } else {
         throw Error("Unknown graph view " + graphView);
     }
 
+    // the selected element is not part of the selected graph view, so there is no graph to build yet.
+    // The caller navigates to navigateTo and we are called again for the element it lands on.
+    if (navigateTo) return { nodes: [], edges: [], navigateTo };
+
     // reset isCenterNode flags otherwise all previous ones will be colored
-    return prepareGraphDirect(rfi, doa, graphView, props, layout, isExpanded);
+    const [nodes, edges] = prepareGraphDirect(rfi, doa, graphView, props, layout, isExpanded);
+    return { nodes, edges };
 }
 
 /*

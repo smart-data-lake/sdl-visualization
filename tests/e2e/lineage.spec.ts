@@ -84,6 +84,13 @@ test.describe('lineage graph', () => {
   });
 
   test('switching the graph view shows the data resp. action graph', async ({ page }) => {
+    // switching the view can require navigating to another element, which must not happen while the
+    // graph is rendering - react logs "Cannot update a component while rendering a different one"
+    const renderPhaseUpdates: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.text().includes('Cannot update a component')) renderPhaseUpdates.push(msg.text());
+    });
+
     await openLineage(page, '/#/config/dataObjects/int-airports');
 
     await graphViewMenu(page).click();
@@ -95,6 +102,14 @@ test.describe('lineage graph', () => {
     await page.getByRole('menuitem').nth(2).click(); // action graph
     await expect.poll(() => page.url()).toContain('/config/actions/');
     await expect(nodes(page).first()).toBeVisible();
+
+    // and back, which navigates to a neighbour data object
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(1).click();
+    await expect.poll(() => page.url()).toContain('/config/dataObjects/');
+    await expect(nodes(page).first()).toBeVisible();
+
+    expect(renderPhaseUpdates).toEqual([]);
   });
 
   test('the expand handle of a node adds and removes its neighbours', async ({ page }) => {
