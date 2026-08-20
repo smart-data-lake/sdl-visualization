@@ -1,29 +1,24 @@
-import React, { createRef, useEffect, useState } from 'react';
-import styled from 'styled-components';
+import { styled } from '@mui/joy/styles';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Row, TaskStatus } from '../../../../types';
 import { aggregateTaskStatus, startAndEndExecPointsOfRows } from '../../../../util/WorkflowsExplorer/row';
-import { Row, TaskStatus } from "../../../../types";
-import MinimapRow from './MinimapRow';
+import { MINIMAP_GROUPS, TimelineMetrics } from '../constants';
 import MinimapActiveSection from './MinimapActiveSection';
-import { TimelineMetrics } from '../Timeline';
-
-//
-// Typedef
-//
+import MinimapRow from './MinimapRow';
 
 export type MinimapFooterProps = {
   timeline: TimelineMetrics;
   rows: Row[];
+  /** Pan the visible window by a number of milliseconds. */
   onMove: (change: number) => void;
+  /** Move one edge of the visible window to an absolute timestamp. */
   onHandleMove: (which: 'left' | 'right', to: number) => void;
   onDraggingStateChange: (dragging: boolean) => void;
 };
 
 type LineData = { start: number; end: number; status: TaskStatus };
 
-//
-// Component
-//
-
+/** Overview strip under the timeline, with a draggable window for panning and zooming. */
 const MinimapFooter: React.FC<MinimapFooterProps> = ({
   timeline,
   onMove,
@@ -31,37 +26,31 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
   rows,
   onDraggingStateChange,
 }) => {
-  const _container = createRef<HTMLDivElement>();
+  const container = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState({ dragging: false, start: 0 });
   const [handleDrag, setHandleDrag] = useState<{ dragging: boolean; which: 'left' | 'right' }>({
     dragging: false,
     which: 'left',
   });
 
+  const isDragging = drag.dragging || handleDrag.dragging;
+
   const handleMove = (clientX: number) => {
-    if (!_container || !_container.current) {
-      return;
-    }
+    if (!container.current) return;
 
     if (handleDrag.dragging) {
-      const rect = _container.current.getBoundingClientRect();
+      const rect = container.current.getBoundingClientRect();
       const position = (clientX - rect.left) / rect.width;
-
       onHandleMove(handleDrag.which, timeline.startTime + (timeline.endTime - timeline.startTime) * position);
     } else if (drag.dragging) {
-      const movement = (clientX - drag.start) / _container.current.clientWidth;
+      const movement = (clientX - drag.start) / container.current.clientWidth;
       setDrag({ ...drag, start: clientX });
       onMove((timeline.endTime - timeline.startTime) * movement);
     }
   };
 
-  const startMove = (clientX: number) => {
-    setDrag({ ...drag, dragging: true, start: clientX });
-  };
-
-  const stopMove = () => {
-    setDrag({ dragging: false, start: 0 });
-  };
+  const startMove = (clientX: number) => setDrag({ ...drag, dragging: true, start: clientX });
+  const stopMove = () => setDrag({ dragging: false, start: 0 });
 
   const startHandleDrag = (which: 'left' | 'right') => {
     setHandleDrag({ dragging: true, which });
@@ -69,101 +58,81 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
   };
 
   const stopHandleDrag = () => {
-    if (handleDrag.dragging) {
-      setHandleDrag({ ...handleDrag, dragging: false });
-    }
+    if (handleDrag.dragging) setHandleDrag({ ...handleDrag, dragging: false });
   };
 
-  //
-  // Data processing
-  //
-  const [lines, setLines] = useState<LineData[]>([]);
-  useEffect(() => {
-      // If we are not grouping, we make lines from task rows.
-      // 13 groups since we cannot fit more.
-      const perGroup = Math.ceil(rows.length / 13);
-      const grps : Row[][] = [];
-      // Cut all rows to max 13 groups
-      for (let i = 0; i < Math.min(rows.length, 13); i++) {
-        grps.push(rows.slice(perGroup * i, perGroup * i + perGroup));
-      }
-      // Calculate start and end points for each group
-      const linegroups = grps.map((grp) => {
-        const status = aggregateTaskStatus(grp);
-        const { start, end } = startAndEndExecPointsOfRows(grp);
-        return { status, start, end };
-      })
-      setLines(linegroups.filter((r) => r.start !== 0 && r.end !== 0));
+  const stopAll = () => {
+    stopHandleDrag();
+    stopMove();
+  };
+
+  // Rows are bucketed into a fixed number of lines, since more than that will not fit.
+  const lines: LineData[] = useMemo(() => {
+    const perGroup = Math.ceil(rows.length / MINIMAP_GROUPS);
+    const groups: Row[][] = [];
+    for (let i = 0; i < Math.min(rows.length, MINIMAP_GROUPS); i++) {
+      groups.push(rows.slice(perGroup * i, perGroup * i + perGroup));
     }
-  , [rows, timeline.groupingEnabled, timeline.startTime, timeline.endTime]);
+    return groups
+      .map((group) => ({ status: aggregateTaskStatus(group), ...startAndEndExecPointsOfRows(group) }))
+      .filter((line) => line.start !== 0 && line.end !== 0);
+  }, [rows]);
 
   useEffect(() => {
-    onDraggingStateChange(drag.dragging || handleDrag.dragging);
-  }, [drag.dragging, handleDrag.dragging, onDraggingStateChange]);
+    onDraggingStateChange(isDragging);
+  }, [isDragging, onDraggingStateChange]);
 
   return (
     <>
-      <MinimapFooterContent>
+      <FooterContent>
         <MinimapActiveSection
           timeline={timeline}
-          dragging={drag.dragging || handleDrag.dragging}
+          dragging={isDragging}
           startMove={startMove}
           startHandleMove={startHandleDrag}
-        ></MinimapActiveSection>
-        <MinimapContainer ref={_container}>
-          {
-            lines.map((step, index) => (
-              <MinimapRow
-                key={index + step.start + step.end}
-                timeline={timeline}
-                started={step.start}
-                finished={step.end}
-                status={step.status}
-              />
-            ))
-          }
-        </MinimapContainer>
-      </MinimapFooterContent>
+        />
+        <LineContainer ref={container}>
+          {lines.map((line) => (
+            <MinimapRow
+              key={`${line.start}-${line.end}-${line.status}`}
+              startTime={timeline.startTime}
+              endTime={timeline.endTime}
+              started={line.start}
+              finished={line.end}
+              status={line.status}
+            />
+          ))}
+        </LineContainer>
+      </FooterContent>
 
-      {(drag.dragging || handleDrag.dragging) && (
-        <div
-          style={{
-            position: 'fixed',
-            width: '100%',
-            height: '100%',
-            left: 0,
-            top: 0,
-            zIndex: 10,
-          }}
+      {/*
+       * While dragging, a transparent full-screen layer catches the pointer so the gesture
+       * survives leaving the minimap. Touch moves go through handleMove() like mouse moves do;
+       * they used to be handed a raw clientX where a millisecond delta was expected, which made
+       * touch panning jump to the far end of the run.
+       */}
+      {isDragging && (
+        <DragCatcher
           onMouseMove={(e) => handleMove(e.clientX)}
-          onTouchMove={(e) => onMove(e.touches[0].clientX)}
-          onMouseLeave={() => {
-            stopHandleDrag();
-            stopMove();
-          }}
-          onMouseUp={() => {
-            stopHandleDrag();
-            stopMove();
-          }}
-        ></div>
+          onTouchMove={(e) => handleMove(e.touches[0].clientX)}
+          onMouseLeave={stopAll}
+          onMouseUp={stopAll}
+          onTouchEnd={stopAll}
+        />
       )}
     </>
   );
 };
 
-//
-// Style
-//
-
-const MinimapFooterContent = styled.div`
+const FooterContent = styled('div')`
   position: relative;
   flex: 1;
-  background: ${(p) => p.theme.color.bg.light};
-  border-bottom: ${(p) => p.theme.border.thinLight};
+  background: ${(p) => p.theme.vars.palette.background.level1};
+  border-bottom: 1px solid ${(p) => p.theme.vars.palette.divider};
   height: 3.0625rem;
 `;
 
-const MinimapContainer = styled.div`
+const LineContainer = styled('div')`
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -173,10 +142,18 @@ const MinimapContainer = styled.div`
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
   height: 2.5625rem;
 
   pointer-events: none;
+`;
+
+const DragCatcher = styled('div')`
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  z-index: 10;
 `;
 
 export default MinimapFooter;

@@ -4,7 +4,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import { Tooltip, Box } from '@mui/joy';
 import React from 'react';
-import { getStatusColor } from '../../components/WorkflowsExplorer/Timeline/TimelineRow/utils';
+import { getStatusColor } from './statusColors';
 
 export const getIcon = (status: string, marginLeft: string = '0.5rem', additionalStyle: object = {} ) => {
     const color = getStatusColor(status);

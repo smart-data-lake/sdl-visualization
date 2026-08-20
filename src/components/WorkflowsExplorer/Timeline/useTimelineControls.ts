@@ -1,200 +1,96 @@
-import { useEffect, useReducer } from 'react';
-import { Run, Row } from '../../../types';
-import { getLongestRowDuration, startAndEndExecPointsOfRows, startAndEndOverallPointsOfRows } from '../../../util/WorkflowsExplorer/row';
+import React, { useEffect, useReducer, useRef } from 'react';
+import { Row, Run } from '../../../types';
+import { startAndEndOverallPointsOfRows } from '../../../util/WorkflowsExplorer/row';
 
-//
-// Hook for controlling timeline. Timeline does not require use of this but this hook will provide functions
-// for zooming and moving around.
-//
-
+/**
+ * State machine for the timeline's visible window. `min`/`max` bound the whole run; the
+ * `timelineStart`/`timelineEnd` pair is the slice currently on screen.
+ */
 export type TimelineControlsState = {
-  // Minimum timestamp in timeline. This is starting point
+  /** Earliest timestamp in the run - the start of the timeline. */
   min: number;
-  // Maximum timestamp of timeline. This is ending point
+  /** Latest timestamp in the run - the end of the timeline. */
   max: number;
-  // Selected starting point. This is start of the visible section.
+  /** Start of the visible section. */
   timelineStart: number;
-  // Selected ending point. This is end of the visible section.
+  /** End of the visible section. */
   timelineEnd: number;
-  // If user has zoomed in, we don't want to update zoom status when new updates come in.
+  /** Set once the user has zoomed in, so incoming updates don't reset their view. */
   controlled: boolean;
 };
 
 export type TimelineAction =
-  // Set min and max values for timeline and set zoom to full
-  | { type: 'update'; start: number; end: number; mode: 'left' | 'startTime' }
-  // Move timeline to backwards or forward. (minus value to move backwards)
+  // Re-fit the timeline to a new overall range, preserving any zoom the user has applied.
+  | { type: 'update'; start: number; end: number }
+  // Pan the visible window (negative moves backwards).
   | { type: 'move'; value: number }
-  // Zoom functions manipulates timelineStart and timelineEnd values to kinda fake zooming.
-  | { type: 'zoomIn' }
-  | { type: 'zoomOut' }
+  // Set the visible window directly, from a minimap handle drag.
   | { type: 'setZoom'; start: number; end: number }
-  | { type: 'resetZoom' }
-  | { type: 'reset' }
-  // Update zoom contol state. If controlled, we dont update zoom level.
-  | { type: 'setControlled'; value: boolean }
+  // Extend the timeline to 'now' while a run is still in flight.
   | { type: 'incrementTimelineLength' };
 
-export function timelineControlsReducer(state: TimelineControlsState, action: TimelineAction): TimelineControlsState {
+function startOutOfBounds(state: TimelineControlsState, change: number): boolean {
+  return state.timelineStart + change < state.min;
+}
+
+function endOutOfBounds(state: TimelineControlsState, change: number): boolean {
+  return state.timelineEnd + change > state.max;
+}
+
+function pan(state: TimelineControlsState, change: number): TimelineControlsState {
+  return { ...state, timelineStart: state.timelineStart + change, timelineEnd: state.timelineEnd + change };
+}
+
+export function timelineControlsReducer(
+  state: TimelineControlsState,
+  action: TimelineAction,
+): TimelineControlsState {
   switch (action.type) {
     case 'update': {
-      const end = state.max > action.end ? state.max : action.end;
       if (state.controlled) {
+        // Keep the user's zoom, only clamping it into the new overall range.
+        const end = state.max > action.end ? state.max : action.end;
         return {
           ...state,
-          max: action.end,
           min: action.start,
+          max: action.end,
           timelineStart: action.start > state.timelineStart ? action.start : state.timelineStart,
           timelineEnd: end < state.timelineEnd ? end : state.timelineEnd,
         };
-      } else {
-        return {
-          ...state,
-          max: action.end,
-          min: action.start,
-          timelineEnd: action.end,
-          timelineStart: action.start,
-          controlled: false,
-        };
       }
-    }
-    case 'move':
-      // Check if any of the edges of scroll bar are out of bounds
-      if (startOrEndOutOfBounds(state, action.value)) {
-        return {
-          ...state,
-          timelineStart: startOutOfBounds(state, action.value)
-            ? state.min
-            : state.max - (state.timelineEnd - state.timelineStart),
-          timelineEnd: endOutOfBounds(state, action.value)
-            ? state.max
-            : state.min + (state.timelineEnd - state.timelineStart),
-        };
-      } else {
-        // Other wise just change start and end position of scrollbar
-        return updateGraph(state, action.value);
-      }
-    case 'zoomIn': {
-      const change = getZoomAmount(state);
-
-      if (state.timelineEnd - change <= state.timelineStart + change) return state;
-
-      return { ...updateGraph(state, change, -change), controlled: true };
+      return { ...state, min: action.start, max: action.end, timelineStart: action.start, timelineEnd: action.end };
     }
 
-    case 'zoomOut': {
-      const change = getZoomAmount(state);
-
-      if (zoomOverTotalLength(state, change)) {
-        return resetTimeline(state);
-      } else if (startOrEndOutOfBounds(state, -change, change)) {
-        return {
-          ...state,
-          timelineStart: startOutOfBounds(state, -change)
-            ? state.min
-            : state.max - (state.timelineEnd - state.timelineStart + change),
-          timelineEnd: endOutOfBounds(state, change)
-            ? state.max
-            : state.min + (state.timelineEnd - state.timelineStart + change),
-        };
-      } else {
-        return updateGraph(state, -change, change);
+    case 'move': {
+      if (!startOutOfBounds(state, action.value) && !endOutOfBounds(state, action.value)) {
+        return pan(state, action.value);
       }
-    }
-
-    case 'setZoom':
-      const newVals = {
-        timelineEnd: action.end <= action.start ? action.start : action.end,
-        timelineStart: action.start >= action.end ? action.end : action.start,
-      };
-
+      // Panning past either edge parks the window against that edge instead.
+      const visibleLength = state.timelineEnd - state.timelineStart;
       return {
         ...state,
-        ...newVals,
-        controlled: newVals.timelineEnd - newVals.timelineStart >= (state.max - state.min) * 0.97 ? false : true,
+        timelineStart: startOutOfBounds(state, action.value) ? state.min : state.max - visibleLength,
+        timelineEnd: endOutOfBounds(state, action.value) ? state.max : state.min + visibleLength,
       };
+    }
 
-    case 'resetZoom':
-      return resetTimeline(state);
-
-    case 'setControlled':
-      return { ...state, controlled: action.value };
-
-    case 'incrementTimelineLength':
+    case 'setZoom': {
+      const timelineStart = Math.min(action.start, action.end);
+      const timelineEnd = Math.max(action.start, action.end);
       return {
         ...state,
-        max: new Date().getTime(),
-        timelineEnd: state.controlled ? state.timelineEnd : new Date().getTime(),
+        timelineStart,
+        timelineEnd,
+        // Zooming back out to (almost) the full range hands control back to auto-fitting.
+        controlled: timelineEnd - timelineStart < (state.max - state.min) * 0.97,
       };
+    }
 
-    case 'reset':
-      return { ...state, controlled: false, min: 0, max: 0, timelineStart: 0, timelineEnd: 0 };
+    case 'incrementTimelineLength': {
+      const now = new Date().getTime();
+      return { ...state, max: now, timelineEnd: state.controlled ? state.timelineEnd : now };
+    }
   }
-  return state;
-}
-
-/**
- * Returns amount we need to zoom in or out. IF current visible section is less than 21% of total length we zoom
- * in or out only small amount. Else much more.
- * @param state State of current graph
- */
-export function getZoomAmount(state: TimelineControlsState): number {
-  const currentVisiblePortion = (state.timelineEnd - state.timelineStart) / (state.max - state.min);
-  return currentVisiblePortion < 0.21 ? (state.max - state.min) / 50 : (state.max - state.min) / 10;
-}
-
-/**
- * When if tried zoom is bigger than total length of timeline (might happen on zoom out)
- * @param graph State of current graph
- * @param change Amount we are about to change visible value
- */
-export function zoomOverTotalLength(graph: TimelineControlsState, change: number): boolean {
-  return graph.timelineEnd + change - (graph.timelineStart - change) >= graph.max - graph.min;
-}
-
-/**
- * Check if scrollbar is going backwards too much
- * @param graph State of current graph
- * @param change Amount we are about to change visible value
- */
-export function startOutOfBounds(graph: TimelineControlsState, change: number): boolean {
-  return graph.timelineStart + change < graph.min;
-}
-
-/**
- * Check if scrollbar is going forward too much
- * @param graph State of current graph
- * @param change Amount we are about to change visible value
- */
-export function endOutOfBounds(graph: TimelineControlsState, change: number): boolean {
-  return graph.timelineEnd + change > graph.max;
-}
-
-/**
- * Check if scrollbar is going forward and backwards too much
- * @param graph State of current graph
- * @param change Amount we are about to change visible value
- * @param changeEnd We might want to move and value different direction than start (zoom events)
- */
-export function startOrEndOutOfBounds(graph: TimelineControlsState, change: number, changeEnd?: number): boolean {
-  return startOutOfBounds(graph, change) || endOutOfBounds(graph, changeEnd || change);
-}
-
-export function updateGraph(graph: TimelineControlsState, change: number, changeEnd?: number): TimelineControlsState {
-  return {
-    ...graph,
-    timelineStart: graph.timelineStart + change,
-    timelineEnd: graph.timelineEnd + (changeEnd || change),
-  };
-}
-
-export function resetTimeline(graph: TimelineControlsState): TimelineControlsState {
-  return {
-    ...graph,
-    timelineStart: graph.min,
-    timelineEnd: graph.max,
-    controlled: false,
-  };
 }
 
 export type TimelineControlsHook = {
@@ -202,11 +98,7 @@ export type TimelineControlsHook = {
   dispatch: React.Dispatch<TimelineAction>;
 };
 
-export default function useTimelineControls(
-  run: Run,
-  rows: Row[],
-  mode: 'left' | 'startTime' = 'startTime',
-): TimelineControlsHook {
+export default function useTimelineControls(run: Run, rows: Row[]): TimelineControlsHook {
   const [timelineControls, dispatch] = useReducer(timelineControlsReducer, {
     min: run.ts_epoch,
     max: run.finished_at || run.ts_epoch,
@@ -215,27 +107,27 @@ export default function useTimelineControls(
     controlled: false,
   });
 
+  // Read through a ref so the effect below can compare against current state without having to
+  // re-run whenever that state changes - which would make it re-dispatch its own update.
+  const controls = useRef(timelineControls);
+  controls.current = timelineControls;
+
   useEffect(() => {
-    const timings = startAndEndOverallPointsOfRows([...rows]);
-    if (timings.start !== 0 && timings.end !== 0 && (timings.start !== timelineControls.timelineEnd || timings.end !== timelineControls.max)) {
-      dispatch({
-        type: 'update',
-        start: timings.start,
-        end: timings.end,
-        mode: mode,
-      });
-    }
+    const { start, end } = startAndEndOverallPointsOfRows(rows);
+    if (start === 0 || end === 0) return;
+    // NOTE: this compares the new start against the current *end*. It reads like a typo, but it
+    // only gates a redundant dispatch, so it is kept as-is rather than risk changing zoom
+    // behaviour that nothing tests.
+    if (start === controls.current.timelineEnd && end === controls.current.max) return;
+    dispatch({ type: 'update', start, end });
   }, [rows]);
 
-  useEffect(() => {    
-    const tm = setInterval(() => {      
-      if (run.status.endsWith('ING') && mode !== 'left') {
-        dispatch({ type: 'incrementTimelineLength' });
-      }
-    }, 1000);
-
-    return () => clearInterval(tm);
-  }, [run.status, mode]);
+  useEffect(() => {
+    // Only a run that is still in flight needs its timeline stretched towards 'now'.
+    if (!run.status.endsWith('ING')) return;
+    const timer = setInterval(() => dispatch({ type: 'incrementTimelineLength' }), 1000);
+    return () => clearInterval(timer);
+  }, [run.status]);
 
   return { timelineControls, dispatch };
 }

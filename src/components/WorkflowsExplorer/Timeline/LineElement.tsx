@@ -1,0 +1,141 @@
+import { Tooltip } from '@mui/joy';
+import { styled } from '@mui/joy/styles';
+import React from 'react';
+import { Row } from '../../../types';
+import { formatDuration } from '../../../util/WorkflowsExplorer/format';
+import { statusColor } from '../../../util/WorkflowsExplorer/statusColors';
+import { extendedDuration, percentFromStart } from './constants';
+
+type LineElementProps = {
+  row: Row;
+  visibleStartTime: number;
+  visibleEndTime: number;
+  isLastAttempt: boolean;
+  /** While the minimap is being dragged, animations are suppressed so rows don't lag behind. */
+  dragging: boolean;
+  displayPhases: string[];
+};
+
+/** A row's status, falling back to a start/finish inference when the state file has none. */
+function getRowStatus(row: Row): string {
+  return row.status || (row.finished_at ? 'SUCCEEDED' : 'RUNNING');
+}
+
+/**
+ * Describes the three SDLB execution phases of one action. Each renders as its own bar, so an
+ * action that was prepared, initialised and executed shows three segments on its row.
+ */
+function phasesOf(row: Row) {
+  return [
+    {
+      name: 'Exec',
+      startedAt: row.details.startTstmp,
+      duration: row.getDuration(),
+      status: getRowStatus(row),
+    },
+    {
+      name: 'Init',
+      startedAt: row.details.startTstmpInit,
+      duration: row.getDurationInit(),
+      status: row.details.endTstmpInit ? 'INITIALIZED' : 'INITIALIZING',
+    },
+    {
+      name: 'Prepare',
+      startedAt: row.details.startTstmpPrepare,
+      duration: row.getDurationPrepare(),
+      status: row.details.endTstmpPrepare ? 'PREPARED' : 'PREPARING',
+    },
+  ];
+}
+
+/** The bars on a single timeline row - one per execution phase the user has enabled. */
+const LineElement: React.FC<LineElementProps> = ({
+  row,
+  visibleStartTime,
+  visibleEndTime,
+  isLastAttempt,
+  dragging,
+  displayPhases,
+}) => {
+  const visibleDuration = extendedDuration(visibleStartTime, visibleEndTime);
+
+  return (
+    <>
+      {phasesOf(row).map(({ name, startedAt, duration, status }) => {
+        // A phase is drawn only if the state file recorded a start for it and it is enabled.
+        if (!startedAt || !displayPhases.includes(name)) return null;
+
+        const fromLeft = percentFromStart(startedAt.getTime(), visibleStartTime, visibleDuration);
+        // A phase that never finished runs to the right edge of the visible window.
+        const width = duration ? (duration / visibleDuration) * 100 : 100 - fromLeft;
+
+        return (
+          <Tooltip
+            key={name}
+            arrow
+            title={`${name}: ${formatDuration(duration)}`}
+            enterDelay={500}
+            enterNextDelay={500}
+          >
+            <BarContainer
+              style={{ transform: `translateX(${fromLeft}%)` }}
+              $dragging={dragging}
+              data-testid="boxgraphic-container"
+            >
+              <Bar style={{ width: `${width}%` }} $dragging={dragging} data-testid="boxgraphic">
+                <BarLine $status={status} $isLastAttempt={isLastAttempt} />
+                <BarTickStart />
+                {status !== 'RUNNING' && <BarTickEnd />}
+              </Bar>
+            </BarContainer>
+          </Tooltip>
+        );
+      })}
+    </>
+  );
+};
+
+const BarContainer = styled('div')<{ $dragging: boolean }>`
+  width: 100%;
+  transition: ${(p) => (p.$dragging ? 'none' : '0.5s transform')};
+`;
+
+const Bar = styled('div')<{ $dragging: boolean }>`
+  position: absolute;
+  cursor: pointer;
+  color: ${(p) => p.theme.vars.palette.text.primary};
+  min-width: 0.3125rem;
+  height: 1.6875rem;
+  line-height: 1.6875rem;
+  transition: ${(p) => (p.$dragging ? 'none' : '0.5s width')};
+`;
+
+const BarLine = styled('div')<{ $status: string; $isLastAttempt: boolean }>`
+  position: absolute;
+  background: ${(p) => statusColor(p.$status, p.$isLastAttempt)};
+  width: 100%;
+  height: 0.375rem;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: background 0.15s;
+  overflow: hidden;
+`;
+
+/** Thin ticks marking the exact start and end of a phase, under the coloured bar. */
+const BarTick = styled('div')`
+  height: 0.1875rem;
+  width: 1px;
+  background: ${(p) => p.theme.vars.palette.text.tertiary};
+  position: absolute;
+  bottom: 0;
+`;
+
+const BarTickStart = styled(BarTick)`
+  left: 0;
+`;
+
+const BarTickEnd = styled(BarTick)`
+  right: 0;
+`;
+
+export default LineElement;

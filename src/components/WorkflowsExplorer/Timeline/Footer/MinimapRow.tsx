@@ -1,47 +1,35 @@
+import { styled } from '@mui/joy/styles';
 import React from 'react';
-import styled from 'styled-components';
 import { TaskStatus } from '../../../../types';
-import { TimelineMetrics } from '../Timeline';
-import { statusColor } from '../TimelineRow/utils';
-
-//
-// Typedef
-//
+import { getStatusColor } from '../../../../util/WorkflowsExplorer/statusColors';
+import { extendedDuration, percentFromStart } from '../constants';
 
 type MinimapRowProps = {
   started: number;
   finished: number;
   status: TaskStatus;
-  timeline: TimelineMetrics;
+  startTime: number;
+  endTime: number;
 };
 
-//
-// Component
-//
-const MinimapRow: React.FC<MinimapRowProps> = ({ started, finished, status, timeline }) => {
-  const extendAmount = (timeline.endTime - timeline.startTime) * 0.01;
-  const visibleDuration = timeline.endTime - timeline.startTime + extendAmount;
-  const width = ((finished - started) / visibleDuration) * 100;
-  const left = ((started - timeline.startTime) / visibleDuration) * 100;
+/** One aggregated line in the minimap, standing in for a group of action rows. */
+const MinimapRow: React.FC<MinimapRowProps> = ({ started, finished, status, startTime, endTime }) => {
+  const duration = extendedDuration(startTime, endTime);
 
   return (
     <MinimapLine
       $status={status}
       style={{
-        width: width + '%',
-        left: left + '%',
+        width: `${((finished - started) / duration) * 100}%`,
+        left: `${percentFromStart(started, startTime, duration)}%`,
       }}
-    ></MinimapLine>
+    />
   );
 };
 
-//
-// Style
-//
-
-const MinimapLine = styled.div<{ $status: TaskStatus }>`
+const MinimapLine = styled('div')<{ $status: TaskStatus }>`
   position: relative;
-  background: ${(p) => statusColor(p.theme, false, p.$status, true)};
+  background: ${(p) => getStatusColor(p.$status)};
   height: 2px;
   min-height: 2px;
   margin-bottom: 1px;

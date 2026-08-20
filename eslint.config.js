@@ -45,6 +45,11 @@ export default tseslint.config(
       'no-var': 'off',
       'prefer-const': 'off',
 
+      /* ---- error: no current violations ---------------------------------------------- */
+      // was 6 hits (hook-calling helpers in the timeline's dead useTaskListSettings, plus a
+      // conditional useParams in TimelineRow); both are gone, so regressions now fail CI
+      'react-hooks/rules-of-hooks': 'error',
+
       /* ---- warn: pre-existing violations to clean up ---------------------------------- */
       // React Compiler rules, new in eslint-plugin-react-hooks v7
       'react-hooks/set-state-in-effect': 'warn',
@@ -54,10 +59,8 @@ export default tseslint.config(
       'react-hooks/use-memo': 'warn',
       // advisory, and the codebase has deliberate eslint-disable comments for it
       'react-hooks/exhaustive-deps': 'warn',
-      // 6 hits: helpers that call hooks, plus a conditional useParams in TimelineRow
-      'react-hooks/rules-of-hooks': 'warn',
-      '@typescript-eslint/no-wrapper-object-types': 'warn', // 13: String/Number used as types
-      '@typescript-eslint/no-non-null-asserted-optional-chain': 'warn', // 12
+      '@typescript-eslint/no-wrapper-object-types': 'warn', // 11: String/Number used as types
+      '@typescript-eslint/no-non-null-asserted-optional-chain': 'warn', // 9
       '@typescript-eslint/no-unused-expressions': 'warn', // 6
       '@typescript-eslint/no-empty-object-type': 'warn', // 3
       '@typescript-eslint/no-require-imports': 'warn', // 2
@@ -67,8 +70,8 @@ export default tseslint.config(
       'react/no-children-prop': 'warn', // 2
       'react/no-find-dom-node': 'warn', // 1
       'no-prototype-builtins': 'warn', // 3
-      'no-case-declarations': 'warn', // 3
-      'no-unsafe-optional-chaining': 'warn', // 3
+      'no-case-declarations': 'warn', // 2
+      'no-unsafe-optional-chaining': 'warn', // 2
       'no-empty': 'warn', // 2
       'no-useless-escape': 'warn', // 1
       'no-empty-pattern': 'warn', // 1
@@ -76,7 +79,8 @@ export default tseslint.config(
       'no-unused-private-class-members': 'warn', // 1
       'jsx-a11y/no-autofocus': 'warn', // 3
       'jsx-a11y/anchor-is-valid': 'warn', // 1
-      'jsx-a11y/no-static-element-interactions': 'warn', // 1
+      // 0 now, but only because jsx-a11y cannot see through styled() wrappers
+      'jsx-a11y/no-static-element-interactions': 'warn',
     },
   },
 );
