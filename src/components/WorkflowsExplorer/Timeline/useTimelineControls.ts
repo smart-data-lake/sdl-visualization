@@ -1,6 +1,6 @@
-import React, { useEffect, useReducer, useRef } from 'react';
+import React, { useEffect, useMemo, useReducer, useRef } from 'react';
 import { Row, Run } from '../../../types';
-import { startAndEndOverallPointsOfRows } from '../../../util/WorkflowsExplorer/row';
+import { startAndEndPointsOfPhases } from '../../../util/WorkflowsExplorer/phases';
 
 /**
  * State machine for the timeline's visible window. `min`/`max` bound the whole run; the
@@ -24,6 +24,8 @@ export type TimelineAction =
   | { type: 'update'; start: number; end: number }
   // Pan the visible window (negative moves backwards).
   | { type: 'move'; value: number }
+  // Re-fit to a new range and discard any zoom, so the window shows exactly that range.
+  | { type: 'refit'; start: number; end: number }
   // Set the visible window directly, from a minimap handle drag.
   | { type: 'setZoom'; start: number; end: number }
   // Extend the timeline to 'now' while a run is still in flight.
@@ -47,6 +49,8 @@ export function timelineControlsReducer(
 ): TimelineControlsState {
   switch (action.type) {
     case 'update': {
+      // Nothing to do if the bounds already match; returning the same state skips a re-render.
+      if (state.min === action.start && state.max === action.end) return state;
       if (state.controlled) {
         // Keep the user's zoom, only clamping it into the new overall range.
         const end = state.max > action.end ? state.max : action.end;
@@ -60,6 +64,15 @@ export function timelineControlsReducer(
       }
       return { ...state, min: action.start, max: action.end, timelineStart: action.start, timelineEnd: action.end };
     }
+
+    case 'refit':
+      return {
+        min: action.start,
+        max: action.end,
+        timelineStart: action.start,
+        timelineEnd: action.end,
+        controlled: false,
+      };
 
     case 'move': {
       if (!startOutOfBounds(state, action.value) && !endOutOfBounds(state, action.value)) {
@@ -98,29 +111,42 @@ export type TimelineControlsHook = {
   dispatch: React.Dispatch<TimelineAction>;
 };
 
-export default function useTimelineControls(run: Run, rows: Row[]): TimelineControlsHook {
-  const [timelineControls, dispatch] = useReducer(timelineControlsReducer, {
-    min: run.ts_epoch,
-    max: run.finished_at || run.ts_epoch,
-    timelineStart: run.ts_epoch,
-    timelineEnd: run.finished_at || run.ts_epoch,
-    controlled: false,
+export default function useTimelineControls(
+  run: Run,
+  rows: Row[],
+  displayPhases: string[],
+): TimelineControlsHook {
+  // Seed straight from the phases on screen, so the first render is already zoomed to the range
+  // that has bars rather than briefly showing the run's full span.
+  const [timelineControls, dispatch] = useReducer(timelineControlsReducer, undefined, () => {
+    const { start, end } = startAndEndPointsOfPhases(rows, displayPhases);
+    const min = start || run.ts_epoch;
+    const max = end || run.finished_at || run.ts_epoch;
+    return { min, max, timelineStart: min, timelineEnd: max, controlled: false };
   });
 
-  // Read through a ref so the effect below can compare against current state without having to
-  // re-run whenever that state changes - which would make it re-dispatch its own update.
-  const controls = useRef(timelineControls);
-  controls.current = timelineControls;
+  // Compare the phase selection by content: the filter menu hands down a fresh array on mount
+  // even when nothing was toggled.
+  const phaseKey = useMemo(() => [...displayPhases].sort().join(','), [displayPhases]);
+  const fittedPhases = useRef(phaseKey);
 
   useEffect(() => {
-    const { start, end } = startAndEndOverallPointsOfRows(rows);
+    const { start, end } = startAndEndPointsOfPhases(rows, displayPhases);
     if (start === 0 || end === 0) return;
-    // NOTE: this compares the new start against the current *end*. It reads like a typo, but it
-    // only gates a redundant dispatch, so it is kept as-is rather than risk changing zoom
-    // behaviour that nothing tests.
-    if (start === controls.current.timelineEnd && end === controls.current.max) return;
-    dispatch({ type: 'update', start, end });
-  }, [rows]);
+
+    if (fittedPhases.current !== phaseKey) {
+      // The phase selection decides which part of the run holds bars at all, so zoom to the new
+      // non-empty range rather than leave empty space at one end.
+      fittedPhases.current = phaseKey;
+      dispatch({ type: 'refit', start, end });
+    } else {
+      // Only the rows changed (a search or attempt filter): re-fit the bounds but leave any zoom
+      // the user has set in place.
+      dispatch({ type: 'update', start, end });
+    }
+    // displayPhases is covered by phaseKey, which compares it by content.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, phaseKey]);
 
   useEffect(() => {
     // Only a run that is still in flight needs its timeline stretched towards 'now'.
