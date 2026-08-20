@@ -53,6 +53,7 @@ yarn-error.log*
 
 .idea
 *.iml
+.claude
 
 # typescript
 *.tsbuildinfo
