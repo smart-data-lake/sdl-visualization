@@ -73,7 +73,7 @@ test.describe('workflows explorer', () => {
     await expect(page.getByRole('button', { name: /switch to (horizontal|vertical) layout/ })).toBeVisible();
   });
 
-  test('the run graph colours the node border by the state of the action', async ({ page }) => {
+  test('the run graph shows the state of each action on its node', async ({ page }) => {
     await page.goto(`/#/workflows/${WORKFLOW}/24.1/graph`);
     await expect(page.locator('.react-flow__node').first()).toBeVisible();
 
@@ -86,6 +86,11 @@ test.describe('workflows explorer', () => {
     await expect(node('download-deduplicate-departures')).toHaveCSS('border-color', 'rgb(235, 52, 40)'); // FAILED
     await expect(node('join-departures-airports')).toHaveCSS('border-color', 'rgb(0, 187, 206)'); // CANCELLED
     await expect(node('compute-distances')).toHaveCSS('border-color', 'rgb(0, 187, 206)'); // CANCELLED
+
+    // the state is also named by an icon, so that it does not rely on the border colour alone
+    await expect(node('download-airports').getByTestId('CheckCircleOutlineIcon')).toBeVisible();
+    await expect(node('download-deduplicate-departures').getByTestId('HighlightOffIcon')).toBeVisible();
+    await expect(node('join-departures-airports').getByTestId('BlockOutlinedIcon')).toBeVisible();
   });
 
   test('clicking an action in the run graph opens its details', async ({ page }) => {
