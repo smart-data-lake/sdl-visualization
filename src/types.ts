@@ -19,7 +19,6 @@ export interface RunInfo {
 }   
 
 
-export type SortType = 'start time asc' | 'start time desc' | 'duration asc' | 'duration desc'
 
 export class Row implements MetaDataBaseObject {
     flow_id: string;

@@ -70,25 +70,24 @@ const LineElement: React.FC<LineElementProps> = ({
         const width = duration ? (duration / visibleDuration) * 100 : 100 - fromLeft;
 
         return (
-          <Tooltip
+          <BarContainer
             key={name}
-            arrow
-            title={`${name}: ${formatDuration(duration)}`}
-            enterDelay={500}
-            enterNextDelay={500}
+            style={{ transform: `translateX(${fromLeft}%)` }}
+            $dragging={dragging}
+            data-testid="boxgraphic-container"
           >
-            <BarContainer
-              style={{ transform: `translateX(${fromLeft}%)` }}
-              $dragging={dragging}
-              data-testid="boxgraphic-container"
-            >
+            {/*
+             * The tooltip anchors to the bar itself, not to BarContainer: the container spans the
+             * full row width, so anchoring there pushed the tooltip far to the right of the bar.
+             */}
+            <Tooltip arrow title={`${name}: ${formatDuration(duration)}`} enterDelay={500} enterNextDelay={500}>
               <Bar style={{ width: `${width}%` }} $dragging={dragging} data-testid="boxgraphic">
                 <BarLine $status={status} $isLastAttempt={isLastAttempt} />
                 <BarTickStart />
                 {status !== 'RUNNING' && <BarTickEnd />}
               </Bar>
-            </BarContainer>
-          </Tooltip>
+            </Tooltip>
+          </BarContainer>
         );
       })}
     </>
