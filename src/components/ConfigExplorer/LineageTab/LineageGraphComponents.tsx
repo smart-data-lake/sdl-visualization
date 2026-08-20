@@ -146,7 +146,8 @@ export const CustomDataNode = ( {data} ) => {
   }, [initStateBwd, initStateFwd]);
 
   const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff";
-  // in a run attempt the border tells the state the action ended up in, e.g. red for FAILED
+  // in a run attempt the border tells the state the action ended up in, e.g. red for FAILED. The
+  // status icon names that state, so it does not rely on the colour alone
   const borderColor = highlighted ? highLightedEdgeColor :
                       status ? getStatusColor(status) :
                       defaultNodeBorderColor;
@@ -162,6 +163,8 @@ export const CustomDataNode = ( {data} ) => {
   // the runs of an element are only shown in the config explorer, the run view shows a single run
   const { data: runs} = useFetchWorkflowRunsByElement(runContext ? "" : nodeTypeName, label);
   const lastRun = runs?.at(-1); // this only shows the LAST run, but the times could be different for each object
+  // the state of the node within a run attempt, falling back to the state of the element's last run
+  const titleStatus = status !== undefined ? status : lastRun?.status;
 
   // handlers
   const urlParams = useParams();
@@ -235,7 +238,8 @@ export const CustomDataNode = ( {data} ) => {
         {/* the node attributes come from the configuration, which the run view does not have */}
         {!runContext && nodeType === NodeType.ActionNode && selectedNodeAttributes.includes("action-executionMode") ? getExecutionMode(executionMode?.type) : null }
         {!runContext && nodeType === NodeType.DataNode  && selectedNodeAttributes.includes("data-partitionState") ? getPartitionStatus(isPartioned) : null}
-        {lastRun?.status !== undefined  && (getIcon(lastRun?.status, '0px', {scale: '100%'}))}
+        {/* the state within the run attempt, or the state of the element's last run in the config explorer */}
+        {titleStatus !== undefined  && (getIcon(titleStatus, '0px', {scale: '100%'}))}
 
         {/* <div style={{justifyContent: 'flex-end'}}>
           {lastRun.status !== undefined  && (getIcon(lastRun.status, '0px', {display: 'block'}))}
