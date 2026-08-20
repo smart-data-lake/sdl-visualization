@@ -29,9 +29,10 @@ const TimelineRow: React.FC<TimelineRowProps> = ({
 	dragging,
 	displayPhases,
 }) => {
+	const {tab, stepName} = useParams();
+
 	if (!item) return null;
 	const Element = sticky ? StickyStyledRow : StyledRow;
-    const {tab, stepName} = useParams();
 	const link = tab ? (stepName ? `../${item.step_name}` : item.step_name) : `timeline/${item.step_name}`;
 
 	return (
