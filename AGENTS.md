@@ -89,3 +89,7 @@ MUI **Joy** (`@mui/joy`) is the primary component library with `CssVarsProvider`
 `src/archiv/` is dead/legacy code kept for reference — don't build on it.
 
 Vite needs Node polyfills (buffer/process, `rollup-plugin-polyfill-node`, `dynamicRequireTargets` for the hocon parser) because the HOCON parser is a Node library running in the browser; changes to `vite.config.ts` around this are load-bearing.
+
+### documentation
+
+Write README.md in the corresponding folder.
