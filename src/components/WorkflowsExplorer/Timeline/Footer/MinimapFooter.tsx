@@ -1,7 +1,8 @@
 import { styled } from '@mui/joy/styles';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Row, TaskStatus } from '../../../../types';
-import { aggregateTaskStatus, startAndEndExecPointsOfRows } from '../../../../util/WorkflowsExplorer/row';
+import { startAndEndPointsOfPhases } from '../../../../util/WorkflowsExplorer/phases';
+import { aggregateTaskStatus } from '../../../../util/WorkflowsExplorer/row';
 import { MINIMAP_GROUPS, TimelineMetrics } from '../constants';
 import MinimapActiveSection from './MinimapActiveSection';
 import MinimapRow from './MinimapRow';
@@ -9,6 +10,7 @@ import MinimapRow from './MinimapRow';
 export type MinimapFooterProps = {
   timeline: TimelineMetrics;
   rows: Row[];
+  displayPhases: string[];
   /** Pan the visible window by a number of milliseconds. */
   onMove: (change: number) => void;
   /** Move one edge of the visible window to an absolute timestamp. */
@@ -24,6 +26,7 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
   onMove,
   onHandleMove,
   rows,
+  displayPhases,
   onDraggingStateChange,
 }) => {
   const container = useRef<HTMLDivElement>(null);
@@ -74,9 +77,9 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
       groups.push(rows.slice(perGroup * i, perGroup * i + perGroup));
     }
     return groups
-      .map((group) => ({ status: aggregateTaskStatus(group), ...startAndEndExecPointsOfRows(group) }))
+      .map((group) => ({ status: aggregateTaskStatus(group), ...startAndEndPointsOfPhases(group, displayPhases) }))
       .filter((line) => line.start !== 0 && line.end !== 0);
-  }, [rows]);
+  }, [rows, displayPhases]);
 
   useEffect(() => {
     onDraggingStateChange(isDragging);

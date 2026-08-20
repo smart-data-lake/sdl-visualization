@@ -38,6 +38,9 @@ The component was later simplified and brought in line with the rest of the app:
 - `TimelineRow.tsx` - one action: its label column and its bars.
 - `TaskListLabel.tsx` - the left-hand column: action name and summed duration.
 - `LineElement.tsx` - the bars themselves, one per enabled phase.
-- `useTimelineControls.ts` - reducer for panning and zooming the window.
+- `useTimelineControls.ts` - reducer for panning and zooming the window. The window is fitted to the range the
+  *selected phases* cover (`startAndEndPointsOfPhases`), not the run's overall span, so showing only Exec does not
+  leave the prepare/init period as empty space on the left. Changing the phase filter re-fits and drops any manual
+  zoom; changing the row filters re-fits but keeps it.
 - `constants.ts` - shared geometry (row height, label column width, the time-window helpers).
 - `Footer/` - the minimap: aggregated lines, the draggable viewport rectangle and its handles.

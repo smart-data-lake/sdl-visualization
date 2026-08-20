@@ -20,7 +20,7 @@ const listStyle = { transition: 'height 0.25s' };
  * the visible time window.
  */
 const Timeline: React.FC<TimelineProps> = ({ run, rows, displayPhases }) => {
-  const { timelineControls, dispatch } = useTimelineControls(run, rows);
+  const { timelineControls, dispatch } = useTimelineControls(run, rows, displayPhases);
   const [dragging, setDragging] = useState(false);
 
   const timeline: TimelineMetrics = useMemo(
@@ -84,6 +84,7 @@ const Timeline: React.FC<TimelineProps> = ({ run, rows, displayPhases }) => {
                 <MinimapFooter
                   timeline={timeline}
                   rows={rows}
+                  displayPhases={displayPhases}
                   onMove={handleMove}
                   onHandleMove={handleEdgeMove}
                   onDraggingStateChange={setDragging}

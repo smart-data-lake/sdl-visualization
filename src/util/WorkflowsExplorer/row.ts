@@ -1,17 +1,5 @@
 import { Row, TaskStatus } from '../../types';
 
-/**
- * Find smallest and biggest time value from rows
- */
-export const startAndEndExecPointsOfRows = (rows: Row[]): { start: number; end: number } => {
-  const start = Math.min(...(rows.map(row => row.details.startTstmp?.getTime()).filter(x => x)));
-  const end =  Math.max(...(rows.map(row => row.details.endTstmp?.getTime() || row.finished_at.getTime())));
-  return {
-    start: (isFinite(start) ? start : 0),
-    end: (isFinite(end) ? end : 0),
-  };
-};
-
 export const startAndEndOverallPointsOfRows = (rows: Row[]): { start: number; end: number } => {
   const start = Math.min(...(rows.map(row => row.started_at?.getTime())));
   const end =  Math.max(...(rows.map(row => row.finished_at?.getTime())));

@@ -3,6 +3,7 @@ import { styled } from '@mui/joy/styles';
 import React from 'react';
 import { Row } from '../../../types';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
+import { phasesOf } from '../../../util/WorkflowsExplorer/phases';
 import { statusColor } from '../../../util/WorkflowsExplorer/statusColors';
 import { extendedDuration, percentFromStart } from './constants';
 
@@ -15,38 +16,6 @@ type LineElementProps = {
   dragging: boolean;
   displayPhases: string[];
 };
-
-/** A row's status, falling back to a start/finish inference when the state file has none. */
-function getRowStatus(row: Row): string {
-  return row.status || (row.finished_at ? 'SUCCEEDED' : 'RUNNING');
-}
-
-/**
- * Describes the three SDLB execution phases of one action. Each renders as its own bar, so an
- * action that was prepared, initialised and executed shows three segments on its row.
- */
-function phasesOf(row: Row) {
-  return [
-    {
-      name: 'Exec',
-      startedAt: row.details.startTstmp,
-      duration: row.getDuration(),
-      status: getRowStatus(row),
-    },
-    {
-      name: 'Init',
-      startedAt: row.details.startTstmpInit,
-      duration: row.getDurationInit(),
-      status: row.details.endTstmpInit ? 'INITIALIZED' : 'INITIALIZING',
-    },
-    {
-      name: 'Prepare',
-      startedAt: row.details.startTstmpPrepare,
-      duration: row.getDurationPrepare(),
-      status: row.details.endTstmpPrepare ? 'PREPARED' : 'PREPARING',
-    },
-  ];
-}
 
 /** The bars on a single timeline row - one per execution phase the user has enabled. */
 const LineElement: React.FC<LineElementProps> = ({
