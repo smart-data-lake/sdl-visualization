@@ -69,6 +69,9 @@ export interface flowProps {
     elementName: string;
     elementType: string; // we have either dataObjects or actions now
     configData?: ConfigData;
+    // a ready-made graph to show as a whole, instead of the neighbourhood of elementName in one of
+    // configData's graphs. Used by the run view, which builds its graph from the state file.
+    graph?: DAGraph;
     runContext?: boolean;
 }
 
@@ -111,6 +114,7 @@ export interface ReactFlowNodeProps {
     graphNodeProps: graphNodeProps,
     isGraphFullyExpanded: boolean,
     graphView: GraphView,
+    runContext: boolean, // rendered inside a run attempt, i.e. without config data behind the nodes
     highlighted: boolean,
     numFwdActiveEdges: number,
     numBwdActiveEdges: number,
@@ -144,6 +148,14 @@ export function getGraphFromConfig(configData: any, graphView: GraphView): DAGra
     return graph;
 }
 
+/*
+    The graph to render: either the one passed in through the props (run view), or the graph of the
+    selected view built from the config (config explorer).
+*/
+export function getGraph(props: flowProps, graphView: GraphView): DAGraph {
+    return props.graph ? props.graph : getGraphFromConfig(props.configData, graphView);
+}
+
 
 export function createReactFlowNodes(selectedNodes: GraphNode[],
     layoutDirection: LayoutDirection,
@@ -154,31 +166,35 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     expandNodeFunc: (id: string, isExpanded: boolean, direction: ExpandDirection, graphView: GraphView, layout: LayoutDirection) => void,
     props: flowProps
 ): ReactFlowNode[] {
-    const dataObjectsAndActions = graphView === 'action' ? props.configData?.actionGraph! :
-        graphView === 'data' ? props.configData?.dataGraph! :
-            props.configData?.fullGraph!;
+    const dataObjectsAndActions = getGraph(props, graphView);
     const isHorizontal = layoutDirection === 'LR';
 
-    const centerNode = dataObjectsAndActions.getNodeById(props.elementName)!;
+    // there is no center node if the whole graph is shown (run view), so everything derived from it
+    // stays empty and the nodes are rendered without center node highlighting and expand handles
+    const centerNode = dataObjectsAndActions.getNodeById(props.elementName);
     const targetPos = isHorizontal ? Position.Left : Position.Top;
     const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
     const sinkNodes = dataObjectsAndActions.getSinkNodes();
     const sourceNodes = dataObjectsAndActions.getSourceNodes();
-    const [fwdNodes, fwdEdges] = dataObjectsAndActions.getDirectDescendants(centerNode, "all") as [GraphNode[], GraphEdge[]];
-    const [bwdNodes, bwdEdges] = dataObjectsAndActions.getDirectAncestors(centerNode, "all") as [GraphNode[], GraphEdge[]];
-    const [centerNodeDirectFwdNodes,] = dataObjectsAndActions.getOutElems(centerNode.id);
-    const [centerNodeDirectBwdNodes,] = dataObjectsAndActions.getInElems(centerNode.id);
+    const [fwdNodes, fwdEdges] = centerNode ? dataObjectsAndActions.getDirectDescendants(centerNode, "all") as [GraphNode[], GraphEdge[]] : [[], []];
+    const [bwdNodes, bwdEdges] = centerNode ? dataObjectsAndActions.getDirectAncestors(centerNode, "all") as [GraphNode[], GraphEdge[]] : [[], []];
+    const [centerNodeDirectFwdNodes,] = centerNode ? dataObjectsAndActions.getOutElems(centerNode.id) : [[], []];
+    const [centerNodeDirectBwdNodes,] = centerNode ? dataObjectsAndActions.getInElems(centerNode.id) : [[], []];
     const [reachableNodes, reachableEdges] = [[...fwdNodes, ...bwdNodes], [...fwdEdges, ...bwdEdges]];
     const reachableSubGraph = new PartialDataObjectsAndActions(reachableNodes, reachableEdges, layoutDirection);
 
-    // If we need more information to be displayed on the node, 
+    // without a center node the reachable subgraph is empty, so the edge counts are taken from the
+    // graph itself - all of its nodes are shown anyway
+    const neighbourGraph = centerNode ? reachableSubGraph : dataObjectsAndActions;
+
+    // If we need more information to be displayed on the node,
     // just add more fields to the flowProps interface and access it in the custom node component.
     // The additional props can be passed in ElementDetails where the LineageTab is opened.
     var result: ReactFlowNode[] = [];
     selectedNodes.forEach((node) => {
         const nodeType = node.nodeType;
-        const [currNodeDirectFwdNodes,] = reachableSubGraph.getOutElems(node.id); // instead of dataObjectsAndActions
-        const [currNodeDirectBwdNodes,] = reachableSubGraph.getInElems(node.id);
+        const [currNodeDirectFwdNodes,] = neighbourGraph.getOutElems(node.id); // instead of dataObjectsAndActions
+        const [currNodeDirectBwdNodes,] = neighbourGraph.getInElems(node.id);
 
         const isCenterNode = node.isCenterNode;
         const isSink = sinkNodes.includes(node);
@@ -189,7 +205,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
         const isCenterNodeAncestor = bwdNodes.includes(node);
 
         const data: ReactFlowNodeProps = {
-            props: props.configData![props.elementType][props.elementName],
+            props: props.configData?.[props.elementType]?.[props.elementName],
             label: node.id,
             nodeType: nodeType,
             targetPosition: targetPos,
@@ -197,6 +213,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             isGraphFullyExpanded: isGraphFullyExpanded,
             layoutDirection: layoutDirection,
             graphView: graphView,
+            runContext: props.runContext === true,
             expandNodeFunc: expandNodeFunc,
             graphNodeProps: {
                 isCenterNode: isCenterNode,
@@ -242,9 +259,7 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
     props: flowProps,
     graphView: GraphView,
     selectedEdgeId: string | undefined): ReactFlowEdge[] {
-    const dataObjectsAndActions = graphView === 'action' ? props.configData?.actionGraph! :
-        graphView === 'data' ? props.configData?.dataGraph! :
-            props.configData?.fullGraph!;
+    const dataObjectsAndActions = getGraph(props, graphView);
     const edges = dataObjectsAndActions.edges?.filter(edge => selectedEdges.includes(edge));
     const edgeColor = selectedEdgeId ? EDGE_COLOR_HIGHLIGHTED : EDGE_COLOR_DEFAULT;
 
@@ -302,11 +317,29 @@ function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: Gra
     }
 }
 
+/*
+    Renders the whole graph, without a center node and without expand/collapse handles on the nodes.
+*/
+function prepareGraphComplete(rfi: ReactFlowInstance, doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection): [ReactFlowNode[], ReactFlowEdge[]] {
+    // no node is the center node, otherwise a previously selected one would still be colored
+    doa.nodes.forEach((node) => node.setIsCenterNode(false));
+
+    const nodes = createReactFlowNodes(doa.nodes, layout, true, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props);
+    const edges = createReactFlowEdges(doa.edges, props, graphView, undefined);
+    return [nodes, edges];
+}
+
 export function prepareAndRenderGraph(rfi: ReactFlowInstance, lineageState: lineageGraphState): preparedGraph {
     const { graphView, props, layout, isExpanded } = lineageState;
 
     var doa: DAGraph; // data objects and actions
     var navigateTo: string | undefined;
+
+    // a graph given through the props is shown as a whole, there is no element to center it on
+    if (props.graph) {
+        const [nodes, edges] = prepareGraphComplete(rfi, props.graph, graphView, props, layout);
+        return { nodes, edges };
+    }
 
     // get the right central node for the graph
     if (graphView === 'full') {
@@ -355,7 +388,7 @@ function expandNodeFunc(rfi: ReactFlowInstance, props: flowProps,
     layoutDirection: LayoutDirection) {
 
     // if expanded, show the direct out neighbours of the node with the id; if unexpanded, hide all descendants
-    const graph = getGraphFromConfig(props.configData, graphView);
+    const graph = getGraph(props, graphView);
     const isFwd = expandDirection === 'forward';
     const currNode = graph.getNodeById(id)!;
     const currRfNode = rfi.getNode(currNode?.id!)!;
@@ -1100,8 +1133,9 @@ export function restoreGroupSettingsBySubgroup(rfi: ReactFlowInstance, lineageSt
     groupingState.subgroups = undefined;
     groupingState.subgroupsRf = undefined;
 
-    const graph: DAGraph = getGraphFromConfig(props.configData, graphView);
-    const [nodes, edges] = prepareGraphDirect(rfi, graph, graphView, props, layout, isExpanded);
+    const graph: DAGraph = getGraph(props, graphView);
+    const [nodes, edges] = props.graph ? prepareGraphComplete(rfi, graph, graphView, props, layout)
+                                       : prepareGraphDirect(rfi, graph, graphView, props, layout, isExpanded);
     rfi.setNodes(nodes);
     rfi.setEdges(edges);
 }

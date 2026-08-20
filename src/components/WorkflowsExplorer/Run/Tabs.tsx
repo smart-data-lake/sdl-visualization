@@ -13,10 +13,10 @@ import ContentDrawer from './ContentDrawer';
 
 import useLocalStorageState from '../../../hooks/useLocalStorageState';
 import { useWorkspace } from '../../../hooks/useWorkspace';
-import { PartialDataObjectsAndActions } from "../../../util/ConfigExplorer/Graphs";
+import { flowProps } from "../../../util/ConfigExplorer/LineageTabUtils";
 import { onlyUnique } from '../../../util/helpers';
 import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
-import LineageTab from "../../ConfigExplorer/LineageTab/LineageTab";
+import LineageTabSep from "../../ConfigExplorer/LineageTab/LineageTabWithSeparateView";
 import { filterByGroup, FilterParams, filterSearchText } from '../WorkflowHistory';
 import { TableView } from './TableView';
 import { TimelineView } from './TimelineView';
@@ -69,7 +69,9 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
 		setFilterParams(prev => ({...prev, ...partialFilter}))
 	}
 
-    const graph: PartialDataObjectsAndActions = useMemo(() => {
+    // the graph tab shows the actions of the attempt and how they are connected through their
+    // data objects, i.e. the action graph of the lineage the state file describes
+    const graphProps: flowProps = useMemo(() => {
         let data: { action: string, inputIds: string[], outputIds: string[] }[] = [];
         attempt.timelineRows.forEach((row: Row) => {
             data.push({
@@ -78,7 +80,7 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
                 outputIds: row.details.outputIds || []
             })
         })
-        return new Lineage(data).graph
+        return {elementName: '', elementType: '', graph: new Lineage(data).graph.getActionGraph(), runContext: true}
     }, [attempt]);
 
     return (<>
@@ -98,7 +100,7 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
                     <TableView rows={selData} stepName={params.stepName} setToolbarElements={setAdditionalToolbarElements} />
                 </TabPanel>
                 <TabPanel className='content-panel' value='graph' sx={{height: '100%', width: '100%', overflow: 'hidden', paddingTop: '0'}}>
-                    <LineageTab elementName="" elementType="" graph={graph} key={params.toString()}/>
+                    <LineageTabSep graphProps={graphProps}/>
                 </TabPanel>
             </>}
         </Sheet>

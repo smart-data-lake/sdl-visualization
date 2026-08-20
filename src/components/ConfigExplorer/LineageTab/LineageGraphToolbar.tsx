@@ -21,7 +21,7 @@ import Draggable from 'react-draggable';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { nodeAttributes, useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
 import { dagreLayoutRf } from '../../../util/ConfigExplorer/Graphs';
-import { computeNodePositionFromParent, computeParentNodePositionFromArray, getGraphFromConfig, getNonParentNodesFromArray, getParentNodesFromArray, groupByFeed, groupBySubstring, prioritizeParentNodes, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { computeNodePositionFromParent, computeParentNodePositionFromArray, flowProps, getGraphFromConfig, getNonParentNodesFromArray, getParentNodesFromArray, groupByFeed, groupBySubstring, prioritizeParentNodes, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { nodeHeight, nodeWidth } from './LineageTabWithSeparateView';
 
 /*
@@ -222,9 +222,8 @@ function RecomputeLayoutButton() {
     )
 }
 
-function GroupingButton() {
+function GroupingButton({props: lineageTabProps}: {props: flowProps}) {
     const rfi = useReactFlow();
-    const { lineageTabProps } = useLineagePanel();
     const { graphView, layout, isExpanded } = useLineageGraph();
     const configData = lineageTabProps.configData;
 
@@ -468,9 +467,11 @@ export const NodeSearchButton = () => {
     );
 };
 
-export default function LineageGraphToolbar() {
-    const { lineageTabProps } = useLineagePanel();
-    const isPropsConfigDefined = lineageTabProps.configData !== undefined;
+export default function LineageGraphToolbar({props}: {props: flowProps}) {
+    const isPropsConfigDefined = props.configData !== undefined;
+    // The run view shows one given graph as a whole, so everything that selects a graph view, a
+    // center node or config attributes of the nodes has nothing to act on there.
+    const showConfigGraphOptions = props.graph === undefined;
     // avoid DOM warning for Draggable, see https://github.com/react-grid-layout/react-draggable/blob/v4.4.2/lib/DraggableCore.js#L159-L171
     const nodeRef = useRef(null);
 
@@ -483,24 +484,26 @@ export default function LineageGraphToolbar() {
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <NodeSearchButton/>
                 </ToggleButtonGroup>
-                <Divider orientation="vertical" />
-                <ToggleButtonGroup variant="plain" spacing={0.1}>
-                    {isPropsConfigDefined && <GraphExpansionButton />}
-                    <GraphViewSelector />
-                    <GroupingButton />
-                    <NodeAttributeSelector />
-                </ToggleButtonGroup>
+                {showConfigGraphOptions && <>
+                    <Divider orientation="vertical" />
+                    <ToggleButtonGroup variant="plain" spacing={0.1}>
+                        {isPropsConfigDefined && <GraphExpansionButton />}
+                        <GraphViewSelector />
+                        <GroupingButton props={props} />
+                        <NodeAttributeSelector />
+                    </ToggleButtonGroup>
+                </>}
                 <Divider orientation="vertical" />
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <ShowAllButton />
-                    <CenterFocusButton />
+                    {showConfigGraphOptions && <CenterFocusButton />}
                     <RecomputeLayoutButton />
                     <LayoutButton />
                 </ToggleButtonGroup>
                 <Divider orientation="vertical" />
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <DownloadLineageButton />
-                    <CloseLineageButton />
+                    {showConfigGraphOptions && <CloseLineageButton />}
                 </ToggleButtonGroup>
             </Box>
         </Draggable>
