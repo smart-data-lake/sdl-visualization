@@ -63,8 +63,10 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
         return timelineRun;
     }, [data, filterParams]);
 
+	// merge into the previous value: the filter menus report their initial selection on mount, so two
+	// of them updating in the same render must not overwrite each other
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {
-		setFilterParams({...filterParams, ...partialFilter})
+		setFilterParams(prev => ({...prev, ...partialFilter}))
 	}
 
     const graph: PartialDataObjectsAndActions = useMemo(() => {
@@ -83,7 +85,7 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
         <Sheet sx={{ flex: 1, display: 'flex', flexDirection: 'column', mt: '1rem', mb: '1rem', width: '100%', height: '100%', overflow: 'hidden' }}>
             {tab !== "graph" && 
                 <ToolBar data={data} filterParams={filterParams} updateFilterParams={updateFilterParams} searchPlaceholder="Search by action name"
-                    stateFilters={checkFiltersAvailability(data, stateFilters('status'))} attemptFilters={attemptFilterDefs}                
+                    stateFilters={checkFiltersAvailability(data, stateFilters('status'))} attemptFilters={attemptFilterDefs} storageKeyPrefix="run"
                     leftElements={additionalLeftToolbarElements} rightElements={additionalRightToolbarElements}
                 />
             }

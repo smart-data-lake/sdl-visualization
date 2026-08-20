@@ -73,4 +73,27 @@ test.describe('workflows explorer', () => {
     await expect(page.getByRole('row', { name: /^compute-distances / })).toBeVisible();
     await expect(page.getByRole('row', { name: /^download-airports / })).toBeHidden();
   });
+
+  // issue #115: refreshing remounts the page, which used to reset the filters to their default
+  // while the menus still showed the selection
+  test('the status filter stays applied when the data is refreshed', async ({ page }) => {
+    await page.goto(`/#/workflows/${WORKFLOW}/24.1/table`);
+    await expect(page.getByRole('row', { name: /^compute-distances / })).toBeVisible();
+
+    // compute-distances and join-departures-airports were cancelled in attempt 24.1
+    await page.getByRole('button', { name: 'Filter Status' }).click();
+    await page.getByRole('menuitem').filter({ hasText: 'Cancelled' }).getByRole('checkbox').click();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('row', { name: /^compute-distances / })).toBeHidden();
+
+    await page.getByTestId('RefreshOutlinedIcon').click();
+
+    await expect(page.getByRole('row', { name: /^download-airports / })).toBeVisible();
+    await expect(page.getByRole('row', { name: /^compute-distances / })).toBeHidden();
+    await expect(page.getByRole('row', { name: /^join-departures-airports / })).toBeHidden();
+    // and the menu still shows what is applied
+    await page.getByRole('button', { name: 'Filter Status' }).click();
+    await expect(page.getByRole('menuitem').filter({ hasText: 'Cancelled' }).getByRole('checkbox')).not.toBeChecked();
+    await expect(page.getByRole('menuitem').filter({ hasText: 'Succeeded' }).getByRole('checkbox')).toBeChecked();
+  });
 });

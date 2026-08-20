@@ -141,8 +141,10 @@ export default function WorkflowHistory() {
 		}
     }, [data, filterParams])
 
+	// merge into the previous value: the filter menus report their initial selection on mount, so two
+	// of them updating in the same render must not overwrite each other
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {
-		setFilterParams({...filterParams, ...partialFilter})
+		setFilterParams(prev => ({...prev, ...partialFilter}))
 	}
 
 	function refreshData() {
@@ -182,6 +184,7 @@ export default function WorkflowHistory() {
 					searchPlaceholder={'Search by Run ID'}
 					stateFilters={checkFiltersAvailability(data, stateFilters('status'))}
 					filterParams={filterParams}
+					storageKeyPrefix="workflowHistory"
 					datetimePicker={true}
                     leftElements={additionalLeftToolbarElements}
                     rightElements={additionalRightToolbarElements}/>
