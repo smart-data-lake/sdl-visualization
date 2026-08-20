@@ -79,15 +79,21 @@ function LineageTabCore() {
   const rfContainer = useRef<HTMLDivElement>(); // container holding SVG needs manual height resizing to fill 100%
 
   // defines the conditions to (re-)render the lineage graph
-  const [nodes, edges] = useMemo(() => {
+  const {nodes, edges, navigateTo} = useMemo(() => {
     // save current zoom to initialize new react flow component
     setPreviousZoom(previousZoom ? reactFlow.getZoom() : 0.5); // initialize with 0.5
     setRfContainerMounted(false); // workaround to make changing layout work correctly
-    var [nodes_init, edges_init] = prepareAndRenderGraph(reactFlow, navigateContent, {graphView, props, layout, isExpanded});
-    nodes_init = dagreLayoutRf(nodes_init, edges_init, layout, nodeWidth, nodeHeight);
+    const prepared = prepareAndRenderGraph(reactFlow, {graphView, props, layout, isExpanded});
     setReactFlowKey(reactFlowKey + 1); // change key to re-create react flow component (and initialize it through default nodes)
-    return [nodes_init, edges_init];
+    return {...prepared, nodes: dagreLayoutRf(prepared.nodes, prepared.edges, layout, nodeWidth, nodeHeight)};
   }, [isExpanded, props.elementName, props.elementType, props.configData, graphView, layout]);
+
+  // the selected element does not exist in the selected graph view, so switch to one that does.
+  // This has to happen after rendering, navigating from within the memo above would update the router
+  // while this component is rendering.
+  useEffect(() => {
+    if (navigateTo) navigateContent(navigateTo);
+  }, [navigateTo])
 
   useEffect(() => {
     setRfContainerMounted(true); // workaround to make changing layout work correctly
