@@ -1,124 +1,77 @@
+import { Tooltip } from '@mui/joy';
+import { styled } from '@mui/joy/styles';
 import { Link } from 'react-router-dom';
-import styled, { css } from 'styled-components';
 import { Row } from '../../../types';
 import { formatDuration } from '../../../util/WorkflowsExplorer/format';
-import { colorByStatus } from '../../../util/WorkflowsExplorer/style';
+import { LABEL_COLUMN_WIDTH } from './constants';
 
-//
-// Component
-//
+/** Duration getters keyed by the phase names used in the phase filter. */
+const PHASE_DURATION: Record<string, (row: Row) => number | null> = {
+  Exec: (row) => row.getDuration(),
+  Init: (row) => row.getDurationInit(),
+  Prepare: (row) => row.getDurationPrepare(),
+};
 
-const TaskListLabel = (props: {item: Row, displayPhases: string[], link?: string}) => {
-  const { item, displayPhases, link } = props  
+/** Combined duration of the phases the user currently has enabled. */
+function totalDuration(row: Row, displayPhases: string[]): number {
+  return displayPhases.reduce((sum, phase) => sum + (PHASE_DURATION[phase]?.(row) || 0), 0);
+}
 
-  const getTotalDuration = () => {
-    let duration = 0;
-
-    displayPhases.forEach((phase) => {
-      switch (phase) {
-        case 'Exec':
-          duration += item.getDuration() || 0;
-          break;
-        case 'Init':
-          duration += item.getDurationInit() || 0;
-          break;
-        case 'Prepare':
-          duration += item.getDurationPrepare() || 0;
-          break;
-        default:
-          break;
-      }
-    });
-    
-    return duration
-  }
+/** The left-hand column of a timeline row: the action name, and its duration. */
+const TaskListLabel = (props: { item: Row; displayPhases: string[]; link?: string }) => {
+  const { item, displayPhases, link } = props;
 
   return (
-    <RowLabel $type={'task'} $isOpen={false} $group={false} $status={item.status}>
-        <Link to={link!} relative='path' data-testid="tasklistlabel-link">
-          <RowLabelContent>
-            <RowLabelTaskName
-              data-testid="tasklistlabel-text"
-              title={`${item.step_name}`}
-            >
-              <RowTaskName>
-                {getTaskLabel(item)}
-              </RowTaskName>
-            </RowLabelTaskName>
-            <RowDuration data-testid="tasklistlabel-duration">
-              {formatDuration(getTotalDuration())}
-            </RowDuration>
-          </RowLabelContent>
-        </Link>
-      
-    </RowLabel>
+    <LabelColumn>
+      <Link to={link!} relative="path" data-testid="tasklistlabel-link">
+        <LabelContent>
+          <Tooltip arrow title={item.step_name} enterDelay={500} enterNextDelay={500}>
+            <ActionName data-testid="tasklistlabel-text">{item.step_name}</ActionName>
+          </Tooltip>
+          <Duration data-testid="tasklistlabel-duration">
+            {formatDuration(totalDuration(item, displayPhases))}
+          </Duration>
+        </LabelContent>
+      </Link>
+    </LabelColumn>
   );
 };
 
-function getTaskLabel(item: Row): string {
-  return item.getTaskId();
-}
-
-export default TaskListLabel;
-
-//
-// Style
-//
-
-const RowLabel = styled.div<{ $type: 'step' | 'task'; $isOpen?: boolean; $group?: boolean; $status: string }>`
-  flex: 0 0 15.3125rem;
-  max-width: 15.3125rem;
+const LabelColumn = styled('div')`
+  flex: 0 0 ${LABEL_COLUMN_WIDTH};
+  max-width: ${LABEL_COLUMN_WIDTH};
   overflow: hidden;
   cursor: pointer;
-  font-size: ${(p) => (p.$type === 'task' ? '0.75rem' : '0.875rem')};
-  font-weight: ${(p) => (p.$type === 'step' ? '600' : 'normal')};
+  font-size: ${(p) => p.theme.vars.fontSize.xs};
   line-height: 1.6875rem;
-  padding-left: ${(p) => (p.$group ? '0' : '0.5rem')};
+  padding-left: 0.5rem;
 
   a {
     display: flex;
+    justify-content: flex-end;
     width: 100%;
-    color: ${(p) => p.theme.color.text.dark};
-    text-decoration: none;
     max-width: 100%;
-    padding-left: ${(p) => (p.$group ? '2.5rem' : '0rem')};
+    color: ${(p) => p.theme.vars.palette.text.primary};
+    text-decoration: none;
     white-space: nowrap;
-
-    ${(p) =>
-      !p.$group
-        ? css`
-            display: flex;
-            justify-content: flex-end;
-          `
-        : ''}
-  }
-
-  i {
-    line-height: 0px;
   }
 `;
 
-const RowDuration = styled.span`
-  padding: 0 0.25rem 0 0.5rem;
-  white-space: nowrap;
-`;
-
-const RowLabelContent = styled.div<{ type?: 'step' }>`
-  // In case of step row, lets remove icon width from total width so it aligns nicely
-  width: ${(p) => (p.type === 'step' ? 'calc(100% - 30px)' : '100%')};
+const LabelContent = styled('div')`
+  width: 100%;
   display: flex;
   justify-content: space-between;
 `;
 
-const RowLabelTaskName = styled.div`
-  display: flex;
+const ActionName = styled('div')`
   overflow: hidden;
-`;
-
-const RowTaskName = styled.div`
-  overflow: hidden;
-
   text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
+const Duration = styled('span')`
+  padding: 0 0.25rem 0 0.5rem;
+  white-space: nowrap;
+`;
 
+export default TaskListLabel;

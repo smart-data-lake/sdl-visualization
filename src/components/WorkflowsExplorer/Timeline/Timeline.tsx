@@ -1,155 +1,129 @@
+import { styled } from '@mui/joy/styles';
 import React, { useCallback, useMemo, useState } from 'react';
 import { AutoSizer, List } from 'react-virtualized';
-import styled from 'styled-components';
-import { toRelativeSize } from '../../../util/WorkflowsExplorer/style';
-import TimelineFooter from './Footer';
+import { Row, Run } from '../../../types';
+import MinimapFooter from './Footer/MinimapFooter';
 import TimelineRow from './TimelineRow';
-import { Row } from '../../../types';
+import { LABEL_COLUMN_WIDTH, ROW_HEIGHT, SPACE_UNDER_TIMELINE, TimelineMetrics } from './constants';
+import useTimelineControls from './useTimelineControls';
+
+type TimelineProps = {
+  run: Run;
+  rows: Row[];
+  displayPhases: string[];
+};
 
 const listStyle = { transition: 'height 0.25s' };
 
-//
-// Typedef
-//
-type TimelineProps = {
-  rows: Row[];
-  timeline: TimelineMetrics;
-  footerType?: 'minimal' | 'minimap';
-  paramsString?: string;
-  customMinimumHeight?: number;
-  onHandleMove?: (which: 'left' | 'right', to: number) => void;
-  onMove?: (change: number) => void;
-  displayPhases: string[];
-};
-
-export type TimelineMetrics = {
-  startTime: number;
-  endTime: number;
-  visibleEndTime: number;
-  visibleStartTime: number;
-  groupingEnabled: boolean;
-  latestAttemptId: number;
-};
-
-//
-// Component
-//
-
-export const SPACE_UNDER_TIMELINE = (type: 'minimal' | 'minimap'): number =>
-  type === 'minimap' ? toRelativeSize(80) : toRelativeSize(38);
-export const ROW_HEIGHT = toRelativeSize(28);
-
-const Timeline: React.FC<TimelineProps> = ({
-  rows,
-  timeline,
-  footerType = 'minimap',
-  paramsString = '',
-  onHandleMove = () => null,
-  onMove = () => null,
-  displayPhases,
-}) => {
-
-  // Name of sticky header (if should be visible)
+/**
+ * Gantt-style view of a run: one virtualized row per action, over a minimap that pans and zooms
+ * the visible time window.
+ */
+const Timeline: React.FC<TimelineProps> = ({ run, rows, displayPhases }) => {
+  const { timelineControls, dispatch } = useTimelineControls(run, rows);
   const [dragging, setDragging] = useState(false);
-  //
-  // Event handling
-  //
 
-  const rowRenderer = useMemo(
-    () =>
-      createRowRenderer({
-        rows,
-        timeline,
-        paramsString,
-        dragging: dragging,
-        displayPhases: displayPhases,
-      }),
-    [dragging, paramsString, rows, timeline, displayPhases],
+  const timeline: TimelineMetrics = useMemo(
+    () => ({
+      startTime: timelineControls.min,
+      endTime: timelineControls.max,
+      visibleStartTime: timelineControls.timelineStart,
+      visibleEndTime: timelineControls.timelineEnd,
+      latestAttemptId: rows.reduce((latest, row) => Math.max(latest, row.attempt_id), 0),
+    }),
+    [timelineControls, rows],
   );
 
-  const autosizerContents = useCallback(
-    ({height, width}) => (
-      <>
-        <List
-          overscanRowCount={rows.length}
-          rowCount={rows.length}
-          rowHeight={ROW_HEIGHT}
-          rowRenderer={rowRenderer}
-          height={
-            height - SPACE_UNDER_TIMELINE(footerType) > rows.length * ROW_HEIGHT
-              ? rows.length * ROW_HEIGHT
-              : height - SPACE_UNDER_TIMELINE(footerType)
-          }
-          width={width}
-          style={listStyle}
-        />
+  const handleMove = useCallback((value: number) => dispatch({ type: 'move', value }), [dispatch]);
 
-        <div style={{ width: width + 'px' }}>
-          <TimelineFooter
-            {...(footerType === 'minimap'
-              ? {
-                  type: 'minimap',
-                  props: { timeline, rows, onMove: onMove, onHandleMove: onHandleMove, onDraggingStateChange: setDragging },
-                }
-              : {
-                  type: 'minimal',
-                  props: { startTime: timeline.startTime, visibleStartTime: timeline.visibleStartTime, visibleEndtime: timeline.visibleEndTime },
-                })}
-          />
-        </div>
-      </>
+  // Dragging a minimap handle sets one edge of the window. Dragging an edge past its opposite
+  // number, or outside the run, is ignored rather than inverting the window.
+  const handleEdgeMove = useCallback(
+    (which: 'left' | 'right', to: number) => {
+      const { min, max, timelineStart, timelineEnd } = timelineControls;
+      if (which === 'left') {
+        const start = to < min ? min : to > timelineEnd - 500 ? timelineStart : to;
+        dispatch({ type: 'setZoom', start, end: timelineEnd });
+      } else {
+        const end = to > max ? max : to < timelineStart + 500 ? timelineEnd : to;
+        dispatch({ type: 'setZoom', start: timelineStart, end });
+      }
+    },
+    [dispatch, timelineControls],
+  );
+
+  const rowRenderer = useCallback(
+    ({ index, style, key }: { index: number; style: React.CSSProperties; key: string }) => (
+      <div style={style} key={key}>
+        <TimelineRow item={rows[index]} timeline={timeline} dragging={dragging} displayPhases={displayPhases} />
+      </div>
     ),
-    [ dragging, footerType, onHandleMove, onMove, rowRenderer, rows, timeline, displayPhases ],
+    [rows, timeline, dragging, displayPhases],
   );
+
+  if (rows.length === 0) return null;
 
   return (
-    <ListContainer>
-      <AutoSizer>{autosizerContents}</AutoSizer>
-    </ListContainer>
+    <Container>
+      <AutoSizer>
+        {({ height, width }) => (
+          <>
+            <List
+              overscanRowCount={10}
+              rowCount={rows.length}
+              rowHeight={ROW_HEIGHT}
+              rowRenderer={rowRenderer}
+              height={Math.min(height - SPACE_UNDER_TIMELINE, rows.length * ROW_HEIGHT)}
+              width={width}
+              style={listStyle}
+            />
+            <div style={{ width: `${width}px` }}>
+              <Footer>
+                {/* Empty column keeping the minimap aligned with the bars, not the labels. */}
+                <FooterLabelSpacer />
+                <MinimapFooter
+                  timeline={timeline}
+                  rows={rows}
+                  onMove={handleMove}
+                  onHandleMove={handleEdgeMove}
+                  onDraggingStateChange={setDragging}
+                />
+              </Footer>
+            </div>
+          </>
+        )}
+      </AutoSizer>
+    </Container>
   );
 };
 
-//
-// Utils
-//
+const Container = styled('div')`
+  display: flex;
+  height: 100%;
+  width: 100%;
+  user-select: none;
 
-type RowRendererProps = {
-  rows: Row[];
-  timeline: TimelineMetrics;
-  paramsString: string;
-  dragging: boolean;
-  displayPhases: string[];
-};
+  /* Was previously applied app-wide by a global stylesheet mounted with this component. */
+  & .ReactVirtualized__List:focus {
+    outline: none;
+    border: none;
+  }
+`;
 
-function getUniqueKey(index: number, row: Row) {
-  const key = index;
-   return key + row.task_id;
-}
+const Footer = styled('div')`
+  display: flex;
+  position: relative;
+  width: 100%;
+  height: 2.5rem;
+  margin-bottom: 1.5625rem;
+  border-top: 2px solid ${(p) => p.theme.vars.palette.divider};
+`;
 
-function createRowRenderer({ rows, timeline, paramsString = '', dragging, displayPhases }: RowRendererProps) {
-  return ({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const row = rows[index];
-    return (
-      <div style={style} key={getUniqueKey(index, row)}>
-        <TimelineRow
-          item={row}
-          timeline={timeline}
-          paramsString={paramsString}
-          dragging={dragging}
-          displayPhases={displayPhases}
-        />
-      </div>
-    );
-  };
-}
-
-//
-// Style
-//
-
-const ListContainer = styled.div`
-    width: 100%;  
-    height: 100%;
+const FooterLabelSpacer = styled('div')`
+  display: inline-block;
+  width: ${LABEL_COLUMN_WIDTH};
+  margin: 0.5rem 0;
+  padding-right: 0.5rem;
 `;
 
 export default Timeline;

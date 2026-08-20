@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { formatDuration } from "../../../util/WorkflowsExplorer/format";
-import { getStatusColor } from "../Timeline/TimelineRow/utils";
+import { getStatusColor } from "../../../util/WorkflowsExplorer/statusColors";
 import { CustomTooltip } from "./CustomTooltip";
 import { compareFunc } from "../../../util/helpers";
 

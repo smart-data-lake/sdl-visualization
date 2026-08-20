@@ -1,8 +1,7 @@
 import { Box, Input } from "@mui/joy";
-import defaultTheme from "../../../theme";
 import { Filter } from "../../../util/WorkflowsExplorer/StatusInfo";
 import DatetimePicker from "../DatetimePicker/DatetimePicker";
-import { getStatusColor } from "../Timeline/TimelineRow/utils";
+import { NEUTRAL_COLOR, getStatusColor } from "../../../util/WorkflowsExplorer/statusColors";
 import { FilterParams } from "../WorkflowHistory";
 import FilterMenu from "./FilterMenu";
 
@@ -62,7 +61,7 @@ const ToolBar = (
                 sx={{fontSize: 'var(--joy-fontSize-sm)', zIndex: 'auto',}}
                 onChange={(event) => setSearchText(event.target.value)}
             />
-            {attemptFilters && attemptFilters.length>1 && <FilterMenu title='Select Attempts' filters={attemptFilters} setFilters={setAttemptsFilters} filterInit={attemptFilterInit} colorMap={() => defaultTheme.color.bg.dark}/>}
+            {attemptFilters && attemptFilters.length>1 && <FilterMenu title='Select Attempts' filters={attemptFilters} setFilters={setAttemptsFilters} filterInit={attemptFilterInit} colorMap={() => NEUTRAL_COLOR}/>}
             {stateFilters && <FilterMenu title='Filter Status' filters={stateFilters} setFilters={setStateFilters} colorMap={getStatusColor} withIcon={true}/>}
             {datetimePicker && <DatetimePicker range={filterParams.dateRange} setRange={setDateRange}/>}
             {leftElements && leftElements}

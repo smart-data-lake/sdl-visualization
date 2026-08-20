@@ -27,7 +27,7 @@ yarn test:e2e:ui      # playwright interactive runner
 npx playwright test tests/e2e/lineage.spec.ts --project hocon
 ```
 
-Lint uses ESLint 9 flat config (`eslint.config.js`), rebuilt from the maintained plugins after the unmaintained CRA `react-app` config was dropped. Rules with pre-existing violations are set to `warn` and annotated with their count; `yarn lint` fails on errors only, so those 136 warnings are a visible cleanup backlog rather than a blocker.
+Lint uses ESLint 9 flat config (`eslint.config.js`), rebuilt from the maintained plugins after the unmaintained CRA `react-app` config was dropped. Rules with pre-existing violations are set to `warn` and annotated with their count; `yarn lint` fails on errors only, so those 122 warnings are a visible cleanup backlog rather than a blocker.
 
 Local data setup (needed before anything is visible): put config files in `public/config` and state files in `public/state`, then `./build_index.sh <path-to-statefiles> <path-to-configfiles>` (Python 3; creates a venv, writes JSON-Lines `index` files). `backendConfig` in `public/manifest.json` must be `local;`.
 
@@ -80,11 +80,11 @@ Two lineage components exist: `LineageTabWithSeparateView.tsx` (current, used by
 
 ### Workflows Explorer (`src/components/WorkflowsExplorer`, `src/util/WorkflowsExplorer`)
 
-`Workflows` (list) → `WorkflowHistory` (runs + charts) → `Run` (single attempt, tabs: timeline / table / lineage). SDLB state files are normalized in `Attempt.ts` — `updateStateFile` migrates older state-file formats (flattening `results[].subFeed`, `mainMetrics` → `metrics`, `inputIds`/`outputIds` objects → ids), so new state-file format changes belong there. `types.ts` holds the run/row domain model (`Row`, `TaskStatus`, `StateFile`) and derives durations from ISO-8601 strings. The timeline (`Timeline/`) is a virtualized Gantt-style view adapted from Netflix Metaflow (see `Timeline/LICENSE`).
+`Workflows` (list) → `WorkflowHistory` (runs + charts) → `Run` (single attempt, tabs: timeline / table / lineage). SDLB state files are normalized in `Attempt.ts` — `updateStateFile` migrates older state-file formats (flattening `results[].subFeed`, `mainMetrics` → `metrics`, `inputIds`/`outputIds` objects → ids), so new state-file format changes belong there. `types.ts` holds the run/row domain model (`Row`, `TaskStatus`, `StateFile`) and derives durations from ISO-8601 strings. The timeline (`src/components/WorkflowsExplorer/Timeline/`) is a virtualized Gantt-style view adapted from Netflix Metaflow (see `Timeline/LICENSE`, which must be retained, and that folder's `README.md`). It has since been de-Metaflowed and moved onto MUI Joy; status/phase colours live in `src/util/WorkflowsExplorer/statusColors.ts` because the history chart, status icons and toolbar share them.
 
 ### UI conventions
 
-MUI **Joy** (`@mui/joy`) is the primary component library with `CssVarsProvider`; `@mui/material`, `@mui/x-data-grid`, antd, recharts and react-bootstrap also appear in older code — match the surrounding file rather than unifying. Layout chrome lives in `src/layouts` (`RootLayout` + `Outlet`, `PageHeader`, `SideBar`, `ErrorBoundary`).
+MUI **Joy** (`@mui/joy`) is the primary component library with `CssVarsProvider`; `@mui/material`, `@mui/x-data-grid`, antd, recharts and react-bootstrap also appear in older code — match the surrounding file rather than unifying. For CSS-in-JS use `styled` from `@mui/joy/styles` and Joy theme tokens (`theme.vars.palette.*`, `theme.vars.fontSize.*`); `styled-components` and `polished` were removed once the timeline — their only consumer — was migrated, so don't reintroduce them. There is no custom Joy theme and no dark mode. Layout chrome lives in `src/layouts` (`RootLayout` + `Outlet`, `PageHeader`, `SideBar`, `ErrorBoundary`).
 
 `src/archiv/` is dead/legacy code kept for reference — don't build on it.
 

@@ -1,9 +1,5 @@
+import { styled } from '@mui/joy/styles';
 import React from 'react';
-import styled, { css } from 'styled-components';
-
-//
-// Typedef
-//
 
 type HandleProps = {
   which: 'left' | 'right';
@@ -13,34 +9,24 @@ type HandleProps = {
   stackText?: boolean;
 };
 
-//
-// Component
-//
-
+/** A grab handle on one edge of the minimap's viewport rectangle, labelled with its offset. */
 const MinimapHandle: React.FC<HandleProps> = ({ label, onDragStart, which, isZoomed, stackText }) => (
-  <MiniTimelineHandle
-    style={which === 'right' ? { right: '-5px' } : { left: '-5px' }}
-    onMouseDown={() => onDragStart()}
-  >
-    <MiniTimelineIconLine />
-    <MiniTimelineIconLine />
-    <MiniTimelineIconLine />
-    <MiniTimelineLabel $which={which} $isZoomed={isZoomed} $stackText={stackText}>
+  <Handle style={which === 'right' ? { right: '-5px' } : { left: '-5px' }} onMouseDown={onDragStart}>
+    <GripLine />
+    <GripLine />
+    <GripLine />
+    <HandleLabel $which={which} $isZoomed={isZoomed} $stackText={stackText}>
       {label}
-    </MiniTimelineLabel>
-  </MiniTimelineHandle>
+    </HandleLabel>
+  </Handle>
 );
 
-//
-// Style
-//
-
-const MiniTimelineHandle = styled.div`
+const Handle = styled('div')`
   position: absolute;
   top: 0.4375rem;
   height: 1.8125rem;
   width: 0.625rem;
-  background: ${(p) => p.theme.color.bg.blue};
+  background: ${(p) => p.theme.vars.palette.primary.solidBg};
   z-index: 2;
 
   display: flex;
@@ -49,30 +35,25 @@ const MiniTimelineHandle = styled.div`
   align-items: center;
 `;
 
-const MiniTimelineIconLine = styled.div`
+const GripLine = styled('div')`
   height: 1px;
   width: 0.25rem;
-  background: ${(p) => p.theme.color.bg.white};
+  background: ${(p) => p.theme.vars.palette.common.white};
   margin-bottom: 2px;
 `;
 
-const LeftLabelPositioning = css<{ $isZoomed: boolean }>`
-  ${(p) => (p.$isZoomed ? 'right: 100%;' : 'left: 0%')}
-`;
-
-const RightLabelPositioning = css<{ $isZoomed: boolean }>`
-  ${(p) => (p.$isZoomed ? 'left: 0%' : 'right: 100%;')}
-`;
-
-const MiniTimelineLabel = styled.div<{ $which: 'left' | 'right'; $isZoomed: boolean; $stackText?: boolean }>`
+const HandleLabel = styled('div')<{ $which: 'left' | 'right'; $isZoomed: boolean; $stackText?: boolean }>`
   position: absolute;
   top: 3.125rem;
+  font-size: ${(p) => p.theme.vars.fontSize.sm};
+  white-space: ${(p) => (p.$stackText && p.$isZoomed ? 'normal' : 'pre')};
 
-  right: ${(p) => (p.$which === 'right' ? '100%' : 'none')};
-  font-size: 0.875rem;
-  white-space: ${(p) => (p.$stackText && p.$isZoomed ? 'none' : 'pre')};
-
-  ${(p) => (p.$which === 'left' ? LeftLabelPositioning : RightLabelPositioning)}
+  /*
+   * The label normally hangs outside the viewport rectangle. Once the window is zoomed in far
+   * enough that there is no room, it flips to the inside so it stays on screen. Exactly one of
+   * left/right is set - the original set both, using invalid 'none' values that browsers dropped.
+   */
+  ${(p) => (((p.$which === 'left') !== p.$isZoomed) ? 'left: 0; right: auto;' : 'right: 100%; left: auto;')}
 `;
 
 export default MinimapHandle;

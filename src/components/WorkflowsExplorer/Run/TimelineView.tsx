@@ -1,14 +1,11 @@
 import { Sheet } from "@mui/joy";
-import { useEffect, useState } from "react";
-import { ThemeProvider } from 'styled-components';
-import GlobalStyle from "../../../GlobalStyle";
-import theme from "../../../theme";
+import { useEffect } from "react";
+import useLocalStorageState from "../../../hooks/useLocalStorageState";
 import { Row, Run } from "../../../types";
 import { phaseFilters } from "../../../util/WorkflowsExplorer/StatusInfo";
-import { getPhasesColor } from "../Timeline/TimelineRow/utils";
-import VirtualizedTimeline from "../Timeline/VirtualizedTimeline";
+import { getPhasesColor } from "../../../util/WorkflowsExplorer/statusColors";
+import Timeline from "../Timeline/Timeline";
 import FilterMenu from "../ToolBar/FilterMenu";
-import useLocalStorageState from "../../../hooks/useLocalStorageState";
 
 export const TimelineView = (props: {  run: Run, rows: Row[], stepName?: string, setToolbarElements: (lrElements: [JSX.Element?, JSX.Element?]) => void}) => {
 
@@ -22,9 +19,6 @@ export const TimelineView = (props: {  run: Run, rows: Row[], stepName?: string,
     }, [])
 
     return <Sheet sx={{ flex: 1, width: '100%', height: '100%', backgroundColor: props.stepName ? 'primary.main' : 'none', opacity: props.stepName ? [0.4, 0.4, 0.4] : []}} >
-        <ThemeProvider theme={theme}>
-            <GlobalStyle />
-            <VirtualizedTimeline run={props.run} rows={props.rows} displayPhases={phases} />
-        </ThemeProvider>
+        <Timeline run={props.run} rows={props.rows} displayPhases={phases} />
     </Sheet>
 }

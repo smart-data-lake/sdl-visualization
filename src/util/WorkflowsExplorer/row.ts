@@ -1,29 +1,5 @@
 import { Row, SortType, TaskStatus } from '../../types';
 
-const takeSmallest = (a: Row): number | null =>
-  a.started_at.getTime() || Number.MAX_VALUE;
-
-const takeBiggest = (a: Row): number =>
-  a.finished_at.getTime() || 0;
-
-/**
- * Sort rows by smallest value
- */
-const sortSmallest = (a: Row, b: Row) => {
-  const aval = takeSmallest(a);
-  const bval = takeSmallest(b);
-
-  if (aval === bval) {
-    return 0;
-  }
-  if (!aval) {
-    return -1;
-  } else if (!bval) {
-    return 1;
-  }
-  return aval - bval;
-};
-
 /**
  * Find smallest and biggest time value from rows
  */
@@ -46,16 +22,6 @@ export const startAndEndOverallPointsOfRows = (rows: Row[]): { start: number; en
 };
 
 /**
- * Find longest duration from rows
- */
-export const getLongestRowDuration = (rows: Row[]): number => {
-  return rows.reduce((val, item) => {
-      const t : Row = item;
-      return t.duration && t.duration > val ? t.duration : val;
-  }, 0);
-};
-
-/**
  * Get status for group of rows.
  */
 export const aggregateTaskStatus = (rows: Row[]): TaskStatus => {
@@ -71,16 +37,13 @@ export const aggregateTaskStatus = (rows: Row[]): TaskStatus => {
   return 'UNKNOWN';
 };
 
-/**
- * Get current step name	
- */
-export const getCurrentStepName = (rows: Row[]): string =>
-  rows.find((row) => row.status === 'RUNNING')?.step_name || '';
 
 
 export const sortRows = (rows: any, sortType: SortType) => {
 	if(sortType === 'start time asc') return rows.sort(startTimeAsc)
 	if(sortType === 'start time desc') return rows.sort(startTimeDesc)
+	if(sortType === 'duration asc') return rows.sort(durationAsc)
+	if(sortType === 'duration desc') return rows.sort(durationDesc)
 	return rows;
 }
 

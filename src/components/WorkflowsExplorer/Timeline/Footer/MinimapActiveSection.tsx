@@ -1,12 +1,8 @@
+import { styled } from '@mui/joy/styles';
 import React from 'react';
-import styled from 'styled-components';
 import { formatDuration } from '../../../../util/WorkflowsExplorer/format';
-import { TimelineMetrics } from '../Timeline';
+import { TimelineMetrics, extendedDuration, percentFromStart } from '../constants';
 import MinimapHandle from './MinimapHandle';
-
-//
-// Typedef
-//
 
 type ActiveSectionProps = {
   timeline: TimelineMetrics;
@@ -15,22 +11,20 @@ type ActiveSectionProps = {
   startHandleMove: (which: 'left' | 'right') => void;
 };
 
-//
-// Component
-//
-
+/**
+ * The draggable rectangle showing which slice of the run the rows above are displaying.
+ * It shares `extendedDuration` with the minimap lines so the two stay aligned - previously it
+ * used the raw span and drifted slightly against the bars it sits under.
+ */
 const MinimapActiveSection: React.FC<ActiveSectionProps> = ({ timeline, dragging, startMove, startHandleMove }) => {
-  const width = ((timeline.visibleEndTime - timeline.visibleStartTime) / (timeline.endTime - timeline.startTime)) * 100;
-  const left = ((timeline.visibleStartTime - timeline.startTime) / (timeline.endTime - timeline.startTime)) * 100;
+  const duration = extendedDuration(timeline.startTime, timeline.endTime);
+  const width = ((timeline.visibleEndTime - timeline.visibleStartTime) / duration) * 100;
+  const left = percentFromStart(timeline.visibleStartTime, timeline.startTime, duration);
 
   return (
-    <MiniTimelineActiveSection
+    <ActiveSection
       $dragging={dragging}
-      style={{
-        width: width + '%',
-        left: left + '%',
-        background: '#fff'
-      }}
+      style={{ width: `${width}%`, left: `${left}%` }}
       onMouseDown={(e) => startMove(e.clientX)}
       onTouchStart={(e) => startMove(e.touches[0].clientX)}
     >
@@ -51,21 +45,17 @@ const MinimapActiveSection: React.FC<ActiveSectionProps> = ({ timeline, dragging
         label={formatDuration(timeline.visibleEndTime - timeline.startTime)}
         onDragStart={() => startHandleMove('right')}
       />
-    </MiniTimelineActiveSection>
+    </ActiveSection>
   );
 };
 
-//
-// Style
-//
-
-const MiniTimelineActiveSection = styled.div<{ $dragging: boolean }>`
+const ActiveSection = styled('div')<{ $dragging: boolean }>`
   position: relative;
   height: 3.0625rem;
-  background #fff;
-  border-left: ${(p) => p.theme.border.thinLight};
-  border-right: ${(p) => p.theme.border.thinLight};
-  border-bottom: 0.5rem solid ${(p) => p.theme.color.border.light};
+  background: ${(p) => p.theme.vars.palette.background.surface};
+  border-left: 1px solid ${(p) => p.theme.vars.palette.divider};
+  border-right: 1px solid ${(p) => p.theme.vars.palette.divider};
+  border-bottom: 0.5rem solid ${(p) => p.theme.vars.palette.divider};
   cursor: grab;
   transition: ${(p) => (p.$dragging ? 'none' : '0.5s left, 0.5s width')};
 `;
