@@ -71,8 +71,10 @@ export default function Workflows() {
 
     if (isLoading || isFetching) return <CenteredCircularProgress/>;
     
+	// merge into the previous value: the filter menus report their initial selection on mount, so two
+	// of them updating in the same render must not overwrite each other
 	function updateFilterParams(partialFilter: Partial<FilterParams>) {
-		setFilterParams({...filterParams, ...partialFilter})
+		setFilterParams(prev => ({...prev, ...partialFilter}))
 	}
 
 	function refreshData() {
@@ -91,6 +93,7 @@ export default function Workflows() {
                         updateFilterParams={updateFilterParams}
                         stateFilters={checkFiltersAvailability(data, stateFilters('lastStatus'))}
                         searchPlaceholder="Search by name"
+                        storageKeyPrefix="workflows"
                         leftElements={additionalLeftToolbarElements}
                         rightElements={additionalRightToolbarElements}    
                     />
