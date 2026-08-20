@@ -81,9 +81,13 @@ export function compareFunc(attr: any, reverse: boolean = false) {
  * usage: arr.sort(compareFunc(["x","y"]))
  */
 export function compareMultiFunc(attrs: any[]) {
+  // Dates have to be compared by value: two Date instances for the same instant are never ===,
+  // so a tie on a Date attribute would never be detected and the next attribute never consulted.
+  // Numbers and strings pass through unchanged.
+  const byValue = (x: any) => (x instanceof Date ? x.getTime() : x);
   function compare(a: any, b: any, attrIdx: number) {
-    const aVal = getPropertyByPath(a, attrs[attrIdx]);
-    const bVal = getPropertyByPath(b, attrs[attrIdx]);
+    const aVal = byValue(getPropertyByPath(a, attrs[attrIdx]));
+    const bVal = byValue(getPropertyByPath(b, attrs[attrIdx]));
     if (aVal === bVal) {
       if (attrIdx === attrs.length - 1) return 0; // final attr to compare?
       else return compare(a, b, attrIdx + 1); // otherwise continue with next attr
