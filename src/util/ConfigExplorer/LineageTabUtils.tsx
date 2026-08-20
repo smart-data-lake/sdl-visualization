@@ -8,6 +8,7 @@ import {
 import assert from 'assert';
 
 import { nodeHeight, nodeWidth } from '../../components/ConfigExplorer/LineageTab/LineageTabWithSeparateView';
+import { TaskStatus } from '../../types';
 import { findFirstKeyWithObject } from '../helpers';
 import { ConfigData } from './ConfigData';
 import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, setRfNodeData } from './Graphs';
@@ -72,6 +73,8 @@ export interface flowProps {
     // a ready-made graph to show as a whole, instead of the neighbourhood of elementName in one of
     // configData's graphs. Used by the run view, which builds its graph from the state file.
     graph?: DAGraph;
+    // the state of each node within a run attempt, by node id. Only the run view knows these.
+    nodeStatuses?: Map<string, TaskStatus>;
     runContext?: boolean;
 }
 
@@ -115,6 +118,7 @@ export interface ReactFlowNodeProps {
     isGraphFullyExpanded: boolean,
     graphView: GraphView,
     runContext: boolean, // rendered inside a run attempt, i.e. without config data behind the nodes
+    status: TaskStatus | undefined, // the state of the node within a run attempt, if it has one
     highlighted: boolean,
     numFwdActiveEdges: number,
     numBwdActiveEdges: number,
@@ -214,6 +218,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             layoutDirection: layoutDirection,
             graphView: graphView,
             runContext: props.runContext === true,
+            status: props.nodeStatuses?.get(node.id),
             expandNodeFunc: expandNodeFunc,
             graphNodeProps: {
                 isCenterNode: isCenterNode,

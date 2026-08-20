@@ -80,7 +80,9 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
                 outputIds: row.details.outputIds || []
             })
         })
-        return {elementName: '', elementType: '', graph: new Lineage(data).graph.getActionGraph(), runContext: true}
+        // the node borders show the state each action ended up in
+        const nodeStatuses = new Map(attempt.timelineRows.map((row: Row) => [row.step_name, row.status]));
+        return {elementName: '', elementType: '', graph: new Lineage(data).graph.getActionGraph(), nodeStatuses, runContext: true}
     }, [attempt]);
 
     return (<>
