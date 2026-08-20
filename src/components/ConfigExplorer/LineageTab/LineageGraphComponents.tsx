@@ -26,6 +26,7 @@ import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { flowProps, graphNodeProps, ReactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { getIcon, getPartitionStatus, getExecutionMode } from '../../../util/WorkflowsExplorer/StatusInfo';
+import { getStatusColor } from '../../../util/WorkflowsExplorer/statusColors';
 import './LineageTab.css';
 import { useWorkspace } from '../../../hooks/useWorkspace';
 import { useLineageGraph } from '../../../hooks/useLineage';
@@ -124,7 +125,7 @@ export const CustomDataNode = ( {data} ) => {
           targetPosition, sourcePosition,
           progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
           numBwdActiveEdges, numFwdActiveEdges,
-          expandNodeFunc, graphNodeProps, highlighted, runContext
+          expandNodeFunc, graphNodeProps, highlighted, runContext, status
   }: ReactFlowNodeProps = data;
   const {isSink,  isSource,  
          isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode
@@ -144,7 +145,11 @@ export const CustomDataNode = ( {data} ) => {
 
   }, [initStateBwd, initStateFwd]);
 
-  const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff"; 
+  const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff";
+  // in a run attempt the border tells the state the action ended up in, e.g. red for FAILED
+  const borderColor = highlighted ? highLightedEdgeColor :
+                      status ? getStatusColor(status) :
+                      defaultNodeBorderColor;
 
   // the nodes of a run graph are built from the state file, they have no config object behind them
   const nodeSubTypeName: string | undefined = jsonObject?.type;
@@ -282,7 +287,7 @@ export const CustomDataNode = ( {data} ) => {
       ref={chartBox}
       sx={{
         padding: '10px',
-        border: ` ${highlighted ? highlightedEdgeStrokeWidth : defaultEdgeStrokeWidth}px solid ${highlighted ? highLightedEdgeColor : defaultNodeBorderColor}`,
+        border: ` ${highlighted ? highlightedEdgeStrokeWidth : defaultEdgeStrokeWidth}px solid ${borderColor}`,
         ...(nodeType === NodeType.ActionNode && {borderRadius: '20px',}),
         minWidth: '200px',
         maxWidth: '200px',

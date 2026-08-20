@@ -73,6 +73,21 @@ test.describe('workflows explorer', () => {
     await expect(page.getByRole('button', { name: /switch to (horizontal|vertical) layout/ })).toBeVisible();
   });
 
+  test('the run graph colours the node border by the state of the action', async ({ page }) => {
+    await page.goto(`/#/workflows/${WORKFLOW}/24.1/graph`);
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
+
+    // the box inside the node carries the border
+    const node = (action: string) => page.locator(`.react-flow__node[data-id="${action}"] > div`).first();
+    // in attempt 24.1 the downloads succeeded, deduplicate-departures failed and the actions
+    // waiting on it were cancelled - see statusColors.ts for the palette
+    await expect(node('download-airports')).toHaveCSS('border-color', 'rgb(32, 175, 46)'); // SUCCEEDED
+    await expect(node('historize-airports')).toHaveCSS('border-color', 'rgb(32, 175, 46)'); // SUCCEEDED
+    await expect(node('download-deduplicate-departures')).toHaveCSS('border-color', 'rgb(235, 52, 40)'); // FAILED
+    await expect(node('join-departures-airports')).toHaveCSS('border-color', 'rgb(0, 187, 206)'); // CANCELLED
+    await expect(node('compute-distances')).toHaveCSS('border-color', 'rgb(0, 187, 206)'); // CANCELLED
+  });
+
   test('clicking an action in the run graph opens its details', async ({ page }) => {
     await page.goto(`/#/workflows/${WORKFLOW}/24.1/graph`);
 
