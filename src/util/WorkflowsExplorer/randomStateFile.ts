@@ -15,8 +15,8 @@ export default function randomStateFile(name?: string, runId?: number) {
         },
         runId : runId || Math.round(Math.random()*100),
         attemptId : Math.round(Math.random()*10),
-        runStartTime : runStartTime.toString(),
-        attemptStartTime : runStartTime.toString(),
+        runStartTime : runStartTime,
+        attemptStartTime : runStartTime,
         actionsState : randomActionsState(runStartTime)
     }
 }

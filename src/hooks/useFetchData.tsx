@@ -1,7 +1,7 @@
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { useMutation, useQuery, UseQueryResult } from "react-query";
 import { fetcher } from "../api/Fetcher";
-import { TstampEntry } from "../types";
+import { TstampEntry, WorkflowRun } from "../types";
 import { useWorkspace } from "./useWorkspace";
 import { sortIfArray } from "../util/helpers";
 
@@ -39,7 +39,7 @@ export const useFetchWorkflowRuns = (workflow: string, enabled: boolean) => {
 };
 
 export const useFetchWorkflowRunsByElement = (elementType: string, elementName: string) => {
-  var queryFn = () => Promise.resolve(undefined as any[]|undefined);
+  var queryFn = () => Promise.resolve(undefined as WorkflowRun[]|undefined);
   if (elementType === "dataObjects") queryFn = () => fetcher().getWorkflowRunsByDataObject(elementName)
   if (elementType === "actions") queryFn = () => fetcher().getWorkflowRunsByAction(elementName)
   return handleError(useQuery({

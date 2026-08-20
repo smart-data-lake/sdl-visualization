@@ -127,7 +127,7 @@ export default function WorkflowHistory() {
         if (data && data.length>0) {
 			var selected = data;
 			if (filterParams.dateRange) {
-				selected = selected.filter((row) => row.attemptStartTime >= filterParams.dateRange![0] && row.attemptStartTime <= filterParams.dateRange![1])
+				selected = selected.filter((row) => row.attemptStartTime !== undefined && row.attemptStartTime >= filterParams.dateRange![0] && row.attemptStartTime <= filterParams.dateRange![1])
 			}
 			if (filterParams.searchText) {
 				selected = selected.filter((row) => filterSearchText(filterParams, row));
