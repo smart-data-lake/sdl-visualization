@@ -53,49 +53,76 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
   );
 }
 
-export function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: "primary" | "neutral" | "success" | "danger" | "warning" | undefined = "primary", size: ('sm' | 'md' | 'lg') ="md", sx: object = {}) {
+/*
+  The create*Chip functions below are called from render bodies as plain functions - conditionally,
+  and in .map() over config attributes. They must therefore not call useWorkspace() themselves: the
+  number of hooks of the calling component would depend on the config being displayed, and react
+  reports a change in hook order as soon as another element is selected. Each chip is a component
+  instead, so the hook lives in its own scope.
+*/
+
+type ChipSize = 'sm' | 'md' | 'lg';
+type ChipColor = "primary" | "neutral" | "success" | "danger" | "warning" | undefined;
+
+function SearchChip({attr, value, route, icon, color, size, sx}:
+                    {attr: string, value: string, route: string, icon: JSX.Element, color: ChipColor, size: ChipSize, sx: object}) {
   const {contentPath} = useWorkspace();
-  if (value){
-    const path = (attr == "feedSel" ? 
-      `${contentPath}config/${route}?elementSearchType=${attr}&elementSearch=${value}` :
-      `${contentPath}config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`
-    )
-    return(
-      <Link to={path} key={attr+':'+value}>
-        <Chip key={attr} sx={{mr: 1, ...sx}} color={color} startDecorator={icon} variant="outlined" onClick={(e) => e.stopPropagation()} size={size}>{value}</Chip>
-      </Link>
-    )
-  }
+  const path = (attr == "feedSel" ? 
+    `${contentPath}config/${route}?elementSearchType=${attr}&elementSearch=${value}` :
+    `${contentPath}config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`
+  )
+  return(
+    <Link to={path}>
+      <Chip key={attr} sx={{mr: 1, ...sx}} color={color} startDecorator={icon} variant="outlined" onClick={(e) => e.stopPropagation()} size={size}>{value}</Chip>
+    </Link>
+  )
 }
 
-export function createDataObjectChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}, key?: any){
+export function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: ChipColor = "primary", size: ChipSize ="md", sx: object = {}) {
+  if (!value) return undefined;
+  return <SearchChip key={attr+':'+value} attr={attr} value={value} route={route} icon={icon} color={color} size={size} sx={sx}/>
+}
+
+function DataObjectChip({name, size, sx}: {name: string, size: ChipSize, sx: object}){
   const {contentPath} = useWorkspace();
   return(
-    <Link to={`${contentPath}config/dataObjects/${name}`} key={key}>
+    <Link to={`${contentPath}config/dataObjects/${name}`}>
       <Chip key={"dataObjects/"+name} color="primary" startDecorator={<TableViewTwoTone />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
 }
 
-export function createActionsChip(name: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
+export function createDataObjectChip(name: string, size: ChipSize ="md", sx: object = {}, key?: any){
+  return <DataObjectChip key={key} name={name} size={size} sx={sx}/>
+}
+
+function ActionsChip({name, size, sx}: {name: string, size: ChipSize, sx: object}){
   const {contentPath} = useWorkspace();
   return(
-    <Link to={`${contentPath}config/actions/${name}`} key={"action/"+name}>
+    <Link to={`${contentPath}config/actions/${name}`}>
       <Chip key={"action/"+name} color="primary" startDecorator={<RocketLaunchOutlined />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
 }
 
-function createConnectionChip(name: string){
+export function createActionsChip(name: string, size: ChipSize ="md", sx: object = {}){
+  return <ActionsChip key={"action/"+name} name={name} size={size} sx={sx}/>
+}
+
+function ConnectionChip({name}: {name: string}){
   const {contentPath} = useWorkspace();
   return(
-    <Link to={`${contentPath}config/connections/${name}`} key={"connections/"+name}>
+    <Link to={`${contentPath}config/connections/${name}`}>
       <Chip key={"connections/"+name} color="primary" startDecorator={<LanOutlinedIcon />} variant="outlined" >{name}</Chip>
     </Link>
   )
 }
 
-export function createFeedChip(feed: string, elementType: string, size: ('sm' | 'md' | 'lg') ="md", sx: object = {}){
+function createConnectionChip(name: string){
+  return <ConnectionChip key={"connections/"+name} name={name}/>
+}
+
+export function createFeedChip(feed: string, elementType: string, size: ChipSize ="md", sx: object = {}){
   return createSearchChip("feedSel", feed, elementType, <AltRouteIcon />, "success", size, sx);
 }
 

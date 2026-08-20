@@ -85,10 +85,12 @@ test.describe('lineage graph', () => {
 
   test('switching the graph view shows the data resp. action graph', async ({ page }) => {
     // switching the view can require navigating to another element, which must not happen while the
-    // graph is rendering - react logs "Cannot update a component while rendering a different one"
-    const renderPhaseUpdates: string[] = [];
+    // graph is rendering ("Cannot update a component while rendering a different one"), and must not
+    // change the number of hooks the details tabs call ("change in the order of Hooks")
+    const reactWarnings: string[] = [];
     page.on('console', (msg) => {
-      if (msg.text().includes('Cannot update a component')) renderPhaseUpdates.push(msg.text());
+      const text = msg.text();
+      if (text.includes('Cannot update a component') || text.includes('order of Hooks')) reactWarnings.push(text);
     });
 
     await openLineage(page, '/#/config/dataObjects/int-airports');
@@ -109,7 +111,7 @@ test.describe('lineage graph', () => {
     await expect.poll(() => page.url()).toContain('/config/dataObjects/');
     await expect(nodes(page).first()).toBeVisible();
 
-    expect(renderPhaseUpdates).toEqual([]);
+    expect(reactWarnings).toEqual([]);
   });
 
   test('the expand handle of a node adds and removes its neighbours', async ({ page }) => {
