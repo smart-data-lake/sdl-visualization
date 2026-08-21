@@ -6,7 +6,7 @@
 import { expect, test } from 'vitest';
 import { Action, ResultMetrics } from '../src/types.ts';
 import { getRunMetrics, Lineage } from '../src/util/WorkflowsExplorer/Lineage.ts';
-import { getInputMetric, getOutputMetric } from '../src/util/WorkflowsExplorer/metrics.ts';
+import { getInputMetric, getMainInputCount, getMainOutputCount, getOutputMetric } from '../src/util/WorkflowsExplorer/metrics.ts';
 
 function action(inputIds: string[], outputs: {dataObjectId: string, metrics?: ResultMetrics}[]): Action {
     return {
@@ -74,6 +74,28 @@ test('a metric carries every metric of its data object, for the tooltip', () => 
     // an input lists the metrics qualified with its own id, and no other input's
     expect(getInputMetric(join, 'int-departures')!.all).toEqual([{name: 'count#int-departures', value: 666}]);
     expect(getInputMetric(join, 'int-airports')!.all).toEqual([{name: 'count#int-airports', value: 83330}]);
+});
+
+test('the main input and output counts are what the run table shows', () => {
+    const join = action(['int-departures', 'int-airports'], [{dataObjectId: 'out', metrics: {
+        count: 663, 'count#mainInput': 83330, 'count#int-airports': 83330, 'count#int-departures': 666,
+    }}]);
+    expect(getMainInputCount(join)).toBe(83330);
+    expect(getMainOutputCount(join)).toBe(663);
+
+    // the output falls back over the metric names, the same way an edge label does
+    expect(getMainOutputCount(action([], [{dataObjectId: 'do', metrics: {records_written: 7}}]))).toBe(7);
+    expect(getMainOutputCount(action([], [{dataObjectId: 'do', metrics: {files_written: 1}}]))).toBe(1);
+
+    // an action that recorded nothing, e.g. a cancelled one, has neither
+    const cancelled = action(['in'], [{dataObjectId: 'do', metrics: {}}]);
+    expect(getMainInputCount(cancelled)).toBeUndefined();
+    expect(getMainOutputCount(cancelled)).toBeUndefined();
+
+    // an action reading a single input records no mainInput metric
+    const download = action(['ext'], [{dataObjectId: 'do', metrics: {count: 759}}]);
+    expect(getMainInputCount(download)).toBeUndefined();
+    expect(getMainOutputCount(download)).toBe(759);
 });
 
 /*

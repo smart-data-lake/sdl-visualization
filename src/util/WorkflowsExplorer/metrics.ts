@@ -81,3 +81,35 @@ export function getInputMetric(action: Action | undefined, dataObjectId: string)
     }
     return undefined;
 }
+
+/**
+ * The first of METRIC_NAMES the action recorded over all its results, optionally qualified with
+ * `#<qualifier>`, i.e. belonging to one of its inputs.
+ */
+function findFlowMetric(action: Action | undefined, qualifier?: string): number | undefined {
+    for (const name of METRIC_NAMES) {
+        const key = qualifier ? `${name}${QUALIFIER_SEPARATOR}${qualifier}` : name;
+        for (const result of action?.results || []) {
+            const value = numericMetric(result.metrics, key);
+            if (value !== undefined) return value;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * How much the action read from its main input. SDLB records it qualified with `mainInput`, next to
+ * the same metric qualified with that input's own data object id.
+ */
+export function getMainInputCount(action: Action | undefined): number | undefined {
+    return findFlowMetric(action, MAIN_INPUT);
+}
+
+/**
+ * How much the action wrote to its main output. The state file does not mark which result is the
+ * main output, so the first one that recorded such a metric is taken - which is unambiguous for the
+ * actions with a single output, i.e. nearly all of them.
+ */
+export function getMainOutputCount(action: Action | undefined): number | undefined {
+    return findFlowMetric(action);
+}

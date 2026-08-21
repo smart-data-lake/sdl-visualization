@@ -48,6 +48,34 @@ test.describe('workflows explorer', () => {
     );
   });
 
+  test('the table shows the main input and output counts of each action', async ({ page }) => {
+    await page.goto(`/#/workflows/${WORKFLOW}/75.1/table`);
+
+    // the counts come from the metrics of the state file: count#mainInput for the input, and count,
+    // records_written or files_written for the output
+    const cells = (action: string) => page.getByRole('row', { name: new RegExp(`^${action} `) })
+      .getByRole('cell');
+    // download-airports is a file action, so its output count is its files_written
+    await expect(cells('download-airports').nth(6)).toHaveText('');
+    await expect(cells('download-airports').nth(7)).toHaveText('1');
+    // an action reading a single input records no mainInput metric
+    await expect(cells('download-deduplicate-departures').nth(6)).toHaveText('');
+    await expect(cells('download-deduplicate-departures').nth(7)).toHaveText('759');
+    // the join reads 83330 rows from its main input and writes 663
+    await expect(cells('join-departures-airports').nth(6)).toHaveText('83330');
+    await expect(cells('join-departures-airports').nth(7)).toHaveText('663');
+
+    // both columns are shown by default and can be switched off again
+    const menu = page.locator('button:has([data-testid="ViewColumnOutlinedIcon"])');
+    await menu.click();
+    const item = (title: string) => page.getByRole('menuitem').filter({ hasText: title });
+    await expect(item('Input Count').getByRole('checkbox')).toBeChecked();
+    await expect(item('Output Count').getByRole('checkbox')).toBeChecked();
+    await item('Input Count').getByRole('checkbox').click();
+    await expect(page.getByRole('columnheader', { name: 'Input Count' })).toBeHidden();
+    await expect(page.getByRole('columnheader', { name: 'Output Count' })).toBeVisible();
+  });
+
   test('shows the action graph of a run attempt', async ({ page }) => {
     await page.goto(`/#/workflows/${WORKFLOW}/24.1/graph`);
 
