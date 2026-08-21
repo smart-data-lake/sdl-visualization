@@ -76,6 +76,15 @@ const columns = [{
     property: 'duration',
     renderer: (x) => durationRenderer(x),
     width: '150px'
+}, {
+    // what the action read resp. wrote, from the metrics of the state file (see metrics.ts)
+    title: 'Input Count',
+    property: 'mainInputCount',
+    width: '150px'
+}, {
+    title: 'Output Count',
+    property: 'mainOutputCount',
+    width: '150px'
 }];
 
 export const TableView = (props: { rows: Row[], stepName?: string, setToolbarElements: (lrElements: [JSX.Element?, JSX.Element?]) => void}) => {
