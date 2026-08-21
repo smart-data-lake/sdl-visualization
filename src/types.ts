@@ -150,23 +150,38 @@ export class Row implements MetaDataBaseObject {
     inputIds?: string[],
     outputIds?: string[],
   }
-  export type Results = [{
+  /**
+   * The metrics SDLB recorded for one result of an action. The bag is open ended - the named
+   * attributes are the ones the UI knows about, and input metrics come as `<name>#<inputId>`,
+   * e.g. `count#int-airports`, see util/WorkflowsExplorer/metrics.ts.
+   */
+  export interface ResultMetrics {
+    stage?: string,
+    count?: number,
+    num_tasks?: number,
+    no_data?: boolean,
+    records_written?: number,
+    files_written?: number,
+    num_files?: number,
+    rows_inserted?: number,
+    num_output_bytes?: number,
+    stage_duration?: string,
+    bytes_written?: number,
+    [metricName: string]: number | string | boolean | undefined
+  }
+
+  /** What an action wrote to one of its output data objects */
+  export interface Result {
     type: string,
     dataObjectId: string,
     partitionValues: any[],
     isSkipped?: boolean,
     isDAGStart?: boolean,
     isDummy?: boolean,
-    metrics?: {
-      stage?: string,
-      count?: number, 
-      num_tasks?: number,
-      no_data?: boolean,
-      records_written?: number,
-      stage_duration?: string,
-      bytes_written?: number,
-    }
-  }]
+    metrics?: ResultMetrics
+  }
+
+  export type Results = Result[]
 
   /**** Workflows and their runs as delivered by fetchAPI ****/
 

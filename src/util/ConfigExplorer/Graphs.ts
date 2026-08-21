@@ -85,8 +85,13 @@ export class Edge {
     public source: string;
     public target: string;
     public type?: string;
+    /**
+     * The data object this edge stands for, if data objects are not nodes of the graph. Set by
+     * getActionGraph, where an edge between two actions is the data object they share.
+     */
+    public dataObjectId?: string;
 
-    constructor(fromNode: Node, toNode: Node, id: id, type?: string){
+    constructor(fromNode: Node, toNode: Node, id: id, type?: string, dataObjectId?: string){
         this.fromNode = fromNode;
         this.toNode = toNode;
         this.id = id; //Ids are not unique identifiers, since we can have the same Edge/Action connecting several Nodes/DataObjects.
@@ -94,6 +99,7 @@ export class Edge {
         this.source = this.fromNode.id;
         this.target = this.toNode.id;
         this.type = type;
+        this.dataObjectId = dataObjectId;
     }
 }
 
@@ -282,13 +288,14 @@ export class DAGraph {
         we have the following invariant:
         type(succ(a)) = DataObject[] and type(succ(succ(a))) = ActionObject[]
     */
+    // the successors of an action, each together with the data object it is reached through
     #getDirectlyReachableActionSuccessors(a: ActionObject){
-        const succ: ActionObject[] = [];
+        const succ: {via: Node, action: ActionObject}[] = [];
         
         a.toNodes.forEach(d => {
             const nextActions = this.edges.filter(e => e.fromNode == d);
             nextActions.forEach(action => {
-                succ.push(action.toNode as ActionObject);
+                succ.push({via: d, action: action.toNode as ActionObject});
             })
         });
         return succ;
@@ -355,6 +362,10 @@ export class DAGraph {
      * Returns a new graph with ActionObject as ndoes. The edges are built by connecting neighbouring actions.
      *  In rare case, an action object can have multiple incoming and outgoing edges
 
+        An action that reads and writes the same data object - the historization pattern - would be
+        its own successor. Such an edge says nothing about how the actions are connected, so it is
+        left out.
+
         Caveat: this assumes that we are in full graph view
      */
 
@@ -369,9 +380,12 @@ export class DAGraph {
         actions.forEach(action => {
             const actionType = action.getActionType();
             const directlyReachableActions = this.#getDirectlyReachableActionSuccessors(action);
-            directlyReachableActions.forEach(toAction =>{
-                newEdges.push(new Edge(action, toAction, `${action.id}->${toAction.id}`, actionType));
-            }) 
+            // the data object is part of the edge id, so that two actions sharing more than one data
+            // object are connected by one edge per data object instead of by duplicate ids
+            directlyReachableActions.filter(({action: toAction}) => toAction.id !== action.id)
+                .forEach(({via, action: toAction}) =>{
+                    newEdges.push(new Edge(action, toAction, `${action.id}->${via.id}->${toAction.id}`, actionType, via.id));
+                }) 
         });
 
         return new DAGraph(newNodes, newEdges);

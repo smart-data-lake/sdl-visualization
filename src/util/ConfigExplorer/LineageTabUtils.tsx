@@ -11,6 +11,8 @@ import { nodeHeight, nodeWidth } from '../../components/ConfigExplorer/LineageTa
 import { TaskStatus } from '../../types';
 import { findFirstKeyWithObject } from '../helpers';
 import { ConfigData } from './ConfigData';
+import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
+import { FlowMetric } from '../WorkflowsExplorer/metrics';
 import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, setRfNodeData } from './Graphs';
 
 
@@ -29,6 +31,13 @@ const EDGE_COLOR_HIGHLIGHTED = '#096bde';
 const PARENT_NODE_COLOR_DEFAULT = 'rgba(255, 0, 0, 0.2)';
 const EDGE_STROKE_WIDTH_DEFAULT = 3
 const EDGE_STROKE_WIDTH_HIGHLIGHTED = 5;
+/*
+    The z level a selected edge, the nodes it connects and its metric labels are lifted to, so that
+    the highlighting is not hidden behind another edge or another edge's labels. ReactFlow renders
+    the edges of one z level into one SVG layer and puts the level on it, and takes the z of a node
+    from the same attribute (see groupEdgesByZLevel resp. createNodeInternals).
+*/
+export const SELECTED_ELEMENT_Z_INDEX = 1000;
 
 
 /*
@@ -75,6 +84,10 @@ export interface flowProps {
     graph?: DAGraph;
     // the state of each node within a run attempt, by node id. Only the run view knows these.
     nodeStatuses?: Map<string, TaskStatus>;
+    // the metrics of the data flows within a run attempt, by edge id resp. by node id for the flows
+    // that have no edge to sit on (see getRunMetrics). Only the run view knows these.
+    edgeMetrics?: Map<string, EdgeMetrics>;
+    nodeMetrics?: Map<string, NodeMetrics>;
     runContext?: boolean;
 }
 
@@ -104,6 +117,15 @@ export interface graphNodeProps {
     isCenterNodeAncestor: boolean
 }
 
+/** The data a customEdge is rendered from, see CustomEdge */
+export interface CustomEdgeProps {
+    output?: FlowMetric,          // what the source action wrote to the data object of this edge
+    input?: FlowMetric,           // what the target action read from it
+    outputIndex: number,          // position among the edges leaving the source, to spread the labels
+    inputIndex: number,           // position among the edges entering the target
+    highlighted: boolean,
+}
+
 export interface ReactFlowNodeProps {
     props: any,
     label: string,
@@ -119,6 +141,7 @@ export interface ReactFlowNodeProps {
     graphView: GraphView,
     runContext: boolean, // rendered inside a run attempt, i.e. without config data behind the nodes
     status: TaskStatus | undefined, // the state of the node within a run attempt, if it has one
+    metrics: NodeMetrics | undefined, // the metrics of this action that have no edge to sit on
     highlighted: boolean,
     numFwdActiveEdges: number,
     numBwdActiveEdges: number,
@@ -219,6 +242,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             graphView: graphView,
             runContext: props.runContext === true,
             status: props.nodeStatuses?.get(node.id),
+            metrics: props.nodeMetrics?.get(node.id as string),
             expandNodeFunc: expandNodeFunc,
             graphNodeProps: {
                 isCenterNode: isCenterNode,
@@ -271,10 +295,14 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
     var result: ReactFlowEdge[] = [];
     edges.forEach(edge => {
         assert(!(edge.toNode.id === undefined || edge.fromNode.id === undefined), "Edge has no source or target")
-        const selected = selectedEdgeId === edge.id;
         const uniqueId = edge.id;
         const fromNodeId = edge.fromNode.id;
         const toNodeId = edge.toNode.id;
+        // where the metric labels sit among the labels of the sibling edges leaving the source resp.
+        // entering the target, so that the labels of one action do not end up on top of each other
+        const siblingOutEdges = dataObjectsAndActions.getOutElems(fromNodeId)[1];
+        const siblingInEdges = dataObjectsAndActions.getInElems(toNodeId)[1];
+        const metrics = props.edgeMetrics?.get(edge.id as string);
 
         const newEdge = {
             type: 'customEdge',
@@ -287,9 +315,14 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
                 height: 10,
                 color: edgeColor,
             },
-            labelBgPadding: [7, 7],
-            labelBgBorderRadius: 8,
-            labelBgStyle: { fill: selected ? LABEL_COLOR : '#fff', fillOpacity: selected ? 1 : 0.75, stroke: LABEL_COLOR },
+            data: {
+                // the metrics of the data object this edge stands for, only set in a run attempt
+                output: metrics?.output,
+                input: metrics?.input,
+                outputIndex: Math.max(siblingOutEdges.findIndex(e => e.id === edge.id), 0),
+                inputIndex: Math.max(siblingInEdges.findIndex(e => e.id === edge.id), 0),
+                highlighted: selectedEdgeId === edge.id,
+            } as CustomEdgeProps,
             style: { stroke: edgeColor, strokeWidth: EDGE_STROKE_WIDTH_DEFAULT },
         } as ReactFlowEdge;
         result.push(newEdge);
@@ -578,20 +611,23 @@ export function setDefaultNodeStyles() { }
 
 export function resetEdgeStyles(rfi: ReactFlowInstance) {
     rfi.setEdges((edge) => {
-        return edge.map((e) => {
-            e.style = {
+        // a new object per edge, so that the custom edge component re-renders its metric labels
+        return edge.map((e) => ({
+            ...e,
+            data: {...e.data, highlighted: false},
+            zIndex: 0,
+            style: {
                 ...e.style,
                 stroke: EDGE_COLOR_DEFAULT,
                 strokeWidth: EDGE_STROKE_WIDTH_DEFAULT
-            }
-            e.markerEnd = {
+            },
+            markerEnd: {
                 type: MarkerType.ArrowClosed,
                 width: 10,
                 height: 10,
                 color: EDGE_COLOR_DEFAULT,
             }
-            return e;
-        })
+        }))
     })
 }
 
@@ -600,6 +636,7 @@ export function resetNodeStyles(rfi: ReactFlowInstance) {
         return node.map((elem) => {
             const newElem = {
                 ...elem,
+                zIndex: 0,
                 data: {
                     ...elem.data,
                     highlighted: false
@@ -631,12 +668,13 @@ export function setNodeStyles(rfi: ReactFlowInstance, nodeIds: string[]) {
 
 export function setEdgeStyles() { } // TODO
 
-export function setNodeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlowEdge) {
+export function setNodeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: SelectableEdge) {
     rfi.setNodes((n) => {
         return n.map((elem) => {
             if (edge.source === elem.id || edge.target === elem.id) {
                 const newElem = {
                     ...elem,
+                    zIndex: SELECTED_ELEMENT_Z_INDEX,
                     data: {
                         ...elem.data,
                         highlighted: true
@@ -649,25 +687,43 @@ export function setNodeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlow
     })
 }
 
-export function setEdgeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: ReactFlowEdge) {
+export function setEdgeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: SelectableEdge) {
     rfi.setEdges((e) => {
         return e.map((elem) => {
-            if (elem.id === edge.id) {
-                elem.style = {
+            if (elem.id !== edge.id) return elem;
+            // a new object, so that the custom edge component re-renders its metric labels highlighted
+            return {
+                ...elem,
+                data: {...elem.data, highlighted: true},
+                zIndex: SELECTED_ELEMENT_Z_INDEX,
+                style: {
                     ...elem.style,
                     stroke: EDGE_COLOR_HIGHLIGHTED,
                     strokeWidth: EDGE_STROKE_WIDTH_HIGHLIGHTED,
-                }
-                elem.markerEnd = {
+                },
+                markerEnd: {
                     type: MarkerType.ArrowClosed,
                     width: 10,
                     height: 10,
                     color: EDGE_COLOR_HIGHLIGHTED,
                 }
             }
-            return elem;
         })
     });
+}
+
+/**
+ * Everything an edge needs to identify for being selected. The metric labels of an edge are rendered
+ * outside of its SVG group, so they select the edge themselves and only know these attributes.
+ */
+export type SelectableEdge = {id: string, source: string, target: string};
+
+/** Select one edge: highlight it, the nodes it connects and its metric labels, and nothing else */
+export function selectEdge(rfi: ReactFlowInstance, edge: SelectableEdge) {
+    resetEdgeStyles(rfi);
+    resetNodeStyles(rfi);
+    setNodeStylesOnEdgeClick(rfi, edge);
+    setEdgeStylesOnEdgeClick(rfi, edge);
 }
 
 

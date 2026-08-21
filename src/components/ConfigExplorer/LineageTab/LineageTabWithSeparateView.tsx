@@ -37,7 +37,7 @@ import {
   flowProps,
   prepareAndRenderGraph,
   resetEdgeStyles, resetNodeStyles,
-  setEdgeStylesOnEdgeClick, setNodeStylesOnEdgeClick
+  selectEdge
 } from '../../../util/ConfigExplorer/LineageTabUtils';
 import CenteredCirularProgress from '../../Common/CenteredCircularProgress';
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
@@ -116,12 +116,9 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
     resetNodeStyles(reactFlow);
   }
 
-  // highlight edge and src, target nodes' border
+  // highlight edge, its metric labels and src, target nodes' border
   const onEdgeClick = (_event, edge: ReactFlowEdge) => {
-    resetEdgeStyles(reactFlow);
-    resetNodeStyles(reactFlow);
-    setNodeStylesOnEdgeClick(reactFlow, edge);
-    setEdgeStylesOnEdgeClick(reactFlow, edge);
+    selectEdge(reactFlow, edge);
   }
 
   useEffect(() => {
