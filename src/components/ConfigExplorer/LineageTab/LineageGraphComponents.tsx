@@ -6,9 +6,9 @@
     -adjust between node distance (max width and text-overflow)
     -sohuld be able to show all nodes of the same type (generic function in Graph.ts)
 */
-import { useEffect, useRef, useState } from 'react';
+import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
-import { EdgeProps, Handle, getSmoothStepPath } from 'reactflow';
+import { EdgeLabelRenderer, EdgeProps, Handle, getSmoothStepPath, useReactFlow } from 'reactflow';
 
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
@@ -24,7 +24,8 @@ import { Link } from "react-router-dom";
 import { Position } from 'reactflow';
 import { useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
-import { flowProps, graphNodeProps, ReactFlowNodeProps } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { CustomEdgeProps, flowProps, graphNodeProps, ReactFlowNodeProps, SELECTED_ELEMENT_Z_INDEX, selectEdge } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { FlowMetric } from '../../../util/WorkflowsExplorer/metrics';
 import { getIcon, getPartitionStatus, getExecutionMode } from '../../../util/WorkflowsExplorer/StatusInfo';
 import { getStatusColor } from '../../../util/WorkflowsExplorer/statusColors';
 import './LineageTab.css';
@@ -42,6 +43,13 @@ const defaultNodeBorderColor = '#a9a9a9';
 
 const defaultEdgeStrokeWidth = 3
 const highlightedEdgeStrokeWidth = 5;
+
+// Where an edge starts and ends relative to the box of its node: ReactFlow measures the source
+// handle a few pixels inside the box and the target handle a few pixels outside it. The metric
+// labels are aligned to the box, so they correct for it (see metricLabelDistance). Measured values
+// - the node box has a fixed size, see CustomDataNode.
+const SOURCE_HANDLE_INSET = 13;
+const TARGET_HANDLE_INSET = -11;
 
 const dataNodeStyles = {
   padding: '10px',
@@ -111,6 +119,44 @@ const handleTypeClick = () => {
 };
 
 
+/*
+  The metrics of a data flow, shown next to the edge it flows along (see CustomEdge) or next to the
+  node when there is no edge to sit on (see CustomDataNode). Only the value is shown, to keep the
+  graph readable - the tooltip names the data object and the metric it comes from.
+*/
+const MetricLabel = ({metric, direction, highlighted, testId, onClick}: {
+  metric: FlowMetric,
+  direction: 'output' | 'input',
+  highlighted?: boolean,
+  testId: string,
+  onClick?: () => void,
+}) => {
+  // the label shows one number, the tooltip names the data object and everything the action
+  // recorded for it
+  const title = (
+    <Box>
+      <div><b>{direction === 'output' ? 'written to' : 'read from'} {metric.dataObjectId}:</b></div>
+      {metric.all.map(entry => <div key={entry.name}>{entry.name} = {String(entry.value)}</div>)}
+    </Box>
+  );
+  return (
+    <Tooltip title={title} arrow disableInteractive size="sm">
+      <Typography level="body-xs" data-testid={testId} onClick={onClick}
+        sx={{
+          padding: '0px 4px',
+          borderRadius: '8px',
+          // the border follows the edge the label belongs to, so both highlight together
+          border: `1px solid ${highlighted ? highLightedEdgeColor : defaultEdgeColor}`,
+          bgcolor: '#fff',
+          whiteSpace: 'nowrap',
+          cursor: onClick ? 'pointer' : 'default',
+        }}>
+        {metric.value}
+      </Typography>
+    </Tooltip>
+  )
+}
+
 function createConnectionChip(name: string){
   return(
     <Link to={"/config/connections/"+name}>
@@ -125,7 +171,7 @@ export const CustomDataNode = ( {data} ) => {
           targetPosition, sourcePosition,
           progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
           numBwdActiveEdges, numFwdActiveEdges,
-          expandNodeFunc, graphNodeProps, highlighted, runContext, status
+          expandNodeFunc, graphNodeProps, highlighted, runContext, status, metrics
   }: ReactFlowNodeProps = data;
   const {isSink,  isSource,  
          isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode
@@ -284,6 +330,30 @@ export const CustomDataNode = ( {data} ) => {
   const handleHOffset = isVerticalLayout ? '1px' : '24px';
   const handleWOffset = isVerticalLayout ? '24px' : '1px';
 
+  /*
+    The metrics of the data objects this action wrote but nobody read, resp. read from a source no
+    action of the attempt produced. They have no edge to sit on, so they are shown just past the
+    node on the side the missing edge would leave from - beneath it in a vertical layout, next to it
+    in a horizontal one - centered on the node, as there is no line to align them to.
+  */
+  function showDanglingMetrics(flowMetrics: FlowMetric[], direction: 'output' | 'input'){
+    if (flowMetrics.length === 0) return null;
+    const isOutput = direction === 'output';
+    const gap = 'calc(100% + 10px)';
+    const position = isVerticalLayout
+      ? {left: '50%', transform: 'translateX(-50%)', ...(isOutput ? {top: gap} : {bottom: gap})}
+      : {top: '50%', transform: 'translateY(-50%)', ...(isOutput ? {left: gap} : {right: gap})};
+    return (
+      <Box sx={{position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: '2px', ...position}}>
+        {flowMetrics.map(metric =>
+          <MetricLabel key={metric.dataObjectId} metric={metric} direction={direction}
+                       testId={`node-metric-${direction}-${metric.dataObjectId}`}/>
+        )}
+      </Box>
+    )
+  }
+
   return (
     <>
       <Box 
@@ -318,6 +388,8 @@ export const CustomDataNode = ( {data} ) => {
         {showObjectTitle()}
         {showObjectName(layoutDirection)}
       </div>
+      {metrics && showDanglingMetrics(metrics.outputs, 'output')}
+      {metrics && showDanglingMetrics(metrics.inputs, 'input')}
       {/*showProperties()*/}
       
       {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}> */}
@@ -351,15 +423,58 @@ export const CustomDataNode = ( {data} ) => {
 };
 
 
+/*
+  How far apart the labels of sibling edges are set. A vertical edge has room along the line, so they
+  follow each other away from the node; a horizontal one does not, so they are stacked above it.
+*/
+const METRIC_LABEL_GAP_ALONG_EDGE = 26;
+const METRIC_LABEL_GAP_STACKED = 22;
+// the gap between a label and the box of the node it belongs to
+const METRIC_LABEL_MARGIN = 10;
+// the gap between a label and the line of its edge
+const METRIC_LABEL_LINE_GAP = 6;
+
+/*
+  Where a metric label sits, as a transform for the label box.
+
+  It is set METRIC_LABEL_MARGIN away from the box of the node it belongs to - `inset` corrects for
+  where ReactFlow puts the handle relative to that box - along the straight part of the smooth step
+  path, so the label lies on its edge in any layout direction and the labels of all nodes line up.
+  The corner of the box facing the node is anchored on that point, so a label is never pushed back
+  onto the node by its own size.
+
+  The labels of the edges of one node all start at the same handle, so `index` keeps them apart.
+*/
+function metricLabelTransform(x: number, y: number, position: Position, inset: number, index: number) {
+  const along = METRIC_LABEL_MARGIN + inset;
+  const alongIndexed = along + index * METRIC_LABEL_GAP_ALONG_EDGE;
+  const stacked = METRIC_LABEL_LINE_GAP + index * METRIC_LABEL_GAP_STACKED;
+  switch (position) {
+    // a vertical edge: beside the line, one label after the other away from the node
+    case Position.Top:
+      return `translate(${METRIC_LABEL_LINE_GAP}px, -100%) translate(${x}px, ${y - alongIndexed}px)`;
+    case Position.Bottom:
+      return `translate(${METRIC_LABEL_LINE_GAP}px, 0) translate(${x}px, ${y + alongIndexed}px)`;
+    // a horizontal edge: above the line, the labels stacked on the same point of the edge
+    case Position.Left:
+      return `translate(-100%, calc(-100% - ${stacked}px)) translate(${x - along}px, ${y}px)`;
+    default:
+      return `translate(0, calc(-100% - ${stacked}px)) translate(${x + along}px, ${y}px)`;
+  }
+}
+
 //https://github.com/xyflow/xyflow/discussions/2347
 export const CustomEdge = ({
   id,
+  source, target,
   sourceX, sourceY, targetX, targetY,
   sourcePosition,targetPosition,
   style,
   markerEnd,
-}: EdgeProps) => {
+  data,
+}: EdgeProps<CustomEdgeProps>) => {
 
+  const reactFlow = useReactFlow();
   const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -370,11 +485,42 @@ export const CustomEdge = ({
     borderRadius: 10,
   });
 
+  // the metrics of the data object this edge stands for, only known within a run attempt
+  const {output, input} = data || {};
+  const outputTransform = metricLabelTransform(sourceX, sourceY, sourcePosition,
+    SOURCE_HANDLE_INSET, data?.outputIndex ?? 0);
+  const inputTransform = metricLabelTransform(targetX, targetY, targetPosition,
+    TARGET_HANDLE_INSET, data?.inputIndex ?? 0);
+  // a selected edge and its labels are lifted over the other edges and labels
+  const labelWrapperStyles: CSSProperties = {
+    position: 'absolute', pointerEvents: 'all',
+    zIndex: data?.highlighted ? SELECTED_ELEMENT_Z_INDEX + 1 : undefined,
+  };
+  // the labels are rendered outside of the edge's SVG group, so a click on them has to select the
+  // edge itself - without that, clicking a label would do nothing
+  const onLabelClick = () => selectEdge(reactFlow, {id, source, target});
+
   // maybe use BaseEdge...
   return (
     <>
       <path style={style} className="react-flow__edge-path-selector" d={edgePath} markerEnd={markerEnd} fillRule="evenodd"/>
       <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={markerEnd}/>
+      {(output || input) &&
+        <EdgeLabelRenderer>
+          {output &&
+            <div className="nodrag nopan" style={{...labelWrapperStyles, transform: outputTransform}}>
+              <MetricLabel metric={output} direction='output' highlighted={data?.highlighted}
+                           testId={`edge-metric-output-${id}`} onClick={onLabelClick}/>
+            </div>
+          }
+          {input &&
+            <div className="nodrag nopan" style={{...labelWrapperStyles, transform: inputTransform}}>
+              <MetricLabel metric={input} direction='input' highlighted={data?.highlighted}
+                           testId={`edge-metric-input-${id}`} onClick={onLabelClick}/>
+            </div>
+          }
+        </EdgeLabelRenderer>
+      }
     </>
   );
 }

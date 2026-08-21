@@ -199,6 +199,51 @@ test('get action graph, single I/O source', () => {
 
     expect(actionGraph.nodes.length).toBe(2);
     expect(actionGraph.edges.length).toBe(1); 
+    // the data object the two actions share is kept on the edge and in its id, it is the only place
+    // left to look up the metrics of the data that flowed between them
+    expect(actionGraph.edges[0].dataObjectId).toBe('n2');
+    expect(actionGraph.edges[0].id).toBe('a12->n2->a23');
+})
+
+/*
+     n1 -> hist -> n1, i.e. an action reading and writing the same data object
+*/
+test('get action graph, an action is not its own successor', () => {
+    const n0 = new DataObject('n0');
+    const n1 = new DataObject('n1');
+
+    const hist = new ActionObject([n0, n1], [n1], 'hist', {type: "actionType1"});
+
+    const g = new DAGraph([n0, n1, hist],
+                          [new Edge(n0, hist, "e0"), new Edge(n1, hist, "e1"), new Edge(hist, n1, "e2")]);
+
+    // the historization pattern would make the action its own successor, which says nothing about
+    // how the actions are connected
+    expect(g.getActionGraph().edges.length).toBe(0);
+})
+
+/*
+     a1 -> {n1, n2} -> a2, i.e. two actions sharing two data objects
+*/
+test('get action graph, two actions connected by two data objects', () => {
+    const n0 = new DataObject('n0');
+    const n1 = new DataObject('n1');
+    const n2 = new DataObject('n2');
+
+    const a1 = new ActionObject([n0], [n1, n2], 'a1', {type: "actionType1"});
+    const a2 = new ActionObject([n1, n2], [], 'a2', {type: "actionType2"});
+
+    const g = new DAGraph([n0, n1, n2, a1, a2],
+                          [new Edge(n0, a1, "e0"), new Edge(a1, n1, "e1"), new Edge(a1, n2, "e2"),
+                           new Edge(n1, a2, "e3"), new Edge(n2, a2, "e4")]);
+
+    const actionGraph = g.getActionGraph();
+
+    // one edge per shared data object, with distinct ids - a single a1->a2 edge would hide one of
+    // the two data flows, and two edges of the same id would collide in the ReactFlow instance
+    expect(actionGraph.edges.length).toBe(2);
+    expect(new Set(actionGraph.edges.map(e => e.id)).size).toBe(2);
+    expect(actionGraph.edges.map(e => e.dataObjectId).sort()).toEqual(['n1', 'n2']);
 })
 
 /*

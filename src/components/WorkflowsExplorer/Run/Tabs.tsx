@@ -15,7 +15,7 @@ import useLocalStorageState from '../../../hooks/useLocalStorageState';
 import { useWorkspace } from '../../../hooks/useWorkspace';
 import { flowProps } from "../../../util/ConfigExplorer/LineageTabUtils";
 import { onlyUnique } from '../../../util/helpers';
-import { Lineage } from "../../../util/WorkflowsExplorer/Lineage";
+import { getRunMetrics, Lineage } from "../../../util/WorkflowsExplorer/Lineage";
 import LineageTabSep from "../../ConfigExplorer/LineageTab/LineageTabWithSeparateView";
 import { filterByGroup, FilterParams, filterSearchText } from '../WorkflowHistory';
 import { TableView } from './TableView';
@@ -82,7 +82,11 @@ const TabsPanels = (props: { attempt: Attempt, tab: string }) => {
         })
         // the node borders show the state each action ended up in
         const nodeStatuses = new Map(attempt.timelineRows.map((row: Row) => [row.step_name, row.status]));
-        return {elementName: '', elementType: '', graph: new Lineage(data).graph.getActionGraph(), nodeStatuses, runContext: true}
+        const graph = new Lineage(data).graph.getActionGraph();
+        // how much data flowed along each edge, i.e. what the actions read and wrote
+        const actions = new Map(attempt.timelineRows.map((row: Row) => [row.step_name, row.details]));
+        const {edgeMetrics, nodeMetrics} = getRunMetrics(graph, actions);
+        return {elementName: '', elementType: '', graph, nodeStatuses, edgeMetrics, nodeMetrics, runContext: true}
     }, [attempt]);
 
     return (<>

@@ -93,6 +93,160 @@ test.describe('workflows explorer', () => {
     await expect(node('join-departures-airports').getByTestId('BlockOutlinedIcon')).toBeVisible();
   });
 
+  test('the run graph shows the metrics of each data flow on its edge', async ({ page }) => {
+    await page.goto(`/#/workflows/${WORKFLOW}/75.1/graph`);
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
+
+    // every edge of the action graph is one data object: the output label is what the source action
+    // wrote to it, the input label what the target action read from it
+    const edge = (from: string, via: string, to: string) => `${from}->${via}->${to}`;
+    const output = (id: string) => page.getByTestId(`edge-metric-output-${id}`);
+    const input = (id: string) => page.getByTestId(`edge-metric-input-${id}`);
+
+    // download-airports is a file action, so it only recorded files_written
+    const download = edge('download-airports', 'stg-airports', 'historize-airports');
+    await expect(output(download)).toHaveText('1');
+    await expect(input(download)).toBeHidden(); // historize-airports recorded no input metric
+
+    // the interesting case: 759 rows written, only 666 of them read
+    const departures = edge('download-deduplicate-departures', 'int-departures', 'join-departures-airports');
+    await expect(output(departures)).toHaveText('759');
+    await expect(input(departures)).toHaveText('666');
+
+    const airports = edge('historize-airports', 'int-airports', 'join-departures-airports');
+    await expect(output(airports)).toHaveText('83330');
+    await expect(input(airports)).toHaveText('83330');
+
+    const join = edge('join-departures-airports', 'btl-departures-arrivals-airports', 'compute-distances');
+    await expect(output(join)).toHaveText('663');
+    await expect(input(join)).toHaveText('663');
+
+    // btl-distances is written but read by no action of the attempt, so its metric has no edge and
+    // is shown next to compute-distances instead
+    await expect(page.getByTestId('node-metric-output-btl-distances')).toHaveText('663');
+  });
+
+  test('the tooltip of a metric names its data object and lists every metric of it', async ({ page }) => {
+    await page.goto(`/#/workflows/${WORKFLOW}/75.1/graph`);
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
+    const compute = 'join-departures-airports->btl-departures-arrivals-airports->compute-distances';
+
+    // innerText, not toHaveText: the assertion is about the line breaks, which textContent drops
+    const tooltipLines = () => page.getByRole('tooltip').innerText();
+
+    // an output lists everything the action recorded for that data object, sorted by name, and none
+    // of the count#<inputId> metrics, which describe the action's inputs
+    await page.getByTestId(`edge-metric-output-${compute}`).hover();
+    await expect.poll(tooltipLines).toBe([
+      'written to btl-departures-arrivals-airports:',
+      'bytes_written = 16837', 'count = 663', 'num_files = 2', 'num_output_bytes = 16837',
+      'num_tasks = 2', 'records_written = 663', 'rows_inserted = 663',
+    ].join('\n'));
+
+    // an input lists the metrics qualified with its own id
+    const departures = 'download-deduplicate-departures->int-departures->join-departures-airports';
+    await page.getByTestId(`edge-metric-input-${departures}`).hover();
+    await expect.poll(tooltipLines).toBe('read from int-departures:\ncount#int-departures = 666');
+  });
+
+  test('selecting an edge in the run graph highlights its metrics', async ({ page }) => {
+    await page.goto(`/#/workflows/${WORKFLOW}/75.1/graph`);
+    const id = 'download-deduplicate-departures->int-departures->join-departures-airports';
+    const label = page.getByTestId(`edge-metric-output-${id}`);
+    await expect(label).toBeVisible();
+
+    // unselected: the label border follows its edge, i.e. the default grey
+    await expect(label).toHaveCSS('border-color', 'rgb(177, 177, 183)');
+    await expect(page.locator(`g[data-testid="rf__edge-${id}"] .react-flow__edge-path`))
+      .toHaveCSS('stroke', 'rgb(177, 177, 183)');
+
+    await page.locator(`g[data-testid="rf__edge-${id}"] .react-flow__edge-path`).click({ force: true });
+
+    // selected: the edge and both of its metric labels turn to the highlight colour
+    await expect(page.locator(`g[data-testid="rf__edge-${id}"] .react-flow__edge-path`))
+      .toHaveCSS('stroke', 'rgb(9, 107, 222)');
+    await expect(label).toHaveCSS('border-color', 'rgb(9, 107, 222)');
+    await expect(page.getByTestId(`edge-metric-input-${id}`)).toHaveCSS('border-color', 'rgb(9, 107, 222)');
+
+    // and everything highlighted is lifted over the other edges and labels, so that the
+    // highlighting is not hidden behind them
+    await expect(page.locator(`svg.react-flow__edges:has(g[data-testid="rf__edge-${id}"])`))
+      .toHaveCSS('z-index', '1000');
+    await expect(page.locator('.react-flow__node[data-id="join-departures-airports"]'))
+      .toHaveCSS('z-index', '1000');
+    await expect(label.locator('..')).toHaveCSS('z-index', '1001');
+
+    // clicking the pane puts everything back - away from the toolbar and the zoom controls
+    await page.locator('.react-flow__pane').click({ position: { x: 1150, y: 300 } });
+    await expect(label).toHaveCSS('border-color', 'rgb(177, 177, 183)');
+    await expect(page.locator('.react-flow__node[data-id="join-departures-airports"]'))
+      .toHaveCSS('z-index', '0');
+  });
+
+  test('the run graph aligns the metrics to the nodes in both layouts', async ({ page }) => {
+    await page.goto(`/#/workflows/${WORKFLOW}/75.1/graph`);
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
+
+    const box = async (locator: ReturnType<typeof page.locator>) => (await locator.boundingBox())!;
+    // the labels are placed relative to the edge endpoints, which ReactFlow measures, so the gap to
+    // the node is asserted as "a small one" rather than to the pixel
+    const isSmallGap = (gap: number) => { expect(gap).toBeGreaterThan(4); expect(gap).toBeLessThan(16); };
+    const node = (action: string) => page.locator(`.react-flow__node[data-id="${action}"]`);
+    const join = 'download-deduplicate-departures->int-departures->join-departures-airports';
+    const airports = 'historize-airports->int-airports->join-departures-airports';
+
+    // vertical layout: the labels sit below resp. above their node, the ones of the two edges
+    // entering join-departures-airports following each other along the path
+    let departures = await box(node('download-deduplicate-departures'));
+    let output = await box(page.getByTestId(`edge-metric-output-${join}`));
+    isSmallGap(output.y - (departures.y + departures.height));
+
+    let joinNode = await box(node('join-departures-airports'));
+    let first = await box(page.getByTestId(`edge-metric-input-${join}`));
+    let second = await box(page.getByTestId(`edge-metric-input-${airports}`));
+    isSmallGap(joinNode.y - (first.y + first.height));
+    expect(second.y + second.height).toBeLessThan(first.y); // no overlap
+    expect(Math.round(second.x)).toBe(Math.round(first.x)); // both beside the same line
+
+    // the metric of an output no action reads has no edge, so it is centered under its action
+    let compute = await box(node('compute-distances'));
+    let stub = await box(page.getByTestId('node-metric-output-btl-distances'));
+    expect(Math.round(stub.x + stub.width / 2)).toBe(Math.round(compute.x + compute.width / 2));
+
+    await page.getByRole('button', { name: /switch to horizontal layout/ }).click();
+    await expect(page.getByTestId(`edge-metric-output-${join}`)).toBeVisible();
+
+    // horizontal layout: the labels sit right resp. left of their node and above the line, and the
+    // ones entering join-departures-airports are stacked, as there is no room along the line
+    departures = await box(node('download-deduplicate-departures'));
+    output = await box(page.getByTestId(`edge-metric-output-${join}`));
+    isSmallGap(output.x - (departures.x + departures.width));
+    expect(output.y + output.height).toBeLessThan(departures.y + departures.height / 2); // above the line
+
+    joinNode = await box(node('join-departures-airports'));
+    first = await box(page.getByTestId(`edge-metric-input-${join}`));
+    second = await box(page.getByTestId(`edge-metric-input-${airports}`));
+    isSmallGap(joinNode.x - (first.x + first.width));
+    expect(Math.round(second.x + second.width)).toBe(Math.round(first.x + first.width)); // stacked
+    expect(second.y + second.height).toBeLessThan(first.y);
+
+    // the stub is centered on its action in this layout too
+    compute = await box(node('compute-distances'));
+    stub = await box(page.getByTestId('node-metric-output-btl-distances'));
+    expect(Math.round(stub.y + stub.height / 2)).toBe(Math.round(compute.y + compute.height / 2));
+  });
+
+  test('the run graph of an attempt without metrics shows no labels', async ({ page }) => {
+    // in attempt 24.1 deduplicate-departures failed and the actions waiting on it were cancelled,
+    // so their results carry an empty metrics bag
+    await page.goto(`/#/workflows/${WORKFLOW}/24.1/graph`);
+    await expect(page.locator('.react-flow__node')).toHaveCount(ACTIONS.length);
+
+    const departures = 'download-deduplicate-departures->int-departures->join-departures-airports';
+    await expect(page.getByTestId(`edge-metric-output-${departures}`)).toBeHidden();
+    await expect(page.getByTestId(`edge-metric-input-${departures}`)).toBeHidden();
+  });
+
   test('clicking an action in the run graph opens its details', async ({ page }) => {
     await page.goto(`/#/workflows/${WORKFLOW}/24.1/graph`);
 
