@@ -33,6 +33,27 @@ test.describe('workflows explorer', () => {
     }
   });
 
+  test('the timeline minimap keeps one line per action group', async ({ page }) => {
+    // run 75 starts download-airports and download-deduplicate-departures in the same millisecond,
+    // so the minimap lines they aggregate into carry the same phase and start time. Keying those
+    // lines by their content made them collide ("two children with the same key"), which lets React
+    // drop one of them.
+    const reactWarnings: string[] = [];
+    page.on('console', (msg) => {
+      const text = msg.text();
+      if (text.includes('same key')) reactWarnings.push(text);
+    });
+
+    await page.goto(`/#/workflows/${WORKFLOW}/75.1`);
+
+    for (const action of ACTIONS) {
+      await expect(page.getByRole('link', { name: new RegExp(`^${action} `) }).first()).toBeVisible();
+    }
+    // one minimap line per action, none omitted by a duplicate key
+    await expect.poll(() => page.getByTestId('minimap-line').count()).toBe(ACTIONS.length);
+    expect(reactWarnings).toEqual([]);
+  });
+
   test('shows action execution details in the table view', async ({ page }) => {
     await page.goto(`/#/workflows/${WORKFLOW}/24.1/table`);
 

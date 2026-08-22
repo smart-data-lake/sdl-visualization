@@ -21,7 +21,7 @@ const MinimapRow: React.FC<MinimapRowProps> = ({ segments, startTime, endTime })
   const duration = extendedDuration(startTime, endTime);
 
   return (
-    <LineTrack>
+    <LineTrack data-testid="minimap-line">
       {segments.map((segment) => (
         <LineSegment
           key={segment.phase}

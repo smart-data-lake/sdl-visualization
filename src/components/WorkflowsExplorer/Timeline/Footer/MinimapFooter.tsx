@@ -92,9 +92,15 @@ const MinimapFooter: React.FC<MinimapFooterProps> = ({
           startHandleMove={startHandleDrag}
         />
         <LineContainer ref={container}>
-          {lines.map((segments) => (
+          {/*
+           * Keyed by position, not by content: two groups whose actions start at the same
+           * millisecond aggregate to the same phase and start time, so a content-derived key
+           * is not unique. The lines are a positional list anyway, and keeping the identity
+           * of a line lets the segments transition instead of remounting.
+           */}
+          {lines.map((segments, index) => (
             <MinimapRow
-              key={segments.map((segment) => `${segment.phase}${segment.start}`).join('-')}
+              key={index}
               segments={segments}
               startTime={timeline.startTime}
               endTime={timeline.endTime}
