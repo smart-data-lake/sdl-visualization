@@ -82,6 +82,9 @@ export interface flowProps {
     // a ready-made graph to show as a whole, instead of the neighbourhood of elementName in one of
     // configData's graphs. Used by the run view, which builds its graph from the state file.
     graph?: DAGraph;
+    // which view a given graph is. The run view passes an action graph and no view, the configuration
+    // tables pass the data resp. action graph restricted to the elements they list.
+    graphView?: GraphView;
     // the state of each node within a run attempt, by node id. Only the run view knows these.
     nodeStatuses?: Map<string, TaskStatus>;
     // the metrics of the data flows within a run attempt, by edge id resp. by node id for the flows

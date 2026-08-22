@@ -120,7 +120,7 @@ function ConfigExplorer() {
             <Panel>
             <Routes>
               <Route path=":elementType" 
-                element={<ElementTable dataLists={filteredConfigDataLists!} />} 
+                element={<ElementTable dataLists={filteredConfigDataLists!} configData={configData} />} 
                 errorElement={<ErrorBoundary/>}
               />
               <Route

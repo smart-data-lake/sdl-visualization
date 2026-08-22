@@ -468,10 +468,14 @@ export const NodeSearchButton = () => {
 };
 
 export default function LineageGraphToolbar({props}: {props: flowProps}) {
+    // grouping and the node attributes need the configuration behind the nodes, which the run view
+    // does not have
     const isPropsConfigDefined = props.configData !== undefined;
-    // The run view shows one given graph as a whole, so everything that selects a graph view, a
-    // center node or config attributes of the nodes has nothing to act on there.
-    const showConfigGraphOptions = props.graph === undefined;
+    // a given graph is shown as a whole - by the run view and by the configuration tables - so
+    // everything that selects a graph view or acts on a center node has nothing to act on there
+    const showCenterNodeOptions = props.graph === undefined;
+    // the lineage of a run is a tab of the run view, only the panel of the config explorer closes
+    const showCloseButton = !props.runContext;
     // avoid DOM warning for Draggable, see https://github.com/react-grid-layout/react-draggable/blob/v4.4.2/lib/DraggableCore.js#L159-L171
     const nodeRef = useRef(null);
 
@@ -484,26 +488,26 @@ export default function LineageGraphToolbar({props}: {props: flowProps}) {
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <NodeSearchButton/>
                 </ToggleButtonGroup>
-                {showConfigGraphOptions && <>
+                {(showCenterNodeOptions || isPropsConfigDefined) && <>
                     <Divider orientation="vertical" />
                     <ToggleButtonGroup variant="plain" spacing={0.1}>
-                        {isPropsConfigDefined && <GraphExpansionButton />}
-                        <GraphViewSelector />
-                        <GroupingButton props={props} />
-                        <NodeAttributeSelector />
+                        {showCenterNodeOptions && isPropsConfigDefined && <GraphExpansionButton />}
+                        {showCenterNodeOptions && <GraphViewSelector />}
+                        {isPropsConfigDefined && <GroupingButton props={props} />}
+                        {isPropsConfigDefined && <NodeAttributeSelector />}
                     </ToggleButtonGroup>
                 </>}
                 <Divider orientation="vertical" />
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <ShowAllButton />
-                    {showConfigGraphOptions && <CenterFocusButton />}
+                    {showCenterNodeOptions && <CenterFocusButton />}
                     <RecomputeLayoutButton />
                     <LayoutButton />
                 </ToggleButtonGroup>
                 <Divider orientation="vertical" />
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <DownloadLineageButton />
-                    {showConfigGraphOptions && <CloseLineageButton />}
+                    {showCloseButton && <CloseLineageButton />}
                 </ToggleButtonGroup>
             </Box>
         </Draggable>

@@ -78,8 +78,8 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
   const [rfContainerMounted, setRfContainerMounted] = useState(false);
 
   const { graphView: selectedGraphView, isExpanded, layout } = useLineageGraph();
-  // a graph passed in through the props is always shown as an action graph, the view cannot be switched
-  const graphView = props.graph ? 'action' : selectedGraphView;
+  // a graph passed in through the props brings its own view, the selector cannot switch it
+  const graphView = props.graph ? (props.graphView ?? 'action') : selectedGraphView;
 
   const reactFlow = useReactFlow();
   const [reactFlowKey, setReactFlowKey] = useState(0);
@@ -94,7 +94,7 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
     const prepared = prepareAndRenderGraph(reactFlow, {graphView, props, layout, isExpanded});
     setReactFlowKey(reactFlowKey + 1); // change key to re-create react flow component (and initialize it through default nodes)
     return {...prepared, nodes: dagreLayoutRf(prepared.nodes, prepared.edges, layout, nodeWidth, nodeHeight)};
-  }, [isExpanded, props.elementName, props.elementType, props.configData, props.graph, graphView, layout]);
+  }, [isExpanded, props.elementName, props.elementType, props.configData, props.graph, props.graphView, graphView, layout]);
 
   // the selected element does not exist in the selected graph view, so switch to one that does.
   // This has to happen after rendering, navigating from within the memo above would update the router

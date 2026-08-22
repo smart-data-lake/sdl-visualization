@@ -336,6 +336,30 @@ test("get action graph, demo example, no duplicates", () => {
     expect(actionIds.size).toBe(4);
 })
 
+/*
+    The subgraph of a list of elements, as the configuration tables show it: only the listed nodes and
+    the edges that stay within them.
+*/
+test("get sub graph, demo example data graph", () => {
+    const dataGraph = construct_demo_example_graph().getDataGraph();
+    expect(dataGraph.nodes.length).toBe(7);
+    expect(dataGraph.edges.length).toBe(6);
+
+    // the airports branch only: ext -> stg -> int -> btl-dep-arr, without the departures branch.
+    // The edge int-departures -> btl-dep-arr-airports is dropped, its source is not listed
+    const subGraph = dataGraph.getSubGraph(['ext-arports', 'stg-airports', 'int-airports', 'btl-dep-arr-airports']);
+    expect(subGraph.nodes.map(n => n.id)).toEqual(['ext-arports', 'stg-airports', 'int-airports', 'btl-dep-arr-airports']);
+    expect(subGraph.edges.length).toBe(3);
+    subGraph.edges.forEach(e => expect(dataGraph.edges).toContain(e));
+
+    // unknown ids are ignored, and the sink/source nodes are the ones of the subgraph
+    const isolated = dataGraph.getSubGraph(['btl-distances', 'does-not-exist']);
+    expect(isolated.nodes.map(n => n.id)).toEqual(['btl-distances']);
+    expect(isolated.edges.length).toBe(0);
+    expect(isolated.getSourceNodes().length).toBe(1);
+    expect(isolated.getSinkNodes().length).toBe(1);
+})
+
 
 test("get partial graph, data objects only, no duplicates", () =>{
     const n1 = new DataObject('n1');

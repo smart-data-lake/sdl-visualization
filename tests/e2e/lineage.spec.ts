@@ -1,4 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
+import { ACTIONS, DATA_OBJECTS } from './fixture';
 
 /**
  * The lineage panel of the config explorer (LineageTabWithSeparateView).
@@ -178,6 +179,98 @@ test.describe('lineage graph', () => {
     await openLineage(page, '/#/config/dataObjects/int-airports');
 
     await page.goto('/#/config/dataObjects/btl-distances');
+    await expect.poll(() => nodeIds(page)).toEqual(['btl-distances', 'compute-distances']);
+  });
+});
+
+/**
+ * The lineage of everything a configuration table lists (ElementTable), which is shown as a whole:
+ * no center node, no expansion and no graph view to switch.
+ */
+test.describe('lineage of the listed elements', () => {
+  const openTableLineage = async (page: Page, url: string) => {
+    await page.goto(url);
+    await page.getByRole('button', { name: 'Show lineage of the listed elements' }).click();
+    await expect(nodes(page).first()).toBeVisible();
+  };
+
+  test('shows every data object of the data objects table', async ({ page }) => {
+    await openTableLineage(page, '/#/config/dataObjects');
+
+    expect(await nodeIds(page)).toEqual([...DATA_OBJECTS].sort());
+    // the whole graph is shown, so there is nothing to expand, center or switch the view of.
+    // The expand handles hold their icon only where they can act (the button itself always renders)
+    await expect(nodes(page).locator('.react-flow__handle svg')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Expand graph' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Focus on central node' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Show graph view options' })).toHaveCount(0);
+    // but it is a panel of the config explorer, so it can be closed
+    await page.getByRole('button', { name: 'Close lineage' }).click();
+    await expect(nodes(page)).toHaveCount(0);
+  });
+
+  test('shows every action of the actions table', async ({ page }) => {
+    await openTableLineage(page, '/#/config/actions');
+
+    expect(await nodeIds(page)).toEqual([...ACTIONS].sort());
+  });
+
+  test('switching the tab switches between the data and the action graph', async ({ page }) => {
+    await openTableLineage(page, '/#/config/dataObjects');
+
+    await page.getByRole('tab', { name: 'Actions' }).click();
+    await expect.poll(() => nodeIds(page)).toEqual([...ACTIONS].sort());
+
+    await page.getByRole('tab', { name: 'Data Objects' }).click();
+    await expect.poll(() => nodeIds(page)).toEqual([...DATA_OBJECTS].sort());
+  });
+
+  test('the graph follows the filter of the element list', async ({ page }) => {
+    await openTableLineage(page, '/#/config/dataObjects');
+
+    await page.getByPlaceholder('Search element').fill('airports');
+
+    await expect.poll(() => nodeIds(page)).toEqual([
+      'btl-departures-arrivals-airports',
+      'ext-airports',
+      'int-airports',
+      'stg-airports',
+    ]);
+  });
+
+  test('an empty table shows an empty graph', async ({ page }) => {
+    await openTableLineage(page, '/#/config/dataObjects');
+
+    // no data object matches, so the tab is empty (and disabled) while there are still actions
+    await page.getByPlaceholder('Search element').fill('download');
+    await expect(nodes(page)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Show lineage of the listed elements' })).toHaveCount(0);
+
+    // nothing matches at all
+    await page.getByPlaceholder('Search element').fill('no-such-element');
+    await expect(nodes(page)).toHaveCount(0);
+
+    // and the graph comes back when the filter is cleared
+    await page.getByPlaceholder('Search element').fill('');
+    await expect.poll(() => nodeIds(page)).toEqual([...DATA_OBJECTS].sort());
+  });
+
+  test('the connections tab shows an empty graph, it has no lineage', async ({ page }) => {
+    await openTableLineage(page, '/#/config/dataObjects');
+
+    await page.goto('/#/config/connections');
+
+    await expect(nodes(page)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Show lineage of the listed elements' })).toHaveCount(0);
+  });
+
+  test('clicking a node navigates to that element and re-centers the graph', async ({ page }) => {
+    await openTableLineage(page, '/#/config/dataObjects');
+
+    await nodes(page).filter({ has: page.getByText('btl-distances', { exact: true }) }).first()
+      .getByText('btl-distances', { exact: true }).click();
+
+    await expect.poll(() => page.url()).toContain('/config/dataObjects/btl-distances');
     await expect.poll(() => nodeIds(page)).toEqual(['btl-distances', 'compute-distances']);
   });
 });

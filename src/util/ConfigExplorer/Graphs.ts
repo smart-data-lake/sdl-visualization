@@ -357,7 +357,19 @@ export class DAGraph {
         });
         return new DAGraph(newNodes, [...newEdges.values()]);
     }
-    
+
+    /**
+        Returns a new graph with the nodes of the given ids and the edges between them.
+
+        Used to show the lineage of a list of elements, e.g. the rows of the configuration tables.
+    */
+    getSubGraph(nodeIds: string[]): DAGraph {
+        const ids = new Set(nodeIds);
+        const newNodes = this.nodes.filter(node => ids.has(node.id));
+        const newEdges = this.edges.filter(edge => ids.has(edge.fromNode.id) && ids.has(edge.toNode.id));
+        return new DAGraph(newNodes, newEdges);
+    }
+
     /**
      * Returns a new graph with ActionObject as ndoes. The edges are built by connecting neighbouring actions.
      *  In rare case, an action object can have multiple incoming and outgoing edges

@@ -1,8 +1,11 @@
-import { Box, Sheet, Tab, TabList, TabPanel, Tabs } from "@mui/joy";
-import { useState } from "react";
+import AccountTree from "@mui/icons-material/AccountTree";
+import { Box, IconButton, Sheet, Tab, TabList, TabPanel, Tabs, Tooltip } from "@mui/joy";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useLineagePanel } from "../../hooks/useLineage";
 import { useWorkspace } from "../../hooks/useWorkspace";
-import { ConfigDataLists } from "../../util/ConfigExplorer/ConfigData";
+import { ConfigData, ConfigDataLists } from "../../util/ConfigExplorer/ConfigData";
+import { flowProps } from "../../util/ConfigExplorer/LineageTabUtils";
 import { isArray } from "../../util/helpers";
 import DataTable from "./DataTable";
 import { tooltipCellRenderer } from "./SchemaTab";
@@ -138,11 +141,37 @@ const connectionColumns: any[] = [{
 }];
 
 
-export default function ElementTable(props: {dataLists: ConfigDataLists}) {
-    const {dataLists} = props;
+export default function ElementTable(props: {dataLists: ConfigDataLists, configData: ConfigData}) {
+    const {dataLists, configData} = props;
     const {elementType} = useParams();
 	const {navigateContent} = useWorkspace();
     const [additionalToolbarElements, setAdditionalToolbarElements] = useState<JSX.Element>();
+    const {lineageTabOpen, setLineageTabOpen, setLineageTabProps} = useLineagePanel();
+    const elementTypeShown = elementType || "dataObjects";
+
+    // the lineage of the elements listed in the current tab: the data graph for data objects and the
+    // action graph for actions, restricted to the rows the table shows, i.e. to the current filter.
+    // An empty table - and the connections tab, which has no lineage - gives an empty graph, so that
+    // an open panel never keeps showing the elements of another tab or of a wider filter.
+    const lineageProps: flowProps = useMemo(() => {
+        const isActions = elementTypeShown === 'actions';
+        const graph = isActions ? configData.actionGraph : configData.dataGraph;
+        const rows = isActions ? dataLists.actions : (elementTypeShown === 'dataObjects' ? dataLists.dataObjects : []);
+        return {
+            elementName: '', // the graph is shown as a whole, there is no element to center it on
+            elementType: elementTypeShown,
+            configData: configData,
+            graph: graph?.getSubGraph(rows.map(row => row.id)),
+            graphView: isActions ? 'action' : 'data'
+        };
+    }, [configData, dataLists, elementTypeShown]);
+
+    const hasLineage = (lineageProps.graph?.nodes.length ?? 0) > 0;
+
+    // keep an open lineage panel in sync with the table, i.e. with the selected tab and the filter
+    useEffect(() => {
+        setLineageTabProps(lineageProps);
+    }, [lineageProps]);
 
     return (
 		<Sheet sx={{ flex: '1', height: '100%', display: 'flex', flexDirection: 'column', p: '1rem 0rem 1rem 0.5rem'}}>
@@ -154,6 +183,11 @@ export default function ElementTable(props: {dataLists: ConfigDataLists}) {
 						<Tab value="connections" disabled={dataLists.connections.length===0}>Connections</Tab>
 					</TabList>
 					<Box flex={1}/>
+					{hasLineage && !lineageTabOpen &&
+						<Tooltip arrow title='Show lineage of the listed elements' enterDelay={500} enterNextDelay={500} placement='top'>
+							<IconButton size="sm" variant="plain" onClick={() => setLineageTabOpen(true)}><AccountTree/></IconButton>
+						</Tooltip>
+					}
 					{additionalToolbarElements && additionalToolbarElements}
 				</Sheet>
 				<TabPanel value="dataObjects" className="content-panel" sx={{height: '100%', width: '100%', overflow: 'auto', paddingTop: '10px'}}>
