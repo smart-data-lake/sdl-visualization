@@ -1,4 +1,4 @@
-import { getPropertyByPath, isArray, onlyUnique } from "../helpers";
+import { getPropertyByPathIgnoreCase, isArray, onlyUnique } from "../helpers";
 import { DAGraph, DataObjectsAndActionsSep } from "./Graphs";
 
 export class ConfigData {
@@ -65,7 +65,7 @@ export class InitialConfigDataLists implements ConfigDataLists {
             const propClean = prop.trim();
             const strLower = str.trim().toLowerCase();
             const filterDef = (obj:any) => {
-                const v = getPropertyByPath(obj,propClean);
+                const v = getPropertyByPathIgnoreCase(obj,propClean);
                 return (v && v.toLowerCase().includes(strLower));
             }
             return this.applyFilterFunc(filterDef);
@@ -86,12 +86,13 @@ export class InitialConfigDataLists implements ConfigDataLists {
         const propClean = prop.trim();
         let regexObj = /.*/;
         try {
-            regexObj = (anchored ? new RegExp("^"+regex.trim()+"$") : new RegExp(regex.trim()));
+            // searching is case insensitive, for the property name as well as for its value
+            regexObj = (anchored ? new RegExp("^"+regex.trim()+"$", 'i') : new RegExp(regex.trim(), 'i'));
         } catch {
             if (regex) throw new Error(`regular expression "${regex}" not valid`);
         }
         return (obj:any) => {
-            const v = getPropertyByPath(obj,propClean);
+            const v = getPropertyByPathIgnoreCase(obj,propClean);
             return (v && (
                 (typeof v !== 'object' && v.match(regexObj)) ||
                 (isArray(v) && v.some(e => e.match(regexObj)))

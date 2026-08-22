@@ -56,6 +56,21 @@ export function getPropertyByPath(object: any, path: string) {
 }
 
 /**
+ * getPropertyByPath, but the property names are matched ignoring case, so that a search does not
+ * have to know how a property is spelled in the configuration.
+ */
+export function getPropertyByPathIgnoreCase(object: any, path: string) {
+  return path
+    .split(/[.[\]'"]/)
+    .filter(k => k)
+    .reduce((o, k) => {
+      if (!o || typeof o !== 'object') return undefined;
+      const key = Object.keys(o).find(name => name.toLowerCase() === k.toLowerCase());
+      return (key === undefined ? undefined : o[key]);
+    }, object);
+}
+
+/**
  * Filter function to make array unique
  * usage: arr.filter(onlyUnique);
  */

@@ -37,6 +37,12 @@ test.describe('config explorer', () => {
     await expect(element(page, 'join-departures-airports')).toBeVisible();
     await expect(element(page, 'btl-distances')).toBeHidden();
     await expect(element(page, 'compute-distances')).toBeHidden();
+
+    // searching is case insensitive
+    await page.getByPlaceholder('Search element').fill('AirPorts');
+
+    await expect(element(page, 'int-airports')).toBeVisible();
+    await expect(element(page, 'btl-distances')).toBeHidden();
   });
 
   test('a property chip filters the list by that property', async ({ page }) => {
@@ -47,6 +53,12 @@ test.describe('config explorer', () => {
     await expect(page).toHaveURL(/elementSearchType=property&elementSearch=type:DeltaLakeTableDataObject/);
     await expect(page.getByPlaceholder('Search element')).toHaveValue('type:DeltaLakeTableDataObject');
     // ext-airports is a WebserviceFileDataObject, so it drops out
+    await expect(element(page, 'int-airports')).toBeVisible();
+    await expect(element(page, 'ext-airports')).toBeHidden();
+
+    // the property name and its value are both matched ignoring case
+    await page.getByPlaceholder('Search element').fill('Type:deltalaketabledataobject');
+
     await expect(element(page, 'int-airports')).toBeVisible();
     await expect(element(page, 'ext-airports')).toBeHidden();
   });
