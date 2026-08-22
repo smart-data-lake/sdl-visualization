@@ -67,7 +67,7 @@ Uses a **hash router**. Two routing shapes depending on whether auth is configur
 
 ### Config Explorer (`src/components/ConfigExplorer`, `src/util/ConfigExplorer`)
 
-- `HoconParser.ts` parses HOCON over HTTP using a **patched** `@pushcorn/hocon-parser` (`patches/` adds `Context.getRegistry()` so the `file` source can be remapped to `http` in the browser). Don't bump that dependency without re-checking the patch.
+- `HoconParser.ts` parses HOCON over HTTP using a **patched** `@pushcorn/hocon-parser` (`patches/` adds `Context.getRegistry()` so the `file` source can be remapped to `http` in the browser). Don't bump that dependency without re-checking the patch — it is therefore pinned to an exact version in `package.json`.
 - `ConfigData.ts` wraps the parsed config and eagerly builds three graphs: `fullGraph` (`DataObjectsAndActionsSep`), `dataGraph`, `actionGraph`. `InitialConfigDataLists`/`ConfigDataLists` hold sorted DataObject/Action/Connection lists and immutable filter operations (`applyContainsFilter`, `applyRegexFilter`, `applyFeedFilter`) used by the search box in `ConfigExplorer.tsx`.
 - `Graphs.ts` is the graph domain model: `Node`/`Edge` base classes, `DataObject`/`ActionObject` (both are *nodes* in the newer separated model), `DAGraph` with traversal/level computation, and dagre layout helpers (`dagreLayout`, `dagreLayoutRf`). This is the file `tests/graph.test.ts` covers.
 - `LineageTabUtils.tsx` converts `DAGraph` → ReactFlow nodes/edges and holds all the styling/expansion/grouping/viewport logic (node & edge colors, parent/subflow nodes, `prepareAndRenderGraph`).
