@@ -216,7 +216,14 @@ export const useFetchLicenses = () => {
   return handleError(useQuery<any, Error>({
     queryKey: ["license", tenant],
     queryFn: () => fetcher().getLicenses(tenant!),
-    enabled: tenant !== "PrivateTenant",
+    /*
+      Whether the backend meters anything, not what its tenant happens to be called.
+      The Azure backend serves no /license - it administers no users and meters
+      nothing - and said so through a tenant name, which stopped being a reliable
+      signal the moment the name became configurable. Backends that declare no
+      capabilities are the hosted ones, which do license.
+    */
+    enabled: (fetcher().capabilities?.().userManagement ?? true) && !!tenant,
   }));
 };
 
