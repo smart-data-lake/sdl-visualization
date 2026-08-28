@@ -29,7 +29,7 @@ jobs:
     - name: Setup node
       uses: actions/setup-node@v7
       with:
-        node-version: 24
+        node-version-file: .nvmrc
         cache: yarn
 
     - name: Get-npm-version
@@ -37,6 +37,11 @@ jobs:
       uses: martinbeentjes/npm-get-version-action@main
 
     - run: yarn install
+
+    # The backend is a separate package. It is installed here because the azure
+    # end-to-end project starts it (with its own Azurite and the fixtures seeded).
+    - name: Install backend
+      run: yarn --cwd backend install --frozen-lockfile
 
     - run: yarn build
       env:
@@ -50,6 +55,12 @@ jobs:
 
     - name: Run unit tests
       run: yarn test:ci
+
+    - name: Type check backend
+      run: yarn --cwd backend type-check
+
+    - name: Run backend tests
+      run: yarn --cwd backend test:ci
 
     - name: Get playwright version
       id: playwright-version

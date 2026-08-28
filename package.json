@@ -3,6 +3,9 @@
   "version": "0.11.2",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@aws-amplify/ui-react": "^5.3.3",
     "@emotion/react": "^11.10.6",
@@ -81,6 +84,7 @@
     "start": "vite --force",
     "build": "vite build",
     "serve": "vite preview",
+    "deploy-azure": "./scripts/deploy-frontend-azure.sh",
     "lint": "eslint src tests",
     "lint:fix": "eslint src tests --fix",
     "eject": "react-scripts eject",

@@ -32,4 +32,36 @@ export interface fetchAPI {
     getEnvs: (tenant: string, repo: string) => Promise<string[]>
     getLicenses: (tenant: string) => Promise<LicenseInfo>;
     clearCache: () => void;
+
+    /**
+     * What this backend can do beyond the methods above. Optional: a backend that
+     * does not declare anything is the classic one, with a user directory and no
+     * MCP endpoint. Used by the settings screen to decide what to offer.
+     */
+    capabilities?: () => BackendCapabilities;
+
+    /**** MCP access tokens, for backends that serve an MCP endpoint ****/
+
+    listMcpTokens?: (tenant: string, repo: string, env: string) => Promise<McpToken[]>;
+    /** The only time the token itself is returned; it cannot be read again. */
+    createMcpToken?: (tenant: string, repo: string, env: string, label: string, ttlDays?: number) => Promise<McpToken & { token: string }>;
+    revokeMcpToken?: (tenant: string, repo: string, env: string, id: string) => Promise<void>;
+    /** URL an MCP client should be pointed at for this repo and environment. */
+    mcpUrl?: (tenant: string, repo: string, env: string) => string;
+}
+
+export interface BackendCapabilities {
+    /** Whether users are administered here, or somewhere else entirely. */
+    userManagement: boolean;
+    /** Whether agents can be given access to this backend over MCP. */
+    mcpTokens: boolean;
+}
+
+export interface McpToken {
+    id: string;
+    label: string;
+    email: string;
+    createdAt: string;
+    expiresAt?: string;
+    lastUsedAt?: string;
 }

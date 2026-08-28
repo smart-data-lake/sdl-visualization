@@ -1,0 +1,44 @@
+{
+  "name": "sdlb-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SDLB UI backend and MCP server: Fastify on Azure Functions, Azure Tables + Blob",
+  "main": "dist/http.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsx scripts/bundle.ts",
+    "watch": "tsc --watch",
+    "start": "yarn build && func start",
+    "azurite": "azurite --silent --skipApiVersionCheck --location .azurite",
+    "type-check": "tsc && tsc -p tsconfig.test.json",
+    "test": "vitest",
+    "test:ci": "vitest run",
+    "deploy": "./scripts/deploy-azure.sh",
+    "seed": "tsx scripts/seed-fixtures.ts",
+    "serve": "tsx scripts/serve.ts",
+    "serve:e2e": "SDLB_START_AZURITE=1 SDLB_SEED_FIXTURES=1 SDLB_PORT=7071 tsx scripts/serve.ts"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.16.2"
+  },
+  "devDependencies": {
+    "@azure/data-tables": "^13.3.2",
+    "@azure/identity": "^4.13.2",
+    "@azure/storage-blob": "^12.33.0",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/multipart": "^10.1.1",
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@types/node": "^24.10.0",
+    "azurite": "^3.36.0",
+    "esbuild": "^0.28.2",
+    "fastify": "^5.12.1",
+    "tsx": "^4.20.0",
+    "typescript": "5.9.3",
+    "vitest": "^3.0.3",
+    "zod": "^4.4.3"
+  }
+}

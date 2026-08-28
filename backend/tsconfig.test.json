@@ -1,0 +1,9 @@
+{
+  "//": "Tests are run by vitest (esbuild) and never emitted, but type-checking them still catches real mistakes. test/unit/parity.test.ts is the exception: it imports the frontend's own modules to check the ported copies against the originals, and the frontend compiles with noImplicitAny off and bundler resolution, so pulling its sources into this tsconfig would report the frontend's typing, not ours. Vitest still type-strips and runs it.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
+  "exclude": ["test/unit/parity.test.ts"]
+}

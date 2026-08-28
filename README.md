@@ -4,7 +4,7 @@ SDL Visualizer is a single page web application to show SDLB configuration and w
 # Usage
 
 Prerequisites
-- NodeJS version 20 ([see](https://nodejs.dev/en/download/))
+- Node.js 22 or later ([see](https://nodejs.org/en/download)). `.nvmrc` pins 24, which is what CI builds and tests on.
 - Yarn. [See here](https://classic.yarnpkg.com/lang/en/docs/install/#windows-stable) for Yarn Classic or [here](https://yarnpkg.com/getting-started/install) for modern Yarn. If you prefer using Yarn Classic, be sure to use a version >= 1.22.x. 
 
 ## Developer server
@@ -24,6 +24,10 @@ Alternatively, the createRelease.sh script can be used to manually build the pro
 The single page app can be deployed as static webapp on any cloud provider. Care must be taken about the CRSF problematic for the API calls to get config and state. Usually you need to configure a basic API with your cloud provider that handles this requests.
 
 A simple solution on Linux is using lighttpd web server to serve the web app, config files and state files. See https://github.com/smart-data-lake/sdl-visualization/tree/develop/public for details.
+
+For Azure there is a ready-made path that needs none of this: Terraform in
+`backend/infra_azure/` and `yarn deploy-azure`. See
+[Deploying this app alongside it](#deploying-this-app-alongside-it) below.
 
 # Backend
 
@@ -48,6 +52,71 @@ This will generate an index for each of the file sources. The outputs are JSON-L
 Finally you have to make sure you are using the default connector for local statefiles. Change the field `backendConfig` to `local` in `public/manifest.json` if it is not already the case.
 
 You should now be able to browse to `localhost:3000/` and should be greeted by the home page.
+
+## Azure backend and MCP server
+
+`backend/` holds a ready-made backend for an Azure deployment: an Azure Functions app
+that serves this app's REST contract, receives SDLB's uploads, and exposes an MCP
+endpoint so coding agents can search the configuration and analyse failed runs. It
+stores state and configuration in Azure Table Storage and Blob Storage, and
+authenticates users against a Databricks workspace.
+
+Set `backendConfig` to `azure;<baseUrl>` in `public/manifest.json` (or
+`azure;<baseUrl>;<repo>;<env>` to pin a single-repository deployment). See
+[backend/README.md](backend/README.md) for how to run it locally and what it expects
+from SDLB.
+
+### Deploying this app alongside it
+
+`backend/infra_azure/` provisions an Azure Static Web App for this frontend next to
+the Function app, and `scripts/deploy-frontend-azure.sh` ships a build to it:
+
+```bash
+cd backend/infra_azure
+cp terraform.tfvars.example terraform.tfvars   # then edit it; gitignored and auto-loaded
+terraform apply                                # creates the site
+terraform output -raw static_site_url          # -> allowed_origins in the tfvars
+terraform apply                                # and again, so the API accepts that origin
+az functionapp restart -g <rg> -n <name>-funcapp
+
+cd ../..
+yarn deploy-azure --databricks-client-id <oauth-app-client-id>
+yarn deploy-azure --repo my-repo --env prod    # pin one repository
+yarn deploy-azure --package-only               # build and prepare build/, upload nothing
+```
+
+The apply happens **twice**, and the second one is not optional. The site's hostname
+does not exist until it is created, so `allowed_origins` cannot be derived in the
+same apply - and it has to be set, because the Functions host answers every `OPTIONS`
+itself, before the app is invoked. `@fastify/cors` in the backend therefore never
+sees a preflight, and every authenticated call carries `Authorization` and
+`X-Databricks-Host`, neither of which is a safelisted header. Without the origin in
+that list the browser blocks all of them. The host reads the list at startup, so the
+restart is part of the step; `yarn deploy-azure` checks the preflight at the end and
+says so if it is still wrong.
+
+The script reads the Terraform outputs, so the API URL it writes into the deployed
+`manifest.json` is the one `apply` produced - `public/manifest.json` stays `local;`
+for development and is never edited to deploy. `--databricks-client-id` is the OAuth
+application users sign in with, and is required: without it nobody can sign in, so
+the script refuses before it builds anything. `--no-auth` overrides that, for
+standing a site up before its OAuth app exists.
+
+Three things it does that are worth knowing:
+
+- **Static content is served from the Static Web Apps edge, never through Azure
+  Functions.** The Function app is deliberately not attached as a linked backend, so
+  this app calls the API at its own absolute URL and `/api` on the static host is a
+  plain 404. `backend/infra_azure/static_site.tf` explains the choice.
+- **It prunes `build/` before uploading.** Vite copies all of `public/` into the
+  build, and `public/config`, `public/state`, `public/envConfig`, `public/schema` and
+  `public/description` are where you keep the project you browse locally. An `azure`
+  deployment reads none of them - that data comes from the API - so they are deleted
+  rather than trusted not to be requested.
+- **It renders `scripts/staticwebapp.config.template.json` into the build**, which
+  is what sets the CSP, HSTS and the SPA fallback at the edge. The template is
+  substituted rather than committed whole because two of the CSP origins - the API
+  and the Databricks workspaces - are only known after `apply`.
 
 ## REST API
 

@@ -1,0 +1,21 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/api/*", "/assets/*", "/images/*", "/manifest.json", "/*.png", "/*.svg", "/*.ico"]
+  },
+
+  "mimeTypes": {
+    ".conf": "text/plain",
+    ".md": "text/markdown",
+    ".index": "application/x-ndjson"
+  },
+
+  "globalHeaders": {
+    "Content-Security-Policy": "default-src 'self'; connect-src 'self' __API_ORIGIN__ __DATABRICKS_ORIGINS__; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    "Cross-Origin-Opener-Policy": "same-origin"
+  }
+}

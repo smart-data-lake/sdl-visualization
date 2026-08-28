@@ -1,0 +1,161 @@
+name: Deploy backend
+
+# Manual only, on purpose: this provisions and updates real infrastructure, and the
+# repository has no environment it should reach for on its own. Wire it to a push
+# trigger once a deployment exists that is meant to track a branch.
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Name prefix for the resources, e.g. sdlb-acme'
+        required: true
+      resourceGroup:
+        description: 'Resource group to deploy into (must already exist)'
+        required: true
+      location:
+        description: 'Azure region'
+        required: false
+        default: 'westeurope'
+      databricksHosts:
+        description: 'Databricks workspace origins allowed to use this deployment, comma separated'
+        required: true
+      allowedOrigin:
+        description: 'Origin the SPA is served from, for CORS. Leave empty if not known yet.'
+        required: false
+        default: ''
+      plan_only:
+        description: 'Only show what would change'
+        type: boolean
+        required: false
+        default: false
+
+# Federated credentials rather than a stored secret: set AZURE_CLIENT_ID,
+# AZURE_TENANT_ID and AZURE_SUBSCRIPTION_ID as repository variables and trust this
+# repository from the app registration.
+#
+# Terraform state lives in an Azure storage account that must already exist and is
+# not managed here - a state store that Terraform creates cannot hold its own state.
+# Set TFSTATE_RESOURCE_GROUP, TFSTATE_STORAGE_ACCOUNT and TFSTATE_CONTAINER too.
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: backend/yarn.lock
+
+      - name: Install
+        run: yarn install --frozen-lockfile
+
+      - name: Type check
+        run: yarn type-check
+
+      - name: Test
+        run: yarn test:ci
+
+      - name: Build
+        run: yarn build
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: backend/infra
+        env:
+          ARM_USE_OIDC: 'true'
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ vars.TFSTATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ vars.TFSTATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.TFSTATE_CONTAINER }}" \
+            -backend-config="key=${{ inputs.name }}.tfstate" \
+            -backend-config="use_oidc=true"
+
+      - name: Terraform format check
+        working-directory: backend/infra
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate
+        working-directory: backend/infra
+        run: terraform validate
+
+      # Written as a file rather than as -var flags: turning a comma-separated
+      # input into an HCL list inside a GitHub expression is unreadable and easy to
+      # get subtly wrong.
+      - name: Assemble variables
+        working-directory: backend/infra
+        env:
+          NAME: ${{ inputs.name }}
+          RESOURCE_GROUP: ${{ inputs.resourceGroup }}
+          LOCATION: ${{ inputs.location }}
+          DATABRICKS_HOSTS: ${{ inputs.databricksHosts }}
+          ALLOWED_ORIGIN: ${{ inputs.allowedOrigin }}
+        run: |
+          jq -n \
+            --arg name "$NAME" \
+            --arg rg "$RESOURCE_GROUP" \
+            --arg location "$LOCATION" \
+            --arg hosts "$DATABRICKS_HOSTS" \
+            --arg origin "$ALLOWED_ORIGIN" \
+            '{
+              name: $name,
+              resource_group_name: $rg,
+              location: $location,
+              databricks_hosts: ($hosts | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))),
+              allowed_origins: (if $origin == "" then [] else [$origin] end)
+            }' > deploy.auto.tfvars.json
+          cat deploy.auto.tfvars.json
+
+      - name: Terraform plan
+        id: plan
+        working-directory: backend/infra
+        env:
+          ARM_USE_OIDC: 'true'
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        if: ${{ !inputs.plan_only }}
+        working-directory: backend/infra
+        env:
+          ARM_USE_OIDC: 'true'
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: terraform apply -input=false -auto-approve tfplan
+
+      # Only what the Functions host needs at runtime, and only once the
+      # infrastructure it is deployed into exists.
+      - name: Prune to production dependencies
+        if: ${{ !inputs.plan_only }}
+        run: yarn install --frozen-lockfile --production --ignore-scripts
+
+      - name: Deploy
+        if: ${{ !inputs.plan_only }}
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ inputs.name }}-func
+          package: backend

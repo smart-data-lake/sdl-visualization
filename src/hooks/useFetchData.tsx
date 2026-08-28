@@ -1,4 +1,4 @@
-import { useAuthenticator } from "@aws-amplify/ui-react";
+import { useAuth } from "../auth/AuthProvider";
 import { useMutation, useQuery, UseQueryResult } from "react-query";
 import { fetcher } from "../api/Fetcher";
 import { TstampEntry, WorkflowRun } from "../types";
@@ -179,7 +179,7 @@ export const useRemoveUser = () => {
 }
 
 export const useFetchTenants = () => {
-  const { authStatus } = useAuthenticator();
+  const { status: authStatus } = useAuth();
   return handleError(useQuery({
     queryKey: ["tenants"],
     queryFn: () => fetcher().getTenants(),
@@ -190,7 +190,7 @@ export const useFetchTenants = () => {
 };
 
 export const useFetchRepos = (tenant: string) => {
-  const { authStatus } = useAuthenticator();
+  const { status: authStatus } = useAuth();
   return handleError(useQuery({
     queryKey: ["repo", tenant],
     queryFn: () => fetcher().getRepos(tenant),
@@ -201,7 +201,7 @@ export const useFetchRepos = (tenant: string) => {
 };
 
 export const useFetchEnvs = (tenant: string, repo: string | undefined) => {
-  const { authStatus } = useAuthenticator();
+  const { status: authStatus } = useAuth();
   return handleError(useQuery({
     queryKey: ["envs", tenant, repo],
     queryFn: () => fetcher().getEnvs(tenant, repo!),

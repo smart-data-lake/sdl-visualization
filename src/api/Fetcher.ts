@@ -1,5 +1,6 @@
 import { getPersistedManifest } from "../hooks/useManifest";
 import { fetchAPI } from "./fetchAPI";
+import { fetchAPI_azure } from "./fetchAPI_azure";
 import { fetchAPI_local_statefiles } from "./fetchAPI_local_statefiles";
 import { fetchAPI_rest } from "./fetchAPI_rest";
 
@@ -11,6 +12,7 @@ import { fetchAPI_rest } from "./fetchAPI_rest";
 const fetchAPITypes = {
     local: fetchAPI_local_statefiles,
     rest: fetchAPI_rest,
+    azure: fetchAPI_azure,
     /**
      * You can add a new fetchAPI implementation here. 
      * If it is set up in manifest, the Fetcher will find it automatically and fetch the data according to your definition of the interface's functions

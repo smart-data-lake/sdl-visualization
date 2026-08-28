@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    // Node 24 is what this runs on, in Azure and locally.
+    "target": "ES2023",
+    "lib": ["ES2024"],
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    // Nothing is emitted by tsc: scripts/bundle.ts produces what ships, and a stray
+    // `npx tsc` emitting per-file output into dist/ would clobber it.
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "declaration": false
+  },
+  "include": ["src/**/*.ts", "scripts/**/*.ts"]
+}

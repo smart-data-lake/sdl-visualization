@@ -1,8 +1,6 @@
-import { useAuthenticator } from "@aws-amplify/ui-react";
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
+import { useAuth } from "../auth/AuthProvider";
 import { useFetchUsers } from "./useFetchData";
-import { Authenticator} from '@aws-amplify/ui-react';
-import { SignpostOutlined } from "@mui/icons-material";
 
 type UserContextType = {
   user_id?: string;
@@ -15,25 +13,25 @@ type UserContextType = {
 
 const UserContext = React.createContext<UserContextType | undefined>(undefined);
 UserContext.displayName = "UserContext";
-const emptyUserContext = { user_id: undefined, email: undefined, permissions: [], authenticated: false, loginElement: <Authenticator variation="modal" /> };
+const emptyUserContext: UserContextType = { user_id: undefined, email: undefined, permissions: [], authenticated: false };
 
 const UserProvider = (props: React.PropsWithChildren) => {
-  const { user, signOut, authStatus } = useAuthenticator();
-  const { data } = useFetchUsers(authStatus === "authenticated");
-  const [userContext, setUserContext] = useState<UserContextType>(emptyUserContext);
-  
-  useEffect(() => {
-    if (authStatus === "authenticated") {
-      const user_id = user?.attributes?.sub;
-      const email = user?.attributes?.email;
-      const permissions = Array.isArray(data)
-        ? data?.find((user) => user["user_id"] === user_id)?.permissions ?? []
-        : [];
-      setUserContext({ user_id: user_id, email: email, permissions: permissions, authenticated: true, signOut: () => signOut() });
-    } else {  
-      setUserContext(emptyUserContext);
-    }
-  }, [user, authStatus, data]);
+  // Which identity provider is behind this is decided in AuthProvider; here it is
+  // only ever a session with a status, an identity and a way to sign out.
+  const { status, userId, email, loginElement, signOut } = useAuth();
+  const authenticated = status === "authenticated";
+  const { data } = useFetchUsers(authenticated);
+
+  // Derived, not stored: the session already is state, and copying it into another
+  // useState through an effect would re-render on every identity change of
+  // loginElement or signOut - which for some providers is every render.
+  const userContext = useMemo<UserContextType>(() => {
+    if (!authenticated) return { ...emptyUserContext, loginElement };
+    const permissions = Array.isArray(data)
+      ? data?.find((user) => user["user_id"] === userId)?.permissions ?? []
+      : [];
+    return { user_id: userId, email, permissions, authenticated: true, signOut };
+  }, [userId, email, authenticated, loginElement, signOut, data]);
 
   return <UserContext.Provider value={userContext}>{props.children}</UserContext.Provider>;
 };
