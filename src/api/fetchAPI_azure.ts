@@ -29,7 +29,15 @@ export class fetchAPI_azure extends fetchAPI_rest {
     constructor(configString: string, baseUrl?: string, env?: string) {
         const [url, repo, scopeEnv] = configString.split(';');
         super(url, baseUrl, env);
-        this.defaultScope = { tenant: 'PrivateTenant', repo, env: scopeEnv ?? env };
+        /*
+          The tenant here is a placeholder, not a name. This backend requires the
+          parameter on every scoped route and then discards it - the schema lists it
+          as required, the handler keeps only repo and env - so it cannot be dropped,
+          and it does not have to be right. Naming a real tenant here was how the SPA
+          came to have an opinion about the tenant name at all; the real one comes
+          from GET /tenants and only ever arrives through the URL.
+        */
+        this.defaultScope = { tenant: 'unscoped', repo, env: scopeEnv ?? env };
     }
 
     /**
