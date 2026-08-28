@@ -111,7 +111,7 @@ Amplify used to be hard-wired at three sites (`Amplify.configure` in `App.tsx`, 
 
 The fetchAPI classes live outside React, so they cannot read that context: the provider registers a header function in `src/auth/tokenProvider.ts` and `fetchAPI_azure.getRequestInfo` asks it per request. The Databricks redirect comes back to the app's base URL with the code in the **query** string, because the hash router owns everything after the `#`; `AuthProvider` consumes and strips it before anything else looks at the URL.
 
-`fetchAPI` gained two optional groups: `capabilities()` (whether the backend administers users, whether it serves MCP) and the MCP token methods. Both are optional, so existing implementations are unchanged; `Settings/Setting.tsx` uses the capabilities to decide whether to show User Management, Agent Access, or both.
+`fetchAPI` gained two optional groups: `capabilities()` (whether the backend administers users, whether it serves MCP) and the MCP token methods. Both are optional, so existing implementations are unchanged; `Settings/Setting.tsx` uses the capabilities to decide whether to show User Management, Access Token, or both. One access token serves both consumers that have no browser - an agent over MCP and an SDLB job uploading - which is why the page is not named after either.
 
 ### documentation
 

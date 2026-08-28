@@ -25,14 +25,18 @@ output "mcp_base_url" {
 
 output "uibackend_base_url" {
   description = <<-EOT
-    What to configure as global.uiBackend.baseUrl in SDLB.
+    What to configure as global.uiBackend.baseUrl in SDLB. The same URL as
+    api_base_url, named separately because the two things that consume it are
+    configured in different places.
 
-    The workspace host is baked in as a query parameter because SDLB cannot send a
-    second header - none of its auth modes emits one - and sttp appends its own
-    parameters, so one already in the URL survives. Replace the placeholder with the
-    workspace the job's token belongs to.
+    Plain, with no dbxHost: a job authenticates with an access token minted in the
+    UI under Settings -> Access Token, which is already scoped to one repository and
+    environment and so never has to name a workspace. The backend still accepts a
+    Databricks token with ?dbxHost=<workspace> appended - SDLB can send no second
+    header - but that is a credential for the whole workspace API and is not what
+    this deployment expects.
   EOT
-  value       = "https://${azurerm_function_app_flex_consumption.this.default_hostname}/api/v1?dbxHost=${length(var.databricks_hosts) > 0 ? var.databricks_hosts[0] : "<workspace>"}"
+  value       = "https://${azurerm_function_app_flex_consumption.this.default_hostname}/api/v1"
 }
 
 output "storage_account_name" {
