@@ -24,12 +24,24 @@ import { fetcher } from "../../api/Fetcher";
 const backendCapabilities = () =>
   fetcher().capabilities?.() ?? { userManagement: true, mcpTokens: false };
 
-const NavLink = ({ to, title }) => {
-  const activated = useMatch(`settings/${to}`);
+/*
+  Absolute paths, deliberately.
+
+  Setting is the element of a splat route (`:tenant/settings/*`), and inside one a
+  relative `to` resolves against the whole current pathname rather than against the
+  route's base. So `to="agents"` reads as settings/agents from the index and
+  settings/agents/agents once you are already there - and the catch-all below did
+  the same, which turned one wrong path into an endless redirect: every hop appended
+  another segment, remounted the page and refetched. `pathnameBase` is that base
+  with the splat removed, so it stays put wherever we are underneath it.
+*/
+const NavLink = ({ base, to, title }) => {
+  const path = `${base}/${to}`;
+  const activated = useMatch(path);
 
   return (
     <ListItemButton selected={!!activated}>
-      <Link to={to}>{title}</Link>
+      <Link to={path}>{title}</Link>
     </ListItemButton>
   );
 };
@@ -68,6 +80,8 @@ const TenantLicenses = () => {
 };
 
 export default function Setting() {
+  // Always matches - this component is that route's element. See NavLink above.
+  const base = useMatch(":tenant/settings/*")?.pathnameBase ?? "";
   const capabilities = backendCapabilities();
   const settingMenuItems = [
     ...(capabilities.userManagement ? [{ title: "User Management", path: "users" }] : []),
@@ -93,7 +107,7 @@ export default function Setting() {
               <List>
                 {settingMenuItems.map((x) => (
                   <ListItem key={x.path}>
-                    <NavLink to={x.path} title={x.title}></NavLink>
+                    <NavLink base={base} to={x.path} title={x.title}></NavLink>
                   </ListItem>
                 ))}
               </List>
@@ -103,7 +117,7 @@ export default function Setting() {
             <Routes>
               {capabilities.userManagement && <Route path="users" element={<Users />} />}
               {capabilities.mcpTokens && <Route path="agents" element={<AgentAccess />} />}
-              <Route path="*" element={<Navigate to={landingPath} replace={true} />} />
+              <Route path="*" element={<Navigate to={`${base}/${landingPath}`} replace={true} />} />
             </Routes>
           </Grid>
         </Grid>
