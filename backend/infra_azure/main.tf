@@ -209,10 +209,11 @@ resource "azurerm_function_app_flex_consumption" "this" {
     "SDLB_STORAGE_ACCOUNT" = azurerm_storage_account.this.name
     "SDLB_BLOB_CONTAINER"  = azurerm_storage_container.data.name
 
-    "SDLB_TENANT_NAME"            = var.tenant_name
-    "SDLB_AUTH_MODE"              = "databricks"
-    "SDLB_DATABRICKS_HOSTS"       = join(",", var.databricks_hosts)
-    "SDLB_AUTH_CACHE_TTL_SECONDS" = tostring(var.auth_cache_ttl_seconds)
+    "SDLB_TENANT_NAME"                = var.tenant_name
+    "SDLB_AUTH_MODE"                  = "databricks"
+    "SDLB_DATABRICKS_HOSTS"           = join(",", var.databricks_hosts)
+    "SDLB_AUTH_CACHE_TTL_SECONDS"     = tostring(var.auth_cache_ttl_seconds)
+    "SDLB_AUTH_RATE_LIMIT_PER_MINUTE" = tostring(var.auth_rate_limit_per_minute)
   }
 
   tags = local.tags

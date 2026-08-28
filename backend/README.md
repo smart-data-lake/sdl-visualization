@@ -404,6 +404,20 @@ workspace's `/oidc/v1/token` sends no CORS headers at all and does not answer
 preflight - see `relayTokenRequest` in `src/auth/databricks.ts` for why that is safe
 to expose unauthenticated.
 
+They are also the only routes that cannot be authenticated, and therefore the one
+place a stranger can make this service call Databricks. `src/routes/rateLimit.ts` is
+a fixed-window limit on them, `auth_rate_limit_per_minute` in the Terraform, refusing
+with a 429 and a `Retry-After`.
+
+It counts in memory, so it is per address **per instance**, and that multiplication
+is real rather than theoretical: Flex Consumption spreads even strictly sequential
+requests across instances - measured, 42 requests landed on five - so at the defaults
+one address meets 10 x 5 = 50 requests a minute, not 10. That is deliberate. An exact
+global limit needs a shared store on the path of every request, and what this
+prevents is a stranger generating traffic through us, not a stranger getting in; the
+allowlist and the workspace do that. The tables are already there if an exact limit
+is ever wanted.
+
 ## MCP
 
 The 2026-07-28 protocol has no sessions, so the endpoint is stateless by

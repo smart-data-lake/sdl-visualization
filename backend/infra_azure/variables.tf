@@ -218,6 +218,27 @@ variable "auth_cache_ttl_seconds" {
   default     = 300
 }
 
+variable "auth_rate_limit_per_minute" {
+  description = <<-EOT
+    Requests per minute, per address, allowed on the routes that cannot be
+    authenticated - the OAuth relay at /api/v1/auth/*, which is the one place a
+    stranger can make this service call Databricks.
+
+    Counted in memory, so it is per address *per instance*, and Flex Consumption
+    spreads even sequential requests across instances - so what a caller actually
+    meets is this times maximum_instance_count. At the defaults that is 10 x 5 = 50
+    requests a minute from one address.
+
+    Deliberate: an exact global limit needs a shared store, and this is a brake on
+    traffic rather than a door. See src/routes/rateLimit.ts.
+
+    Generous against a person, who signs in once and refreshes about hourly and may
+    share an address with a whole office. Ungenerous against a script.
+  EOT
+  type        = number
+  default     = 10
+}
+
 variable "log_retention_days" {
   description = "Retention of the Log Analytics workspace behind Application Insights."
   type        = number

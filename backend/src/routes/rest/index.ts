@@ -7,6 +7,8 @@ import * as schemaStats from '../../services/schemaStats.js';
 import * as scopes from '../../services/scope.js';
 import { listTokens, mintToken, revokeToken } from '../../auth/mcpTokens.js';
 import { relayTokenRequest } from '../../auth/databricks.js';
+import { RateLimiter, rateLimit } from '../rateLimit.js';
+import { settings } from '../../config.js';
 import { notFound } from '../../errors.js';
 
 /**
@@ -216,11 +218,18 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
     clientId: { type: 'string', maxLength: 100 },
   };
 
+  // Shared by both routes, so a caller cannot get the allowance twice by alternating
+  // between them: it is one flow, and the point is a ceiling on how often a stranger
+  // can make this service call Databricks.
+  const oauthLimiter = new RateLimiter(settings().authRateLimitPerMinute, 60_000);
+  const oauthRateLimit = rateLimit(oauthLimiter);
+
   app.post<{
     Body: { workspaceHost: string; clientId: string; code: string; codeVerifier: string; redirectUri: string };
   }>(
     '/auth/token',
     {
+      preHandler: oauthRateLimit,
       schema: {
         body: {
           type: 'object',
@@ -250,6 +259,7 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: { workspaceHost: string; clientId: string; refreshToken: string } }>(
     '/auth/refresh',
     {
+      preHandler: oauthRateLimit,
       schema: {
         body: {
           type: 'object',
