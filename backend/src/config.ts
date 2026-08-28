@@ -29,6 +29,12 @@ export interface Settings {
   /** Full https origins of the Databricks workspaces whose users may use this deployment. */
   databricksHosts: string[];
   authCacheTtlMs: number;
+  /**
+   * Requests per minute, per address, *per instance*, on the routes that cannot be
+   * authenticated. The deployment-wide ceiling is this times the instance count -
+   * see routes/rateLimit.ts.
+   */
+  authRateLimitPerMinute: number;
 }
 
 let _settings: Settings | undefined;
@@ -69,5 +75,6 @@ function readSettings(): Settings {
       .map((h) => h.trim().toLowerCase().replace(/\/$/, ''))
       .filter((h) => h.length > 0),
     authCacheTtlMs: Number(optional('SDLB_AUTH_CACHE_TTL_SECONDS', '300')) * 1000,
+    authRateLimitPerMinute: Number(optional('SDLB_AUTH_RATE_LIMIT_PER_MINUTE', '10')),
   };
 }

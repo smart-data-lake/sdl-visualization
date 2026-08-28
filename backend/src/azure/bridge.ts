@@ -18,18 +18,30 @@ import type { FastifyInstance } from 'fastify';
  *  - HEAD must not carry a body.
  */
 
+/**
+ * Strip the port Azure attaches to a forwarded address.
+ *
+ * Shared, because trustProxy means Fastify computes request.ip from the raw
+ * X-Forwarded-For header rather than from the remoteAddress below - so anything
+ * keyed on request.ip has to do this too, or every connection looks like a new
+ * caller. See routes/rateLimit.ts, which learned that the hard way.
+ */
+export function stripPort(address: string): string {
+  // IPv6 addresses are bracketed when a port is attached: [::1]:1234
+  const bracketed = /^\[(.+)\](?::\d+)?$/.exec(address);
+  if (bracketed) return bracketed[1];
+  // IPv4 with a port, but leave a bare IPv6 address alone
+  const colons = address.split(':');
+  return colons.length === 2 ? colons[0] : address;
+}
+
 /** Azure's X-Forwarded-For carries "ip:port"; Fastify wants just the address. */
 export function clientIpOf(headers: Headers): string | undefined {
   const forwarded = headers.get('x-forwarded-for');
   if (!forwarded) return undefined;
   const first = forwarded.split(',')[0].trim();
   if (!first) return undefined;
-  // IPv6 addresses are bracketed when a port is attached: [::1]:1234
-  const bracketed = /^\[(.+)\](?::\d+)?$/.exec(first);
-  if (bracketed) return bracketed[1];
-  // IPv4 with a port, but leave a bare IPv6 address alone
-  const colons = first.split(':');
-  return colons.length === 2 ? colons[0] : first;
+  return stripPort(first);
 }
 
 const METHODS_WITHOUT_BODY = new Set(['GET', 'HEAD', 'DELETE', 'OPTIONS']);
