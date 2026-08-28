@@ -44,7 +44,15 @@ variable "databricks_hosts" {
 }
 
 variable "tenant_name" {
-  description = "The single tenant name GET /tenants reports. PrivateTenant is what the SPA falls back to when the URL carries no tenant, so it lands without a redirect."
+  description = <<-EOT
+    The single tenant name GET /tenants reports, and the only place the name is
+    decided: the SPA adopts this answer rather than defaulting to one of its own, so
+    a URL with no tenant lands on whatever is set here.
+
+    Changing it renames the tenant segment of every URL, so existing bookmarks stop
+    resolving - they get "Tenant ... does not exist" with a way back, rather than
+    silently showing the right data under the wrong name.
+  EOT
   type        = string
   default     = "PrivateTenant"
 }

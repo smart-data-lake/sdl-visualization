@@ -50,7 +50,7 @@ function Routing() {
       <Routes>
         <Route element={<RootLayout />} errorElement={<ErrorBoundary/>}>
         {userContext?.loginElement ? <Route path='*' element={userContext.loginElement}/> : 
-          workspace.tenant ? workspaceRouting() : contentRouting()
+          workspace.workspaceEnabled ? workspaceRouting() : contentRouting()
         }
         </Route>
       </Routes>

@@ -41,7 +41,7 @@ function WorkspaceSelector({selectedItem, data, setData, isLoading, tooltipText}
 
 function TenantSelector() {
   const { tenant, setTenant } = useWorkspace();
-  const { data: tenants = [], isFetching: isLoading, isError, error } = useFetchTenants();
+  const { data: tenants = [], isFetching: isLoading } = useFetchTenants();
 
   return (
     <WorkspaceSelector
@@ -102,19 +102,21 @@ function EnvSelector() {
 export default function Authentication() {
   const userContext = useUser();
   const navigate = useNavigate();
-  const {tenant} = useWorkspace();
+  const {workspaceEnabled, tenant} = useWorkspace();
 
   const logout = () => {
     userContext!.signOut!();
   };
 
   const goToSetting = () => {
-    navigate(`/${tenant}/settings/users`);
+    // "/" resolves to the configured tenant, so this stays sane in the moment before
+    // the tenant is known - see RootLayoutSpinner.
+    navigate(tenant ? `/${tenant}/settings/users` : "/");
   };
 
   return (
     <>
-      {tenant && 
+      {workspaceEnabled && 
         <Box sx={{display: "flex", alignContent: "flex-end", flexDirection: "row", gap: 1}}>
           <TenantSelector /> /
           <RepoSelector /> /

@@ -1,4 +1,5 @@
-import { Box } from "@mui/joy";
+import { Box, Button, Typography } from "@mui/joy";
+import { Navigate, useNavigate } from "react-router-dom";
 import CenteredCircularProgress from "../components/Common/CenteredCircularProgress";
 import { useFetchEnvs, useFetchRepos, useFetchTenants } from "../hooks/useFetchData";
 import { useManifest } from "../hooks/useManifest";
@@ -9,9 +10,17 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 
+/**
+ * The gate every page passes through, and where the tenant is settled.
+ *
+ * This sits around the Outlet, so it covers /xyz, /xyz/content/... and /xyz/settings/...
+ * alike - one check before any page mounts, rather than one per route element. It is
+ * also the first place below AuthProvider that can ask: useFetchTenants is disabled
+ * until authenticated, so useWorkspace (which is mounted above AuthProvider) cannot.
+ */
 function WorkspaceSpinner({ children }) {
   const { tenant, repo, env } = useWorkspace();
-  const { isFetching: isFetchingTenants } = useFetchTenants();
+  const { data: tenants, isFetching: isFetchingTenants } = useFetchTenants();
   const { isFetching: isFetchingRepos } = (useFetchRepos(tenant!));
   const { isFetching: isFetchingEnvs } = useFetchEnvs(tenant!, repo);
 
@@ -21,7 +30,48 @@ function WorkspaceSpinner({ children }) {
     return <CenteredCircularProgress />;
   }
 
+  /*
+    Only decide once there is something to decide with. An empty list is not "no such
+    tenant" - it is either nobody signed in yet (useFetchTenants is disabled until then,
+    so it never runs and never fetches) or a failed read (retry is off). Getting this
+    wrong puts "Tenant does not exist" over the login screen, which locks everyone out.
+
+    A name is filtered out if it is empty, because redirecting to "/" would loop here.
+  */
+  const known = (Array.isArray(tenants) ? tenants : []).filter(Boolean);
+  if (known.length > 0) {
+    // No tenant in the URL: adopt the one this deployment serves. This is what replaces
+    // the SPA's old hard-coded default - the name now comes from GET /tenants, which is
+    // the tenant_name of the deployment.
+    if (!tenant) return <Navigate to={`/${known[0]}`} replace />;
+    if (!known.includes(tenant)) return <TenantNotFound tenant={tenant} />;
+  }
+
   return <>{children}</>;
+}
+
+/**
+ * A tenant the deployment does not have.
+ *
+ * Distinct from WorkspaceEmpty on purpose: that one means "this tenant exists and has
+ * no data yet" and offers the upload guide, which is useless and misleading advice for
+ * a name that is simply wrong.
+ */
+export function TenantNotFound({ tenant }: { tenant: string }) {
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <PageHeader title="Unknown tenant" />
+      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, p: 2 }}>
+        <Typography level="body-lg">Tenant "{tenant}" does not exist.</Typography>
+        {/* "/" is resolved above, so home is defined in one place rather than two. */}
+        <Button variant="soft" onClick={() => navigate("/")}>
+          Go to home
+        </Button>
+      </Box>
+    </>
+  );
 }
 
 export function WorkspaceEmpty() {
@@ -49,8 +99,14 @@ export function WorkspaceEmpty() {
           password = "###ENV#pwd###"
         }`;
 
+  // `tenant` is undefined only when the backend reported no tenants at all - a fresh
+  // deployment. Naming one then would print "Tenant 'undefined'".
+  const heading = tenant
+    ? `**Tenant '${tenant}' seems still empty.**`
+    : "**This deployment seems still empty.**";
+
   const markdown = `
-**Tenant '${tenant}' seems still empty.**
+${heading}
 
 Use the following steps based on our [getting-started](https://github.com/smart-data-lake/getting-started) guide to upload an SDLB configuration and runtime informations,  
 or select another tenant in the upper right corner.
@@ -64,7 +120,7 @@ Adapt _repo_ (repository name) and _env_ (environment name) to your needs and us
 
       uiBackend {
         baseUrl = "${url}"
-        tenant = ${tenant}
+        tenant = ${tenant ?? "<your tenant>"}
         repo = getting-started
         env = dev
 ${authModeSnippet}
