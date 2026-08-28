@@ -50,9 +50,9 @@ afterAll(async () => {
 });
 
 describe('workspace', () => {
-  test('a single tenant is reported, and it is the one useWorkspace defaults to', async () => {
-    // "PrivateTenant" is what useWorkspace falls back to when the URL has no tenant,
-    // and the value useFetchLicenses uses to decide there is no licensing.
+  test('a single tenant is reported, and it is the one the SPA adopts', async () => {
+    // The SPA takes the name from here rather than defaulting to one of its own, so
+    // this answer is what ends up in the URL. "PrivateTenant" is the env default.
     expect(await json('/api/v1/tenants')).toEqual(['PrivateTenant']);
   });
 

@@ -3,7 +3,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useManifest } from "./useManifest";
 
 type WorkspaceContextType = {
-  tenant: string | undefined; // if tenant is undefined, UI Backend is not configured.
+  /** Whether URLs are tenant-routed. Decided by the manifest, fixed for the life of the app. */
+  workspaceEnabled: boolean;
+  /** The tenant the URL names. Undefined in flat routing, and at "/" before one is chosen. */
+  tenant: string | undefined;
   setTenant: (tenant: string) => void;
   repo: string | undefined;
   setRepo: (repo?: string) => void;
@@ -24,9 +27,22 @@ const WorkspaceProvider = (props: React.PropsWithChildren) => {
   const [urlTenant, content, urlRepo, urlEnv, ...contentSubPathElements] = (manifest?.auth ? [] as string[] : [undefined, undefined, undefined, undefined]).concat(location.pathname.split('/').filter(v => v.length>0))
   const repo = (content == "content" ? urlRepo : undefined)  
   const env = (content == "content" ? urlEnv : undefined)  
-  const tenant = (manifest?.auth ? (urlTenant || "PrivateTenant") : undefined);
-  const contentPath = (!tenant ? "/": (repo && env ? `/${tenant}/content/${repo}/${env}/` : undefined));
-  const contentSubPath = (!tenant || contentPath ? contentSubPathElements.join("/") : undefined);
+  /*
+    Two questions that used to be one.
+
+    `workspaceEnabled` is "are URLs tenant-routed", which is decided by the manifest and
+    is fixed for the life of the app. `tenant` is "which tenant does the URL name", which
+    is not known at `/` and can be wrong. Reading the second for the first is what made a
+    hard-coded "PrivateTenant" load-bearing: it existed to keep `tenant` truthy so the
+    routing shape and the sidebar stayed in workspace mode, and inventing a tenant name
+    was the side effect. The real name comes from GET /tenants - see RootLayoutSpinner,
+    which resolves it. It cannot be resolved here: this provider sits above AuthProvider,
+    and useFetchTenants is disabled until authenticated.
+  */
+  const workspaceEnabled = !!manifest?.auth;
+  const tenant = (workspaceEnabled ? urlTenant : undefined);
+  const contentPath = (!workspaceEnabled ? "/": (repo && env ? `/${tenant}/content/${repo}/${env}/` : undefined));
+  const contentSubPath = (!workspaceEnabled || contentPath ? contentSubPathElements.join("/") : undefined);
   const navigate = useNavigate();
 
   /*
@@ -72,7 +88,7 @@ const WorkspaceProvider = (props: React.PropsWithChildren) => {
 
   return (
     <WorkspaceContext.Provider
-      value={{ tenant, setTenant, repo, setRepo, env, setEnv, contentPath, contentSubPath, navigateContent, navigateRel }}
+      value={{ workspaceEnabled, tenant, setTenant, repo, setRepo, env, setEnv, contentPath, contentSubPath, navigateContent, navigateRel }}
     >
       {props.children}
     </WorkspaceContext.Provider>

@@ -7,10 +7,11 @@ import { settings } from '../config.js';
  *
  * There is no tenant dimension: this service is deployed once per tenant, so the
  * `tenant` parameter every operation carries is accepted for compatibility with the
- * existing contract and then ignored. GET /tenants answers with the single
- * configured name, which defaults to "PrivateTenant" - the value useWorkspace falls
- * back to when the URL carries no tenant, so the SPA lands without a redirect, and
- * the value useFetchLicenses treats as "no licensing".
+ * existing contract and then ignored. GET /tenants answers with the single configured
+ * name, and that answer is what the SPA adopts - it no longer carries a default of its
+ * own, so SDLB_TENANT_NAME is the only place the name is decided. The default is still
+ * "PrivateTenant", but now only as a default rather than a constant two codebases have
+ * to agree on.
  */
 
 interface MetaEntity {

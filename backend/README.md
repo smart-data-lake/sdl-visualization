@@ -60,7 +60,7 @@ Copy `local.settings.json.example` to `local.settings.json`.
 | `SDLB_STORAGE_ACCOUNT` | storage account name, reached with the managed identity. What the deployment uses |
 | `SDLB_STORAGE_CONNECTION_STRING` | Azurite, locally. Ignored when `SDLB_STORAGE_ACCOUNT` is set |
 | `SDLB_BLOB_CONTAINER` | container name, default `sdlb` |
-| `SDLB_TENANT_NAME` | the single tenant name `GET /tenants` reports, default `PrivateTenant` |
+| `SDLB_TENANT_NAME` | the single tenant name `GET /tenants` reports, default `PrivateTenant`. The SPA adopts this rather than defaulting to a name of its own, so it decides the tenant segment of every URL |
 | `SDLB_AUTH_MODE` | `databricks`, or `disabled` for local work |
 | `SDLB_DATABRICKS_HOSTS` | comma-separated workspace origins that may use this deployment |
 | `SDLB_AUTH_CACHE_TTL_SECONDS` | how long a verified token is trusted, default 300 |

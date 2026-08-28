@@ -50,6 +50,32 @@ const targets = () => navigate.mock.calls.map(([to]) => to as string);
 
 beforeEach(() => navigate.mockClear());
 
+describe('what the URL says about the workspace', () => {
+  test('no tenant in the URL means no tenant - the SPA no longer invents one', () => {
+    // Was "PrivateTenant", which is why a deployment that renamed tenant_name was
+    // ignored. RootLayoutSpinner now fills this in from GET /tenants.
+    expect(workspaceAt('/').tenant).toBeUndefined();
+  });
+
+  test('a tenant in the URL is taken verbatim', () => {
+    expect(workspaceAt('/acme').tenant).toBe('acme');
+  });
+
+  test('workspace mode comes from the manifest, not from having a tenant', () => {
+    // The routing shape and the sidebar key off this. Keyed off `tenant` they would
+    // flip to flat mode at "/" the moment the hard-coded fallback was removed.
+    expect(workspaceAt('/').workspaceEnabled).toBe(true);
+    expect(workspaceAt('/acme').workspaceEnabled).toBe(true);
+  });
+
+  test('"/" is not mistaken for flat routing, which would show content links', () => {
+    // contentPath is what SideBar tests to decide whether to render the config and
+    // workflow buttons; "/" there would render them with nowhere to go.
+    expect(workspaceAt('/').contentPath).toBeUndefined();
+    expect(workspaceAt('/acme/content/my-repo/prod').contentPath).toBe('/acme/content/my-repo/prod/');
+  });
+});
+
 describe('workspace navigation', () => {
   test('the home button goes to the tenant, not below the current path', () => {
     // The reported bug: from /PrivateTenant this returned "PrivateTenant".
