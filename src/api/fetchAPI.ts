@@ -48,6 +48,12 @@ export interface fetchAPI {
     revokeMcpToken?: (tenant: string, repo: string, env: string, id: string) => Promise<void>;
     /** URL an MCP client should be pointed at for this repo and environment. */
     mcpUrl?: (tenant: string, repo: string, env: string) => string;
+
+    /**
+     * What goes in global.uiBackend.baseUrl - where SDLB pushes its configuration,
+     * schemas and run state. The same token authenticates it as authenticates MCP.
+     */
+    uploadUrl?: (tenant: string, repo: string, env: string) => string;
 }
 
 export interface BackendCapabilities {

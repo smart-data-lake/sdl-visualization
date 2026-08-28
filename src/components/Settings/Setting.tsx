@@ -13,7 +13,7 @@ import {
 import PageHeader from "../../layouts/PageHeader";
 import { Link, Navigate, Route, Routes, useMatch } from "react-router-dom";
 import Users from "./Users";
-import AgentAccess from "./AgentAccess";
+import AccessTokens from "./AccessTokens";
 import { useFetchLicenses } from "../../hooks/useFetchData";
 import { fetcher } from "../../api/Fetcher";
 
@@ -85,7 +85,7 @@ export default function Setting() {
   const capabilities = backendCapabilities();
   const settingMenuItems = [
     ...(capabilities.userManagement ? [{ title: "User Management", path: "users" }] : []),
-    ...(capabilities.mcpTokens ? [{ title: "Agent Access", path: "agents" }] : []),
+    ...(capabilities.mcpTokens ? [{ title: "Access Token", path: "tokens" }] : []),
   ];
   const landingPath = settingMenuItems[0]?.path ?? "users";
 
@@ -116,7 +116,7 @@ export default function Setting() {
           <Grid xs={10}>
             <Routes>
               {capabilities.userManagement && <Route path="users" element={<Users />} />}
-              {capabilities.mcpTokens && <Route path="agents" element={<AgentAccess />} />}
+              {capabilities.mcpTokens && <Route path="tokens" element={<AccessTokens />} />}
               <Route path="*" element={<Navigate to={`${base}/${landingPath}`} replace={true} />} />
             </Routes>
           </Grid>

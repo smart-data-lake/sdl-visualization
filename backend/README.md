@@ -88,11 +88,18 @@ SDLB cannot send a second header — none of its auth modes emits one — so the
 workspace host is also accepted as a `dbxHost` query parameter, which survives being
 baked into the configured `baseUrl`.
 
-Agents use a token this service issues instead (`sdlb_…`, see `auth/mcpTokens.ts`).
-A Databricks user-to-machine token expires within the hour, which makes it useless
-in a configuration file, and MCP's own rules say a server should not accept tokens
-minted for another resource. Only the hash is stored; the SPA mints, lists and
-revokes them under Settings → Agent Access.
+Everything without a browser uses an **access token** this service issues instead
+(`sdlb_…`, see `auth/mcpTokens.ts`) - a coding agent over MCP, and an SDLB job
+uploading what it ran. A Databricks user-to-machine token expires within the hour,
+which makes it useless in a configuration file; it is a credential for the whole
+workspace API rather than for one repository; and MCP's own rules say a server should
+not accept tokens minted for another resource. An access token is scoped to one
+repository and environment at the moment it is minted, so it needs no `dbxHost` and
+no SCIM call. Only the hash is stored; the SPA mints, lists and revokes them under
+Settings → Access Token.
+
+They carry no groups, so the `requiredGroup` rule above applies to Databricks callers
+only.
 
 ## Storage layout
 
@@ -175,19 +182,26 @@ serves verbatim. Treat a failure there as a release blocker.
 
 ## Uploads, and what SDLB actually sends
 
-Set `global.uiBackend` in the SDLB configuration. `TokenAuthMode` sends
-`Authorization: Bearer`, which is what this service wants; `OAuthMode` is better for
-long jobs, because it refreshes a token that would otherwise expire mid-run.
+Issue an **access token** in the UI - Settings, Access Token, with the repository and
+environment selected - and put it in the job's environment. The same token serves an
+agent over MCP and a job uploading here; it is scoped to that one repository and
+environment, has no expiry unless one is asked for, and is revoked from the same
+page. Only its hash is stored, so it is shown once.
 
 ```hocon
 global.uiBackend {
-  baseUrl = "https://<app>.azurewebsites.net/api/v1?dbxHost=https://adb-....azuredatabricks.net"
+  baseUrl = "https://<app>.azurewebsites.net/api/v1"
   tenant = PrivateTenant
   repo = getting-started
   env = dev
   authMode { type = TokenAuthMode, token = "###ENV#SDLB_UI_TOKEN###" }
+  stagePath = "/tmp/sdlb-ui-stage"
 }
 ```
+
+`terraform output -raw api_base_url` is that `baseUrl`. `TokenAuthMode` sends
+`Authorization: Bearer`, which is what this service wants, and an access token does
+not expire mid-run, so `OAuthMode` buys nothing here.
 
 Things that are easy to get wrong, and fail quietly:
 
@@ -314,7 +328,8 @@ Two further choices worth knowing about:
 
 `terraform output uibackend_base_url` gives the `global.uiBackend.baseUrl` to
 configure in SDLB, and `api_base_url` gives what goes after `azure;` in the SPA's
-`manifest.json`.
+`manifest.json` - they are the same URL, named twice because the two things that
+consume it are configured in different places.
 
 The identity cannot be granted access to the deployment container until the app
 exists to have an identity, so the app is necessarily created before it may read its

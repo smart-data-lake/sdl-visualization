@@ -127,6 +127,13 @@ export class fetchAPI_azure extends fetchAPI_rest {
         await this.fetch(`${this.url}/mcp-tokens?${query}`, this.getRequestInfo("DELETE"));
     };
 
+    /**
+     * Where SDLB uploads to. The scope is not in the path here - SDLB names tenant,
+     * repo and env as its own configuration keys and sends them as query parameters -
+     * so this is simply the API root.
+     */
+    uploadUrl = (): string => this.url;
+
     /** The MCP endpoint binds the scope in its path, so agents never repeat it. */
     mcpUrl = (_tenant: string, repo: string, env: string): string => {
         repo = repo ?? this.defaultScope.repo!;

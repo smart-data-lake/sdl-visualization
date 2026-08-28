@@ -20,16 +20,19 @@ import { McpToken } from "../../api/fetchAPI";
 import { useWorkspace } from "../../hooks/useWorkspace";
 
 /**
- * Give a coding agent access to this repository and environment.
+ * Tokens for the two things that talk to this backend without a browser: a coding
+ * agent over MCP, and an SDLB job uploading what it ran.
  *
- * The token shown here is issued by this backend, not by Databricks. A Databricks
- * user-to-machine token lasts about an hour, which makes it useless in a
- * configuration file, and it is a credential for a different resource; a token of
- * our own can be named, seen, and revoked.
+ * One kind of token serves both, which is why this page is not called "agent
+ * access" - the endpoints differ, the credential does not. It is issued by this
+ * backend rather than by Databricks: a Databricks user-to-machine token lasts about
+ * an hour, which makes it useless in a job configuration, and it is a credential for
+ * a different resource entirely. A token of our own is scoped to one repository and
+ * environment, can be named, and can be revoked here without touching Databricks.
  *
  * It is displayed exactly once, because only its hash is stored.
  */
-export default function AgentAccess() {
+export default function AccessTokens() {
   const { tenant, repo, env } = useWorkspace();
   const [tokens, setTokens] = useState<McpToken[] | undefined>();
   const [label, setLabel] = useState("");
@@ -71,6 +74,7 @@ export default function AgentAccess() {
   }
 
   const url = api.mcpUrl(tenant!, repo!, env!);
+  const upload = api.uploadUrl?.(tenant!, repo!, env!);
 
   const create = async () => {
     setBusy(true);
@@ -99,12 +103,29 @@ export default function AgentAccess() {
   );
   const cliCommand = `claude mcp add --transport http sdlb ${url} --header "Authorization: Bearer ${issued ?? "<your token>"}"`;
 
+  // The env placeholder rather than the token itself: this snippet goes into a file
+  // that is usually committed, and SDLB resolves ###ENV#...### at read time.
+  const uiBackendHocon = [
+    "global.uiBackend {",
+    `  baseUrl = "${upload}"`,
+    `  tenant = ${tenant}`,
+    `  repo = ${repo}`,
+    `  env = ${env}`,
+    '  authMode { type = TokenAuthMode, token = "###ENV#SDLB_UI_TOKEN###" }',
+    '  stagePath = "/tmp/sdlb-ui-stage"',
+    "}",
+  ].join("\n");
+
   return (
     <Sheet sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2, overflow: "auto" }}>
-      <Typography level="h4">Agent access</Typography>
+      <Typography level="h4">Access token</Typography>
       <Typography level="body-sm">
-        An agent connected here can search this configuration, follow lineage and analyse runs. It
-        cannot change anything - every tool is read-only.
+        One token for both things that reach this backend without a browser: a coding agent over
+        MCP, and an SDLB job uploading its configuration and run history. It is scoped to{" "}
+        <b>
+          {repo}/{env}
+        </b>
+        , shown once, and can be revoked here at any time.
       </Typography>
 
       {error && (
@@ -142,14 +163,35 @@ export default function AgentAccess() {
       </Card>
 
       <Card variant="outlined" sx={{ gap: 1 }}>
-        <Typography level="title-md">Point your agent at it</Typography>
+        <Typography level="title-md">MCP endpoint - for a coding agent</Typography>
+        <CodeBlock title="URL" text={url} />
+        <Typography level="body-xs">
+          An agent connected here can search this configuration, follow lineage and analyse runs. It
+          cannot change anything - every tool is read-only. The repository and environment are part
+          of the URL, so the agent never has to name them; change the last two segments to connect
+          to a different environment.
+        </Typography>
         <CodeBlock title=".mcp.json" text={configJson} />
         <CodeBlock title="or, in Claude Code" text={cliCommand} />
-        <Typography level="body-xs">
-          The repository and environment are part of the URL, so the agent never has to name them.
-          Connect to a different environment by changing the last two segments.
-        </Typography>
       </Card>
+
+      {upload && (
+        <Card variant="outlined" sx={{ gap: 1 }}>
+          <Typography level="title-md">Upload API - for an SDLB job</Typography>
+          <CodeBlock title="URL" text={upload} />
+          <Typography level="body-xs">
+            Where SDLB pushes its exported configuration, schemas, statistics and run state. Unlike
+            MCP the scope is not in the URL: SDLB names the tenant, repository and environment as
+            configuration keys of its own.
+          </Typography>
+          <CodeBlock title="global.uiBackend, in the SDLB configuration" text={uiBackendHocon} />
+          <Typography level="body-xs">
+            Put the token in the job's <code>SDLB_UI_TOKEN</code> environment variable rather than in
+            the file. Set <code>stagePath</code> too: without it a failed upload fails the whole job,
+            and with it the run is simply retried next time.
+          </Typography>
+        </Card>
+      )}
 
       <Card variant="outlined">
         <Typography level="title-md">Your tokens</Typography>
