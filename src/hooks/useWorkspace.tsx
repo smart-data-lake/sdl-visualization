@@ -29,24 +29,35 @@ const WorkspaceProvider = (props: React.PropsWithChildren) => {
   const contentSubPath = (!tenant || contentPath ? contentSubPathElements.join("/") : undefined);
   const navigate = useNavigate();
 
+  /*
+    Every path below is absolute, and the leading slash is the whole point.
+
+    These name a place in the workspace - a tenant, a repository, an environment -
+    rather than a step from wherever we happen to be, and react-router treats a path
+    without a leading slash as relative to the current one. `navigate(tenant)` from
+    /PrivateTenant therefore goes to /PrivateTenant/PrivateTenant, and again on the
+    next click: the home button used to walk down its own path one segment at a time.
+    Only navigateRel is meant to be relative, and it says so in its name.
+  */
   function setTenant(newTenant: string) {
     if (env) navigate(`/${newTenant}/content/${repo}/${env}`)
     else if (repo) navigate(`/${newTenant}/content/${repo}`)
-    else navigate(`${newTenant}`)
+    else navigate(`/${newTenant}`)
 
   }
   function setRepo(newRepo: string | undefined) {
     if (newRepo) navigate(`/${tenant}/content/${newRepo}/${env}`);
-    else navigate(`${tenant}`);
+    else navigate(`/${tenant}`);
   }
   function setEnv(newEnv: string | undefined) {
     if (newEnv) navigate(`/${tenant}/content/${repo}/${newEnv}`)
-    else navigate(`${tenant}/content/${repo}`);
+    else navigate(`/${tenant}/content/${repo}`);
   }
   function navigateContent(contentSubPath: string) {
     if (!contentPath) {
       if (contentSubPath!="") throw new Error("Can not navigateContent when contentPath is undefined");
-      else navigate(tenant ?? "/")
+      // The home button, before a repository and environment have been chosen.
+      else navigate(tenant ? `/${tenant}` : "/")
     }
     else {
       navigate(contentPath + contentSubPath);
