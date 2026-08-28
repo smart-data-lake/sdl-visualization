@@ -28,8 +28,27 @@ export function WorkspaceEmpty() {
   const { tenant } = useWorkspace();
   const manifest = useManifest();
   const url = manifest.data?.backendConfig.split(";")[1];
-  const clientId = manifest.data?.auth["aws_user_pools_web_client_id"];
-  
+  const clientId = manifest.data?.auth?.["aws_user_pools_web_client_id"];
+
+  // Which authMode the user should configure depends on which backend they are
+  // uploading to: the hosted one authenticates against its Cognito pool, the Azure
+  // one takes any bearer token and verifies it against the Databricks workspace.
+  const authModeSnippet =
+    manifest.data?.auth?.type === "databricks"
+      ? `        authMode {
+          type = TokenAuthMode
+          token = "###ENV#SDLB_UI_TOKEN###"
+        }`
+      : `        authMode {
+          type = AWSUserPwdAuthMode
+          region = eu-central-1
+          userPool = sdlb-ui
+          clientId = ${clientId}
+          useIdToken = true
+          user = "###ENV#user###"
+          password = "###ENV#pwd###"
+        }`;
+
   const markdown = `
 **Tenant '${tenant}' seems still empty.**
 
@@ -37,7 +56,7 @@ Use the following steps based on our [getting-started](https://github.com/smart-
 or select another tenant in the upper right corner.
 
 #### 1. Add global.uiBackend configuration
-Adapt _repo_ (repository name) and _env_ (environment name) to your needs and use [Secret Providers](https://smartdatalake.ch/docs/reference/hoconSecrets) to hide the _password_ of your UI user.
+Adapt _repo_ (repository name) and _env_ (environment name) to your needs and use [Secret Providers](https://smartdatalake.ch/docs/reference/hoconSecrets) to hide the credentials.
 
     global {
       
@@ -48,15 +67,7 @@ Adapt _repo_ (repository name) and _env_ (environment name) to your needs and us
         tenant = ${tenant}
         repo = getting-started
         env = dev
-        authMode {
-          type = AWSUserPwdAuthMode
-          region = eu-central-1
-          userPool = sdlb-ui
-          clientId = ${clientId}
-          useIdToken = true
-          user = "###ENV#user###"
-          password = "###ENV#pwd###"
-        }
+${authModeSnippet}
       }
     }
 

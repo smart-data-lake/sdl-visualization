@@ -11,6 +11,12 @@ export interface Manifest {
     // config source file url template: {filename} and {lineNumber} will be replaced by corresponding config element origin in 'raw config' section of Configuration viewer.
     configSourceUrl?: string;
     
+    /**
+     * Identity provider configuration. Its presence switches the app to multi-tenant
+     * routing; `type` selects the provider, defaulting to the AWS Cognito one:
+     *   { type: "cognito", ...amplify configuration }
+     *   { type: "databricks", clientId, workspaceHosts: [...], scopes? }
+     */
     auth: any;
 }
 

@@ -1,0 +1,14 @@
+# Only dist/, host.json, package.json and node_modules are needed at runtime;
+# everything is bundled into dist/ by scripts/bundle.ts.
+.azurite
+.git*
+.vscode
+infra
+scripts
+spec
+src
+test
+tsconfig*.json
+vitest.config.ts
+local.settings.json
+*.md

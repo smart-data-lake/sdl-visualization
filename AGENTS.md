@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Single-page React/TypeScript web app (Vite) that visualizes Smart Data Lake Builder (SDLB) projects: the HOCON **configuration** (data objects, actions, connections, lineage graph) and the **workflow runs** recorded in SDLB state files. It is a pure static frontend — all data comes from a pluggable backend (local files or REST).
+Single-page React/TypeScript web app (Vite) that visualizes Smart Data Lake Builder (SDLB) projects: the HOCON **configuration** (data objects, actions, connections, lineage graph) and the **workflow runs** recorded in SDLB state files. The frontend is a pure static app — all data comes from a pluggable backend (local files, REST, or the Azure backend in `backend/`).
+
+`backend/` is a separate Node package, not part of the Vite build: an Azure Functions app (Node 24) serving the SPA's REST contract, SDLB's uploads and an MCP endpoint for coding agents. It has its own `README.md`, `package.json` and tests; see the "Backend" section below.
 
 ## Commands
 
-Requires Node 20 and Yarn (classic >= 1.22).
+Requires Node 22 or later and Yarn (classic >= 1.22). `.nvmrc` pins 24 and both workflows read it, so there is one place to change it; `engines` in each `package.json` states the floor. Vite 7 is the binding constraint below that (`^20.19 || >=22.12`), and Node 20 is out of upstream support.
 
 ```bash
 yarn install          # runs patch-package postinstall (see patches/)
@@ -91,6 +93,25 @@ MUI **Joy** (`@mui/joy`) is the primary component library with `CssVarsProvider`
 `src/archiv/` is dead/legacy code kept for reference — don't build on it.
 
 Vite needs Node polyfills (buffer/process, `rollup-plugin-polyfill-node`, `dynamicRequireTargets` for the hocon parser) because the HOCON parser is a Node library running in the browser; changes to `vite.config.ts` around this are load-bearing.
+
+### Backend (`backend/`)
+
+Its own package (`cd backend && yarn install`), outside the Vite build, with its own README. What matters from the frontend's side:
+
+- It reimplements `backend/spec/upstream-openapi.json` — the contract `src/api/fetchAPI_rest.ts` already speaks — so the SPA needs no new fetcher logic, only different credentials. `src/api/fetchAPI_azure.ts` extends `fetchAPI_rest`, which is why `fetch` and `getRequestInfo` there are `protected` rather than `private`. It also implements `getWorkflowRunsByAction`/`getWorkflowRunsByDataObject`, which the REST fetcher leaves as `TODO`, so the config explorer's "Last 5 runs" panel works against it.
+- `backendConfig` is `azure;<baseUrl>[;<repo>;<env>]`. Naming a repo and env pins a single-repository deployment: no workspace switcher, flat routes, and `fetchAPI_azure.fetch` fills the scope into every query string. Omit them and the scope comes from the URL, as `useWorkspace` derives it.
+- **Five pieces of logic exist twice** — `src/util/WorkflowsExplorer/metrics.ts`, `src/util/ConfigExplorer/Graphs.ts`, the filters in `src/util/ConfigExplorer/ConfigData.ts` plus `getPropertyByPathIgnoreCase`, `updateStateFile`/`endAnchorOf` in `Attempt.ts`, and `build_index.py`'s `getRuns()` — copied into `backend/src/domain/`. `backend/test/unit/parity.test.ts` imports the frontend originals and asserts both agree over the getting-started fixture, so drift fails a test rather than a user. **Change the pair together.**
+- The `azure` Playwright project (port 3002) runs the same specs as `hocon` against the real backend, started by `yarn --cwd backend serve:e2e` with a throwaway Azurite and the fixtures seeded. Green there means the backend implements the contract.
+- Storage is reached with the app's **managed identity**, not a key: `SDLB_STORAGE_ACCOUNT` (account name) takes precedence over `SDLB_STORAGE_CONNECTION_STRING`, which exists for Azurite. `backend/infra` sets `shared_access_key_enabled = false`, so there is no key to leak, and `network_isolation` (`none`/`firewall`/`private`) decides how reachable the endpoint is. `@azure/identity` is imported lazily in `backend/src/store/credential.ts` to keep it off the cold-start path.
+- `yarn --cwd backend build` is esbuild, not `tsc` — the deployed artefact is three bundled files and a 1.3 MB `node_modules`, and `@azure/functions` is the only runtime dependency. `tsc` is a type checker there and emits nothing. `backend/test/unit/bundle.test.ts` runs the built bundle in a plain Node process, because bundling a Node service breaks in ways that only show up at runtime.
+
+### Authentication (`src/auth`)
+
+Amplify used to be hard-wired at three sites (`Amplify.configure` in `App.tsx`, `useAuthenticator` in `useUser`, the `authStatus` gate in `useFetchData`). Those now go through `useAuth()` from `src/auth/AuthProvider.tsx`, which picks an implementation from `manifest.auth.type`: `cognito` (the default, and what a manifest without a type means) or `databricks` (OAuth user-to-machine, authorization code with PKCE, in `databricksOAuth.ts`).
+
+The fetchAPI classes live outside React, so they cannot read that context: the provider registers a header function in `src/auth/tokenProvider.ts` and `fetchAPI_azure.getRequestInfo` asks it per request. The Databricks redirect comes back to the app's base URL with the code in the **query** string, because the hash router owns everything after the `#`; `AuthProvider` consumes and strips it before anything else looks at the URL.
+
+`fetchAPI` gained two optional groups: `capabilities()` (whether the backend administers users, whether it serves MCP) and the MCP token methods. Both are optional, so existing implementations are unchanged; `Settings/Setting.tsx` uses the capabilities to decide whether to show User Management, Agent Access, or both.
 
 ### documentation
 

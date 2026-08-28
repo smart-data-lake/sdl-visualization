@@ -57,7 +57,7 @@ export class fetchAPI_rest implements fetchAPI {
         this.env = env;
     }
 
-    private async fetch(url: string, init: Promise<RequestInit> = this.getRequestInfo()) {
+    protected async fetch(url: string, init: Promise<RequestInit> = this.getRequestInfo()) {
         const response = await fetch(url, await init);
         if (!response.ok) {
             const json = await response.json()
@@ -67,7 +67,7 @@ export class fetchAPI_rest implements fetchAPI {
         return await response.json();
     }
 
-    private async getRequestInfo(method: string = 'GET', headers?: any): Promise<RequestInit> {
+    protected async getRequestInfo(method: string = 'GET', headers?: any): Promise<RequestInit> {
         try {
             const currentUserSession = await Auth.currentSession();
             return { mode: "cors", method, headers: {'Authorization': currentUserSession.getIdToken().getJwtToken(), ...headers}}

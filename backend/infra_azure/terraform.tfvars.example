@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored and Terraform
+# loads it automatically, so `terraform apply` needs no -var-file.
+
+name                = "sdlb-acme"
+resource_group_name = "rg-example"
+location            = "westeurope"
+
+# Only users of these workspaces can sign in, and only these hosts are ever
+# contacted to verify a token. See the comment on the variable.
+databricks_hosts = [
+  "https://adb-0000000000000000.0.azuredatabricks.net"
+]
+
+# The origin the SPA is served from. Empty on the first apply - the Static Web App
+# does not exist yet, so its hostname cannot be known. Fill it in afterwards from
+# `terraform output -raw static_site_url`, apply again, and restart the function app;
+# without it the browser blocks every authenticated call. See static_site.tf.
+allowed_origins = []

@@ -1,0 +1,9 @@
+{
+    "short_name": "SDLB config",
+    "name": "SDLB Configuration Viewer",
+    "start_url": ".",
+    "display": "standalone",
+    "backendConfig": "azure;http://localhost:7071/api/v1;getting-started;dev",
+    "env": "dev",
+    "baseUrl": "./"
+}

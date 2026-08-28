@@ -13,9 +13,16 @@ import {
 import PageHeader from "../../layouts/PageHeader";
 import { Link, Navigate, Route, Routes, useMatch } from "react-router-dom";
 import Users from "./Users";
+import AgentAccess from "./AgentAccess";
 import { useFetchLicenses } from "../../hooks/useFetchData";
+import { fetcher } from "../../api/Fetcher";
 
-const settingMenuItems = [{ title: "User Management", path: "users" }];
+/**
+ * Which settings a backend actually has. A backend that declares nothing is the
+ * classic one: it administers users and serves no MCP endpoint.
+ */
+const backendCapabilities = () =>
+  fetcher().capabilities?.() ?? { userManagement: true, mcpTokens: false };
 
 const NavLink = ({ to, title }) => {
   const activated = useMatch(`settings/${to}`);
@@ -61,6 +68,13 @@ const TenantLicenses = () => {
 };
 
 export default function Setting() {
+  const capabilities = backendCapabilities();
+  const settingMenuItems = [
+    ...(capabilities.userManagement ? [{ title: "User Management", path: "users" }] : []),
+    ...(capabilities.mcpTokens ? [{ title: "Agent Access", path: "agents" }] : []),
+  ];
+  const landingPath = settingMenuItems[0]?.path ?? "users";
+
   return (
     <Sheet
       sx={{
@@ -71,7 +85,7 @@ export default function Setting() {
         flexDirection: "column",
       }}
     >
-      <PageHeader title={"Setting"} corner={<TenantLicenses />} />
+      <PageHeader title={"Setting"} corner={capabilities.userManagement ? <TenantLicenses /> : undefined} />
       <Sheet sx={{ display: "flex", width: "100%", minHeight: 0, flexGrow: 1 }}>
         <Grid container height="100%">
           <Grid xs={2}>
@@ -87,8 +101,9 @@ export default function Setting() {
           </Grid>
           <Grid xs={10}>
             <Routes>
-              <Route path="users" element={<Users />} />
-              <Route path="*" element={<Navigate to="users" replace={true} />} />
+              {capabilities.userManagement && <Route path="users" element={<Users />} />}
+              {capabilities.mcpTokens && <Route path="agents" element={<AgentAccess />} />}
+              <Route path="*" element={<Navigate to={landingPath} replace={true} />} />
             </Routes>
           </Grid>
         </Grid>

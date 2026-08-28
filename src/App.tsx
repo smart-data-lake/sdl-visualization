@@ -1,9 +1,8 @@
-import { Authenticator, ThemeProvider } from '@aws-amplify/ui-react';
+import { ThemeProvider } from '@aws-amplify/ui-react';
 import { CssVarsProvider } from '@mui/joy';
 import CssBaseline from '@mui/joy/CssBaseline';
-import { Amplify } from 'aws-amplify';
-import { useEffect } from 'react';
 import { createHashRouter, Route, RouterProvider, Routes } from 'react-router-dom';
+import { AuthProvider } from './auth/AuthProvider';
 import ConfigExplorer from './components/ConfigExplorer/ConfigExplorer';
 import Home from './components/HomeMenu/Home';
 import Setting from './components/Settings/Setting';
@@ -68,19 +67,13 @@ export default function App() {
   
   const {data: manifest} = useManifest();
 
-  useEffect(() => {
-    if(manifest?.auth) {
-      Amplify.configure(manifest.auth);
-    }
-  }, [manifest])
-
   const rootWithAuth = () => (
     <WorkspaceProvider>
-      <Authenticator.Provider>
-        <UserProvider>  
+      <AuthProvider>
+        <UserProvider>
           <Routing/>
-        </UserProvider>  
-      </Authenticator.Provider>
+        </UserProvider>
+      </AuthProvider>
     </WorkspaceProvider>
   )
 

@@ -1,0 +1,19 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+
+    "//storage": "Locally a connection string, because Azurite has no Entra. In Azure it is SDLB_STORAGE_ACCOUNT instead, and the account has no shared key at all - see infra/ and src/store/credential.ts. If both are set the account name wins.",
+    "SDLB_STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true",
+    "SDLB_BLOB_CONTAINER": "sdlb",
+    "SDLB_TENANT_NAME": "PrivateTenant",
+
+    "SDLB_AUTH_MODE": "disabled",
+    "SDLB_DATABRICKS_HOSTS": "https://adb-1234567890.4.azuredatabricks.net",
+    "SDLB_AUTH_CACHE_TTL_SECONDS": "300"
+  },
+  "Host": {
+    "CORS": "*"
+  }
+}
