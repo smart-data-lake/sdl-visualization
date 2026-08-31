@@ -1,3 +1,5 @@
+import type { ElementType } from '../domain/types.js';
+
 /**
  * What the store trades in, with no backend in it.
  *
@@ -49,4 +51,52 @@ export interface TstampEntry {
   tstamp: number;
   blobPath: string;
   sizeBytes: number;
+}
+
+/** One stored configuration version: the index entry beside its blob. */
+export interface ConfigVersionRecord {
+  version: string;
+  createdAt: string;
+  blobPath: string;
+  numDataObjects: number;
+  numActions: number;
+  numConnections: number;
+}
+
+/**
+ * One element of one configuration version, projected flat.
+ *
+ * This is the index for questions that should not have to materialise the whole
+ * configuration - see the note on searchText in services/config.ts about why the search
+ * the UI offers does not currently use it.
+ */
+export interface ConfigElementRecord {
+  id: string;
+  elementType: ElementType;
+  type?: string;
+  name?: string;
+  layer?: string;
+  subjectArea?: string;
+  feed?: string;
+  tags?: string;
+  connectionId?: string;
+  inputIds?: string;
+  outputIds?: string;
+  path?: string;
+  tableFullName?: string;
+  originPath?: string;
+  originLine?: number;
+  descriptionSnippet?: string;
+  /** Every leaf value, lowercased, for cheap containment without loading the blob. */
+  searchText?: string;
+}
+
+/** Where an element was last seen, across versions. */
+export interface LatestElementRecord {
+  id: string;
+  elementType: ElementType;
+  lastVersion: string;
+  lastSeenAt: string;
+  type?: string;
+  layer?: string;
 }

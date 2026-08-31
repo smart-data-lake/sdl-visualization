@@ -149,3 +149,21 @@ function checkProperty(value: unknown, what: string): PropertyValue {
       `only be a string, a finite number, or absent.`,
   );
 }
+
+const TRUNCATION_SUFFIX = '… [truncated]';
+
+/**
+ * Bring a string under the property limit. Anything that would still be too big
+ * belongs in a blob instead.
+ *
+ * `max` counts the result, suffix included, so a caller cannot ask for a bound that
+ * still produces an over-limit value - which is what `truncate(v, MAX_PROPERTY_CHARS)`
+ * would otherwise do.
+ */
+export function truncate(value: string | undefined, max = 30_000): string | undefined {
+  if (value === undefined) return undefined;
+  const limit = Math.min(max, MAX_PROPERTY_CHARS) - TRUNCATION_SUFFIX.length;
+  return value.length <= max && value.length <= MAX_PROPERTY_CHARS
+    ? value
+    : `${value.slice(0, limit)}${TRUNCATION_SUFFIX}`;
+}

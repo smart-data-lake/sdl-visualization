@@ -1,5 +1,14 @@
 import { settings } from '../config.js';
-import type { Scope, StoredToken, Subtype, TstampEntry, WorkspaceRule } from './types.js';
+import type {
+  ConfigElementRecord,
+  ConfigVersionRecord,
+  LatestElementRecord,
+  Scope,
+  StoredToken,
+  Subtype,
+  TstampEntry,
+  WorkspaceRule,
+} from './types.js';
 
 /**
  * The store, as named operations rather than as queries.
@@ -70,11 +79,29 @@ export interface SchemaStatsRepository {
   listTstamps(scope: Scope, subtype: Subtype, dataObjectId: string): Promise<number[]>;
 }
 
+export interface ConfigRepository {
+  putVersion(scope: Scope, version: ConfigVersionRecord): Promise<void>;
+  /** Every stored version name. Order is not significant - the SPA sorts and reverses. */
+  listVersions(scope: Scope): Promise<string[]>;
+  /**
+   * Replace the flat index of one version's elements.
+   *
+   * Nothing reads this yet. It was built as a search index and then could not serve
+   * the search, because Table Storage has no substring filter - see services/config.ts.
+   * It is kept because it is what a store that can answer such a query would need, and
+   * because dropping it would make the write path lie about what is recorded.
+   */
+  putElements(scope: Scope, version: string, elements: ConfigElementRecord[]): Promise<void>;
+  /** Where each element was last seen. Also write-only today, for the same reason. */
+  putLatestElements(scope: Scope, elements: LatestElementRecord[]): Promise<void>;
+}
+
 export interface Repositories {
   scopes: ScopeRepository;
   workspaces: WorkspaceRepository;
   tokens: TokenRepository;
   schemaStats: SchemaStatsRepository;
+  configs: ConfigRepository;
 }
 
 let resolved: Promise<Repositories> | undefined;
