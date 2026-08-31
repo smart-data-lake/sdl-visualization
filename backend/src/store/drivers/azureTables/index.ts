@@ -1,6 +1,8 @@
 import type { Repositories } from '../../repositories.js';
 import type { Settings } from '../../../config.js';
+import { schemaStatsRepository } from './schemaStats.js';
 import { scopeRepository } from './scopes.js';
+import { tokenRepository } from './tokens.js';
 import { workspaceRepository } from './workspaces.js';
 
 /**
@@ -18,5 +20,7 @@ export function createAzureTablesRepositories(_options: AzureTablesOptions): Rep
   return {
     scopes: scopeRepository(),
     workspaces: workspaceRepository(),
+    tokens: tokenRepository(),
+    schemaStats: schemaStatsRepository(),
   };
 }

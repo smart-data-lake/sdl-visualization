@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { TABLES, deleteEntity, getEntity, listPartition, upsert } from '../store/tables.js';
-import { keys, type Scope } from '../store/keys.js';
+import { repositories } from '../store/repositories.js';
+import type { Scope, StoredToken } from '../store/types.js';
 
 /**
  * Long-lived tokens for MCP clients.
@@ -15,16 +15,6 @@ import { keys, type Scope } from '../store/keys.js';
  */
 
 export const TOKEN_PREFIX = 'sdlb_';
-
-export interface McpTokenEntity {
-  partitionKey: string;
-  rowKey: string;
-  email: string;
-  label: string;
-  createdAt: string;
-  expiresAt?: string;
-  lastUsedAt?: string;
-}
 
 export interface McpTokenInfo {
   id: string;
@@ -57,34 +47,19 @@ export async function mintToken(
       ? undefined
       : new Date(Date.now() + ttlDays * 86_400_000).toISOString();
 
-  await upsert<Omit<McpTokenEntity, 'partitionKey' | 'rowKey'>>(TABLES.mcpTokens, {
-    partitionKey: keys.mcpTokens(scope),
-    rowKey,
-    email,
-    label,
-    createdAt,
-    expiresAt,
-  } as McpTokenEntity);
+  const stored: StoredToken = { id: rowKey, email, label, createdAt, expiresAt };
+  await (await repositories()).tokens.put(scope, stored);
 
   return { token, info: { id: rowKey, label, email, createdAt, expiresAt } };
 }
 
 export async function listTokens(scope: Scope, email?: string): Promise<McpTokenInfo[]> {
-  const entities = await listPartition<McpTokenEntity>(TABLES.mcpTokens, keys.mcpTokens(scope));
-  return entities
-    .filter((e) => email === undefined || e.email === email)
-    .map((e) => ({
-      id: e.rowKey,
-      label: e.label,
-      email: e.email,
-      createdAt: e.createdAt,
-      expiresAt: e.expiresAt,
-      lastUsedAt: e.lastUsedAt,
-    }));
+  const tokens = await (await repositories()).tokens.list(scope);
+  return tokens.filter((token) => email === undefined || token.email === email);
 }
 
 export async function revokeToken(scope: Scope, id: string): Promise<void> {
-  await deleteEntity(TABLES.mcpTokens, keys.mcpTokens(scope), id);
+  await (await repositories()).tokens.delete(scope, id);
 }
 
 /**
@@ -96,19 +71,16 @@ export async function resolveToken(
   token: string,
 ): Promise<{ email: string; label: string } | undefined> {
   const rowKey = hash(token);
-  const entity = await getEntity<McpTokenEntity>(TABLES.mcpTokens, keys.mcpTokens(scope), rowKey);
-  if (!entity) return undefined;
-  if (entity.expiresAt && Date.parse(entity.expiresAt) < Date.now()) {
+  const tokens = (await repositories()).tokens;
+  const stored = await tokens.get(scope, rowKey);
+  if (!stored) return undefined;
+  if (stored.expiresAt && Date.parse(stored.expiresAt) < Date.now()) {
     await revokeToken(scope, rowKey);
     return undefined;
   }
 
   // Best effort: a failed touch must never cost the caller their request.
-  void upsert(TABLES.mcpTokens, {
-    partitionKey: entity.partitionKey,
-    rowKey,
-    lastUsedAt: new Date().toISOString(),
-  }).catch(() => undefined);
+  void tokens.touch(scope, rowKey, new Date().toISOString()).catch(() => undefined);
 
-  return { email: entity.email, label: entity.label };
+  return { email: stored.email, label: stored.label };
 }

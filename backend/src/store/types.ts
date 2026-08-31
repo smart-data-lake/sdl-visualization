@@ -26,3 +26,27 @@ export interface WorkspaceRule {
   envs?: string;
   requiredGroup?: string;
 }
+
+/**
+ * A minted access token, as stored. `id` is the token's SHA-256 hash: only the hash is
+ * kept, so a leak of the store does not leak anyone's access, and it doubles as the
+ * token's identity in the UI.
+ */
+export interface StoredToken {
+  id: string;
+  email: string;
+  label: string;
+  createdAt: string;
+  expiresAt?: string;
+  lastUsedAt?: string;
+}
+
+/** Which of the two per-timestamp series a record belongs to. */
+export type Subtype = 'schema' | 'stats';
+
+/** One recorded schema or statistics snapshot: the index entry beside its blob. */
+export interface TstampEntry {
+  tstamp: number;
+  blobPath: string;
+  sizeBytes: number;
+}
