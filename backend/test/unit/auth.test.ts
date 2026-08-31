@@ -8,8 +8,7 @@ import {
   verifyDatabricksToken,
 } from '../../src/auth/databricks.js';
 import { authorizeScope, credentialsFrom, verifyBearer } from '../../src/auth/verifyBearer.js';
-import { TABLES, upsert } from '../../src/store/tables.js';
-import { keys } from '../../src/store/keys.js';
+import { repositories } from '../../src/store/repositories.js';
 
 /**
  * The checks that separate one workspace from another.
@@ -216,9 +215,7 @@ describe('scope authorisation', () => {
   });
 
   test('a row narrows the workspace to the repos and envs it names', async () => {
-    await upsert(TABLES.workspaces, {
-      partitionKey: keys.workspaces(),
-      rowKey: ALSO_ALLOWED.replace('https://', ''),
+    await (await repositories()).workspaces.putRule(ALSO_ALLOWED.replace('https://', ''), {
       repos: 'something-else',
     });
     await expect(
@@ -228,11 +225,7 @@ describe('scope authorisation', () => {
 
   test('a required group is enforced', async () => {
     const host = ALLOWED.replace('https://', '');
-    await upsert(TABLES.workspaces, {
-      partitionKey: keys.workspaces(),
-      rowKey: host,
-      requiredGroup: 'platform-admins',
-    });
+    await (await repositories()).workspaces.putRule(host, { requiredGroup: 'platform-admins' });
     await expect(authorizeScope(principal, scope)).rejects.toMatchObject({ status: 403 });
     await expect(
       authorizeScope({ ...principal, groups: ['platform-admins'] }, scope),
