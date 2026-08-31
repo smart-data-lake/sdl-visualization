@@ -1,5 +1,4 @@
 import type { TokenCredential } from '@azure/core-auth';
-import { settings } from '../config.js';
 
 /**
  * How the storage clients authenticate.
@@ -35,8 +34,3 @@ export function resetCredential(): void {
 
 export const tableEndpoint = (account: string) => `https://${account}.table.core.windows.net`;
 export const blobEndpoint = (account: string) => `https://${account}.blob.core.windows.net`;
-
-/** True when storage is reached with the managed identity rather than a key. */
-export function usesIdentity(): boolean {
-  return settings().storage.kind === 'identity';
-}
