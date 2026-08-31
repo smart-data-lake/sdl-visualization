@@ -1,5 +1,5 @@
-import { TABLES, listPartition, upsert } from '../store/tables.js';
-import { inv, keys, uninv, type Scope } from '../store/keys.js';
+import { repositories } from '../store/repositories.js';
+import type { Scope, Subtype } from '../store/types.js';
 import { blobPaths, readJson, writeJson } from '../store/blobs.js';
 import type { SchemaData, Stats } from '../domain/types.js';
 import { notFound } from '../errors.js';
@@ -13,15 +13,7 @@ import { registerScope } from './scope.js';
  * from the index, so the blob layout can be the plain {dataObjectId}/{tstamp}.json.
  */
 
-export type Subtype = 'schema' | 'stats';
-
-export interface TstampEntity {
-  partitionKey: string;
-  rowKey: string;
-  tstamp: number;
-  blobPath: string;
-  sizeBytes: number;
-}
+export type { Subtype };
 
 function blobPathFor(scope: Scope, subtype: Subtype, dataObjectId: string, tstamp: number): string {
   return subtype === 'schema'
@@ -39,14 +31,11 @@ export async function putSchemaOrStats(
   const path = blobPathFor(scope, subtype, dataObjectId, tstamp);
   await writeJson(path, body);
 
-  const entity: TstampEntity = {
-    partitionKey: keys.tstamps(scope, subtype, dataObjectId),
-    rowKey: inv(tstamp),
+  await (await repositories()).schemaStats.put(scope, subtype, dataObjectId, {
     tstamp,
     blobPath: path,
     sizeBytes: JSON.stringify(body).length,
-  };
-  await upsert(TABLES.tstamps, entity);
+  });
   await registerScope(scope);
 }
 
@@ -56,11 +45,7 @@ export async function tstamps(
   subtype: Subtype,
   dataObjectId: string,
 ): Promise<number[]> {
-  const entities = await listPartition<TstampEntity>(
-    TABLES.tstamps,
-    keys.tstamps(scope, subtype, dataObjectId),
-  );
-  return entities.map((e) => e.tstamp ?? uninv(e.rowKey));
+  return (await repositories()).schemaStats.listTstamps(scope, subtype, dataObjectId);
 }
 
 export async function getSchema(

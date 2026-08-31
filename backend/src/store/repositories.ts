@@ -1,5 +1,5 @@
 import { settings } from '../config.js';
-import type { Scope, WorkspaceRule } from './types.js';
+import type { Scope, StoredToken, Subtype, TstampEntry, WorkspaceRule } from './types.js';
 
 /**
  * The store, as named operations rather than as queries.
@@ -41,9 +41,40 @@ export interface WorkspaceRepository {
   putRule(workspaceHost: string, rule: WorkspaceRule): Promise<void>;
 }
 
+export interface TokenRepository {
+  put(scope: Scope, token: StoredToken): Promise<void>;
+  get(scope: Scope, id: string): Promise<StoredToken | undefined>;
+  /** Every token of one scope. Order is not significant - the SPA sorts. */
+  list(scope: Scope): Promise<StoredToken[]>;
+  delete(scope: Scope, id: string): Promise<void>;
+  /**
+   * Record that a token was used, leaving every other field alone.
+   *
+   * This is the operation that pins merge semantics for the whole store: it writes one
+   * field of a row that another request may be writing at the same time, so a driver
+   * that implemented it as a read-modify-write would lose the other write. Callers treat
+   * it as best effort - a failed touch must not cost anyone their request.
+   */
+  touch(scope: Scope, id: string, at: string): Promise<void>;
+}
+
+export interface SchemaStatsRepository {
+  put(scope: Scope, subtype: Subtype, dataObjectId: string, entry: TstampEntry): Promise<void>;
+  /**
+   * The timestamps recorded for one data object, newest first.
+   *
+   * Newest first is part of the answer, not a happy accident of the storage layout:
+   * tstampAt takes the first entry at or before a moment, and the SPA shows the newest
+   * schema by default.
+   */
+  listTstamps(scope: Scope, subtype: Subtype, dataObjectId: string): Promise<number[]>;
+}
+
 export interface Repositories {
   scopes: ScopeRepository;
   workspaces: WorkspaceRepository;
+  tokens: TokenRepository;
+  schemaStats: SchemaStatsRepository;
 }
 
 let resolved: Promise<Repositories> | undefined;
