@@ -1,5 +1,5 @@
 output "resource_group_name" {
-  description = "Resource group the deployment lives in. Read by scripts/deploy-azure.sh."
+  description = "Resource group the deployment lives in. Read by deploy-backend.sh."
   value       = data.azurerm_resource_group.this.name
 }
 
@@ -55,7 +55,7 @@ output "storage_shared_key_enabled" {
 }
 
 output "static_site_name" {
-  description = "Name of the Static Web App. Read by scripts/deploy-frontend-azure.sh."
+  description = "Name of the Static Web App. Read by deploy-frontend.sh."
   value       = one(azurerm_static_web_app.this[*].name)
 }
 

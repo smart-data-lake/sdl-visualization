@@ -83,7 +83,7 @@
     "start": "vite --force",
     "build": "vite build",
     "serve": "vite preview",
-    "deploy-azure": "./scripts/deploy-frontend-azure.sh",
+    "deploy-azure": "./backend/infra_azure/deploy-frontend.sh",
     "lint": "eslint src tests",
     "lint:fix": "eslint src tests --fix",
     "scriptIlias": "cd src/components/util && node markdown_parser.js && npm run start",

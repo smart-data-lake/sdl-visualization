@@ -39,7 +39,7 @@ vi.mock('../src/hooks/useFetchData', () => ({
   useFetchEnvs: () => ({ data: [], isFetching: false }),
 }));
 
-const AUTH_MANIFEST = { auth: { type: 'databricks' }, backendConfig: 'azure;https://x/api/v1' };
+const AUTH_MANIFEST = { auth: { type: 'databricks' }, backendConfig: 'bundled;https://x/api/v1' };
 
 const state: {
   manifest: any;

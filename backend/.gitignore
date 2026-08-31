@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-package/
 .azurite/
 local.settings.json
 *.tsbuildinfo

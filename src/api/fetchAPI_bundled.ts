@@ -4,7 +4,8 @@ import { BackendCapabilities, McpToken } from "./fetchAPI";
 import { fetchAPI_rest, processWorkflowHistory } from "./fetchAPI_rest";
 
 /**
- * Backend implementation for the Azure deployment.
+ * Backend implementation for the backend bundled with this repository - `backend/`,
+ * deployed as a Node process or as an Azure Function.
  *
  * It speaks the same REST contract as fetchAPI_rest, only three things differ:
  *
@@ -17,12 +18,12 @@ import { fetchAPI_rest, processWorkflowHistory } from "./fetchAPI_rest";
  *    directory to manage and nothing to meter. getUsers still answers, with the
  *    caller alone, because useUser cross-references it to find its own permissions.
  */
-export class fetchAPI_azure extends fetchAPI_rest {
+export class fetchAPI_bundled extends fetchAPI_rest {
     /** Scope to fall back on when the app runs without a workspace switcher, see fetch(). */
     private readonly defaultScope: { tenant: string; repo?: string; env?: string };
 
     /**
-     * backendConfig is "azure;<baseUrl>[;<repo>;<env>]". Naming a repo and an
+     * backendConfig is "bundled;<baseUrl>[;<repo>;<env>]". Naming a repo and an
      * environment pins the deployment to one of them, which is what a single
      * repository behind an external proxy wants: no login, no switcher, flat routes.
      */

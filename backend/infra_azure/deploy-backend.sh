@@ -2,51 +2,64 @@
 #
 # Deploy the backend to its Azure Function app, from a laptop.
 #
-# The infrastructure is Terraform's job (infra_azure/, applied by hand); this only
+# The infrastructure is Terraform's job (this directory, applied by hand); this only
 # ships code into the app that apply created. It reads the app's name from the
 # Terraform outputs, so there is nothing to keep in sync by hand, and falls back to
 # flags or environment variables when the state is somewhere else.
 #
-# What gets uploaded is *not* the working tree. The Function host wants a package
-# whose root holds host.json, package.json and the runnable JavaScript, and cold
-# start is charged per instance for every byte of it - so the zip is assembled in a
-# staging directory from the esbuild bundle plus a production-only install
-# (@azure/functions and nothing else, about 1.3 MB; see the "What gets deployed"
-# section of README.md). The dev node_modules is left alone.
+# It deploys a build; it does not make one. The bundle comes from ../dist when the
+# working tree has been built, and otherwise from the artifact CI published - which
+# is the same package, assembled by this same script in .github/workflows/build.yml.
+# --build builds ../dist first, for the edit-and-deploy loop.
 #
-#   ./scripts/deploy-azure.sh                 # check, build, package, deploy, verify
-#   ./scripts/deploy-azure.sh --skip-checks   # skip type-check and tests
-#   ./scripts/deploy-azure.sh --package-only  # build the zip and stop
+# What gets uploaded is *not* the working tree, and this script does not decide what
+# is in it: `yarn package` (../scripts/package.ts) assembles the package, here and in
+# CI alike, so the layout is defined in the backend rather than in the deployment.
+# This zips what it produced and posts it.
+#
+#   ./deploy-backend.sh                   # ../dist if it exists, else the latest release
+#   ./deploy-backend.sh --build           # build ../dist first, then deploy that
+#   ./deploy-backend.sh --source develop  # deploy the develop snapshot
+#   ./deploy-backend.sh --package-only    # assemble the package and stop
 #
 set -euo pipefail
 
-readonly BACKEND_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-readonly INFRA_DIR="$BACKEND_DIR/infra_azure"
+readonly INFRA_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly BACKEND_DIR="$(cd -- "$INFRA_DIR/.." && pwd)"
 
 app="${SDLB_FUNCTION_APP:-}"
 resource_group="${SDLB_RESOURCE_GROUP:-}"
 subscription="${SDLB_SUBSCRIPTION:-}"
-skip_checks=0
+source_kind='auto'
+artifact_path=''
+do_build=0
 package_only=0
 keep_staging=0
-zip_path=""
+staging=''
+zip_path=''
 
 usage() {
-  sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '3,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   cat <<'USAGE'
 
 Options:
   -a, --app NAME              Function app name. Default: terraform output function_app_name.
   -g, --resource-group NAME   Resource group. Default: from Terraform, else looked up by app name.
   -s, --subscription ID       Azure subscription. Default: the one az is currently set to.
+      --source WHERE          Where the build comes from: auto (default - local if ../dist
+                              exists, else release), local, release, develop.
+      --artifact PATH         Deploy this package instead: a zip, or a directory holding
+                              host.json, package.json and dist/.
+      --build                 Run `yarn build` in ../ first. Implies --source local.
+      --stage-dir PATH        Where to assemble the package. Default: a temporary directory.
       --zip PATH              Where to write the package. Default: a temporary file.
-      --skip-checks           Do not run type-check and tests before building.
-      --package-only          Build the package and print its path; do not deploy.
+      --package-only          Assemble the package and print its path; do not deploy.
+                              Needs no Azure credentials and no Terraform state.
       --keep                  Keep the staging directory and package after deploying.
   -h, --help                  This.
 
 Environment: SDLB_FUNCTION_APP, SDLB_RESOURCE_GROUP, SDLB_SUBSCRIPTION do the same as
-the first three flags. SDLB_SOURCEMAP=1 builds with source maps.
+the first three flags. SDLB_SOURCEMAP=1 makes --build emit source maps.
 USAGE
 }
 
@@ -54,13 +67,19 @@ log()  { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 info() { printf '    %s\n' "$*"; }
 die()  { printf '\n\033[31merror: %s\033[0m\n' "$*" >&2; exit 1; }
 
+# shellcheck source=artifact.sh
+. "$INFRA_DIR/artifact.sh"
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -a|--app)             app="${2:?--app needs a value}"; shift 2 ;;
     -g|--resource-group)  resource_group="${2:?--resource-group needs a value}"; shift 2 ;;
     -s|--subscription)    subscription="${2:?--subscription needs a value}"; shift 2 ;;
+    --source)             source_kind="${2:?--source needs a value}"; shift 2 ;;
+    --artifact)           artifact_path="${2:?--artifact needs a value}"; shift 2 ;;
+    --build)              do_build=1; shift ;;
+    --stage-dir)          staging="${2:?--stage-dir needs a value}"; shift 2 ;;
     --zip)                zip_path="${2:?--zip needs a value}"; shift 2 ;;
-    --skip-checks)        skip_checks=1; shift ;;
     --package-only)       package_only=1; shift ;;
     --keep)               keep_staging=1; shift ;;
     -h|--help)            usage; exit 0 ;;
@@ -68,13 +87,30 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+(( do_build )) && source_kind='local'
+[[ -n "$artifact_path" ]] && source_kind='artifact'
+
+case "$source_kind" in
+  auto|local|release|develop|artifact) ;;
+  *) die "unknown --source: $source_kind (auto, local, release or develop)." ;;
+esac
+
 cd "$BACKEND_DIR"
 
 # ------------------------------------------------------------------ prerequisites
 
-for tool in yarn zip; do
-  command -v "$tool" >/dev/null || die "$tool is not installed."
-done
+# zip in every path: the package is always re-zipped from the staging directory, so
+# that what is posted is what was checked. unzip only where something is unpacked.
+command -v zip >/dev/null || die "zip is not installed."
+if [[ "$source_kind" != local ]]; then
+  command -v unzip >/dev/null || die "unzip is not installed."
+fi
+if [[ "$source_kind" == local || "$source_kind" == auto ]]; then
+  command -v yarn >/dev/null || die "yarn is not installed."
+fi
+if [[ "$source_kind" == release || "$source_kind" == develop || "$source_kind" == auto ]]; then
+  command -v curl >/dev/null || die "curl is not installed."
+fi
 if (( ! package_only )); then
   command -v az >/dev/null || die "the Azure CLI is not installed - see https://aka.ms/azcli."
   for tool in curl jq; do
@@ -92,17 +128,19 @@ terraform_output() {
 
 # ---------------------------------------------------------------------- targeting
 
-log 'Resolving the target'
-
-if [[ -z "$app" ]]; then
-  app="$(terraform_output function_app_name || true)"
-  [[ -n "$app" ]] || die "could not read function_app_name from $INFRA_DIR - pass --app."
-  info "app:            $app (terraform)"
-else
-  info "app:            $app"
-fi
-
+# Skipped entirely for --package-only: that is the CI path, where there is neither a
+# Terraform state to read a name out of nor an Azure session to look one up with.
 if (( ! package_only )); then
+  log 'Resolving the target'
+
+  if [[ -z "$app" ]]; then
+    app="$(terraform_output function_app_name || true)"
+    [[ -n "$app" ]] || die "could not read function_app_name from $INFRA_DIR - pass --app."
+    info "app:            $app (terraform)"
+  else
+    info "app:            $app"
+  fi
+
   az account show -o none 2>/dev/null || die "not signed in - run 'az login'."
   [[ -n "$subscription" ]] && az account set --subscription "$subscription"
   subscription="$(az account show --query id -o tsv)"
@@ -129,43 +167,92 @@ fi
 
 # -------------------------------------------------------------------------- build
 
-log 'Installing'
-yarn install --frozen-lockfile
-
-if (( skip_checks )); then
-  info 'checks skipped'
-else
-  log 'Type checking'
-  yarn type-check
-  log 'Testing'
-  yarn test:ci
+if (( do_build )); then
+  log 'Building'
+  yarn install --frozen-lockfile
+  yarn build   # esbuild, via scripts/bundle.ts - dist/ is the whole artefact
 fi
 
-log 'Building'
-yarn build   # esbuild, via scripts/bundle.ts - dist/ is the whole artefact
+if [[ "$source_kind" == auto ]]; then
+  if [[ -f "$BACKEND_DIR/dist/http.js" ]]; then
+    source_kind='local'
+  else
+    source_kind='release'
+  fi
+fi
 
-# ------------------------------------------------------------------------ package
+# ------------------------------------------------------------------------ staging
 
-staging="$(mktemp -d -t sdlb-deploy-XXXXXX)"
+if [[ -n "$staging" ]]; then
+  mkdir -p "$staging"
+  staging="$(cd -- "$staging" && pwd)"
+  # An explicit staging directory is asked for by name, so it is emptied rather than
+  # merged into: leftovers from a previous run would ship in the zip.
+  rm -rf -- "${staging:?}"/* "${staging:?}"/.[!.]*  2>/dev/null || true
+  keep_staging=1
+else
+  staging="$(mktemp -d -t sdlb-deploy-XXXXXX)"
+fi
 [[ -n "$zip_path" ]] || zip_path="$staging.zip"
+
 cleanup() {
   (( keep_staging )) && return
   rm -rf "$staging"
 }
 trap cleanup EXIT
 
-log 'Packaging'
+log 'Assembling the package'
+info "source:         $source_kind"
 
-# host.json and package.json have to sit at the root of the zip: that is where the
-# host looks for its configuration and for the "main" naming the entry point.
-cp host.json package.json yarn.lock "$staging/"
-cp -R dist "$staging/dist"
+case "$source_kind" in
+  local)
+    [[ -f "$BACKEND_DIR/dist/http.js" ]] || die \
+"there is no build in $BACKEND_DIR/dist.
 
-# The bundle inlines every dependency except @azure/functions, which stays external
-# because it reaches for @azure/functions-core - something only the host provides.
-# So a production install is that one package, and nothing devDependencies drags in.
-( cd "$staging" && yarn install --production --frozen-lockfile --ignore-scripts --non-interactive >/dev/null )
-rm -f "$staging/yarn.lock"
+    Run 'yarn build' in $BACKEND_DIR (or pass --build), or deploy a published
+    build with --source release / --source develop."
+    [[ -d "$BACKEND_DIR/node_modules" ]] || die \
+"$BACKEND_DIR/node_modules is missing, so the packaging script cannot run.
+
+    Run 'yarn install' in $BACKEND_DIR."
+    info "bundle:         $BACKEND_DIR/dist"
+
+    # scripts/package.ts, not a copy of it here. It knows the layout the Functions
+    # host expects and which dependencies are production ones; keeping that in the
+    # backend is what makes this package and the one build.yml publishes the same.
+    # --no-build because dist/ is what was just checked for, or just built above.
+    # --silent drops yarn's own three lines; sed puts what the script does print into
+    # this script's column. pipefail is on, so a failure here still fails.
+    yarn --silent package --no-build --out "$staging" | sed 's/^/    /'
+    ;;
+
+  artifact)
+    [[ -e "$artifact_path" ]] || die "--artifact $artifact_path does not exist."
+    if [[ -d "$artifact_path" ]]; then
+      info "package:        $artifact_path (directory)"
+      cp -R "$artifact_path/." "$staging/"
+    else
+      info "package:        $artifact_path"
+      unzip -q "$artifact_path" -d "$staging"
+    fi
+    ;;
+
+  release|develop)
+    # The published artifact *is* the assembled package - build.yml uploads what
+    # `yarn package` produced - so it only has to be unpacked, not rebuilt.
+    downloaded="$staging.download.zip"
+    fetch_artifact "$BACKEND_ARTIFACT" "$source_kind" "$downloaded"
+    unzip -q "$downloaded" -d "$staging"
+    rm -f "$downloaded"
+    ;;
+esac
+
+# A package missing any of these deploys successfully and then answers 500 to
+# everything, or registers no routes at all - both of which look like an
+# infrastructure problem from the outside. Cheaper to find out here.
+for required in host.json package.json dist/http.js node_modules/@azure/functions/package.json; do
+  [[ -e "$staging/$required" ]] || die "the assembled package has no $required - it is not deployable."
+done
 
 rm -f "$zip_path"
 ( cd "$staging" && zip -r -q -X "$zip_path" . )
@@ -173,8 +260,8 @@ info "package:        $zip_path ($(du -h "$zip_path" | cut -f1))"
 
 if (( package_only )); then
   log 'Done - not deploying (--package-only)'
-  keep_staging=1   # keep the zip; only the staging tree is disposable
-  rm -rf "$staging"
+  info "staging:        $staging"
+  keep_staging=1
   exit 0
 fi
 
@@ -208,7 +295,7 @@ deployment_id="$(
   scm -X POST \
     -H 'Content-Type: application/zip' \
     --data-binary "@$zip_path" \
-    "https://$scm_host/api/publish?RemoteBuild=false&Deployer=deploy-azure.sh" \
+    "https://$scm_host/api/publish?RemoteBuild=false&Deployer=deploy-backend.sh" \
   | tr -d '"'
 )" || die "the upload was rejected. A 401 means the signed-in principal has no rights on $app."
 info "deployment:     $deployment_id"
