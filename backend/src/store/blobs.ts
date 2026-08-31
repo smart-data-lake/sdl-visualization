@@ -1,37 +1,39 @@
-import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 import { settings } from '../config.js';
-import { blobEndpoint, storageCredential } from './credential.js';
 import { assertPathNumber, assertPathSegment } from './limits.js';
 import type { Scope } from './types.js';
 
 /**
- * Blob Storage is the source of truth for every file and every large payload:
- * state files, exported configs, description markdown and its images, schemas
- * and statistics. Tables only index what has to be queried.
+ * Where every file and every large payload lives: state files, exported
+ * configurations, description markdown and its images, schemas and statistics. The
+ * entity store only indexes what has to be queried.
+ *
+ * The surface is deliberately small - whole-buffer reads and writes, a prefix listing,
+ * a delete. No streaming, no SAS, no conditional requests, no metadata: nothing here
+ * needs them, and every one of them would be another thing a second driver had to
+ * reproduce.
  */
 
-let _container: Promise<ContainerClient> | undefined;
-
-export function container(): Promise<ContainerClient> {
-  if (!_container) _container = buildContainer();
-  return _container;
+export interface BlobInfo {
+  /** Path relative to the prefix it was listed under. */
+  name: string;
+  contentType: string;
+  size: number;
+  lastModified: Date;
 }
 
-async function buildContainer(): Promise<ContainerClient> {
-  const storage = settings().storage;
-  const service =
-    storage.kind === 'identity'
-      ? new BlobServiceClient(blobEndpoint(storage.accountName), await storageCredential(), {
-          retryOptions: { maxTries: 3 },
-        })
-      // No allowInsecureConnection here, unlike the table client: @azure/storage-blob
-      // builds its own pipeline with no https guard and takes the scheme from the
-      // connection string's BlobEndpoint, so Azurite's http works as-is.
-      : BlobServiceClient.fromConnectionString(storage.value, { retryOptions: { maxTries: 3 } });
-
-  const client = service.getContainerClient(settings().blobContainer);
-  await client.createIfNotExists();
-  return client;
+export interface BlobStore {
+  writeBuffer(path: string, body: Buffer, contentType: string): Promise<void>;
+  readBuffer(path: string): Promise<Buffer | undefined>;
+  /**
+   * Everything under a prefix, with `name` relative to it.
+   *
+   * A *string* prefix, not a path prefix - "a/b/pre" matches "a/b/prefix.md". The only
+   * caller passes a slash-terminated prefix, so a driver that treated it as a directory
+   * would work today and be wrong later.
+   */
+  list(pathPrefix: string): Promise<BlobInfo[]>;
+  /** True if it existed. */
+  remove(path: string): Promise<boolean>;
 }
 
 const prefix = (scope: Scope) =>
@@ -62,17 +64,7 @@ export const blobPaths = {
 };
 
 export async function writeJson(path: string, value: unknown): Promise<void> {
-  const body = Buffer.from(JSON.stringify(value), 'utf8');
-  await writeBuffer(path, body, 'application/json');
-}
-
-export async function writeBuffer(
-  path: string,
-  body: Buffer,
-  contentType: string,
-): Promise<void> {
-  const client = (await container()).getBlockBlobClient(path);
-  await client.uploadData(body, { blobHTTPHeaders: { blobContentType: contentType } });
+  await writeBuffer(path, Buffer.from(JSON.stringify(value), 'utf8'), 'application/json');
 }
 
 export async function readJson<T>(path: string): Promise<T | undefined> {
@@ -80,45 +72,47 @@ export async function readJson<T>(path: string): Promise<T | undefined> {
   return buffer === undefined ? undefined : (JSON.parse(buffer.toString('utf8')) as T);
 }
 
-export async function readBuffer(path: string): Promise<Buffer | undefined> {
-  const client = (await container()).getBlockBlobClient(path);
-  try {
-    return await client.downloadToBuffer();
-  } catch (error) {
-    if (isNotFound(error)) return undefined;
-    throw error;
-  }
+export async function writeBuffer(
+  path: string,
+  body: Buffer,
+  contentType: string,
+): Promise<void> {
+  return (await blobStore()).writeBuffer(path, body, contentType);
 }
 
-export interface BlobInfo {
-  /** Path relative to the prefix it was listed under. */
-  name: string;
-  contentType: string;
-  size: number;
-  lastModified: Date;
+export async function readBuffer(path: string): Promise<Buffer | undefined> {
+  return (await blobStore()).readBuffer(path);
 }
 
 export async function list(pathPrefix: string): Promise<BlobInfo[]> {
-  const client = await container();
-  const results: BlobInfo[] = [];
-  for await (const blob of client.listBlobsFlat({ prefix: pathPrefix })) {
-    results.push({
-      name: blob.name.slice(pathPrefix.length),
-      contentType: blob.properties.contentType ?? 'application/octet-stream',
-      size: blob.properties.contentLength ?? 0,
-      lastModified: blob.properties.lastModified ?? new Date(0),
-    });
-  }
-  return results;
+  return (await blobStore()).list(pathPrefix);
 }
 
 export async function remove(path: string): Promise<boolean> {
-  const client = (await container()).getBlockBlobClient(path);
-  const response = await client.deleteIfExists();
-  return response.succeeded;
+  return (await blobStore()).remove(path);
 }
 
-function isNotFound(error: unknown): boolean {
-  const status = (error as { statusCode?: number })?.statusCode;
-  return status === 404;
+let resolved: Promise<BlobStore> | undefined;
+
+/**
+ * The blob store this deployment is configured for. Dynamically imported for the same
+ * reason as the entity driver, with a literal specifier for the same reason - see
+ * store/repositories.ts.
+ */
+export function blobStore(): Promise<BlobStore> {
+  if (!resolved) resolved = build();
+  return resolved;
+}
+
+/** Only for tests, which point successive cases at different stores. */
+export function resetBlobStore(): void {
+  resolved = undefined;
+}
+
+async function build(): Promise<BlobStore> {
+  const { createAzureBlobStore } = await import('./drivers/azureBlob.js');
+  return createAzureBlobStore({
+    storage: settings().storage,
+    container: settings().blobContainer,
+  });
 }
