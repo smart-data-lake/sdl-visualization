@@ -132,9 +132,12 @@ async function walk(dir: string): Promise<string[]> {
   return files.flat().sort();
 }
 
-/** Standalone entry point, for seeding a running Azurite by hand. */
+/**
+ * Standalone entry point. Seeds the local store by default; point it at a running Azurite
+ * with SDLB_STORAGE_BACKEND=azure, or at a real account with SDLB_STORAGE_ACCOUNT.
+ */
 if (process.argv[1] && process.argv[1].endsWith('seed-fixtures.ts')) {
-  process.env.SDLB_STORAGE_CONNECTION_STRING ??= 'UseDevelopmentStorage=true';
+  process.env.SDLB_STORAGE_BACKEND ??= 'local';
   process.env.SDLB_AUTH_MODE ??= 'disabled';
   const { buildFastify } = await import('../src/app.js');
   const app = await buildFastify();

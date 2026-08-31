@@ -114,10 +114,63 @@ describe('what the bundle contains', () => {
   });
 
   test('the MCP dependencies stay out of the entry chunk', () => {
-    const entry = Object.entries(metafile.outputs).find(([file]) => file.endsWith('http.js'))!;
-    const entryInputs = Object.keys(entry[1].inputs).join('\n');
     // If these leak into the entry, every SDLB upload pays to parse them again.
-    expect(entryInputs).not.toContain('node_modules/@modelcontextprotocol/');
-    expect(entryInputs).not.toContain('node_modules/zod/');
+    expect(eagerInputs()).not.toContain('node_modules/@modelcontextprotocol/');
+    expect(eagerInputs()).not.toContain('node_modules/zod/');
+  });
+
+  /**
+   * No store driver may be parsed before something asks for one.
+   *
+   * The point is dependency isolation: a deployment on the local backend should not parse
+   * the Azure SDKs, and an Azure one should not parse node:sqlite. Measured, it also takes
+   * 670 kB and about 35 ms off the path to the first response - though not off the path to
+   * the first *upload*, which needs a driver and pays the chunk load then instead.
+   */
+  test('no store driver is parsed before a request needs one', () => {
+    const eager = eagerInputs();
+    for (const driver of [
+      'node_modules/@azure/data-tables/',
+      'node_modules/@azure/storage-blob/',
+      'src/store/drivers/sqlite/',
+      'src/store/drivers/filesystem.ts',
+    ]) {
+      expect(eager, `${driver} is loaded eagerly`).not.toContain(driver);
+    }
+  });
+
+  test('each driver is in a chunk of its own, so one cannot drag in another', () => {
+    const chunkFor = (input: string) =>
+      Object.entries(metafile.outputs).find(([, output]) =>
+        Object.keys(output.inputs).some((i) => i.includes(input)),
+      )?.[0];
+
+    const tables = chunkFor('node_modules/@azure/data-tables/');
+    const sqlite = chunkFor('src/store/drivers/sqlite/db.ts');
+    expect(tables).toBeDefined();
+    expect(sqlite).toBeDefined();
+    expect(sqlite).not.toBe(tables);
   });
 });
+
+/**
+ * Everything reachable from the entry point by static import, transitively - which is
+ * what a cold start parses before it can answer anything. A chunk reached only by a
+ * dynamic import is not in here.
+ */
+function eagerInputs(): string {
+  const staticImportsOf = (file: string): string[] =>
+    (metafile.outputs[file]?.imports ?? [])
+      .filter((i) => i.kind !== 'dynamic-import')
+      .map((i) => i.path);
+
+  const seen = new Set<string>();
+  const queue = [Object.keys(metafile.outputs).find((f) => f.endsWith('http.js'))!];
+  while (queue.length > 0) {
+    const file = queue.pop()!;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    queue.push(...staticImportsOf(file));
+  }
+  return [...seen].flatMap((f) => Object.keys(metafile.outputs[f]?.inputs ?? {})).join('\n');
+}

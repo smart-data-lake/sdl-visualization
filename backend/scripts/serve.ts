@@ -13,18 +13,24 @@ import { seedFixtures } from './seed-fixtures.js';
  * bridge in azure/bridge.ts; that has its own tests.
  *
  *   SDLB_PORT             port to listen on (default 7071, the Functions default)
- *   SDLB_START_AZURITE=1  start a throwaway Azurite first
+ *   SDLB_START_AZURITE=1  run against a throwaway Azurite instead of the local store,
+ *                         for working on the Azure driver
  *   SDLB_SEED_FIXTURES=1  push tests/e2e/fixtures through the upload API on boot
+ *
+ * The store defaults to the local one - SQLite and files under .sdlb-data - so this needs
+ * no emulator and no Azure account.
  */
 
 const port = Number(process.env.SDLB_PORT ?? 7071);
 
 if (process.env.SDLB_START_AZURITE === '1') {
+  // For working on the Azure driver itself. Nothing else needs an emulator.
   const { setup, TEST_CONNECTION_STRING } = await import('../test/setup/azurite.js');
   await setup();
   process.env.SDLB_STORAGE_CONNECTION_STRING = TEST_CONNECTION_STRING;
+  delete process.env.SDLB_STORAGE_BACKEND;
 } else {
-  process.env.SDLB_STORAGE_CONNECTION_STRING ??= 'UseDevelopmentStorage=true';
+  process.env.SDLB_STORAGE_BACKEND ??= 'local';
 }
 process.env.SDLB_AUTH_MODE ??= 'disabled';
 
