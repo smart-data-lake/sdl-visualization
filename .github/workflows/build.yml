@@ -13,8 +13,15 @@ on:
   # allow for manual builds from feature branches
   workflow_dispatch:
 
+# Two builds and a release. The frontend and the backend are separate packages that
+# ship to separate Azure resources, so they build in separate jobs: the backend
+# artifact is then not gated on the frontend's end-to-end run, and both are available
+# as `sdl-visualizer.zip` and `sdl-visualizer-backend.zip` - from the newest release,
+# or through nightly.link for the newest develop run. backend/infra_azure/artifact.sh
+# holds those two URLs, and the deploy scripts download them when there is no local
+# build; the artifact names below are what makes them resolve.
 jobs:
-  build-and-create-release:
+  build-frontend:
 
     runs-on: ubuntu-latest
 
@@ -22,19 +29,12 @@ jobs:
 
     - name: Git Checkout
       uses: actions/checkout@v7
-      with:
-        fetch-depth: 0
-        token: ${{ secrets.PAT_ACTIONS }}
 
     - name: Setup node
       uses: actions/setup-node@v7
       with:
         node-version-file: .nvmrc
         cache: yarn
-
-    - name: Get-npm-version
-      id: package-version
-      uses: martinbeentjes/npm-get-version-action@main
 
     - run: yarn install
 
@@ -102,9 +102,71 @@ jobs:
           !build/envConfig
           !build/description
           !build/schema
-          
-    - name: 'If build on master branch, bump version on develop'
-      if: ${{ github.ref_name == 'master' }}
+
+  # What the Function app is fed. `yarn package` (backend/scripts/package.ts) decides
+  # what is in it, and infra_azure/deploy-backend.sh uploads what that produces - so
+  # the package CI publishes and the package a developer uploads are the same layout
+  # without this job knowing anything about the deployment. The artifact holds the
+  # contents of the package rather than a zip of it, which is what makes the downloaded
+  # sdl-visualizer-backend.zip deployable as it comes.
+  build-backend:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Git Checkout
+      uses: actions/checkout@v7
+
+    - name: Setup node
+      uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+        cache: yarn
+        cache-dependency-path: backend/yarn.lock
+
+    - name: Install backend
+      run: yarn --cwd backend install --frozen-lockfile
+
+    # esbuild, via backend/scripts/bundle.ts. dist/ is the whole artefact; see "What
+    # gets deployed, and cold start" in backend/README.md.
+    - name: Build backend
+      run: yarn --cwd backend build
+
+    # Stages host.json, package.json and dist/, adds the production-only install
+    # (@azure/functions and nothing else) and checks the result is deployable.
+    # --no-build so a failing bundle fails the step above rather than this one.
+    - name: Package backend
+      run: yarn --cwd backend package --no-build --out "$RUNNER_TEMP/backend-package"
+
+    - name: Upload backend to artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: sdl-visualizer-backend
+        path: ${{ runner.temp }}/backend-package
+
+  # Only master, and only once both packages exist: a release carrying one of the two
+  # is worse than no release.
+  release:
+
+    needs: [build-frontend, build-backend]
+    if: ${{ github.ref_name == 'master' }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Git Checkout
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.PAT_ACTIONS }}
+
+    - name: Get-npm-version
+      id: package-version
+      uses: martinbeentjes/npm-get-version-action@main
+
+    - name: Bump version on develop
       uses:  phips28/gh-action-bump-version@v11.0.7
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_ACTIONS }}
@@ -113,23 +175,33 @@ jobs:
         skip-tag: true
         check-last-commit-only: true
 
-    - name: 'If build on master branch, download artifact'
-      if: ${{ github.ref_name == 'master' }}
+    - name: Download frontend artifact
       uses: actions/download-artifact@v8
       with:
         path: artifact
         name: sdl-visualizer
 
-    - name: 'If build on master branch, zip release asset'
-      if: ${{ github.ref_name == 'master' }}
+    - name: Zip frontend release asset
       uses: thedoctor0/zip-release@main
       with:
         type: zip
         directory: artifact
         filename: sdl-visualizer.zip
 
-    - name: 'If build on master branch, create release'
-      if: ${{ github.ref_name == 'master' }}
+    - name: Download backend artifact
+      uses: actions/download-artifact@v8
+      with:
+        path: backend-artifact
+        name: sdl-visualizer-backend
+
+    - name: Zip backend release asset
+      uses: thedoctor0/zip-release@main
+      with:
+        type: zip
+        directory: backend-artifact
+        filename: sdl-visualizer-backend.zip
+
+    - name: Create release
       uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -137,4 +209,6 @@ jobs:
         automatic_release_tag: ${{ steps.package-version.outputs.current-version}}
         draft: true
         prerelease: false
-        files: artifact/sdl-visualizer.zip
+        files: |
+          artifact/sdl-visualizer.zip
+          backend-artifact/sdl-visualizer-backend.zip

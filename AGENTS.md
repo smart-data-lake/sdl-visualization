@@ -33,7 +33,7 @@ Lint uses ESLint 9 flat config (`eslint.config.js`), rebuilt from the maintained
 
 Local data setup (needed before anything is visible): put config files in `public/config` and state files in `public/state`, then `./build_index.sh <path-to-statefiles> <path-to-configfiles>` (Python 3; creates a venv, writes JSON-Lines `index` files). `backendConfig` in `public/manifest.json` must be `local;`.
 
-CI (`.github/workflows/build.yml`) runs `yarn install` + `yarn build` on push to master/develop and on PRs to develop; master builds bump the version on develop and create a draft release. The Playwright suite runs in that same workflow; there is no separate `test.yml`.
+CI (`.github/workflows/build.yml`) runs `yarn install` + `yarn build` on push to master/develop and on PRs to develop. Three jobs: `build-frontend` (build, lint, type-check, unit and Playwright suites, artifact `sdl-visualizer`), `build-backend` (`yarn build` then `yarn package`, i.e. `backend/scripts/package.ts`, artifact `sdl-visualizer-backend`), and `release`, which on master bumps the version on develop and creates a draft release carrying both zips. There is no separate `test.yml`.
 
 ### End-to-end tests (`tests/e2e`)
 
@@ -45,7 +45,7 @@ Two Playwright projects, one per config source, each with its own dev server: `h
 
 Read once at startup via `useManifest` and cached (`getPersistedManifest`). Drives major app behavior, so changes there change routing and data access:
 
-- `backendConfig`: `"<type>;<configString>"` — `local` or `rest;<BASE_URL>`. Selects the fetchAPI implementation.
+- `backendConfig`: `"<type>;<configString>"` — one of `local;`, `bundled;<baseUrl>[;<repo>;<env>]` or `rest;<BASE_URL>`. Selects the fetchAPI implementation.
 - `auth`: if present, AWS Amplify/Cognito auth is configured and the app switches to **multi-tenant routing**.
 - `env`: used to resolve `envConfig/{env}.conf` when parsing HOCON.
 - `baseUrl`, `configSourceUrl` (template for deep links into config source files).
@@ -54,7 +54,7 @@ Read once at startup via `useManifest` and cached (`getPersistedManifest`). Driv
 
 ### Data access layer (`src/api`)
 
-`fetchAPI.ts` defines one interface for everything the UI needs (workflows, runs, config, descriptions, schemas, stats, tenants/repos/envs, users). `Fetcher.ts` lazily instantiates the implementation named by `manifest.backendConfig` from a lookup table (`local` → `fetchAPI_local_statefiles`, `rest` → `fetchAPI_rest`). **Add a backend by implementing `fetchAPI` and registering it in the `fetchAPITypes` map** — nothing else needs to change.
+`fetchAPI.ts` defines one interface for everything the UI needs (workflows, runs, config, descriptions, schemas, stats, tenants/repos/envs, users). `Fetcher.ts` lazily instantiates the implementation named by `manifest.backendConfig` from a lookup table (`local` → `fetchAPI_local_statefiles`, `rest` → `fetchAPI_rest`, `bundled` → `fetchAPI_bundled`, the backend in `backend/`). **Add a backend by implementing `fetchAPI` and registering it in the `fetchAPITypes` map** — nothing else needs to change.
 
 `src/hooks/useFetchData.tsx` wraps every fetcher call in a react-query `useQuery` with a 24h `staleTime`, `retry: false`, and errors rethrown so `ErrorBoundary` catches them. Components should use these hooks, not `fetcher()` directly.
 
@@ -98,8 +98,8 @@ Vite needs Node polyfills (buffer/process, `rollup-plugin-polyfill-node`, `dynam
 
 Its own package (`cd backend && yarn install`), outside the Vite build, with its own README. What matters from the frontend's side:
 
-- It reimplements `backend/spec/upstream-openapi.json` — the contract `src/api/fetchAPI_rest.ts` already speaks — so the SPA needs no new fetcher logic, only different credentials. `src/api/fetchAPI_azure.ts` extends `fetchAPI_rest`, which is why `fetch` and `getRequestInfo` there are `protected` rather than `private`. It also implements `getWorkflowRunsByAction`/`getWorkflowRunsByDataObject`, which the REST fetcher leaves as `TODO`, so the config explorer's "Last 5 runs" panel works against it.
-- `backendConfig` is `azure;<baseUrl>[;<repo>;<env>]`. Naming a repo and env pins a single-repository deployment: no workspace switcher, flat routes, and `fetchAPI_azure.fetch` fills the scope into every query string. Omit them and the scope comes from the URL, as `useWorkspace` derives it.
+- It reimplements `backend/spec/upstream-openapi.json` — the contract `src/api/fetchAPI_rest.ts` already speaks — so the SPA needs no new fetcher logic, only different credentials. `src/api/fetchAPI_bundled.ts` extends `fetchAPI_rest`, which is why `fetch` and `getRequestInfo` there are `protected` rather than `private`. It also implements `getWorkflowRunsByAction`/`getWorkflowRunsByDataObject`, which the REST fetcher leaves as `TODO`, so the config explorer's "Last 5 runs" panel works against it.
+- `backendConfig` is `bundled;<baseUrl>[;<repo>;<env>]` (the code is `bundled`, not `azure`: the same backend runs as a plain Node process). Naming a repo and env pins a single-repository deployment: no workspace switcher, flat routes, and `fetchAPI_bundled.fetch` fills the scope into every query string. Omit them and the scope comes from the URL, as `useWorkspace` derives it.
 - **Five pieces of logic exist twice** — `src/util/WorkflowsExplorer/metrics.ts`, `src/util/ConfigExplorer/Graphs.ts`, the filters in `src/util/ConfigExplorer/ConfigData.ts` plus `getPropertyByPathIgnoreCase`, `updateStateFile`/`endAnchorOf` in `Attempt.ts`, and `build_index.py`'s `getRuns()` — copied into `backend/src/domain/`. `backend/test/unit/parity.test.ts` imports the frontend originals and asserts both agree over the getting-started fixture, so drift fails a test rather than a user. **Change the pair together.**
 - The `azure` Playwright project (port 3002) runs the same specs as `hocon` against the real backend, started by `yarn --cwd backend serve:e2e` with the fixtures seeded into the local store. No emulator: the store defaults to SQLite plus files under `backend/.sdlb-data`. Green there means the backend implements the contract.
 - Storage is behind an interface. `backend/src/store/repositories.ts` and `store/blobs.ts` declare named operations; `store/drivers/` holds `azureTables` + `azureBlob` (the deployment) and `sqlite` + `filesystem` (development and tests). `store/limits.ts` applies Azure's constraints to **both**, so a record written under one is loadable under the other. `SDLB_STORAGE_BACKEND=azure|local` picks both halves; an `SDLB_STORAGE_ACCOUNT` or `SDLB_STORAGE_CONNECTION_STRING` in the environment implies `azure`. Changing one driver means changing `test/store/*.conformance.test.ts` for both.
@@ -110,7 +110,7 @@ Its own package (`cd backend && yarn install`), outside the Vite build, with its
 
 Amplify used to be hard-wired at three sites (`Amplify.configure` in `App.tsx`, `useAuthenticator` in `useUser`, the `authStatus` gate in `useFetchData`). Those now go through `useAuth()` from `src/auth/AuthProvider.tsx`, which picks an implementation from `manifest.auth.type`: `cognito` (the default, and what a manifest without a type means) or `databricks` (OAuth user-to-machine, authorization code with PKCE, in `databricksOAuth.ts`).
 
-The fetchAPI classes live outside React, so they cannot read that context: the provider registers a header function in `src/auth/tokenProvider.ts` and `fetchAPI_azure.getRequestInfo` asks it per request. The Databricks redirect comes back to the app's base URL with the code in the **query** string, because the hash router owns everything after the `#`; `AuthProvider` consumes and strips it before anything else looks at the URL.
+The fetchAPI classes live outside React, so they cannot read that context: the provider registers a header function in `src/auth/tokenProvider.ts` and `fetchAPI_bundled.getRequestInfo` asks it per request. The Databricks redirect comes back to the app's base URL with the code in the **query** string, because the hash router owns everything after the `#`; `AuthProvider` consumes and strips it before anything else looks at the URL.
 
 `fetchAPI` gained two optional groups: `capabilities()` (whether the backend administers users, whether it serves MCP) and the MCP token methods. Both are optional, so existing implementations are unchanged; `Settings/Setting.tsx` uses the capabilities to decide whether to show User Management, Access Token, or both. One access token serves both consumers that have no browser - an agent over MCP and an SDLB job uploading - which is why the page is not named after either.
 

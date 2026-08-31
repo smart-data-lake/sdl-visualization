@@ -39,7 +39,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     The Databricks config gains the backend's base URL, which manifest.auth does not
     carry: the code is exchanged through the backend, because the workspace token
     endpoint sends no CORS headers (see redeem() in databricksOAuth.ts). It is taken
-    from backendConfig - "azure;<baseUrl>[;<repo>;<env>]" - rather than asked for a
+    from backendConfig - "bundled;<baseUrl>[;<repo>;<env>]" - rather than asked for a
     second time, so the two cannot disagree.
 
     Memoised because DatabricksAuthProvider keys an effect on this object; rebuilding
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     const [kind, baseUrl] = (manifest.backendConfig ?? '').split(';');
     return {
       ...(manifest.auth as DatabricksAuthConfig),
-      apiBaseUrl: kind === 'azure' && baseUrl ? baseUrl.replace(/\/$/, '') : undefined,
+      apiBaseUrl: kind === 'bundled' && baseUrl ? baseUrl.replace(/\/$/, '') : undefined,
     };
   }, [manifest]);
 

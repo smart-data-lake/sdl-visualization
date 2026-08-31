@@ -20,7 +20,7 @@
   "azure;<api_base_url>" - and /api on the static host stays a plain 404.
 
   Nothing is wired to GitHub either: no repository_url, so there is no build the
-  platform runs on push. Content is pushed by scripts/deploy-frontend-azure.sh with
+  platform runs on push. Content is pushed by deploy-frontend.sh with
   a deployment token fetched at the time it runs.
 */
 

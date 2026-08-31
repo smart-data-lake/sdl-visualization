@@ -6,3 +6,4 @@ tfplan
 *.tfstate
 *.tfstate.*
 crash.log
+deploy-frontend-elca.sh

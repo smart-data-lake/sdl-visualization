@@ -9,6 +9,11 @@ serving three audiences from one process:
 | SDLB jobs | `/api/v1/*` uploads | what `global.uiBackend` pushes |
 | coding agents | `/mcp/{repo}/{env}` | MCP, read-only tools |
 
+The SPA is pointed at it by setting `backendConfig` to `bundled;<baseUrl>` in
+`public/manifest.json` — `src/api/fetchAPI_bundled.ts`, which extends the REST fetcher.
+The other two values there, `local;` and `rest;<BASE_URL>`, do not involve this service
+at all; see the root [README.md](../README.md).
+
 Storage is a Relational oder KV-Database and File or Blob Storage.
 Blob holds every file and every large payload — state files, exported configurations, description markdown 
 and its images, schemas, statistics — and the tables hold what has to be queried.
@@ -295,7 +300,17 @@ Things that are easy to get wrong, and fail quietly:
 
 ## What gets deployed, and cold start
 
-`yarn build` runs esbuild (`scripts/bundle.ts`), not `tsc`. The output is what ships:
+`yarn build` runs esbuild (`scripts/bundle.ts`), not `tsc`, and `yarn package`
+(`scripts/package.ts`) turns the result into the directory the Functions host expects:
+`host.json`, `package.json` and `dist/` at the root, with a production-only install
+beside them. That script is the single definition of a deployable package —
+`infra_azure/deploy-backend.sh` zips what it produces and posts it, and
+`.github/workflows/build.yml` uploads what it produces as the
+`sdl-visualizer-backend` artifact, so neither of them holds a second opinion about the
+layout. `yarn package --no-build` reuses the current `dist/`; `--out DIR` puts it
+somewhere other than `dist-package/`.
+
+The output of the build is what ships:
 
 | | `tsc`, per file | bundled |
 |---|---|---|
@@ -304,9 +319,7 @@ Things that are easy to get wrong, and fail quietly:
 | process start to first response | ~664 ms | ~380 ms |
 
 Measured with `test/bundle/harness.mjs` - a plain Node process that loads the entry
-point, registers its routes and serves four requests - median of seven runs. On
-Azure the gap should be wider than it is locally, because there the package is
-downloaded per instance and read from a mount rather than a warm page cache.
+point, registers its routes and serves four requests - median of seven runs.
 
 Four things keep it there, and are worth not undoing:
 
@@ -343,12 +356,16 @@ not supported`, which is why the bundle carries a `createRequire` banner.
 
 ## Azure Deployment
 
-See [azure_infra](infra_azure/README.md) Terraform definitions and it's readme to deploy the backend and frontend to Azure serverless services.
+[infra_azure/README.md](infra_azure/README.md) is the deployment: Terraform for the
+Function app, its storage and the Static Web App the SPA is served from, plus the two
+scripts that ship code into them. `yarn deploy` is `infra_azure/deploy-backend.sh`; it
+uploads what `yarn package` assembles, and downloads a published build when the working
+tree has none.
 
 ## MCP
 
 The 2026-07-28 protocol has no sessions, so the endpoint is stateless by
-construction, which suits Azure Functions: `responseMode: 'json'` means one JSON body
+construction, which suits servless deployment such as Azure Functions: `responseMode: 'json'` means one JSON body
 per request and nothing long-lived to be cut off by the load balancer's 230-second
 limit. What that gives up is progress notifications; sampling and elicitation still
 work, because they are answered by a result the client retries.
