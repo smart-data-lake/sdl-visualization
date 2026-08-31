@@ -4,6 +4,7 @@ import { blobPaths, readJson, writeJson } from '../store/blobs.js';
 import type { StateFile, TaskStatus, Workflow, WorkflowRun, WorkflowRunAction } from '../domain/types.js';
 import { aggregateRunStatus, normalizeStateFile, runElementFacts, toWorkflowRun } from '../domain/stateFile.js';
 import { registerScope } from './scope.js';
+import { MAX_PROPERTY_CHARS } from '../store/limits.js';
 import { badRequest, notFound } from '../errors.js';
 
 /**
@@ -148,9 +149,11 @@ async function indexState(scope: Scope, stateFile: StateFile): Promise<void> {
     attemptStartTimeMillis: run.attemptStartTimeMillis,
     actionsStatusJson: JSON.stringify(run.actionsStatus ?? {}),
     dataObjectsJson: JSON.stringify(run.dataObjects ?? []),
-    // A very large run would exceed the 64 KiB property limit. The three derived
-    // fields above cover everything the UI reads it for, so dropping it is safe.
-    actionsJson: actionsJson.length <= 60_000 ? actionsJson : undefined,
+    // A very large run would exceed the property limit, which is 64 KiB but counts
+    // UTF-16 code units - so the bound is 32 768 characters, not 60 000. Measured: 32 769
+    // is refused with PropertyValueTooLarge, which fails the SDLB job. The three derived
+    // fields above cover everything the UI reads this for, so dropping it is safe.
+    actionsJson: actionsJson.length <= MAX_PROPERTY_CHARS ? actionsJson : undefined,
     buildVersion: run.buildVersion ?? undefined,
     appVersion: run.appVersion ?? undefined,
     blobPath: blobPaths.state(scope, run.name, run.runId, run.attemptId),
