@@ -1,6 +1,14 @@
 import { TableClient, TableEntity, TableTransaction, odata } from '@azure/data-tables';
 import { settings } from '../config.js';
 import { storageCredential, tableEndpoint } from './credential.js';
+import {
+  MAX_BATCH,
+  MAX_PROPERTY_CHARS,
+  MAX_TRANSACTION_BYTES,
+  assertBatch,
+  assertRecord,
+  estimateBytes,
+} from './limits.js';
 
 /**
  * Thin layer over @azure/data-tables.
@@ -26,9 +34,6 @@ export const TABLES = {
 } as const;
 
 export type TableName = (typeof TABLES)[keyof typeof TABLES];
-
-/** Azure Tables transactions take at most 100 entities in one partition. */
-const MAX_BATCH = 100;
 
 const clients = new Map<string, Promise<TableClient>>();
 const created = new Set<string>();
@@ -70,7 +75,7 @@ export async function upsert<T extends object>(
   entity: TableEntity<T>,
 ): Promise<void> {
   const client = await ensureTable(name);
-  await client.upsertEntity(entity, 'Merge');
+  await client.upsertEntity(assertRecord(entity as never, name), 'Merge');
 }
 
 /**
@@ -83,24 +88,49 @@ export async function upsertBatch<T extends object>(
   entities: TableEntity<T>[],
 ): Promise<void> {
   if (entities.length === 0) return;
+  const checked = assertBatch(entities as never[], name) as TableEntity<T>[];
   const client = await ensureTable(name);
 
   const byPartition = new Map<string, TableEntity<T>[]>();
-  for (const entity of entities) {
+  for (const entity of checked) {
     const list = byPartition.get(entity.partitionKey);
     if (list) list.push(entity);
     else byPartition.set(entity.partitionKey, [entity]);
   }
 
   for (const partition of byPartition.values()) {
-    for (let i = 0; i < partition.length; i += MAX_BATCH) {
+    for (const chunk of chunkTransactions(partition)) {
       const transaction = new TableTransaction();
-      for (const entity of partition.slice(i, i + MAX_BATCH)) {
-        transaction.upsertEntity(entity, 'Merge');
-      }
+      for (const entity of chunk) transaction.upsertEntity(entity, 'Merge');
       await client.submitTransaction(transaction.actions);
     }
   }
+}
+
+/**
+ * Split one partition's entities into transactions, by count and by size.
+ *
+ * The count limit is the obvious one. The size limit is the one that bites: 100
+ * ConfigElements each carrying a 30 000 character searchText is about 6 MB against a
+ * 4 MB transaction body, so a large enough configuration would fail - and Azurite does
+ * not enforce it, so no test against the emulator would say so first.
+ */
+function* chunkTransactions<T extends object>(
+  partition: TableEntity<T>[],
+): Generator<TableEntity<T>[]> {
+  let chunk: TableEntity<T>[] = [];
+  let bytes = 0;
+  for (const entity of partition) {
+    const size = estimateBytes(entity as never);
+    if (chunk.length > 0 && (chunk.length >= MAX_BATCH || bytes + size > MAX_TRANSACTION_BYTES)) {
+      yield chunk;
+      chunk = [];
+      bytes = 0;
+    }
+    chunk.push(entity);
+    bytes += size;
+  }
+  if (chunk.length > 0) yield chunk;
 }
 
 export async function getEntity<T extends object>(
@@ -167,12 +197,20 @@ function isNotFound(error: unknown): boolean {
   return status === 404;
 }
 
+const TRUNCATION_SUFFIX = '… [truncated]';
+
 /**
- * Azure Tables caps a string property at 64 KiB. Anything that could exceed that -
- * an exception message, a serialised action map - goes through here, and anything
- * that would still be too big belongs in a blob instead.
+ * Bring a string under the property limit. Anything that would still be too big
+ * belongs in a blob instead.
+ *
+ * `max` counts the result, suffix included, so a caller cannot ask for a bound that
+ * still produces an over-limit value - which is what `truncate(v, MAX_PROPERTY_CHARS)`
+ * would otherwise do.
  */
 export function truncate(value: string | undefined, max = 30_000): string | undefined {
   if (value === undefined) return undefined;
-  return value.length <= max ? value : `${value.slice(0, max)}… [truncated]`;
+  const limit = Math.min(max, MAX_PROPERTY_CHARS) - TRUNCATION_SUFFIX.length;
+  return value.length <= max && value.length <= MAX_PROPERTY_CHARS
+    ? value
+    : `${value.slice(0, limit)}${TRUNCATION_SUFFIX}`;
 }
