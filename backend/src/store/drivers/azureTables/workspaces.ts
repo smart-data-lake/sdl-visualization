@@ -1,7 +1,7 @@
 import type { WorkspaceRepository } from '../../repositories.js';
 import type { WorkspaceRule } from '../../types.js';
-import { TABLES, getEntity, upsert } from '../../tables.js';
-import { keys } from '../../keys.js';
+import { TABLES, type TableStore } from './tables.js';
+import { keys } from './keys.js';
 
 /** The Workspaces table: one partition, one row per workspace host. */
 interface WorkspaceEntity {
@@ -12,10 +12,10 @@ interface WorkspaceEntity {
   requiredGroup?: string;
 }
 
-export function workspaceRepository(): WorkspaceRepository {
+export function workspaceRepository(tables: TableStore): WorkspaceRepository {
   return {
     async getRule(workspaceHost: string): Promise<WorkspaceRule | undefined> {
-      const entity = await getEntity<WorkspaceEntity>(
+      const entity = await tables.getEntity<WorkspaceEntity>(
         TABLES.workspaces,
         keys.workspaces(),
         workspaceHost,
@@ -28,7 +28,7 @@ export function workspaceRepository(): WorkspaceRepository {
     },
 
     async putRule(workspaceHost: string, rule: WorkspaceRule): Promise<void> {
-      await upsert(TABLES.workspaces, {
+      await tables.upsert(TABLES.workspaces, {
         partitionKey: keys.workspaces(),
         rowKey: workspaceHost,
         ...rule,

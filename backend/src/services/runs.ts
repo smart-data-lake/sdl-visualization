@@ -6,7 +6,7 @@ import type {
   Scope,
   WorkflowSummary,
 } from '../store/types.js';
-import { assertKeyPart } from '../store/keys.js';
+import { assertKeyPart } from '../store/limits.js';
 import { blobPaths, readJson, writeJson } from '../store/blobs.js';
 import type { StateFile, TaskStatus, Workflow, WorkflowRun } from '../domain/types.js';
 import { aggregateRunStatus, normalizeStateFile, runElementFacts, toWorkflowRun } from '../domain/stateFile.js';

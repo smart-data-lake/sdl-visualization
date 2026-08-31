@@ -1,5 +1,5 @@
 import { blobPaths, list, readBuffer, remove, writeBuffer } from '../store/blobs.js';
-import type { Scope } from '../store/keys.js';
+import type { Scope } from '../store/types.js';
 import type { DescriptionListEntry } from '../domain/types.js';
 import { badRequest } from '../errors.js';
 import { registerScope } from './scope.js';

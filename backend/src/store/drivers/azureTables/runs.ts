@@ -8,8 +8,8 @@ import type {
   WorkflowSummary,
 } from '../../types.js';
 import type { TaskStatus } from '../../../domain/types.js';
-import { TABLES, getEntity, listPartition, upsert, upsertBatch } from '../../tables.js';
-import { keys, runElementKey, runKey } from '../../keys.js';
+import { TABLES, type TableStore } from './tables.js';
+import { keys, runElementKey, runKey } from './keys.js';
 import { MAX_PROPERTY_CHARS } from '../../limits.js';
 
 /**
@@ -163,10 +163,10 @@ const partitionFor = (scope: Scope, ref: ElementRef): string =>
  */
 const ELEMENT_ROWS_PER_ATTEMPT = 8;
 
-export function runRepository(): RunRepository {
+export function runRepository(tables: TableStore): RunRepository {
   return {
     async putRun(scope: Scope, run: RunRecord): Promise<void> {
-      await upsert(TABLES.runs, toRunEntity(scope, run));
+      await tables.upsert(TABLES.runs, toRunEntity(scope, run));
     },
 
     async getRun(
@@ -175,7 +175,7 @@ export function runRepository(): RunRepository {
       runId: number,
       attemptId: number,
     ): Promise<RunRecord | undefined> {
-      const entity = await getEntity<RunEntity>(
+      const entity = await tables.getEntity<RunEntity>(
         TABLES.runs,
         keys.runs(scope, workflow),
         runKey(runId, attemptId),
@@ -184,7 +184,7 @@ export function runRepository(): RunRepository {
     },
 
     async listRuns(scope: Scope, workflow: string, limit: number): Promise<RunRecord[]> {
-      const entities = await listPartition<RunEntity>(TABLES.runs, keys.runs(scope, workflow), {
+      const entities = await tables.listPartition<RunEntity>(TABLES.runs, keys.runs(scope, workflow), {
         limit,
       });
       return entities.map(toRunRecord);
@@ -196,7 +196,7 @@ export function runRepository(): RunRepository {
     ): Promise<{ numRuns: number; numAttempts: number }> {
       // Only the row key: a partition can hold 200 attempts carrying 32 kB of action
       // state each, and fetching all of that to count it would be about 6 MB a time.
-      const rows = await listPartition<{ rowKey: string }>(
+      const rows = await tables.listPartition<{ rowKey: string }>(
         TABLES.runs,
         keys.runs(scope, workflow),
         { select: ['RowKey'] },
@@ -207,7 +207,7 @@ export function runRepository(): RunRepository {
 
     async putWorkflowSummary(scope: Scope, summary: WorkflowSummary): Promise<void> {
       const { name, ...rest } = summary;
-      await upsert(TABLES.workflows, {
+      await tables.upsert(TABLES.workflows, {
         partitionKey: keys.workflows(scope),
         rowKey: name,
         ...rest,
@@ -218,7 +218,7 @@ export function runRepository(): RunRepository {
       scope: Scope,
       workflow: string,
     ): Promise<WorkflowSummary | undefined> {
-      const entity = await getEntity<WorkflowEntity>(
+      const entity = await tables.getEntity<WorkflowEntity>(
         TABLES.workflows,
         keys.workflows(scope),
         workflow,
@@ -229,7 +229,7 @@ export function runRepository(): RunRepository {
     },
 
     async listWorkflows(scope: Scope): Promise<WorkflowSummary[]> {
-      const entities = await listPartition<WorkflowEntity>(
+      const entities = await tables.listPartition<WorkflowEntity>(
         TABLES.workflows,
         keys.workflows(scope),
       );
@@ -261,11 +261,11 @@ export function runRepository(): RunRepository {
           entities.push({ ...base, partitionKey: keys.runsByDataObject(scope, dataObjectId) });
         }
       }
-      await upsertBatch(TABLES.runElements, entities);
+      await tables.upsertBatch(TABLES.runElements, entities);
     },
 
     async listRunsTouching(scope: Scope, ref: ElementRef, limit: number): Promise<RunRecord[]> {
-      const entities = await listPartition<RunElementEntity>(
+      const entities = await tables.listPartition<RunElementEntity>(
         TABLES.runElements,
         partitionFor(scope, ref),
         { limit: limit * ELEMENT_ROWS_PER_ATTEMPT },
@@ -283,7 +283,7 @@ export function runRepository(): RunRepository {
 
       const runs = await Promise.all(
         attempts.map((attempt) =>
-          getEntity<RunEntity>(
+          tables.getEntity<RunEntity>(
             TABLES.runs,
             keys.runs(scope, attempt.workflow),
             runKey(attempt.runId, attempt.attemptId),
@@ -298,7 +298,7 @@ export function runRepository(): RunRepository {
       ref: ElementRef,
       limit: number,
     ): Promise<RunElementRecord[]> {
-      const entities = await listPartition<RunElementEntity>(
+      const entities = await tables.listPartition<RunElementEntity>(
         TABLES.runElements,
         partitionFor(scope, ref),
         { limit },

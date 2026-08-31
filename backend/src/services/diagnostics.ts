@@ -2,7 +2,7 @@ import type { Action, StateFile, TaskStatus } from '../domain/types.js';
 import { durationMillis, endAnchorOf, writtenDataObjects } from '../domain/stateFile.js';
 import { getMainInputCount, getMainOutputCount } from '../domain/metrics.js';
 import { buildRunGraph } from '../domain/graph.js';
-import type { Scope } from '../store/keys.js';
+import type { Scope } from '../store/types.js';
 import * as runs from './runs.js';
 import * as config from './config.js';
 import * as schemaStats from './schemaStats.js';

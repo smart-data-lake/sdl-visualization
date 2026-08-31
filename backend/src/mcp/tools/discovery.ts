@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
-import type { Scope } from '../../store/keys.js';
+import type { Scope } from '../../store/types.js';
 import * as config from '../../services/config.js';
 import * as runsService from '../../services/runs.js';
 import * as descriptions from '../../services/descriptions.js';

@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { Scope } from '../store/keys.js';
+import type { Scope } from '../store/types.js';
 import { authorizeScope, credentialsFrom, verifyBearer, type Principal } from '../auth/verifyBearer.js';
 
 /**
