@@ -45,6 +45,26 @@ export async function setup(): Promise<void> {
   process.env.SDLB_LOG_LEVEL = 'error';
   process.env.SDLB_BLOB_CONTAINER = 'sdlb';
 
+  /*
+    Refuse to run if something already holds the ports. waitForPort below only checks
+    that a port answers, so a leftover emulator - one whose process outlived the run that
+    spawned it - is adopted silently: the freshly spawned Azurite fails to bind, every
+    suite talks to the old store instead, and the run inherits whatever the previous one
+    left behind. That surfaces as an unrelated assertion failing, because the suites are
+    not written to tolerate pre-existing data. auth.test.ts is the one that notices,
+    since it asserts a workspace has no row before a later case gives it one.
+  */
+  const ports = [BLOB_PORT, QUEUE_PORT, TABLE_PORT];
+  const busy = await Promise.all(ports.map(isOpen));
+  const occupied = ports.filter((_, i) => busy[i]);
+  if (occupied.length > 0) {
+    throw new Error(
+      `Something is already listening on ${occupied.join(', ')}, which is where the test ` +
+        `Azurite goes. That is usually an emulator left behind by an earlier run, and the ` +
+        `suite would silently share its store. Kill it and try again.`,
+    );
+  }
+
   location = await mkdtemp(path.join(tmpdir(), 'sdlb-azurite-'));
   azurite = spawn(
     process.execPath,
