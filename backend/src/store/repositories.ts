@@ -1,12 +1,16 @@
 import { settings } from '../config.js';
 import type {
   ConfigElementRecord,
+  ElementRef,
   ConfigVersionRecord,
   LatestElementRecord,
+  RunElementRecord,
+  RunRecord,
   Scope,
   StoredToken,
   Subtype,
   TstampEntry,
+  WorkflowSummary,
   WorkspaceRule,
 } from './types.js';
 
@@ -96,7 +100,57 @@ export interface ConfigRepository {
   putLatestElements(scope: Scope, elements: LatestElementRecord[]): Promise<void>;
 }
 
+export interface RunRepository {
+  putRun(scope: Scope, run: RunRecord): Promise<void>;
+  getRun(
+    scope: Scope,
+    workflow: string,
+    runId: number,
+    attemptId: number,
+  ): Promise<RunRecord | undefined>;
+  /** Attempts of one workflow, newest first. */
+  listRuns(scope: Scope, workflow: string, limit: number): Promise<RunRecord[]>;
+  /**
+   * Count a workflow's attempts and its distinct runs.
+   *
+   * A recount rather than a pair of counters, deliberately: counters drift the moment
+   * an upload fails half way through - which is exactly when nobody is watching - and
+   * nothing can notice or repair the drift afterwards, while a recount is self-healing.
+   * It is its own operation because the two drivers answer it very differently, and
+   * because the Azure one must not be tempted into reading whole rows: a workflow
+   * partition can hold 200 attempts carrying 32 kB of action state each.
+   */
+  countRunsAndAttempts(
+    scope: Scope,
+    workflow: string,
+  ): Promise<{ numRuns: number; numAttempts: number }>;
+  putWorkflowSummary(scope: Scope, summary: WorkflowSummary): Promise<void>;
+  getWorkflowSummary(scope: Scope, workflow: string): Promise<WorkflowSummary | undefined>;
+  /** Every workflow of a scope, in name order. */
+  listWorkflows(scope: Scope): Promise<WorkflowSummary[]>;
+  /**
+   * Record every action's part in one attempt.
+   *
+   * One call per attempt, and the whole attempt or nothing: a partial index is worse
+   * than none, because the recount above would then be confidently wrong.
+   */
+  putRunElements(scope: Scope, elements: RunElementRecord[]): Promise<void>;
+  /**
+   * The attempts that touched one element, newest first, and the runs behind them.
+   *
+   * One operation rather than "find the attempts, then fetch each run", because that
+   * two-step is an artefact of one store: the Azure driver has to over-fetch and
+   * collapse duplicates, since an attempt appears once per action in a data object's
+   * partition, and it may return fewer than `limit` when an attempt has many elements.
+   * Callers must not read that heuristic as a guarantee.
+   */
+  listRunsTouching(scope: Scope, ref: ElementRef, limit: number): Promise<RunRecord[]>;
+  /** The per-action rows behind one element's history, newest first, carrying the metrics. */
+  listRunElements(scope: Scope, ref: ElementRef, limit: number): Promise<RunElementRecord[]>;
+}
+
 export interface Repositories {
+  runs: RunRepository;
   scopes: ScopeRepository;
   workspaces: WorkspaceRepository;
   tokens: TokenRepository;
