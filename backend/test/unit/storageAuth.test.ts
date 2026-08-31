@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { resetSettings, settings } from '../../src/config.js';
-import { blobEndpoint, resetCredential, storageCredential, tableEndpoint, usesIdentity } from '../../src/store/credential.js';
+import { blobEndpoint, resetCredential, storageCredential, tableEndpoint } from '../../src/store/credential.js';
 
 /**
  * How storage is authenticated.
@@ -32,7 +32,6 @@ afterEach(() => {
 describe('choosing how to reach storage', () => {
   test('a connection string alone is used as such - Azurite has no Entra', () => {
     expect(settings().storage).toEqual({ kind: 'connectionString', value: CONNECTION });
-    expect(usesIdentity()).toBe(false);
   });
 
   test('an account name alone means the managed identity', () => {
@@ -40,7 +39,6 @@ describe('choosing how to reach storage', () => {
     process.env.SDLB_STORAGE_ACCOUNT = 'sdlbacmestg';
     resetSettings();
     expect(settings().storage).toEqual({ kind: 'identity', accountName: 'sdlbacmestg' });
-    expect(usesIdentity()).toBe(true);
   });
 
   /**

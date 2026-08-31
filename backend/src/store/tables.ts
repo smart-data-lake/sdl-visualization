@@ -28,12 +28,12 @@ export const TABLES = {
 export type TableName = (typeof TABLES)[keyof typeof TABLES];
 
 /** Azure Tables transactions take at most 100 entities in one partition. */
-export const MAX_BATCH = 100;
+const MAX_BATCH = 100;
 
 const clients = new Map<string, Promise<TableClient>>();
 const created = new Set<string>();
 
-export function tableClient(name: TableName): Promise<TableClient> {
+function tableClient(name: TableName): Promise<TableClient> {
   let client = clients.get(name);
   if (!client) {
     client = buildTableClient(name);
@@ -48,28 +48,21 @@ async function buildTableClient(name: TableName): Promise<TableClient> {
     return new TableClient(tableEndpoint(storage.accountName), name, await storageCredential());
   }
   return TableClient.fromConnectionString(storage.value, name, {
-    allowInsecureConnection: true, // Azurite speaks http
+    // Azurite speaks http, and core-rest-pipeline refuses that by default. The blob
+    // client needs no equivalent: @azure/storage-blob builds its own pipeline with no
+    // such guard, and takes the scheme from the connection string's BlobEndpoint.
+    allowInsecureConnection: true,
   });
 }
 
 /** Create the table if this process has not already done so. Idempotent and cheap after the first call. */
-export async function ensureTable(name: TableName): Promise<TableClient> {
+async function ensureTable(name: TableName): Promise<TableClient> {
   const client = await tableClient(name);
   if (!created.has(name)) {
     await client.createTable();
     created.add(name);
   }
   return client;
-}
-
-export async function ensureAllTables(): Promise<void> {
-  await Promise.all(Object.values(TABLES).map((t) => ensureTable(t)));
-}
-
-/** Only for tests, which point successive cases at different Azurite accounts. */
-export function resetTableClients(): void {
-  clients.clear();
-  created.clear();
 }
 
 export async function upsert<T extends object>(
@@ -88,7 +81,6 @@ export async function upsert<T extends object>(
 export async function upsertBatch<T extends object>(
   name: TableName,
   entities: TableEntity<T>[],
-  mode: 'Merge' | 'Replace' = 'Merge',
 ): Promise<void> {
   if (entities.length === 0) return;
   const client = await ensureTable(name);
@@ -104,7 +96,7 @@ export async function upsertBatch<T extends object>(
     for (let i = 0; i < partition.length; i += MAX_BATCH) {
       const transaction = new TableTransaction();
       for (const entity of partition.slice(i, i + MAX_BATCH)) {
-        transaction.upsertEntity(entity, mode);
+        transaction.upsertEntity(entity, 'Merge');
       }
       await client.submitTransaction(transaction.actions);
     }
@@ -141,13 +133,8 @@ export async function deleteEntity(
 export interface ListOptions {
   /** Stop after this many entities. Omit to read the whole partition. */
   limit?: number;
-  /** Restrict to these properties. PartitionKey and RowKey always come back. */
+  /** Restrict to these properties, as OData names. PartitionKey and RowKey always come back. */
   select?: string[];
-  /** Extra OData filter, ANDed with the partition key. Only eq/ne/gt/ge/lt/le/and/or/not exist. */
-  filter?: string;
-  /** Restrict to a RowKey range, e.g. everything with a given prefix. */
-  rowKeyFrom?: string;
-  rowKeyTo?: string;
 }
 
 /**
@@ -164,28 +151,14 @@ export async function listPartition<T extends object>(
 ): Promise<T[]> {
   const client = await ensureTable(name);
 
-  const clauses = [odata`PartitionKey eq ${partitionKey}`];
-  if (options.rowKeyFrom !== undefined) clauses.push(odata`RowKey ge ${options.rowKeyFrom}`);
-  if (options.rowKeyTo !== undefined) clauses.push(odata`RowKey lt ${options.rowKeyTo}`);
-  if (options.filter) clauses.push(`(${options.filter})`);
-
   const results: T[] = [];
   const iterator = client.listEntities<T>({
-    queryOptions: { filter: clauses.join(' and '), select: options.select },
+    queryOptions: { filter: odata`PartitionKey eq ${partitionKey}`, select: options.select },
   });
   for await (const entity of iterator) {
     results.push(entity as unknown as T);
     if (options.limit !== undefined && results.length >= options.limit) break;
   }
-  return results;
-}
-
-/** Read every entity of a table. Only for small tables such as Workspaces and Meta. */
-export async function listTable<T extends object>(name: TableName, filter?: string): Promise<T[]> {
-  const client = await ensureTable(name);
-  const results: T[] = [];
-  const iterator = client.listEntities<T>(filter ? { queryOptions: { filter } } : undefined);
-  for await (const entity of iterator) results.push(entity as unknown as T);
   return results;
 }
 

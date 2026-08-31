@@ -23,16 +23,14 @@ async function buildContainer(): Promise<ContainerClient> {
       ? new BlobServiceClient(blobEndpoint(storage.accountName), await storageCredential(), {
           retryOptions: { maxTries: 3 },
         })
+      // No allowInsecureConnection here, unlike the table client: @azure/storage-blob
+      // builds its own pipeline with no https guard and takes the scheme from the
+      // connection string's BlobEndpoint, so Azurite's http works as-is.
       : BlobServiceClient.fromConnectionString(storage.value, { retryOptions: { maxTries: 3 } });
 
   const client = service.getContainerClient(settings().blobContainer);
   await client.createIfNotExists();
   return client;
-}
-
-/** Only for tests, which point successive cases at different Azurite accounts. */
-export function resetBlobClient(): void {
-  _container = undefined;
 }
 
 const prefix = (scope: Scope) => `${scope.repo}/${scope.env}`;
@@ -107,10 +105,6 @@ export async function remove(path: string): Promise<boolean> {
   const client = (await container()).getBlockBlobClient(path);
   const response = await client.deleteIfExists();
   return response.succeeded;
-}
-
-export async function exists(path: string): Promise<boolean> {
-  return (await container()).getBlockBlobClient(path).exists();
 }
 
 function isNotFound(error: unknown): boolean {
