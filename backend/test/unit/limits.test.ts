@@ -6,8 +6,8 @@ import {
   assertBatch,
   assertRecord,
   estimateBytes,
+  truncate,
 } from '../../src/store/limits.js';
-import { truncate } from '../../src/store/tables.js';
 import { TEST_CONNECTION_STRING } from '../setup/azurite.js';
 
 /**

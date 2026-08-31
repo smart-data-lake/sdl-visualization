@@ -1,5 +1,10 @@
-import { TABLES, listPartition, truncate, upsert, upsertBatch } from '../store/tables.js';
-import { keys, versionKey, type Scope } from '../store/keys.js';
+import { repositories } from '../store/repositories.js';
+import { truncate } from '../store/limits.js';
+import type {
+  ConfigElementRecord,
+  LatestElementRecord,
+  Scope,
+} from '../store/types.js';
 import { blobPaths, readJson, writeJson } from '../store/blobs.js';
 import { ELEMENT_TYPES, type ConfigJson, type ElementType } from '../domain/types.js';
 import { actionIds, buildFullGraph, DAGraph } from '../domain/graph.js';
@@ -21,55 +26,9 @@ import { notFound } from '../errors.js';
  * not have to materialise the whole configuration.
  */
 
-export interface ConfigVersionEntity {
-  partitionKey: string;
-  rowKey: string;
-  createdAt: string;
-  blobPath: string;
-  numDataObjects: number;
-  numActions: number;
-  numConnections: number;
-}
-
-export interface ConfigElementEntity {
-  partitionKey: string;
-  rowKey: string;
-  id: string;
-  elementType: ElementType;
-  type?: string;
-  name?: string;
-  layer?: string;
-  subjectArea?: string;
-  feed?: string;
-  tags?: string;
-  connectionId?: string;
-  inputIds?: string;
-  outputIds?: string;
-  path?: string;
-  tableFullName?: string;
-  originPath?: string;
-  originLine?: number;
-  descriptionSnippet?: string;
-  /** Every leaf value, lowercased, for cheap containment without loading the blob. */
-  searchText?: string;
-}
-
-export interface ElementEntity {
-  partitionKey: string;
-  rowKey: string;
-  lastVersion: string;
-  lastSeenAt: string;
-  type?: string;
-  layer?: string;
-}
-
 /* ------------------------------------------------------------------ writing */
 
 export async function putConfig(scope: Scope, version: string, config: ConfigJson): Promise<void> {
-  // Both asserts before the write: assertPathSegment inside blobPaths guards the path,
-  // versionKey guards the row key. Doing the second one first too means a version that
-  // is legal in a path but not in a key cannot leave an orphaned blob behind.
-  const rowKey = versionKey(version);
   const path = blobPaths.config(scope, version);
   await writeJson(path, config);
 
@@ -77,27 +36,26 @@ export async function putConfig(scope: Scope, version: string, config: ConfigJso
   const actions = config.actions ?? {};
   const connections = config.connections ?? {};
 
-  const versionEntity: ConfigVersionEntity = {
-    partitionKey: keys.configVersions(scope),
-    rowKey,
+  const configs = (await repositories()).configs;
+  await configs.putVersion(scope, {
+    version,
     createdAt: new Date().toISOString(),
     blobPath: path,
     numDataObjects: Object.keys(dataObjects).length,
     numActions: Object.keys(actions).length,
     numConnections: Object.keys(connections).length,
-  };
-  await upsert(TABLES.configVersions, versionEntity);
+  });
 
-  const elements: ConfigElementEntity[] = [];
-  const latest: ElementEntity[] = [];
+  const elements: ConfigElementRecord[] = [];
+  const latest: LatestElementRecord[] = [];
   const now = new Date().toISOString();
 
   for (const elementType of ELEMENT_TYPES) {
     for (const [id, element] of Object.entries(config[elementType] ?? {})) {
-      elements.push(projectElement(scope, version, elementType, id, element));
+      elements.push(projectElement(elementType, id, element));
       latest.push({
-        partitionKey: keys.elements(scope, elementType),
-        rowKey: id,
+        id,
+        elementType,
         lastVersion: version,
         lastSeenAt: now,
         type: element?.type,
@@ -106,25 +64,21 @@ export async function putConfig(scope: Scope, version: string, config: ConfigJso
     }
   }
 
-  await upsertBatch(TABLES.configElements, elements);
-  await upsertBatch(TABLES.elements, latest);
+  await configs.putElements(scope, version, elements);
+  await configs.putLatestElements(scope, latest);
   await registerScope(scope);
   invalidate(scope, version);
 }
 
 function projectElement(
-  scope: Scope,
-  version: string,
   elementType: ElementType,
   id: string,
   element: any,
-): ConfigElementEntity {
+): ConfigElementRecord {
   const metadata = element?.metadata ?? {};
   const { inputIds, outputIds } = elementType === 'actions' ? actionIds(element ?? {}) : { inputIds: [], outputIds: [] };
   const table = element?.table;
   return {
-    partitionKey: keys.configElements(scope, version),
-    rowKey: `${elementType}|${id}`,
     id,
     elementType,
     type: element?.type,
@@ -148,11 +102,7 @@ function projectElement(
 /* ------------------------------------------------------------------ reading */
 
 export async function configVersions(scope: Scope): Promise<string[]> {
-  const entities = await listPartition<ConfigVersionEntity>(
-    TABLES.configVersions,
-    keys.configVersions(scope),
-  );
-  return entities.map((e) => e.rowKey);
+  return (await repositories()).configs.listVersions(scope);
 }
 
 /** The most recent version, preferring the literal "latest" SDLB writes by default. */

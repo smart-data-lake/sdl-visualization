@@ -1,10 +1,10 @@
-import { TABLES, getEntity, listPartition, truncate, upsert, upsertBatch } from '../store/tables.js';
+import { TABLES, getEntity, listPartition, upsert, upsertBatch } from '../store/tables.js';
 import { assertKeyPart, keys, runElementKey, runKey, type Scope } from '../store/keys.js';
 import { blobPaths, readJson, writeJson } from '../store/blobs.js';
 import type { StateFile, TaskStatus, Workflow, WorkflowRun, WorkflowRunAction } from '../domain/types.js';
 import { aggregateRunStatus, normalizeStateFile, runElementFacts, toWorkflowRun } from '../domain/stateFile.js';
 import { registerScope } from './scope.js';
-import { MAX_PROPERTY_CHARS } from '../store/limits.js';
+import { MAX_PROPERTY_CHARS, truncate } from '../store/limits.js';
 import { badRequest, notFound } from '../errors.js';
 
 /**
