@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildFastify } from '../../src/app.js';
+import { useTempStore } from '../setup/store.js';
 import { SEED_SCOPE, SEED_VERSION, seedFixtures } from '../../scripts/seed-fixtures.js';
 
 /**
@@ -51,13 +52,17 @@ const spec = JSON.parse(readFileSync(SPEC, 'utf8')) as Spec;
 
 let app: FastifyInstance;
 
+let store: Awaited<ReturnType<typeof useTempStore>>;
+
 beforeAll(async () => {
+  store = await useTempStore();
   app = await buildFastify();
   await seedFixtures(app);
 });
 
 afterAll(async () => {
   await app?.close();
+  await store?.cleanup();
 });
 
 function operations(): { method: string; specPath: string; url: string }[] {

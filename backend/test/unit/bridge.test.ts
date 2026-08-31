@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildFastify } from '../../src/app.js';
+import { useTempStore } from '../setup/store.js';
 import { clientIpOf, fromFetchResponse, handleWithFastify, toFetchRequest } from '../../src/azure/bridge.js';
 
 /**
@@ -40,12 +41,16 @@ function azureRequest(options: {
 
 let app: FastifyInstance;
 
+let store: Awaited<ReturnType<typeof useTempStore>>;
+
 beforeAll(async () => {
+  store = await useTempStore();
   app = await buildFastify();
 });
 
 afterAll(async () => {
   await app?.close();
+  await store?.cleanup();
 });
 
 describe('the client address', () => {

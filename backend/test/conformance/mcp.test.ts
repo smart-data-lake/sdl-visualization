@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { buildFastify } from '../../src/app.js';
+import { useTempStore } from '../setup/store.js';
 import { SEED_SCOPE, seedFixtures } from '../../scripts/seed-fixtures.js';
 import { closeMcpHandler, handleMcpRequest } from '../../src/mcp/handler.js';
 
@@ -32,7 +33,10 @@ async function callTool(name: string, args: Record<string, unknown> = {}) {
   return { raw: result, text, value: JSON.parse(text) };
 }
 
+let store: Awaited<ReturnType<typeof useTempStore>>;
+
 beforeAll(async () => {
+  store = await useTempStore();
   app = await buildFastify();
   await seedFixtures(app);
 
@@ -48,6 +52,7 @@ afterAll(async () => {
   await client?.close();
   await closeMcpHandler();
   await app?.close();
+  await store?.cleanup();
 });
 
 describe('the tool surface', () => {

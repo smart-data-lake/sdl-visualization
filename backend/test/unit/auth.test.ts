@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { resetSettings } from '../../src/config.js';
 import {
   AuthError,
@@ -9,6 +9,7 @@ import {
 } from '../../src/auth/databricks.js';
 import { authorizeScope, credentialsFrom, verifyBearer } from '../../src/auth/verifyBearer.js';
 import { repositories } from '../../src/store/repositories.js';
+import { useTempStore } from '../setup/store.js';
 
 /**
  * The checks that separate one workspace from another.
@@ -22,6 +23,16 @@ import { repositories } from '../../src/store/repositories.js';
 
 const ALLOWED = 'https://adb-1234567890.4.azuredatabricks.net';
 const ALSO_ALLOWED = 'https://adb-9876543210.12.azuredatabricks.net';
+
+let store: Awaited<ReturnType<typeof useTempStore>>;
+
+beforeAll(async () => {
+  store = await useTempStore();
+});
+
+afterAll(async () => {
+  await store.cleanup();
+});
 
 beforeEach(() => {
   process.env.SDLB_AUTH_MODE = 'databricks';
