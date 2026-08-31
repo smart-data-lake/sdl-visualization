@@ -65,6 +65,11 @@ interface RunElementEntity {
   msg?: string;
 }
 
+/**
+ * Mapped field by field rather than by spreading the entity: @azure/data-tables attaches
+ * etag and timestamp to every row it returns, and a spread carries them straight out
+ * through the store and into the /workflows response.
+ */
 interface WorkflowEntity {
   partitionKey: string;
   rowKey: string;
@@ -133,6 +138,18 @@ function toRunRecord(entity: RunEntity): RunRecord {
     blobPath: entity.blobPath,
   };
 }
+
+const toWorkflowSummary = (entity: WorkflowEntity): WorkflowSummary => ({
+  name: entity.rowKey,
+  numRuns: entity.numRuns,
+  numAttempts: entity.numAttempts,
+  lastStatus: entity.lastStatus,
+  lastAttemptStartTime: entity.lastAttemptStartTime,
+  lastDuration: entity.lastDuration,
+  lastNumActions: entity.lastNumActions,
+  lastRunId: entity.lastRunId,
+  lastAttemptId: entity.lastAttemptId,
+});
 
 const toRunElementRecord = (entity: RunElementEntity): RunElementRecord => ({
   workflow: entity.workflow,
@@ -223,9 +240,7 @@ export function runRepository(tables: TableStore): RunRepository {
         keys.workflows(scope),
         workflow,
       );
-      if (!entity) return undefined;
-      const { partitionKey: _p, rowKey, ...rest } = entity;
-      return { name: rowKey, ...rest };
+      return entity && toWorkflowSummary(entity);
     },
 
     async listWorkflows(scope: Scope): Promise<WorkflowSummary[]> {
@@ -233,9 +248,7 @@ export function runRepository(tables: TableStore): RunRepository {
         TABLES.workflows,
         keys.workflows(scope),
       );
-      return entities
-        .map(({ partitionKey: _p, rowKey, ...rest }) => ({ name: rowKey, ...rest }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+      return entities.map(toWorkflowSummary).sort((a, b) => a.name.localeCompare(b.name));
     },
 
     async putRunElements(scope: Scope, elements: RunElementRecord[]): Promise<void> {
