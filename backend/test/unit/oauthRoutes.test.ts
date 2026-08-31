@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildFastify } from '../../src/app.js';
+import { useTempStore } from '../setup/store.js';
 import { resetSettings } from '../../src/config.js';
 
 /**
@@ -25,7 +26,10 @@ const body = {
   redirectUri: 'https://example.com/',
 };
 
+let store: Awaited<ReturnType<typeof useTempStore>>;
+
 beforeEach(async () => {
+  store = await useTempStore();
   process.env.SDLB_AUTH_MODE = 'databricks';
   process.env.SDLB_DATABRICKS_HOSTS = ALLOWED;
   process.env.SDLB_AUTH_RATE_LIMIT_PER_MINUTE = String(LIMIT);
@@ -50,6 +54,7 @@ afterEach(async () => {
   delete process.env.SDLB_DATABRICKS_HOSTS;
   delete process.env.SDLB_AUTH_RATE_LIMIT_PER_MINUTE;
   resetSettings();
+  await store.cleanup();
 });
 
 const post = (url: string, payload: Record<string, unknown> = body) =>
