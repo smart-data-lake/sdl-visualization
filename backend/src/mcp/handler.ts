@@ -1,7 +1,7 @@
 import { McpServer, createMcpHandler, type McpHttpHandler } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { credentialsFrom, verifyBearer, authorizeScope, AuthError } from '../auth/verifyBearer.js';
-import type { Scope } from '../store/keys.js';
+import type { Scope } from '../store/types.js';
 import * as scopes from '../services/scope.js';
 import { isMcpPath, scopeFromPath } from './path.js';
 import { registerDiscoveryTools } from './tools/discovery.js';

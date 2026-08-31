@@ -5,8 +5,8 @@ import type {
   LatestElementRecord,
   Scope,
 } from '../../types.js';
-import { TABLES, listPartition, upsert, upsertBatch } from '../../tables.js';
-import { keys, versionKey } from '../../keys.js';
+import { TABLES, type TableStore } from './tables.js';
+import { keys, versionKey } from './keys.js';
 
 /** ConfigVersions: one partition per scope, one row per version. */
 interface ConfigVersionEntity {
@@ -34,7 +34,7 @@ type ElementEntity = Omit<LatestElementRecord, 'id' | 'elementType'> & {
   rowKey: string;
 };
 
-export function configRepository(): ConfigRepository {
+export function configRepository(tables: TableStore): ConfigRepository {
   return {
     async putVersion(scope: Scope, version: ConfigVersionRecord): Promise<void> {
       const { version: name, ...rest } = version;
@@ -43,11 +43,11 @@ export function configRepository(): ConfigRepository {
         rowKey: versionKey(name),
         ...rest,
       };
-      await upsert(TABLES.configVersions, entity);
+      await tables.upsert(TABLES.configVersions, entity);
     },
 
     async listVersions(scope: Scope): Promise<string[]> {
-      const entities = await listPartition<ConfigVersionEntity>(
+      const entities = await tables.listPartition<ConfigVersionEntity>(
         TABLES.configVersions,
         keys.configVersions(scope),
       );
@@ -65,7 +65,7 @@ export function configRepository(): ConfigRepository {
         rowKey: `${element.elementType}|${element.id}`,
         ...element,
       }));
-      await upsertBatch(TABLES.configElements, entities);
+      await tables.upsertBatch(TABLES.configElements, entities);
     },
 
     async putLatestElements(scope: Scope, elements: LatestElementRecord[]): Promise<void> {
@@ -74,7 +74,7 @@ export function configRepository(): ConfigRepository {
         rowKey: id,
         ...rest,
       }));
-      await upsertBatch(TABLES.elements, entities);
+      await tables.upsertBatch(TABLES.elements, entities);
     },
   };
 }

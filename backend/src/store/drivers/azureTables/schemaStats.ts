@@ -1,7 +1,7 @@
 import type { SchemaStatsRepository } from '../../repositories.js';
 import type { Scope, Subtype, TstampEntry } from '../../types.js';
-import { TABLES, listPartition, upsert } from '../../tables.js';
-import { inv, keys, uninv } from '../../keys.js';
+import { TABLES, type TableStore } from './tables.js';
+import { inv, keys, uninv } from './keys.js';
 
 /**
  * The Tstamps table: one partition per data object and subtype, one row per timestamp.
@@ -17,7 +17,7 @@ interface TstampEntity {
   sizeBytes: number;
 }
 
-export function schemaStatsRepository(): SchemaStatsRepository {
+export function schemaStatsRepository(tables: TableStore): SchemaStatsRepository {
   return {
     async put(
       scope: Scope,
@@ -25,7 +25,7 @@ export function schemaStatsRepository(): SchemaStatsRepository {
       dataObjectId: string,
       entry: TstampEntry,
     ): Promise<void> {
-      await upsert(TABLES.tstamps, {
+      await tables.upsert(TABLES.tstamps, {
         partitionKey: keys.tstamps(scope, subtype, dataObjectId),
         rowKey: inv(entry.tstamp),
         ...entry,
@@ -33,7 +33,7 @@ export function schemaStatsRepository(): SchemaStatsRepository {
     },
 
     async listTstamps(scope: Scope, subtype: Subtype, dataObjectId: string): Promise<number[]> {
-      const entities = await listPartition<TstampEntity>(
+      const entities = await tables.listPartition<TstampEntity>(
         TABLES.tstamps,
         keys.tstamps(scope, subtype, dataObjectId),
       );

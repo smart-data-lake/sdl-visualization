@@ -1,7 +1,7 @@
 import type { TokenRepository } from '../../repositories.js';
 import type { Scope, StoredToken } from '../../types.js';
-import { TABLES, deleteEntity, getEntity, listPartition, upsert } from '../../tables.js';
-import { keys } from '../../keys.js';
+import { TABLES, type TableStore } from './tables.js';
+import { keys } from './keys.js';
 
 /** The McpTokens table: one partition per scope, one row per token hash. */
 interface McpTokenEntity {
@@ -23,11 +23,11 @@ const toToken = (entity: McpTokenEntity): StoredToken => ({
   lastUsedAt: entity.lastUsedAt,
 });
 
-export function tokenRepository(): TokenRepository {
+export function tokenRepository(tables: TableStore): TokenRepository {
   return {
     async put(scope: Scope, token: StoredToken): Promise<void> {
       const { id, ...rest } = token;
-      await upsert(TABLES.mcpTokens, {
+      await tables.upsert(TABLES.mcpTokens, {
         partitionKey: keys.mcpTokens(scope),
         rowKey: id,
         ...rest,
@@ -35,12 +35,12 @@ export function tokenRepository(): TokenRepository {
     },
 
     async get(scope: Scope, id: string): Promise<StoredToken | undefined> {
-      const entity = await getEntity<McpTokenEntity>(TABLES.mcpTokens, keys.mcpTokens(scope), id);
+      const entity = await tables.getEntity<McpTokenEntity>(TABLES.mcpTokens, keys.mcpTokens(scope), id);
       return entity && toToken(entity);
     },
 
     async list(scope: Scope): Promise<StoredToken[]> {
-      const entities = await listPartition<McpTokenEntity>(
+      const entities = await tables.listPartition<McpTokenEntity>(
         TABLES.mcpTokens,
         keys.mcpTokens(scope),
       );
@@ -48,12 +48,12 @@ export function tokenRepository(): TokenRepository {
     },
 
     async delete(scope: Scope, id: string): Promise<void> {
-      await deleteEntity(TABLES.mcpTokens, keys.mcpTokens(scope), id);
+      await tables.deleteEntity(TABLES.mcpTokens, keys.mcpTokens(scope), id);
     },
 
     // Merge mode, so the properties this does not mention keep their stored values.
     async touch(scope: Scope, id: string, at: string): Promise<void> {
-      await upsert(TABLES.mcpTokens, {
+      await tables.upsert(TABLES.mcpTokens, {
         partitionKey: keys.mcpTokens(scope),
         rowKey: id,
         lastUsedAt: at,

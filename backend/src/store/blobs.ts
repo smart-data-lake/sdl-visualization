@@ -1,7 +1,8 @@
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 import { settings } from '../config.js';
 import { blobEndpoint, storageCredential } from './credential.js';
-import { assertPathNumber, assertPathSegment, type Scope } from './keys.js';
+import { assertPathNumber, assertPathSegment } from './limits.js';
+import type { Scope } from './types.js';
 
 /**
  * Blob Storage is the source of truth for every file and every large payload:

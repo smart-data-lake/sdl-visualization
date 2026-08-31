@@ -1,4 +1,4 @@
-import type { Scope } from '../store/keys.js';
+import type { Scope } from '../store/types.js';
 
 /**
  * Deciding whether a request is for the MCP endpoint, without loading the MCP SDK.
