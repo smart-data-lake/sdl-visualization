@@ -1,5 +1,7 @@
+import { badRequest } from '../errors.js';
+
 /**
- * Partition and row keys for the Azure Tables layer.
+ * Partition and row keys for the Azure Tables layer, and the segments of a blob path.
  *
  * Two constraints shape everything here:
  *  - Table Storage sorts only by PartitionKey then RowKey, ascending, as strings.
@@ -60,6 +62,53 @@ export function assertKeyPart(value: string, what: string): string {
     throw new Error(`${what} must not contain the key separator "|": ${JSON.stringify(value)}`);
   }
   return assertKeySafe(value, what);
+}
+
+/**
+ * A value that becomes one segment of a blob path.
+ *
+ * Blob names are opaque strings, so "", "." and ".." are merely odd there. Under a
+ * filesystem driver the same path escapes the data directory - and DELETE
+ * /descriptions/* would unlink outside it - so the guard has to exist before such a
+ * driver does.
+ *
+ * It belongs here, called from every blobPaths builder, rather than in the services:
+ * putConfig and putState both write the blob before they build the table key, so the
+ * key assertions below run too late to protect the path. Validating where the path is
+ * constructed closes the class whatever order a caller chooses.
+ *
+ * These are all caller-supplied values - a query parameter, or a field of an uploaded
+ * state file - so this is a 400, where the key assertions below stay 500s for a value
+ * the service itself produced.
+ */
+export function assertPathSegment(value: string, what: string): string {
+  if (value.length === 0) throw badRequest(`${what} must not be empty`);
+  if (value === '.' || value === '..') {
+    throw badRequest(`${what} must not be "${value}"`);
+  }
+  if (ILLEGAL_KEY_CHARS.test(value)) {
+    throw badRequest(
+      `${what} contains a character that is illegal in a path segment: ${JSON.stringify(value)}`,
+    );
+  }
+  if (value.length > 1024) throw badRequest(`${what} is longer than 1024 characters`);
+  return value;
+}
+
+/**
+ * A numeric blob-path segment.
+ *
+ * runId and attemptId are typed as numbers and read straight off an uploaded state
+ * file, which is `any` - so the type is a claim about the caller, not a fact. Coerced
+ * rather than type-checked because a numeric string has always been accepted here and
+ * SDLB is entitled to keep sending one.
+ */
+export function assertPathNumber(value: number, what: string): string {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 0) {
+    throw badRequest(`${what} must be a non-negative integer, got ${JSON.stringify(value)}`);
+  }
+  return String(n);
 }
 
 export function scopeKey(scope: Scope): string {

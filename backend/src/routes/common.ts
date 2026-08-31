@@ -16,8 +16,24 @@ import { authorizeScope, credentialsFrom, verifyBearer, type Principal } from '.
 const NAME = { type: 'string', maxLength: 50, pattern: '^[\\w_\\-]*$' } as const;
 /** dataObjectId has the same character class upstream, but no length limit. */
 const ID = { type: 'string', pattern: '^[\\w_\\-]*$' } as const;
-/** version is free-form apart from its length; SDLB's default is the literal "latest". */
-const VERSION = { type: 'string', maxLength: 50 } as const;
+/**
+ * version is free-form apart from its length upstream, and SDLB's default is the
+ * literal "latest". It becomes a blob path segment, so it may not be empty or carry a
+ * path separator - narrower than the upstream contract, deliberately, and no narrower
+ * than that.
+ *
+ * Control characters are left to assertPathSegment rather than added here: that is the
+ * guard that actually holds, since a version also reaches blobPaths from places with no
+ * route schema. This only moves the common refusal to the schema, where it is a 400
+ * before a handler runs. String.raw because the escaping is otherwise easy to get
+ * wrong, and a pattern ajv cannot compile takes down every route on the app.
+ */
+const VERSION = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 50,
+  pattern: String.raw`^[^/\\]+$`,
+} as const;
 
 export const schemas = {
   /** tenant is required for compatibility and then ignored - this service is single tenant. */

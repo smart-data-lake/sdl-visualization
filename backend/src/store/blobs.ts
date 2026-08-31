@@ -1,7 +1,7 @@
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 import { settings } from '../config.js';
 import { blobEndpoint, storageCredential } from './credential.js';
-import type { Scope } from './keys.js';
+import { assertPathNumber, assertPathSegment, type Scope } from './keys.js';
 
 /**
  * Blob Storage is the source of truth for every file and every large payload:
@@ -33,21 +33,31 @@ async function buildContainer(): Promise<ContainerClient> {
   return client;
 }
 
-const prefix = (scope: Scope) => `${scope.repo}/${scope.env}`;
+const prefix = (scope: Scope) =>
+  `${assertPathSegment(scope.repo, 'repo')}/${assertPathSegment(scope.env, 'env')}`;
 
+/**
+ * Every free-form segment goes through assertPathSegment, so no caller can build a
+ * path that climbs out of its prefix - see the comment on that function for why the
+ * guard lives here rather than in the services.
+ */
 export const blobPaths = {
   state: (scope: Scope, workflow: string, runId: number, attemptId: number) =>
-    `${prefix(scope)}/state/${workflow}/${runId}/${attemptId}.json`,
-  config: (scope: Scope, version: string) => `${prefix(scope)}/config/${version}/exportedConfig.json`,
-  /** `filename` is the API's path segment verbatim, slashes and all. */
+    `${prefix(scope)}/state/${assertPathSegment(workflow, 'workflow')}` +
+    `/${assertPathNumber(runId, 'runId')}/${assertPathNumber(attemptId, 'attemptId')}.json`,
+  config: (scope: Scope, version: string) =>
+    `${prefix(scope)}/config/${assertPathSegment(version, 'version')}/exportedConfig.json`,
+  /** `filename` is the API's path segment verbatim, slashes and all - assertSafeFilename guards it. */
   description: (scope: Scope, version: string, filename: string) =>
-    `${prefix(scope)}/descriptions/${version}/${filename}`,
+    `${prefix(scope)}/descriptions/${assertPathSegment(version, 'version')}/${filename}`,
   descriptionsPrefix: (scope: Scope, version: string) =>
-    `${prefix(scope)}/descriptions/${version}/`,
+    `${prefix(scope)}/descriptions/${assertPathSegment(version, 'version')}/`,
   schema: (scope: Scope, dataObjectId: string, tstamp: number) =>
-    `${prefix(scope)}/schema/${dataObjectId}/${tstamp}.json`,
+    `${prefix(scope)}/schema/${assertPathSegment(dataObjectId, 'dataObjectId')}` +
+    `/${assertPathNumber(tstamp, 'tstamp')}.json`,
   stats: (scope: Scope, dataObjectId: string, tstamp: number) =>
-    `${prefix(scope)}/stats/${dataObjectId}/${tstamp}.json`,
+    `${prefix(scope)}/stats/${assertPathSegment(dataObjectId, 'dataObjectId')}` +
+    `/${assertPathNumber(tstamp, 'tstamp')}.json`,
 };
 
 export async function writeJson(path: string, value: unknown): Promise<void> {
