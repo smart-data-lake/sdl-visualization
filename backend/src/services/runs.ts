@@ -1,5 +1,5 @@
 import { TABLES, getEntity, listPartition, truncate, upsert, upsertBatch } from '../store/tables.js';
-import { keys, runElementKey, runKey, type Scope } from '../store/keys.js';
+import { assertKeyPart, keys, runElementKey, runKey, type Scope } from '../store/keys.js';
 import { blobPaths, readJson, writeJson } from '../store/blobs.js';
 import type { StateFile, TaskStatus, Workflow, WorkflowRun, WorkflowRunAction } from '../domain/types.js';
 import { aggregateRunStatus, normalizeStateFile, runElementFacts, toWorkflowRun } from '../domain/stateFile.js';
@@ -82,7 +82,15 @@ export async function putState(scope: Scope, raw: unknown): Promise<{ name: stri
   // matters: SDLB fails the job on any non-2xx, so the log has to say why.
   if (!name) throw badRequest('the uploaded state has no appConfig.applicationName');
 
-  await writeJson(blobPaths.state(scope, name, stateFile.runId, stateFile.attemptId), stateFile);
+  // Both checks before the write, in this order. blobPaths refuses anything that could
+  // climb out of the prefix, as a 400 - it is the caller's value. assertKeyPart then
+  // refuses the key separator, which is legal in a path but would collide in a table
+  // key; indexState would otherwise reach it only once the blob had been stored under a
+  // name it cannot index.
+  const path = blobPaths.state(scope, name, stateFile.runId, stateFile.attemptId);
+  assertKeyPart(name, 'workflow');
+
+  await writeJson(path, stateFile);
   await indexState(scope, stateFile);
   await registerScope(scope);
   return { name, runId: stateFile.runId, attemptId: stateFile.attemptId };

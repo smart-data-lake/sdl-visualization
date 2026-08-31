@@ -66,6 +66,10 @@ export interface ElementEntity {
 /* ------------------------------------------------------------------ writing */
 
 export async function putConfig(scope: Scope, version: string, config: ConfigJson): Promise<void> {
+  // Both asserts before the write: assertPathSegment inside blobPaths guards the path,
+  // versionKey guards the row key. Doing the second one first too means a version that
+  // is legal in a path but not in a key cannot leave an orphaned blob behind.
+  const rowKey = versionKey(version);
   const path = blobPaths.config(scope, version);
   await writeJson(path, config);
 
@@ -75,7 +79,7 @@ export async function putConfig(scope: Scope, version: string, config: ConfigJso
 
   const versionEntity: ConfigVersionEntity = {
     partitionKey: keys.configVersions(scope),
-    rowKey: versionKey(version),
+    rowKey,
     createdAt: new Date().toISOString(),
     blobPath: path,
     numDataObjects: Object.keys(dataObjects).length,
