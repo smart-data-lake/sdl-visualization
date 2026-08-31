@@ -1,4 +1,9 @@
-import type { ElementType } from '../domain/types.js';
+import type {
+  ElementType,
+  TaskStatus,
+  WorkflowRun,
+  WorkflowRunAction,
+} from '../domain/types.js';
 
 /**
  * What the store trades in, with no backend in it.
@@ -100,3 +105,65 @@ export interface LatestElementRecord {
   type?: string;
   layer?: string;
 }
+
+/**
+ * One indexed attempt, plus where its state file lives.
+ *
+ * The index deliberately holds less than the state file: sdlbVersionInfo and
+ * appVersionInfo are not recorded, only the two version strings the UI shows. The two
+ * that are recorded narrow to `string | undefined`, because the wire contract allows
+ * null there and null is not a value any backend stores portably - see
+ * limits.ts assertRecord.
+ *
+ * Nested values are records and arrays here, not pre-serialised JSON. Serialising them
+ * is a driver's decision, and so is dropping `actions` when it will not fit: that is a
+ * property-size workaround, and a store with no such limit should not inherit it.
+ */
+export interface RunRecord
+  extends Omit<WorkflowRun, 'sdlbVersionInfo' | 'appVersionInfo' | 'buildVersion' | 'appVersion'> {
+  buildVersion?: string;
+  appVersion?: string;
+  blobPath: string;
+}
+
+/** One action's part in one attempt. */
+export interface RunElementRecord {
+  workflow: string;
+  runId: number;
+  attemptId: number;
+  actionId: string;
+  state: TaskStatus;
+  attemptStartTime?: string;
+  durationMillis?: number;
+  mainInputCount?: number;
+  mainOutputCount?: number;
+  inputIds: string[];
+  outputIds: string[];
+  msg?: string;
+}
+
+/** A workflow's headline, as recorded. The wire `Workflow` is this without the last ids. */
+export interface WorkflowSummary {
+  name: string;
+  numRuns: number;
+  numAttempts: number;
+  lastStatus?: TaskStatus;
+  lastAttemptStartTime?: string;
+  lastDuration?: number;
+  lastNumActions?: number;
+  lastRunId?: number;
+  lastAttemptId?: number;
+}
+
+/**
+ * An action or a data object, as something runs can be looked up by.
+ *
+ * Replaces the choice between two partition-key builders that the service used to make
+ * for itself, which was the last place the Azure key design leaked upwards.
+ */
+export interface ElementRef {
+  kind: 'action' | 'dataObject';
+  id: string;
+}
+
+export type { WorkflowRunAction };
