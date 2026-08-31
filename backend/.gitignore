@@ -3,3 +3,4 @@ dist/
 .azurite/
 local.settings.json
 *.tsbuildinfo
+.sdlb-data/
