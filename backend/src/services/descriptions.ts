@@ -1,40 +1,17 @@
 import { blobPaths, list, readBuffer, remove, writeBuffer } from '../store/blobs.js';
 import type { Scope } from '../store/types.js';
+import { contentTypeOf, isMarkdown } from '../store/contentType.js';
 import type { DescriptionListEntry } from '../domain/types.js';
 import { badRequest } from '../errors.js';
 import { registerScope } from './scope.js';
 
 /**
- * Descriptions are pure Blob Storage: the API's `{filename}` is the blob path
- * verbatim, slashes and all, so `dataObjects/int-airports.md` and
- * `images/train.png` land side by side under the version prefix and there is no
- * index to keep in sync. Listing them is one listBlobsFlat, and every field the
- * list response needs comes from the blob's own properties.
+ * Descriptions are the one subsystem with no index at all: the API's `{filename}` is
+ * the blob path verbatim, slashes and all, so `dataObjects/int-airports.md` and
+ * `images/train.png` land side by side under the version prefix and there is nothing to
+ * keep in sync. Listing them is one prefix listing, and every field the list response
+ * needs comes from what the store reports about each file.
  */
-
-const CONTENT_TYPES: Record<string, string> = {
-  '.md': 'text/markdown',
-  '.markdown': 'text/markdown',
-  '.txt': 'text/plain',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.webp': 'image/webp',
-  '.pdf': 'application/pdf',
-};
-
-export function contentTypeOf(filename: string): string {
-  const dot = filename.lastIndexOf('.');
-  const extension = dot < 0 ? '' : filename.slice(dot).toLowerCase();
-  return CONTENT_TYPES[extension] ?? 'application/octet-stream';
-}
-
-export function isMarkdown(filename: string): boolean {
-  return contentTypeOf(filename) === 'text/markdown';
-}
 
 /**
  * `{filename}` arrives from the URL and becomes part of a blob path, so it must not
@@ -101,3 +78,5 @@ export async function listDescriptions(
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
+
+export { contentTypeOf, isMarkdown };
