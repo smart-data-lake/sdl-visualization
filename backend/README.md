@@ -1,30 +1,30 @@
 # SDLB backend and MCP server
 
-The service behind the viewer, for the Azure deployment. One Azure Functions app
-(Node 24, v4 model) serving three audiences from one process:
+The service behind the viewer. It can run as Node process or serverless on e.g. Azure Function,
+serving three audiences from one process:
 
 | audience | endpoint | contract |
 |---|---|---|
-| the SPA | `/api/v1/*` | `spec/upstream-openapi.json`, i.e. what `src/api/fetchAPI_rest.ts` already calls |
+| the SPA | `/api/v1/*` | `spec/upstream-openapi.json`, i.e. what the frontend `src/api/fetchAPI_rest.ts` calls |
 | SDLB jobs | `/api/v1/*` uploads | what `global.uiBackend` pushes |
 | coding agents | `/mcp/{repo}/{env}` | MCP, read-only tools |
 
-Storage is Azure Table Storage plus Blob Storage. Blob holds every file and every
-large payload — state files, exported configurations, description markdown and its
-images, schemas, statistics — and the tables hold only what has to be queried.
+Storage is a Relational oder KV-Database and File or Blob Storage.
+Blob holds every file and every large payload — state files, exported configurations, description markdown 
+and its images, schemas, statistics — and the tables hold what has to be queried.
 
 ## Why the agents are on MCP and the SPA is not
 
-They want opposite things from the same data. The SPA wants whole objects to render:
-a state file with four hundred actions is exactly right for a timeline. An agent
+They want opposite things from the same data. The SPA wants whole objects to render,
+e.g. a state file with hundreds of actions for a timeline. An agent
 wants a small answer to a specific question; that same state file is a context bomb.
 The SPA also needs HTTP caching, binary responses and status codes, none of which
-JSON-RPC gives it.
+JSON-RPC is mode for.
 
-So the split is by transport, not by service. `routes/` and `mcp/` both contain only
+So there are to transports, and one service. `routes/` and `mcp/` both contain only
 translation; everything that knows anything lives in `services/`. Every MCP tool is
-one service call and a formatter, which is why a "diagnose this run" button in the
-UI would be a REST route over code that already exists.
+one service call and a formatter - a "diagnose this run" button in the
+UI is a REST route over code that already exists.
 
 ## Running it
 
@@ -74,17 +74,17 @@ Copy `local.settings.json.example` to `local.settings.json`.
 | `SDLB_DATABRICKS_HOSTS` | comma-separated workspace origins that may use this deployment |
 | `SDLB_AUTH_CACHE_TTL_SECONDS` | how long a verified token is trusted, default 300 |
 
-## Authentication
+## Authentication with Databricks
 
 A caller presents a Databricks token and says which workspace it belongs to, as
 `Authorization: Bearer <token>` plus `X-Databricks-Host`. The order of the checks in
 `auth/databricks.ts` matters:
 
-1. **The host is checked against an allowlist before anything is sent to it.** An
-   Entra token is issued for the Azure Databricks first-party resource rather than
+1. **The Databricks host is checked against an allowlist before anything is sent to it.**
+   An Entra token is issued for the Azure Databricks Account rather than
    for one workspace, so a token minted for workspace A verifies against workspace B
-   — the allowlist is the only thing separating them. It is also what stops the
-   header being used to make this service fetch an arbitrary URL.
+   — the allowlist is separating them. It is also what stops the header being used to make 
+   this service fetch an arbitrary URL.
 2. The workspace's own `scim/v2/Me` endpoint is asked who the token belongs to.
 3. The `Workspaces` table may narrow a workspace to certain repositories,
    environments or a Databricks group. A workspace with no row is allowed
@@ -97,9 +97,8 @@ SDLB cannot send a second header — none of its auth modes emits one — so the
 workspace host is also accepted as a `dbxHost` query parameter, which survives being
 baked into the configured `baseUrl`.
 
-Everything without a browser uses an **access token** this service issues instead
-(`sdlb_…`, see `auth/mcpTokens.ts`) - a coding agent over MCP, and an SDLB job
-uploading what it ran. A Databricks user-to-machine token expires within the hour,
+An MCP or also an SDLB Job uses an **access token** this service issues instead
+(`sdlb_…`, see `auth/mcpTokens.ts`). A Databricks user-to-machine token expires within the hour,
 which makes it useless in a configuration file; it is a credential for the whole
 workspace API rather than for one repository; and MCP's own rules say a server should
 not accept tokens minted for another resource. An access token is scoped to one
@@ -109,6 +108,7 @@ Settings → Access Token.
 
 They carry no groups, so the `requiredGroup` rule above applies to Databricks callers
 only.
+
 ## Storage
 
 There is no tenant dimension anywhere: the service is deployed once per tenant, so the
@@ -116,14 +116,13 @@ There is no tenant dimension anywhere: the service is deployed once per tenant, 
 
 `store/repositories.ts` and `store/blobs.ts` declare the store as named operations —
 `listRuns`, `countRunsAndAttempts`, `listRunsTouching` — and `store/drivers/` implements
-them. The interface used to be `listPartition(table, partitionKey, {limit, select})`, which
-is Table Storage's own vocabulary, and an interface whose only question is "scan one
-partition by row key" can be answered by exactly one kind of store: anything behind it
-either is Table Storage or pretends to be.
+them.
+
+Storage options are:
 
 | | `azureTables` + `azureBlob` | `sqlite` + `filesystem` |
 |---|---|---|
-| used by | the deployment | development, the test suite |
+| used by | the azure deployment | development, the test suite, deployment to relation DB |
 | ordering | baked into the row key by `inv()` | `ORDER BY run_id DESC` |
 | counting runs | scan the partition for row keys, count distinct in JS | `COUNT(DISTINCT run_id)` |
 | attempts touching an element | over-read by 8x and collapse duplicates | `SELECT DISTINCT … LIMIT n` |
@@ -133,8 +132,7 @@ either is Table Storage or pretends to be.
 Both pass one conformance suite per side, `test/store/*.conformance.test.ts`, which is the
 same technique `parity.test.ts` uses for the frontend-copied logic: run both
 implementations over the same input and assert they agree, rather than giving each its own
-examples that drift. Seeding the fixtures into both and diffing every read response leaves
-16 of 17 endpoints byte-identical; the seventeenth is `descriptions/list`'s
+examples that drift. There is one difference in `descriptions/list`'s
 `last_modified`, which is when the file was written.
 
 `store/limits.ts` holds Azure's constraints and applies them to **both** drivers — the
@@ -143,7 +141,7 @@ values no backend round-trips identically. Enforcing the union everywhere is wha
 record written under one backend loadable under the other, and it means a violation fails
 on whichever backend you happen to be running rather than only in production.
 
-### The Azure key design
+### Azure key design
 
 | table | PartitionKey | RowKey |
 |---|---|---|
@@ -322,13 +320,7 @@ Four things keep it there, and are worth not undoing:
 - **Each store driver is its own chunk**, imported dynamically by
   `store/repositories.ts` and `store/blobs.ts` and loaded only when configured. That
   took the bytes parsed before the first request from 1,369 kB to 699 kB, and the entry
-  load from 106 ms to 71 ms (median of seven). It does **not** speed up the first
-  *upload*: that needs a driver and pays the deferred chunk load instead — 106 ms
-  against 108 ms. The reason to split them is dependency isolation, so a local
-  deployment never parses the Azure SDKs and an Azure one never parses `node:sqlite`;
-  `bundle.test.ts` asserts no driver is reachable from the entry by static import. The
-  dynamic specifiers have to stay literal — a template one defeats esbuild's static
-  analysis and becomes a runtime require, which does not survive bundling.
+  load from 106 ms to 71 ms (median of seven).
 - **`@azure/functions` is the only runtime dependency.** Everything else is a
   devDependency, because the bundle inlines it - which is why the production install
   is 1.3 MB. The Functions library has to stay external: it reaches for
@@ -349,178 +341,9 @@ builds with the production configuration and executes the result in a separate
 plain-Node process; it caught exactly one real problem, `Dynamic require of "net" is
 not supported`, which is why the bundle carries a `createRequire` banner.
 
-## Deploying it
+## Azure Deployment
 
-`infra_azure/` is Terraform (azurerm 4.x). It creates a storage account with the
-data and deployment containers, a Log Analytics workspace with Application Insights,
-a Flex Consumption plan and the Function app, grants the app's system-assigned
-identity blob access to its own storage, and creates the Static Web App the SPA is
-served from (`static_site.tf`; `create_static_site = false` if it is hosted
-elsewhere).
-
-```bash
-cd infra_azure
-cp terraform.tfvars.example terraform.tfvars   # then edit it - it is gitignored, and auto-loaded
-terraform init
-terraform plan
-terraform apply
-```
-
-The state is a local file (`.tfstate`, gitignored) so that a single operator can
-apply from a laptop without a state store existing first. Swap the `backend "local"`
-block in `versions.tf` for the commented-out `backend "azurerm" {}` and pass
-`terraform init -backend-config=...` once more than one person applies.
-
-`terraform init -backend=false` is enough for `validate` and `fmt` if you only want
-to read it.
-
-### Reaching storage
-
-The account has **no shared key** - `shared_access_key_enabled = false` - in every
-mode. That is the part worth caring about most: an account-key connection string in
-an app setting is a data-plane credential that works from anywhere the endpoint
-answers, so a leaked setting is a data breach whatever the network is doing. Instead
-the runtime and the app both authenticate with the app's managed identity, which
-holds Storage Blob Data Owner and Storage Table Data Contributor on this account and
-nothing else. Queue and file are deliberately ungranted: every trigger here is HTTP.
-
-`network_isolation` then decides how reachable the endpoint is at all:
-
-| | endpoint | cost | what breaks |
-|---|---|---|---|
-| `none` (default) | public, but needs an Entra token with a data role | none | nothing |
-| `firewall` | public, refuses all but the app's subnet and `management_ip_rules` | a virtual network (free) | `yarn seed` from an address not in the list |
-| `private` | **switched off**; blob and table reached only through private endpoints | network + 2 private endpoints | anything outside the network, including you |
-
-`terraform output storage_reachable_from_internet` says which you got.
-
-Both networked modes create a subnet delegated to `Microsoft.App/environments` and
-integrate the app with it, which is what Flex Consumption requires — and the
-`Microsoft.App` resource provider has to be registered in the subscription first.
-Terraform itself keeps working in `private` mode, because containers are managed
-through the ARM control plane rather than the data plane; the seed script does not,
-because it writes actual data.
-
-Two further choices worth knowing about:
-
-- **Nothing is kept warm** (`always_ready_instances`, default 0). The tightest
-  deadline here is SDLB's five second upload timeout, and a cold start measures at
-  roughly 1.6-2.8 s: 1-2.2 s for the platform (independently measured for Node on
-  Flex Consumption) plus about 0.6 s of ours. Always-ready bills its baseline memory
-  continuously and forfeits the monthly free grants entirely, which is a poor trade
-  against that margin - set `stagePath` in SDLB instead, which costs nothing. Raise
-  it if your own measurements disagree.
-- **`databricks_hosts` is a security control, not a convenience.** It is validated
-  against the per-workspace URL form, and an empty list is rejected. See
-  "Authentication" above for why the allowlist is the thing separating one workspace
-  from another.
-
-`terraform output uibackend_base_url` gives the `global.uiBackend.baseUrl` to
-configure in SDLB, and `api_base_url` gives what goes after `azure;` in the SPA's
-`manifest.json` - they are the same URL, named twice because the two things that
-consume it are configured in different places.
-
-The identity cannot be granted access to the deployment container until the app
-exists to have an identity, so the app is necessarily created before it may read its
-own package. The host retries; do not read the first cold start as a failure.
-
-`infra_azure/github-deploy-backend.yml.example` is the same thing as a workflow
-(`workflow_dispatch`, with a `plan_only` switch), for a repository that wants to own
-the deployment: it authenticates with federated credentials — `AZURE_CLIENT_ID`,
-`AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` and the three `TFSTATE_*` variables — and
-keeps the state in a storage account rather than in the working tree. It is an
-example rather than an installed workflow on purpose; deploying from a laptop is the
-supported path.
-
-### Shipping the code
-
-`terraform apply` creates the app; it does not put any code in it. That is
-`scripts/deploy-azure.sh`, which is the whole command-line deployment:
-
-```bash
-cd backend
-yarn deploy                  # check, build, package, upload, wait for /health
-yarn deploy --skip-checks    # same without type-check and tests
-yarn deploy --package-only   # build the zip and stop, to look inside it
-```
-
-It reads `function_app_name` and `resource_group_name` from the Terraform outputs in
-`infra_azure/`, so there is no app name to keep in sync by hand; `--app`,
-`--resource-group` and `--subscription` (or `SDLB_FUNCTION_APP`,
-`SDLB_RESOURCE_GROUP`, `SDLB_SUBSCRIPTION`) override that when the state lives
-elsewhere. Sign in with `az login` first — the only credential involved is your own
-Entra token.
-
-What it uploads is assembled in a staging directory, not taken from the working
-tree: `host.json`, `package.json` and `dist/` at the root of the zip, plus a
-production-only install — `@azure/functions` and nothing else, because the bundle
-inlines the rest. That is about 880 kB, and every cold-starting instance downloads
-all of it, which is why the build is esbuild rather than `tsc` (see "What gets
-deployed, and cold start"). The dev `node_modules/` is never touched.
-
-`webdeploy_publish_basic_authentication_enabled = false`, so there is no publish
-profile and no password: the script presents the Entra token `az` already holds. A
-401 from the deployment step means the signed-in principal has no rights on the app,
-not that a secret is missing.
-
-It posts to the one-deploy API rather than running `az functionapp deployment source
-config-zip`, which is otherwise the same thing. That command finishes by fetching a
-host key to poll the app with, and host keys live in the storage account — which has
-no shared key, so `az functionapp keys list` answers `Bad Request` and the command
-exits non-zero *after* a successful upload. Posting to the API directly returns a
-deployment id to poll, which needs no key.
-
-Afterwards the script polls `/health` until the app answers — the first attempts
-failing is normal, since a Flex Consumption cold start is 1.6-2.8 s and the role
-assignment letting the app read its own package may still be propagating.
-
-`func azure functionapp publish` also works if the Core Tools are installed, but it
-runs its own build and its own dependency install, so what it ships is not what
-`scripts/bundle.ts` produced.
-
-### The frontend
-
-`terraform output static_site_url` is where the SPA is served from, and
-`../scripts/deploy-frontend-azure.sh` (`yarn deploy-azure` in the repository root)
-ships a
-build to it. The two deployments are independent: the static site is served from the
-Static Web Apps edge and never routes through this Function app, and the SPA reaches
-the API cross-origin at `api_base_url`. See the root README, and the comment at the
-top of `infra_azure/static_site.tf` for why no linked backend is registered.
-
-CORS is where this bites. `@fastify/cors` in `src/app.ts` handles it for simple
-requests, but **the Functions host answers every `OPTIONS` on its own, before the
-worker is invoked** - so the app's CORS never sees a preflight, and only
-`allowed_origins` in the Terraform can satisfy one. Every authenticated call carries
-`Authorization` and `X-Databricks-Host`, neither safelisted, so all of them are
-preflighted: an empty `allowed_origins` means the browser blocks the entire API while
-the site itself loads fine.
-
-It cannot be filled from the static site in the same apply - the provider silently
-drops a `cors` block whose origins are unknown at plan time - so it is a second
-apply, with `terraform output -raw static_site_url`. The host reads the list at
-startup, so follow it with `az functionapp restart`; apply alone leaves the old list
-serving.
-
-Two related endpoints exist for the same reason. `POST /api/v1/auth/token` and
-`/auth/refresh` relay the browser's OAuth code exchange to the workspace, because the
-workspace's `/oidc/v1/token` sends no CORS headers at all and does not answer
-preflight - see `relayTokenRequest` in `src/auth/databricks.ts` for why that is safe
-to expose unauthenticated.
-
-They are also the only routes that cannot be authenticated, and therefore the one
-place a stranger can make this service call Databricks. `src/routes/rateLimit.ts` is
-a fixed-window limit on them, `auth_rate_limit_per_minute` in the Terraform, refusing
-with a 429 and a `Retry-After`.
-
-It counts in memory, so it is per address **per instance**, and that multiplication
-is real rather than theoretical: Flex Consumption spreads even strictly sequential
-requests across instances - measured, 42 requests landed on five - so at the defaults
-one address meets 10 x 5 = 50 requests a minute, not 10. That is deliberate. An exact
-global limit needs a shared store on the path of every request, and what this
-prevents is a stranger generating traffic through us, not a stranger getting in; the
-allowlist and the workspace do that. The tables are already there if an exact limit
-is ever wanted.
+See [azure_infra](infra_azure/README.md) Terraform definitions and it's readme to deploy the backend and frontend to Azure serverless services.
 
 ## MCP
 
