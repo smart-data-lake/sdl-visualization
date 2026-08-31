@@ -4,7 +4,7 @@
     "FUNCTIONS_WORKER_RUNTIME": "node",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
 
-    "//storage": "Locally a connection string, because Azurite has no Entra. In Azure it is SDLB_STORAGE_ACCOUNT instead, and the account has no shared key at all - see infra/ and src/store/credential.ts. If both are set the account name wins.",
+    "//storage": "The local store - SQLite and files under .sdlb-data - needs nothing set; this is only for running the Azure driver locally, against Azurite. In Azure it is SDLB_STORAGE_ACCOUNT instead, and the account has no shared key at all - see infra_azure/ and src/store/credential.ts. If both are set the account name wins. Either one present implies the azure backend.",
     "SDLB_STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true",
     "SDLB_BLOB_CONTAINER": "sdlb",
     "SDLB_TENANT_NAME": "PrivateTenant",

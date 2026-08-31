@@ -59,7 +59,7 @@ export async function bundle(options: BundleOptions = {}): Promise<{ metafile: M
     splitting: true,
     format: 'esm',
     platform: 'node',
-    // Matches runtime_version in infra/ and .nvmrc.
+    // Matches runtime_version in infra_azure/ and .nvmrc.
     target: 'node24',
     minify: options.minify ?? true,
     // Names survive minification, so an Application Insights stack trace still says

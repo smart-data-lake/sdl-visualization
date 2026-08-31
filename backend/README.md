@@ -30,19 +30,24 @@ UI would be a REST route over code that already exists.
 
 ```bash
 yarn install
-yarn azurite          # in one terminal: the storage emulator
 yarn seed             # push tests/e2e/fixtures through the upload API
 yarn serve            # http://localhost:7071
 ```
+
+No emulator and no Azure account: both default to the local store, which is a SQLite file
+and a directory of files under `.sdlb-data` — gitignored, and safe to delete.
 
 `yarn serve` is a plain Node server that dispatches the same way the Function does —
 Fastify for everything, the MCP handler for `/mcp/*` — so you do not need Azure
 Functions Core Tools to work on it. With Core Tools installed, `yarn start` runs the
 real host instead.
 
-`yarn serve:e2e` does the lot in one process: a throwaway Azurite, the fixtures
-seeded, and the server on port 7071. That is what the `azure` Playwright project
-starts.
+`yarn serve:e2e` seeds the fixtures and serves on port 7071 in one process. That is what
+the `azure` Playwright project starts.
+
+To work on the Azure driver rather than through it: `yarn serve:azurite` is the same thing
+against a throwaway emulator, and `yarn azurite` starts a persistent one, for
+`SDLB_STORAGE_BACKEND=azure yarn seed`.
 
 Point an MCP client at `http://localhost:7071/mcp/getting-started/dev`, or open the
 Inspector:
@@ -57,9 +62,13 @@ Copy `local.settings.json.example` to `local.settings.json`.
 
 | setting | meaning |
 |---|---|
-| `SDLB_STORAGE_ACCOUNT` | storage account name, reached with the managed identity. What the deployment uses |
-| `SDLB_STORAGE_CONNECTION_STRING` | Azurite, locally. Ignored when `SDLB_STORAGE_ACCOUNT` is set |
-| `SDLB_BLOB_CONTAINER` | container name, default `sdlb` |
+| `SDLB_STORAGE_BACKEND` | `azure` or `local`, setting both halves of the store at once |
+| `SDLB_ENTITY_STORE` / `SDLB_BLOB_STORE` | override either half on its own |
+| `SDLB_STORAGE_ACCOUNT` | storage account name, reached with the managed identity. What the deployment uses; its presence alone implies `azure` |
+| `SDLB_STORAGE_CONNECTION_STRING` | Azurite. Ignored when `SDLB_STORAGE_ACCOUNT` is set, and also implies `azure` |
+| `SDLB_BLOB_CONTAINER` | container name, default `sdlb`, azure only |
+| `SDLB_SQLITE_FILE` | default `.sdlb-data/entities.db`, local only |
+| `SDLB_BLOB_ROOT` | default `.sdlb-data/blobs`, local only |
 | `SDLB_TENANT_NAME` | the single tenant name `GET /tenants` reports, default `PrivateTenant`. The SPA adopts this rather than defaulting to a name of its own, so it decides the tenant segment of every URL |
 | `SDLB_AUTH_MODE` | `databricks`, or `disabled` for local work |
 | `SDLB_DATABRICKS_HOSTS` | comma-separated workspace origins that may use this deployment |
@@ -100,12 +109,41 @@ Settings → Access Token.
 
 They carry no groups, so the `requiredGroup` rule above applies to Databricks callers
 only.
+## Storage
 
-## Storage layout
+There is no tenant dimension anywhere: the service is deployed once per tenant, so the
+`tenant` parameter every operation carries is accepted for compatibility and then ignored.
 
-`scope = "{repo}|{env}"` throughout. There is no tenant dimension: the service is
-deployed once per tenant, so the `tenant` parameter every operation carries is
-accepted for compatibility and then ignored.
+`store/repositories.ts` and `store/blobs.ts` declare the store as named operations —
+`listRuns`, `countRunsAndAttempts`, `listRunsTouching` — and `store/drivers/` implements
+them. The interface used to be `listPartition(table, partitionKey, {limit, select})`, which
+is Table Storage's own vocabulary, and an interface whose only question is "scan one
+partition by row key" can be answered by exactly one kind of store: anything behind it
+either is Table Storage or pretends to be.
+
+| | `azureTables` + `azureBlob` | `sqlite` + `filesystem` |
+|---|---|---|
+| used by | the deployment | development, the test suite |
+| ordering | baked into the row key by `inv()` | `ORDER BY run_id DESC` |
+| counting runs | scan the partition for row keys, count distinct in JS | `COUNT(DISTINCT run_id)` |
+| attempts touching an element | over-read by 8x and collapse duplicates | `SELECT DISTINCT … LIMIT n` |
+| an element's runs | stored once per data object it touched | stored once, plus a link table |
+| the actions map | dropped past 32 768 characters | always stored |
+
+Both pass one conformance suite per side, `test/store/*.conformance.test.ts`, which is the
+same technique `parity.test.ts` uses for the frontend-copied logic: run both
+implementations over the same input and assert they agree, rather than giving each its own
+examples that drift. Seeding the fixtures into both and diffing every read response leaves
+16 of 17 endpoints byte-identical; the seventeenth is `descriptions/list`'s
+`last_modified`, which is when the file was written.
+
+`store/limits.ts` holds Azure's constraints and applies them to **both** drivers — the
+64 KiB property cap, the 4 MB transaction body, the key character rules, the refusal of
+values no backend round-trips identically. Enforcing the union everywhere is what keeps a
+record written under one backend loadable under the other, and it means a violation fails
+on whichever backend you happen to be running rather than only in production.
+
+### The Azure key design
 
 | table | PartitionKey | RowKey |
 |---|---|---|
@@ -120,20 +158,50 @@ accepted for compatibility and then ignored.
 | `McpTokens` | scope | token hash |
 | `Meta` | `REPO` / `ENV\|repo` | repo / env |
 
-Two things drive the key design, both from Table Storage:
+`scope = "{repo}|{env}"`. Two things drive it, both from Table Storage:
 
 - **It sorts only by PartitionKey then RowKey, ascending, as strings.** There is no
-  `$orderby`. Newest-first therefore lives in the key: `inv(n)` in `store/keys.ts`
-  turns a number into a fixed-width string that sorts backwards.
+  `$orderby`. Newest-first therefore lives in the key: `inv(n)` in
+  `drivers/azureTables/keys.ts` turns a number into a fixed-width string that sorts
+  backwards. The SQLite driver has real columns and so needs none of this.
 - **`$filter` has no `contains` and no `startswith`.** Only `eq/ne/gt/ge/lt/le` with
-  `and/or/not`. So configuration search does not use it: the version's blob is
-  cached in process and the ported filters run over it, which also gives exact
-  parity with the config explorer's own search.
+  `and/or/not`. So configuration search does not use it: the version's blob is cached in
+  process and the ported filters run over it, which also gives exact parity with the config
+  explorer's own search.
 
-`RunElements` carries each attempt once per action and once per data object that
-action touched. That is what makes "the last five runs of this element" a single
-partition query — and it is why the action is part of its RowKey, since otherwise
-two actions sharing a data object collide inside one transaction.
+`RunElements` carries each attempt once per action and once per data object that action
+touched. That is what makes "the last five runs of this element" a single partition query —
+and it is why the action is part of its RowKey, since otherwise two actions sharing a data
+object collide inside one transaction.
+
+**`ConfigElements` and `Elements` are written and never read.** One `upsertBatch` each,
+no reader; `searchText` is truncated to 30 000 characters per element on every upload and
+nothing looks at it. They were built as the index for the search above and could not serve
+it, for the reason above. They are kept because they are what a store that *can* answer
+such a query would need — in the SQLite schema the index exists and the query would be one
+statement — but nothing depends on their shape today, which also makes them the safest
+place for the two drivers to differ.
+
+### The local backend
+
+SQLite comes from `node:sqlite`, in Node's core, so this adds no dependency; hence
+`engines.node >= 24`, since it was unflagged in 23.4. It is not a way to run the deployed
+service: the API is synchronous, so every call blocks the event loop, and one file is not
+something a scaled-out Function app can share.
+
+The filesystem blob driver has to arrange four things Blob Storage gives away. Writes go
+to a temp file and are renamed, because `uploadData` under 256 MB is a single atomic PUT
+and `writeFile` is not — and `patchState` is a read-modify-write that SDLB calls
+concurrently during a run. Content types come from the file extension, which is
+byte-equivalent for every caller here, and a write declaring a type its extension
+contradicts is refused rather than stored under one that cannot be read back. `list()`
+walks the prefix's parent and filters, because `listBlobsFlat` matches a *string* prefix
+rather than a directory. And the resolved path is checked against the root.
+
+One emulator caveat worth knowing: Azurite's overwrites are not atomic under load, where
+real Blob Storage's are. With the emulator busy elsewhere, `downloadToBuffer` returns a
+torn body roughly once per hundred reads, which is why the conformance suite's
+atomic-overwrite case is skipped for the Azure driver — see the comment there.
 
 ## Code copied from the frontend
 
@@ -159,20 +227,31 @@ state index was built the second way.
 ## Tests
 
 ```bash
-yarn test:ci     # vitest; starts its own Azurite on ports 10100-10102
+yarn test:ci     # vitest, in parallel, ~3 s
 yarn type-check  # the build and the tests
 ```
 
 | suite | what it holds in place |
 |---|---|
+| `test/store/entities.conformance.test.ts` | both record drivers answer identically |
+| `test/store/blobs.conformance.test.ts` | both blob drivers answer identically |
+| `test/unit/limits.test.ts` | what the store actually accepts, measured against Azurite |
 | `test/unit/parity.test.ts` | the copies above still agree with their originals |
-| `test/unit/keys.test.ts` | ordering, and the characters a key may not contain |
+| `test/unit/keys.test.ts` | ordering, and the characters a key or a path may not contain |
 | `test/unit/stateFile.test.ts` | the index record, normalisation, durations |
 | `test/unit/auth.test.ts` | the allowlist, the cache, and what is *not* cached |
 | `test/unit/bridge.test.ts` | the Azure Functions to Fastify crossing |
 | `test/conformance/spec.test.ts` | every operation of the upstream OpenAPI is routed and validates |
 | `test/conformance/rest.test.ts` | the response shapes the SPA depends on |
 | `test/conformance/mcp.test.ts` | the tools, driven by a real MCP client |
+
+Most suites run on the local store, with a directory of their own per file
+(`test/setup/store.ts`), so they need no emulator and run in parallel. Azurite is started
+for the four that are about the Azure driver: the two conformance files, `limits.test.ts`
+and `bundle.test.ts`. It is what `fileParallelism` used to be off for — every app-level
+suite seeded the same `getting-started/dev` scope into one shared account, and two seeding
+at once could let one read a half-written index, since the workflow counts are a recount
+over what is stored.
 
 The upstream spec declares every response as an empty schema, so it pins paths and
 parameters and nothing else. `rest.test.ts` is therefore the only thing holding the
@@ -240,6 +319,16 @@ Four things keep it there, and are worth not undoing:
 - **Code splitting is on**, so that stays true after bundling. Without it esbuild
   inlines the dynamic import into the entry chunk and the parse cost comes back;
   `test/unit/bundle.test.ts` asserts the MCP packages are absent from `http.js`.
+- **Each store driver is its own chunk**, imported dynamically by
+  `store/repositories.ts` and `store/blobs.ts` and loaded only when configured. That
+  took the bytes parsed before the first request from 1,369 kB to 699 kB, and the entry
+  load from 106 ms to 71 ms (median of seven). It does **not** speed up the first
+  *upload*: that needs a driver and pays the deferred chunk load instead — 106 ms
+  against 108 ms. The reason to split them is dependency isolation, so a local
+  deployment never parses the Azure SDKs and an Azure one never parses `node:sqlite`;
+  `bundle.test.ts` asserts no driver is reachable from the entry by static import. The
+  dynamic specifiers have to stay literal — a template one defeats esbuild's static
+  analysis and becomes a runtime require, which does not survive bundling.
 - **`@azure/functions` is the only runtime dependency.** Everything else is a
   devDependency, because the bundle inlines it - which is why the production install
   is 1.3 MB. The Functions library has to stay external: it reaches for
