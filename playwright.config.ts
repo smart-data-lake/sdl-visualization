@@ -75,7 +75,7 @@ export default defineConfig({
       timeout: 180_000,
     },
     {
-      // Azurite, the backend and the seeded fixtures, in one process.
+      // The backend on its local store, with the fixtures seeded, in one process.
       command: 'yarn --cwd backend serve:e2e',
       url: 'http://localhost:7071/health',
       reuseExistingServer: !process.env.CI,
