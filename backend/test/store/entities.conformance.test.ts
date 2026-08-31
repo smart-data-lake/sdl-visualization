@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, test } from 'vitest';
 import { createAzureTablesRepositories } from '../../src/store/drivers/azureTables/index.js';
+import { createSqliteRepositories } from '../../src/store/drivers/sqlite/index.js';
 import type { Repositories } from '../../src/store/repositories.js';
 import type { RunElementRecord, RunRecord, Scope } from '../../src/store/types.js';
 import { MAX_BATCH } from '../../src/store/limits.js';
@@ -30,6 +31,10 @@ const DRIVERS: Driver[] = [
       createAzureTablesRepositories({
         storage: { kind: 'connectionString', value: TEST_CONNECTION_STRING },
       }),
+  },
+  {
+    name: 'sqlite',
+    create: () => createSqliteRepositories({ file: ':memory:' }),
   },
 ];
 

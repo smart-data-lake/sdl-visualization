@@ -110,9 +110,15 @@ export function resetBlobStore(): void {
 }
 
 async function build(): Promise<BlobStore> {
-  const { createAzureBlobStore } = await import('./drivers/azureBlob.js');
-  return createAzureBlobStore({
-    storage: settings().storage,
-    container: settings().blobContainer,
-  });
+  const config = settings().blobStore;
+  switch (config.kind) {
+    case 'azureBlob': {
+      const { createAzureBlobStore } = await import('./drivers/azureBlob.js');
+      return createAzureBlobStore({ storage: config.auth, container: config.container });
+    }
+    case 'filesystem': {
+      const { createFilesystemBlobStore } = await import('./drivers/filesystem.js');
+      return createFilesystemBlobStore({ root: config.root });
+    }
+  }
 }
