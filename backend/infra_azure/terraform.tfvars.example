@@ -5,6 +5,8 @@ name                = "sdlb-acme"
 resource_group_name = "rg-example"
 location            = "westeurope"
 
+tenant_name         = "default"
+
 # Only users of these workspaces can sign in, and only these hosts are ever
 # contacted to verify a token. See the comment on the variable.
 databricks_hosts = [
