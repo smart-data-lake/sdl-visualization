@@ -59,6 +59,22 @@ const element = (
   ...over,
 });
 
+/**
+ * Nothing of the storage layout may reach a caller: no keys, and none of the etag or
+ * timestamp @azure/data-tables attaches to every row it returns. That last part is not
+ * hypothetical - mapping a workflow summary by spreading the entity instead of naming its
+ * fields put etag and timestamp into the /workflows response, and only a comparison of
+ * the two backends' actual output caught it. Hence the sweep below over every read.
+ *
+ * Whether an absent field is omitted or present as undefined is deliberately not pinned:
+ * drivers may differ and no caller can tell.
+ */
+const LEAKS = ['partitionKey', 'rowKey', 'etag', 'timestamp', 'PartitionKey', 'RowKey'];
+
+function expectNothingLeaked(value: object): void {
+  for (const forbidden of LEAKS) expect(value).not.toHaveProperty(forbidden);
+}
+
 describe.each(DRIVERS)('$name', ({ create }) => {
   let store: Repositories;
   beforeAll(() => {
@@ -74,13 +90,32 @@ describe.each(DRIVERS)('$name', ({ create }) => {
       expect(got).toBeDefined();
       expect(got).toMatchObject({ name: 'wf', runId: 1, attemptId: 0, feedSel: 'ids:a' });
 
-      // Nothing of the storage layout leaks out: no keys, and none of the etag or
-      // timestamp the Azure SDK attaches. Whether an absent field is omitted or present
-      // as undefined is deliberately not pinned - drivers may differ, and no caller
-      // distinguishes the two.
-      for (const forbidden of ['partitionKey', 'rowKey', 'etag', 'timestamp', 'PartitionKey', 'RowKey']) {
-        expect(got).not.toHaveProperty(forbidden);
-      }
+      expectNothingLeaked(got!);
+    });
+
+    test('no read carries the storage layout out with it', async () => {
+      const scope = freshScope();
+      await store.runs.putRun(scope, run({ runId: 1, attemptId: 0 }));
+      await store.runs.putWorkflowSummary(scope, { name: 'wf', numRuns: 1, numAttempts: 1 });
+      await store.runs.putRunElements(scope, [
+        element({ runId: 1, attemptId: 0, actionId: 'act', outputIds: ['obj'] }),
+      ]);
+      await store.tokens.put(scope, { id: 'h', email: 'e', label: 'l', createdAt: 'c' });
+      await store.workspaces.putRule('leak.example.net', { repos: 'r' });
+
+      const reads: object[] = [
+        (await store.runs.getRun(scope, 'wf', 1, 0))!,
+        ...(await store.runs.listRuns(scope, 'wf', 10)),
+        (await store.runs.getWorkflowSummary(scope, 'wf'))!,
+        ...(await store.runs.listWorkflows(scope)),
+        ...(await store.runs.listRunElements(scope, { kind: 'action', id: 'act' }, 10)),
+        ...(await store.runs.listRunsTouching(scope, { kind: 'dataObject', id: 'obj' }, 10)),
+        (await store.tokens.get(scope, 'h'))!,
+        ...(await store.tokens.list(scope)),
+        (await store.workspaces.getRule('leak.example.net'))!,
+      ];
+      expect(reads.every((r) => r !== undefined)).toBe(true);
+      for (const read of reads) expectNothingLeaked(read);
     });
 
     test('a missing record is undefined rather than a throw', async () => {
