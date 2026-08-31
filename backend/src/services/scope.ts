@@ -1,5 +1,5 @@
-import { TABLES, listPartition, upsert } from '../store/tables.js';
-import { keys, type Scope } from '../store/keys.js';
+import { repositories } from '../store/repositories.js';
+import type { Scope } from '../store/types.js';
 import { settings } from '../config.js';
 
 /**
@@ -14,24 +14,16 @@ import { settings } from '../config.js';
  * to agree on.
  */
 
-interface MetaEntity {
-  partitionKey: string;
-  rowKey: string;
-  lastSeenAt: string;
-}
-
 export function tenants(): string[] {
   return [settings().tenantName];
 }
 
 export async function repos(): Promise<string[]> {
-  const entities = await listPartition<MetaEntity>(TABLES.meta, keys.metaRepos());
-  return entities.map((e) => e.rowKey).sort();
+  return (await repositories()).scopes.listRepos();
 }
 
 export async function envs(repo: string): Promise<string[]> {
-  const entities = await listPartition<MetaEntity>(TABLES.meta, keys.metaEnvs(repo));
-  return entities.map((e) => e.rowKey).sort();
+  return (await repositories()).scopes.listEnvs(repo);
 }
 
 /**
@@ -40,17 +32,5 @@ export async function envs(repo: string): Promise<string[]> {
  * nothing to provision by hand.
  */
 export async function registerScope(scope: Scope): Promise<void> {
-  const now = new Date().toISOString();
-  await Promise.all([
-    upsert(TABLES.meta, {
-      partitionKey: keys.metaRepos(),
-      rowKey: scope.repo,
-      lastSeenAt: now,
-    }),
-    upsert(TABLES.meta, {
-      partitionKey: keys.metaEnvs(scope.repo),
-      rowKey: scope.env,
-      lastSeenAt: now,
-    }),
-  ]);
+  await (await repositories()).scopes.register(scope);
 }

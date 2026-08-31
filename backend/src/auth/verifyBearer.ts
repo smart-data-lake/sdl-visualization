@@ -1,6 +1,6 @@
 import { settings } from '../config.js';
-import { TABLES, getEntity } from '../store/tables.js';
-import { keys, type Scope } from '../store/keys.js';
+import { repositories } from '../store/repositories.js';
+import type { Scope } from '../store/types.js';
 import { AuthError, verifyDatabricksToken, validateWorkspaceHost } from './databricks.js';
 import { isMcpToken, resolveToken } from './mcpTokens.js';
 
@@ -17,16 +17,6 @@ export interface Principal {
   /** Which of the two credential kinds was used. */
   via: 'databricks' | 'mcp-token' | 'anonymous';
   workspaceHost?: string;
-}
-
-export interface WorkspaceEntity {
-  partitionKey: string;
-  rowKey: string;
-  /** Comma-separated allowlists. Empty or absent means "every repo" / "every env". */
-  repos?: string;
-  envs?: string;
-  /** If set, the caller must be in this Databricks group. */
-  requiredGroup?: string;
 }
 
 export interface Credentials {
@@ -104,18 +94,16 @@ export async function authorizeScope(principal: Principal, scope: Scope): Promis
   if (principal.via === 'mcp-token') return; // the token itself is scoped
   if (!principal.workspaceHost) throw new AuthError(401, 'No workspace established for this caller');
 
-  const entity = await getEntity<WorkspaceEntity>(
-    TABLES.workspaces,
-    keys.workspaces(),
-    encodeWorkspaceRowKey(principal.workspaceHost),
-  );
-  if (!entity) return;
+  const rule = await (
+    await repositories()
+  ).workspaces.getRule(encodeWorkspaceRowKey(principal.workspaceHost));
+  if (!rule) return;
 
-  if (entity.requiredGroup && !principal.groups.includes(entity.requiredGroup)) {
-    throw new AuthError(403, `Access requires membership of the Databricks group "${entity.requiredGroup}"`);
+  if (rule.requiredGroup && !principal.groups.includes(rule.requiredGroup)) {
+    throw new AuthError(403, `Access requires membership of the Databricks group "${rule.requiredGroup}"`);
   }
-  assertAllowed(entity.repos, scope.repo, 'repository');
-  assertAllowed(entity.envs, scope.env, 'environment');
+  assertAllowed(rule.repos, scope.repo, 'repository');
+  assertAllowed(rule.envs, scope.env, 'environment');
 }
 
 function assertAllowed(allowlist: string | undefined, value: string, what: string): void {

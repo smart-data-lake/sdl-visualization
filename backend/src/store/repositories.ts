@@ -1,0 +1,72 @@
+import { settings } from '../config.js';
+import type { Scope, WorkspaceRule } from './types.js';
+
+/**
+ * The store, as named operations rather than as queries.
+ *
+ * Every method here is something the service layer actually wants, which is the point.
+ * The interface it replaced was `listPartition(table, partitionKey, {limit, select})`,
+ * and an interface whose only question is "scan one partition by row key" can be
+ * answered by exactly one kind of store: a driver behind it either is Table Storage or
+ * pretends to be. Naming the operations instead lets each driver answer in its own
+ * terms - see the table in the README - and it moved three Table Storage workarounds
+ * out of services/ in the process.
+ */
+
+export interface ScopeRepository {
+  /**
+   * Record that a repository and environment exist. Called from every upload, so a
+   * scope appears in the workspace switcher as soon as SDLB has pushed anything to it.
+   */
+  register(scope: Scope): Promise<void>;
+  /** Every known repository, in name order. */
+  listRepos(): Promise<string[]>;
+  /** Every known environment of one repository, in name order. */
+  listEnvs(repo: string): Promise<string[]>;
+}
+
+export interface WorkspaceRepository {
+  /**
+   * The rule for one workspace, or undefined if it has none - which means it may see
+   * everything. `workspaceHost` is the host without a scheme, as
+   * auth/verifyBearer.ts's encodeWorkspaceRowKey produces it.
+   */
+  getRule(workspaceHost: string): Promise<WorkspaceRule | undefined>;
+  /**
+   * Provision a rule. Nothing in the request path calls this - workspace rules are set
+   * out of band, and until now that meant a table editor, which is also why the tests
+   * reached past the store to write one. It exists so a rule can be expressed at all on
+   * a backend that is not Azure.
+   */
+  putRule(workspaceHost: string, rule: WorkspaceRule): Promise<void>;
+}
+
+export interface Repositories {
+  scopes: ScopeRepository;
+  workspaces: WorkspaceRepository;
+}
+
+let resolved: Promise<Repositories> | undefined;
+
+/**
+ * The repositories this deployment is configured for.
+ *
+ * The driver is imported dynamically so that only the configured one is ever loaded:
+ * a deployment on the local driver should not parse the Azure SDKs, and vice versa.
+ * The specifier has to be a literal - a template one defeats esbuild's static
+ * analysis, becomes a runtime require, and breaks inside the bundle.
+ */
+export function repositories(): Promise<Repositories> {
+  if (!resolved) resolved = build();
+  return resolved;
+}
+
+/** Only for tests, which point successive cases at different stores. */
+export function resetStore(): void {
+  resolved = undefined;
+}
+
+async function build(): Promise<Repositories> {
+  const { createAzureTablesRepositories } = await import('./drivers/azureTables/index.js');
+  return createAzureTablesRepositories({ storage: settings().storage });
+}

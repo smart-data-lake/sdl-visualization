@@ -1,4 +1,5 @@
 import { badRequest } from '../errors.js';
+import type { Scope } from './types.js';
 
 /**
  * Partition and row keys for the Azure Tables layer, and the segments of a blob path.
@@ -10,10 +11,9 @@ import { badRequest } from '../errors.js';
  *    which is why it is the separator.
  */
 
-export interface Scope {
-  repo: string;
-  env: string;
-}
+// Scope is backend-neutral, so it lives in types.ts. Re-exported here because most of
+// the codebase imports the type from this module.
+export type { Scope } from './types.js';
 
 /** Widest value inv() can represent; well past any plausible runId or epoch millisecond count. */
 const INV_BASE = 9_999_999_999_999;
