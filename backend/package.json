@@ -6,7 +6,7 @@
   "description": "SDLB UI backend and MCP server: Fastify on Azure Functions, Azure Tables + Blob",
   "main": "dist/http.js",
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "scripts": {
     "build": "tsx scripts/bundle.ts",

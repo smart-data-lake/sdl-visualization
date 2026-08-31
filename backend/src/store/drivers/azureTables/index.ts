@@ -1,5 +1,5 @@
 import type { Repositories } from '../../repositories.js';
-import type { Settings } from '../../../config.js';
+import type { AzureStorageAuth } from '../../../config.js';
 import { createTableStore } from './tables.js';
 import { configRepository } from './configs.js';
 import { runRepository } from './runs.js';
@@ -19,7 +19,7 @@ import { workspaceRepository } from './workspaces.js';
  * create two of these against different accounts.
  */
 export interface AzureTablesOptions {
-  storage: Settings['storage'];
+  storage: AzureStorageAuth;
 }
 
 export function createAzureTablesRepositories(options: AzureTablesOptions): Repositories {

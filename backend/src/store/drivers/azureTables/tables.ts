@@ -1,5 +1,5 @@
 import { TableClient, TableEntity, TableTransaction, odata } from '@azure/data-tables';
-import type { Settings } from '../../../config.js';
+import type { AzureStorageAuth } from '../../../config.js';
 import { storageCredential, tableEndpoint } from '../../credential.js';
 import {
   MAX_BATCH,
@@ -62,7 +62,7 @@ export interface TableStore {
   ): Promise<T[]>;
 }
 
-export function createTableStore(storage: Settings['storage']): TableStore {
+export function createTableStore(storage: AzureStorageAuth): TableStore {
   const clients = new Map<string, Promise<TableClient>>();
   const created = new Set<string>();
 

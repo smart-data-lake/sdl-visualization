@@ -1,5 +1,9 @@
 import { beforeAll, describe, expect, test } from 'vitest';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { createAzureBlobStore } from '../../src/store/drivers/azureBlob.js';
+import { createFilesystemBlobStore } from '../../src/store/drivers/filesystem.js';
 import type { BlobStore } from '../../src/store/blobs.js';
 import { blobPaths } from '../../src/store/blobs.js';
 import { contentTypeOf } from '../../src/store/contentType.js';
@@ -22,6 +26,13 @@ const DRIVERS: Driver[] = [
       createAzureBlobStore({
         storage: { kind: 'connectionString', value: TEST_CONNECTION_STRING },
         container: 'conformance',
+      }),
+  },
+  {
+    name: 'filesystem',
+    create: () =>
+      createFilesystemBlobStore({
+        root: mkdtempSync(path.join(tmpdir(), 'sdlb-blobs-')),
       }),
   },
 ];

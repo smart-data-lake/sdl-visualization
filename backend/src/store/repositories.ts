@@ -179,6 +179,15 @@ export function resetStore(): void {
 }
 
 async function build(): Promise<Repositories> {
-  const { createAzureTablesRepositories } = await import('./drivers/azureTables/index.js');
-  return createAzureTablesRepositories({ storage: settings().storage });
+  const config = settings().entityStore;
+  switch (config.kind) {
+    case 'azureTables': {
+      const { createAzureTablesRepositories } = await import('./drivers/azureTables/index.js');
+      return createAzureTablesRepositories({ storage: config.auth });
+    }
+    case 'sqlite': {
+      const { createSqliteRepositories } = await import('./drivers/sqlite/index.js');
+      return createSqliteRepositories({ file: config.file });
+    }
+  }
 }

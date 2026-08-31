@@ -148,43 +148,61 @@ export type PropertyValue = string | number | undefined;
 export function assertRecord<T extends KeyedRecord>(record: T, what: string): T {
   assertKeySafe(requireKey(record.partitionKey, 'partitionKey', what), `${what} partitionKey`);
   assertKeySafe(requireKey(record.rowKey, 'rowKey', what), `${what} rowKey`);
+  return checkValues(record, what, ['partitionKey', 'rowKey']);
+}
 
+/**
+ * Check the values of a record, whatever shape a driver stores it in.
+ *
+ * Separate from assertRecord because a driver with real columns has no partition or row
+ * key to check but the same reasons to refuse the same values - and one implementation
+ * is the only way the two stay identical.
+ */
+export function checkValues<T extends object>(record: T, what: string, skip: string[] = []): T {
   let sanitised: T | undefined;
   for (const [property, value] of Object.entries(record)) {
-    if (property === 'partitionKey' || property === 'rowKey') continue;
+    if (skip.includes(property)) continue;
     const clean = checkProperty(value, `${what}.${property}`);
     if (clean !== value) {
       sanitised ??= { ...record };
-      (sanitised as KeyedRecord)[property] = clean;
+      (sanitised as Record<string, unknown>)[property] = clean;
     }
   }
   return sanitised ?? record;
 }
 
+/**
+ * Refuse a key that appears twice in one batch.
+ *
+ * Azure Tables refuses such a transaction, and store/drivers/azureTables/keys.ts leans
+ * on that as a safety net - see runElementKey, where one attempt appears once per action
+ * and once per data object it touched. A driver doing row-by-row upserts would quietly
+ * merge them instead, so both drivers call this.
+ *
+ * JSON rather than a joined string, because joining reintroduces exactly the collision
+ * assertKeyPart exists to prevent: ["a|b","c"] and ["a","b|c"] join identically, and
+ * quoting keeps them apart without depending on which characters are currently illegal.
+ */
+export function assertNoDuplicates(keys: (string | number)[][], what: string): void {
+  const seen = new Set<string>();
+  for (const key of keys) {
+    const identity = JSON.stringify(key);
+    if (seen.has(identity)) {
+      throw new Error(
+        `${what} repeats the key ${identity}, which is a collision rather than an update`,
+      );
+    }
+    seen.add(identity);
+  }
+}
+
 /** assertRecord over a batch, plus the invariants that are about the batch as a whole. */
 export function assertBatch<T extends KeyedRecord>(records: T[], what: string): T[] {
   const checked = records.map((record) => assertRecord(record, what));
-
-  // Azure Tables refuses a transaction that repeats a key, and store/keys.ts leans on
-  // that as a safety net - see the comment on runElementKey, where one attempt appears
-  // once per action and once per data object it touched. A driver doing row-by-row
-  // upserts would quietly merge the two instead, so the check belongs above them all.
-  // Nested rather than a concatenated string key: joining the two with a separator
-  // reintroduces exactly the collision assertKeyPart exists to prevent, since
-  // ("a|b", "c") and ("a", "b|c") concatenate identically. Picking a character that is
-  // currently illegal in a key would work until that list changed.
-  const seen = new Map<string, Set<string>>();
-  for (const record of checked) {
-    let rowKeys = seen.get(record.partitionKey);
-    if (!rowKeys) seen.set(record.partitionKey, (rowKeys = new Set()));
-    if (rowKeys.has(record.rowKey)) {
-      throw new Error(
-        `${what} repeats the key ${JSON.stringify(record.partitionKey)} / ` +
-          `${JSON.stringify(record.rowKey)}, which is a collision rather than an update`,
-      );
-    }
-    rowKeys.add(record.rowKey);
-  }
+  assertNoDuplicates(
+    checked.map((record) => [record.partitionKey, record.rowKey]),
+    what,
+  );
   return checked;
 }
 

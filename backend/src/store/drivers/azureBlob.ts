@@ -1,6 +1,6 @@
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 import type { BlobInfo, BlobStore } from '../blobs.js';
-import type { Settings } from '../../config.js';
+import type { AzureStorageAuth } from '../../config.js';
 import { blobEndpoint, storageCredential } from '../credential.js';
 import { DEFAULT_CONTENT_TYPE } from '../contentType.js';
 
@@ -14,7 +14,7 @@ import { DEFAULT_CONTENT_TYPE } from '../contentType.js';
  * it for itself.
  */
 export interface AzureBlobOptions {
-  storage: Settings['storage'];
+  storage: AzureStorageAuth;
   container: string;
 }
 

@@ -31,14 +31,20 @@ afterEach(() => {
 
 describe('choosing how to reach storage', () => {
   test('a connection string alone is used as such - Azurite has no Entra', () => {
-    expect(settings().storage).toEqual({ kind: 'connectionString', value: CONNECTION });
+    expect(settings().entityStore).toEqual({
+      kind: 'azureTables',
+      auth: { kind: 'connectionString', value: CONNECTION },
+    });
   });
 
   test('an account name alone means the managed identity', () => {
     delete process.env.SDLB_STORAGE_CONNECTION_STRING;
     process.env.SDLB_STORAGE_ACCOUNT = 'sdlbacmestg';
     resetSettings();
-    expect(settings().storage).toEqual({ kind: 'identity', accountName: 'sdlbacmestg' });
+    expect(settings().entityStore).toEqual({
+      kind: 'azureTables',
+      auth: { kind: 'identity', accountName: 'sdlbacmestg' },
+    });
   });
 
   /**
@@ -49,7 +55,7 @@ describe('choosing how to reach storage', () => {
   test('the account name wins when both are set, rather than falling back to the key', () => {
     process.env.SDLB_STORAGE_ACCOUNT = 'sdlbacmestg';
     resetSettings();
-    expect(settings().storage.kind).toBe('identity');
+    expect(settings().entityStore).toMatchObject({ auth: { kind: 'identity' } });
   });
 
   test('neither is a configuration error, not a silent default', () => {
@@ -79,5 +85,71 @@ describe('the credential', () => {
 
   test('is built once and reused', async () => {
     expect(await storageCredential()).toBe(await storageCredential());
+  });
+});
+
+/**
+ * Which backend each half of the store uses.
+ *
+ * The property that matters most is the first one: an Azure credential in the
+ * environment is enough, so every existing deployment, local.settings.json and test
+ * setup keeps working without being told about any of this.
+ */
+describe('choosing a backend', () => {
+  const clear = () => {
+    delete process.env.SDLB_STORAGE_BACKEND;
+    delete process.env.SDLB_ENTITY_STORE;
+    delete process.env.SDLB_BLOB_STORE;
+    delete process.env.SDLB_SQLITE_FILE;
+    delete process.env.SDLB_BLOB_ROOT;
+    resetSettings();
+  };
+  beforeEach(clear);
+  afterEach(clear);
+
+  test('an Azure credential alone still means Azure, on both halves', () => {
+    expect(settings().entityStore.kind).toBe('azureTables');
+    expect(settings().blobStore.kind).toBe('azureBlob');
+  });
+
+  test('"local" switches both halves, under one directory', () => {
+    process.env.SDLB_STORAGE_BACKEND = 'local';
+    resetSettings();
+    expect(settings().entityStore).toEqual({ kind: 'sqlite', file: '.sdlb-data/entities.db' });
+    expect(settings().blobStore).toEqual({ kind: 'filesystem', root: '.sdlb-data/blobs' });
+  });
+
+  test('the two halves can be chosen separately', () => {
+    process.env.SDLB_ENTITY_STORE = 'local';
+    resetSettings();
+    expect(settings().entityStore.kind).toBe('sqlite');
+    expect(settings().blobStore.kind).toBe('azureBlob');
+  });
+
+  test('either path can be pointed elsewhere', () => {
+    process.env.SDLB_STORAGE_BACKEND = 'local';
+    process.env.SDLB_SQLITE_FILE = '/tmp/x.db';
+    process.env.SDLB_BLOB_ROOT = '/tmp/blobs';
+    resetSettings();
+    expect(settings().entityStore).toEqual({ kind: 'sqlite', file: '/tmp/x.db' });
+    expect(settings().blobStore).toEqual({ kind: 'filesystem', root: '/tmp/blobs' });
+  });
+
+  test('a name that is neither is refused rather than guessed at', () => {
+    process.env.SDLB_STORAGE_BACKEND = 'postgres';
+    resetSettings();
+    expect(() => settings()).toThrow(/must be "azure" or "local"/);
+  });
+
+  /**
+   * Deliberately not a fallback to the local backend. An instance that silently wrote to
+   * a container filesystem and lost everything on restart is a worse failure than one
+   * that refuses to start, so the local backend has to be asked for by name.
+   */
+  test('no credential and no backend named is still a configuration error', () => {
+    delete process.env.SDLB_STORAGE_CONNECTION_STRING;
+    delete process.env.SDLB_STORAGE_ACCOUNT;
+    resetSettings();
+    expect(() => settings()).toThrow(/SDLB_STORAGE_ACCOUNT/);
   });
 });
