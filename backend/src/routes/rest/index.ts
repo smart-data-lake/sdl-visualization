@@ -285,7 +285,9 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
     '/mcp-tokens',
     {
       schema: {
-        querystring: schemas.scope,
+        // Minting names a scope: an empty repo and env would mint a credential
+        // nobody can ever ask for again.
+        querystring: schemas.scopeRequired,
         body: {
           type: 'object',
           properties: {
@@ -311,7 +313,7 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
 
   app.get<{ Querystring: ScopeQuery }>(
     '/mcp-tokens',
-    { schema: { querystring: schemas.scope } },
+    { schema: { querystring: schemas.scopeRequired } },
     async (request) => {
       const { scope, principal } = await scopedRequest(request);
       return listTokens(scope, principal.email);
@@ -325,7 +327,7 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
         querystring: {
           type: 'object',
           required: ['tenant', 'repo', 'env', 'id'],
-          properties: { ...schemas.scope.properties, id: { type: 'string' } },
+          properties: { ...schemas.scopeRequired.properties, id: { type: 'string' } },
         },
       },
     },

@@ -11,7 +11,7 @@ import {
   colors,
 } from "@mui/joy";
 import PageHeader from "../../layouts/PageHeader";
-import { Link, Navigate, Route, Routes, useMatch } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation, useMatch } from "react-router-dom";
 import Users from "./Users";
 import AccessTokens from "./AccessTokens";
 import { useFetchLicenses } from "../../hooks/useFetchData";
@@ -82,6 +82,9 @@ const TenantLicenses = () => {
 export default function Setting() {
   // Always matches - this component is that route's element. See NavLink above.
   const base = useMatch(":tenant/settings/*")?.pathnameBase ?? "";
+  // The scope rides in the query string (see goToSetting); this redirect has to carry
+  // it, or it is dropped one hop before the page that wants it.
+  const { search } = useLocation();
   const capabilities = backendCapabilities();
   const settingMenuItems = [
     ...(capabilities.userManagement ? [{ title: "User Management", path: "users" }] : []),
@@ -117,7 +120,7 @@ export default function Setting() {
             <Routes>
               {capabilities.userManagement && <Route path="users" element={<Users />} />}
               {capabilities.mcpTokens && <Route path="tokens" element={<AccessTokens />} />}
-              <Route path="*" element={<Navigate to={`${base}/${landingPath}`} replace={true} />} />
+              <Route path="*" element={<Navigate to={`${base}/${landingPath}${search}`} replace={true} />} />
             </Routes>
           </Grid>
         </Grid>

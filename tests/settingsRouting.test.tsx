@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * The settings navigation, which is rendered inside a splat route.
  *
@@ -11,9 +12,12 @@
  * These assert the property that was missing rather than the symptom: wherever
  * under /settings we are, the nav points at the same place.
  */
+import { cleanup, render } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, test, vi } from 'vitest';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { afterEach, describe, expect, test, vi } from 'vitest';
+
+afterEach(cleanup);
 
 // The Azure backend's shape: no user directory, but it does serve MCP.
 vi.mock('../src/api/Fetcher', () => ({
@@ -39,6 +43,39 @@ function navTargetsAt(pathname: string): string[] {
 }
 
 const TOKENS = '/PrivateTenant/settings/tokens';
+
+/** A real render: renderToString does not act on a Navigate, so it proves nothing. */
+function redirectFrom(pathname: string): string {
+  let landed = '';
+  const Land = () => {
+    const { pathname: at, search } = useLocation();
+    landed = `${at}${search}`;
+    return null;
+  };
+  render(
+    <MemoryRouter initialEntries={[pathname]}>
+      <Routes>
+        <Route path=":tenant/settings/*" element={<Setting />} />
+      </Routes>
+      <Land />
+    </MemoryRouter>,
+  );
+  return landed;
+}
+
+describe('the scope the header hands over', () => {
+  // The header passes the scope as a query (see goToSetting); dropping it here loses
+  // it one hop before the page that wants it, silently.
+  test('survives the redirect to the landing page', () => {
+    expect(redirectFrom('/PrivateTenant/settings?repo=getting-started&env=dev')).toBe(
+      `${TOKENS}?repo=getting-started&env=dev`,
+    );
+  });
+
+  test('and a redirect with no scope to carry still lands on the page', () => {
+    expect(redirectFrom('/PrivateTenant/settings')).toBe(TOKENS);
+  });
+});
 
 describe('settings navigation', () => {
   test('points at the same place from the settings index', () => {

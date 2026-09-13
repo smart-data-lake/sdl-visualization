@@ -264,11 +264,13 @@ serves verbatim. Treat a failure there as a release blocker.
 
 ## Uploads, and what SDLB actually sends
 
-Issue an **access token** in the UI - Settings, Access Token, with the repository and
-environment selected - and put it in the job's environment. The same token serves an
-agent over MCP and a job uploading here; it is scoped to that one repository and
-environment, has no expiry unless one is asked for, and is revoked from the same
-page. Only its hash is stored, so it is shown once.
+Issue an **access token** in the UI - Settings, Access Token - and put it in the job's
+environment. The repository and environment are typed on that page and **do not have to
+exist yet**: nothing provisions one, they appear the first time SDLB uploads to them, so
+on a fresh installation this token is what makes the first upload possible. The same
+token serves an agent over MCP and a job uploading here; it is scoped to that one
+repository and environment, has no expiry unless one is asked for, and is revoked from
+the same page. Only its hash is stored, so it is shown once.
 
 ```hocon
 global.uiBackend {

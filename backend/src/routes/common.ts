@@ -14,6 +14,12 @@ import { authorizeScope, credentialsFrom, verifyBearer, type Principal } from '.
  * put straight into a table key and a blob path.
  */
 const NAME = { type: 'string', maxLength: 50, pattern: '^[\\w_\\-]*$' } as const;
+/**
+ * The pattern above ends in `*`, so an empty name satisfies it - harmless when reading
+ * a scope, but minting one wrote a real credential under {repo:'', env:''}. Only the
+ * token routes narrow it; the read paths keep the upstream contract.
+ */
+const NAME_REQUIRED = { ...NAME, minLength: 1 } as const;
 /** dataObjectId has the same character class upstream, but no length limit. */
 const ID = { type: 'string', pattern: '^[\\w_\\-]*$' } as const;
 /**
@@ -73,6 +79,12 @@ export const schemas = {
     type: 'object',
     required: ['dataObjectId'],
     properties: { dataObjectId: ID },
+  },
+  /** Scope for the routes that name a scope rather than read one - see NAME_REQUIRED. */
+  scopeRequired: {
+    type: 'object',
+    required: ['tenant', 'repo', 'env'],
+    properties: { tenant: NAME, repo: NAME_REQUIRED, env: NAME_REQUIRED },
   },
   tenantOnly: { type: 'object', required: ['tenant'], properties: { tenant: NAME } },
   tenantAndRepo: {
