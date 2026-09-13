@@ -46,7 +46,6 @@
     "neo4j-driver": "^5.22.0",
     "path": "^0.12.7",
     "postinstall-postinstall": "^2.1.0",
-    "query-string": "^6.13.1",
     "react": "^18.3.1",
     "react-bootstrap": "^2.10.2",
     "react-custom-scrollbars-2": "^4.4.0",
@@ -67,17 +66,18 @@
     "tinyduration": "^3.2.4",
     "typescript": "6.0.3",
     "unique-names-generator": "^4.7.1",
-    "url": "^0.11.3",
     "vite": "^7.3.6",
     "web-vitals": "^2.1.4"
   },
   "resolutions": {
-    "//": "react-error-overlay: see https://github.com/facebook/create-react-app/issues/11773. lodash: aws-amplify pins 4.17.21, 4.18.x fixes the _.template / _.unset prototype pollution advisories. prismjs: refractor (via react-syntax-highlighter) pins ~1.27.0, 1.30.0 fixes DOM clobbering.",
+    "//": "react-error-overlay: see https://github.com/facebook/create-react-app/issues/11773. lodash: aws-amplify pins 4.17.21, 4.18.x fixes the _.template / _.unset prototype pollution advisories. prismjs: refractor (via react-syntax-highlighter) pins ~1.27.0, 1.30.0 fixes DOM clobbering. fflate: @aws-amplify/interactions pins 0.7.3, 0.7.5 fixes the unzipSync infinite loop on malformed ZIP64. vitest/vite: vitest 4 declares vite as both a dependency and a peer, which yarn 1 cannot link - pinning it to the vite this project already uses is what lets the install succeed.",
     "react-error-overlay": "6.0.9",
     "lodash": "^4.18.1",
     "prismjs": "^1.30.0",
     "@types/react": "^18.3.1",
-    "@types/react-dom": "^18.3.1"
+    "@types/react-dom": "^18.3.1",
+    "fflate": "^0.7.5",
+    "vitest/vite": "^7.3.6"
   },
   "scripts": {
     "start": "vite --force",
@@ -125,7 +125,7 @@
     "jsdom": "^26",
     "patch-package": "^8.0.0",
     "typescript-eslint": "8.67.0",
-    "vitest": "^3.0.3"
+    "vitest": "^4.1.11"
   },
   "peerDependencies": {
     "react": "18.2.0",
