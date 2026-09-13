@@ -76,6 +76,21 @@ describe('what the URL says about the workspace', () => {
   });
 });
 
+describe('which kind of page the URL names', () => {
+  // The switcher needs "root" (enter the workspace) versus "settings" (leave the URL
+  // alone); contentPath cannot tell them apart, being undefined for both.
+  test.each([
+    ['/', 'root'],
+    ['/acme', 'root'],
+    ['/acme/settings', 'settings'],
+    ['/acme/settings/tokens', 'settings'],
+    ['/acme/content/my-repo/prod', 'content'],
+    ['/acme/content/my-repo/prod/workflows', 'content'],
+  ])('%s is %s', (pathname, section) => {
+    expect(workspaceAt(pathname).section).toBe(section);
+  });
+});
+
 describe('workspace navigation', () => {
   test('the home button goes to the tenant, not below the current path', () => {
     // The reported bug: from /PrivateTenant this returned "PrivateTenant".

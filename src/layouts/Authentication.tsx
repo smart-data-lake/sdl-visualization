@@ -5,7 +5,24 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFetchEnvs, useFetchRepos, useFetchTenants } from "../hooks/useFetchData";
 import { useUser } from "../hooks/useUser";
-import { useWorkspace } from "../hooks/useWorkspace";
+import { useWorkspace, type WorkspaceSection } from "../hooks/useWorkspace";
+
+/**
+ * Which repository the URL should name. At a bare tenant this *enters* the workspace -
+ * the only way anyone reaches their data - and under /content it self-corrects a repo
+ * that has gone. On /settings it must do neither, which is what used to bounce those
+ * pages off the screen. Undefined means "leave the URL alone".
+ */
+export function nextRepo(
+  section: WorkspaceSection,
+  repos: string[],
+  repo: string | undefined,
+): { repo: string | undefined } | undefined {
+  if (section === "settings") return undefined;
+  if (repos.includes(repo!)) return undefined;
+  // repos[0] is undefined for an empty list, which setRepo reads as "back to the tenant".
+  return { repo: repos[0] };
+}
 
 function WorkspaceSelector({selectedItem, data, setData, isLoading, tooltipText}: {
   selectedItem: any;
@@ -55,15 +72,14 @@ function TenantSelector() {
 }
 
 function RepoSelector() {
-  const { tenant, repo, setRepo } = useWorkspace();
-  const { data: repos = [], isFetching: isFetchingRepos, isError } = useFetchRepos(tenant!);
+  const { section, tenant, repo, setRepo } = useWorkspace();
+  const { data: repos = [], isFetching: isFetchingRepos } = useFetchRepos(tenant!);
 
   useEffect(() => {
-    if (!isError && tenant && !isFetchingRepos && Array.isArray(repos) && !repos.includes(repo!)) {
-      if (repos) setRepo(repos[0]);
-      else setRepo();
-    }
-  }, [tenant, repos]);
+    if (!tenant || isFetchingRepos) return;
+    const next = nextRepo(section, repos, repo);
+    if (next) setRepo(next.repo);
+  }, [section, tenant, repos]);
 
   return (
     <WorkspaceSelector
@@ -77,16 +93,17 @@ function RepoSelector() {
 }
 
 function EnvSelector() {
-  const { tenant, repo, env, setEnv } = useWorkspace();
-  const { data: repos = [], isFetching: isFetchingRepos, isError: isErrorRepos } = useFetchRepos(tenant!);
-  const { data: envs = [], isFetching: isFetchingEnvs, isError: isErrorEnvs } = useFetchEnvs(tenant!, repo);
+  const { section, tenant, repo, env, setEnv } = useWorkspace();
+  const { data: repos = [], isFetching: isFetchingRepos } = useFetchRepos(tenant!);
+  const { data: envs = [], isFetching: isFetchingEnvs } = useFetchEnvs(tenant!, repo);
 
+  // The settings guard is belt-and-braces here: this effect already cannot fire there,
+  // because a settings URL names no repo and so never passes repos.includes(repo).
   useEffect(() => {
-    if (!isErrorRepos && !isFetchingRepos && Array.isArray(repos) && repos.includes(repo!) && !isErrorEnvs && !isFetchingEnvs && Array.isArray(envs) && !envs.includes(env!)) {
-      if (envs) setEnv(envs[0]);
-      else setEnv();
-    }
-  }, [repo, repos, envs]);
+    if (section === "settings" || isFetchingRepos || isFetchingEnvs) return;
+    if (!repos.includes(repo!) || envs.includes(env!)) return;
+    setEnv(envs[0]);
+  }, [section, repo, repos, envs]);
 
   return (
     <WorkspaceSelector
@@ -102,7 +119,7 @@ function EnvSelector() {
 export default function Authentication() {
   const userContext = useUser();
   const navigate = useNavigate();
-  const {workspaceEnabled, tenant} = useWorkspace();
+  const {workspaceEnabled, tenant, repo, env} = useWorkspace();
 
   const logout = () => {
     userContext!.signOut!();
@@ -111,7 +128,12 @@ export default function Authentication() {
   const goToSetting = () => {
     // "/" resolves to the configured tenant, so this stays sane in the moment before
     // the tenant is known - see RootLayoutSpinner.
-    navigate(tenant ? `/${tenant}/settings/users` : "/");
+    if (!tenant) return navigate("/");
+    // The settings URL names no repository, so the scope travels as a query for the
+    // access token page. The landing page is left to capabilities - `users` asked for
+    // one the bundled backend does not have.
+    const scope = repo && env ? `?${new URLSearchParams({ repo, env })}` : "";
+    navigate(`/${tenant}/settings${scope}`);
   };
 
   return (
@@ -142,7 +164,7 @@ export default function Authentication() {
             </MenuItem>
             <MenuItem onClick={goToSetting}>
               <Box display="flex" width={1} alignItems="center" justifyContent="start">
-                User Management
+                Settings
               </Box>
             </MenuItem>
           </Menu>

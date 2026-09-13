@@ -2,10 +2,14 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
   CircularProgress,
+  FormControl,
+  FormHelperText,
+  FormLabel,
   IconButton,
   Input,
   Sheet,
@@ -15,8 +19,10 @@ import {
 } from "@mui/joy";
 import copy from "copy-to-clipboard";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { fetcher } from "../../api/Fetcher";
 import { McpToken } from "../../api/fetchAPI";
+import { useFetchEnvs, useFetchRepos } from "../../hooks/useFetchData";
 import { useWorkspace } from "../../hooks/useWorkspace";
 
 /**
@@ -31,9 +37,59 @@ import { useWorkspace } from "../../hooks/useWorkspace";
  * environment, can be named, and can be revoked here without touching Databricks.
  *
  * It is displayed exactly once, because only its hash is stored.
+ *
+ * The repository and environment are typed here, not read from the URL, and need not
+ * exist yet: nothing provisions one until SDLB uploads, and SDLB needs a token first.
  */
+
+/** Mirrors NAME_REQUIRED in backend/src/routes/common.ts. `\w` already contains `_`. */
+const SCOPE_NAME = /^[\w-]{1,50}$/;
+
+export function isValidName(name: string): boolean {
+  return SCOPE_NAME.test(name);
+}
+
+export interface TokenScope {
+  tenant: string;
+  repo: string;
+  env: string;
+}
+
+/** What goes into an MCP client's configuration file. */
+export function mcpClientConfig(url: string, token: string | undefined): string {
+  return JSON.stringify(
+    {
+      mcpServers: {
+        sdlb: { type: "http", url, headers: { Authorization: `Bearer ${token ?? "<your token>"}` } },
+      },
+    },
+    null,
+    2,
+  );
+}
+
+/** The env placeholder, not the token: this snippet usually gets committed. */
+export function uiBackendHocon(baseUrl: string, { tenant, repo, env }: TokenScope): string {
+  return [
+    "global.uiBackend {",
+    `  baseUrl = "${baseUrl}"`,
+    `  tenant = ${tenant}`,
+    `  repo = ${repo}`,
+    `  env = ${env}`,
+    '  authMode { type = TokenAuthMode, token = "###ENV#SDLB_UI_TOKEN###" }',
+    '  stagePath = "/tmp/sdlb-ui-stage"',
+    "}",
+  ].join("\n");
+}
+
 export default function AccessTokens() {
-  const { tenant, repo, env } = useWorkspace();
+  const { tenant } = useWorkspace();
+  const [searchParams] = useSearchParams();
+
+  // Local state, not useWorkspace: a name being typed may not exist, and the context's
+  // repo keys fourteen useFetch hooks. Undefined means "not said yet", so the fields
+  // can fall back to a default below.
+  const [typed, setTyped] = useState<{ repo?: string; env?: string }>({});
   const [tokens, setTokens] = useState<McpToken[] | undefined>();
   const [label, setLabel] = useState("");
   const [issued, setIssued] = useState<string | undefined>();
@@ -41,29 +97,48 @@ export default function AccessTokens() {
   const [error, setError] = useState<string | undefined>();
 
   const api = fetcher();
-  const ready = !!tenant && !!repo && !!env;
+  const { data: repos = [] } = useFetchRepos(tenant!);
 
-  const refresh = async () => {
-    if (!ready || !api.listMcpTokens) return;
-    try {
-      setTokens(await api.listMcpTokens(tenant!, repo!, env!));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    }
+  // Derived, not seeded: the defaults depend on lists that arrive asynchronously,
+  // which useState cannot see and an effect would race the typing for.
+  const repo = typed.repo ?? searchParams.get("repo") ?? repos[0] ?? "";
+  // Only for a repository that exists: a half-typed name would be a request per
+  // keystroke, and an unuploaded repository has no environments anyway.
+  const { data: envs = [] } = useFetchEnvs(tenant!, repos.includes(repo) ? repo : undefined);
+  const env = typed.env ?? searchParams.get("env") ?? envs[0] ?? "";
+
+  const scopeValid = isValidName(repo) && isValidName(env);
+
+  // A token is shown once and belongs to one scope; leaving it on screen above a form
+  // that now names a different repository invites pasting it into the wrong job.
+  const changeScope = (field: "repo" | "env") => (value: string) => {
+    setIssued(undefined);
+    setTyped((current) => ({ ...current, [field]: value }));
   };
 
+  // Debounced: the scope is typed, so the list must not refetch per keystroke.
   useEffect(() => {
-    void refresh();
+    if (!tenant || !scopeValid || !api.listMcpTokens) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      // Inside the timer: the old list stays put while the scope is still being typed.
+      setTokens(undefined);
+      api
+        .listMcpTokens!(tenant, repo, env)
+        .then((listed) => !cancelled && setTokens(listed))
+        .catch((caught) => {
+          if (cancelled) return;
+          setError(caught instanceof Error ? caught.message : String(caught));
+          // Otherwise the spinner outlives the request and spins under the error.
+          setTokens([]);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenant, repo, env]);
-
-  if (!ready) {
-    return (
-      <Alert color="neutral" variant="soft" sx={{ m: 2 }}>
-        Choose a repository and environment first - a token is issued for one of them.
-      </Alert>
-    );
-  }
+  }, [tenant, repo, env, scopeValid]);
 
   if (!api.createMcpToken || !api.mcpUrl) {
     return (
@@ -73,14 +148,20 @@ export default function AccessTokens() {
     );
   }
 
-  const url = api.mcpUrl(tenant!, repo!, env!);
-  const upload = api.uploadUrl?.(tenant!, repo!, env!);
+  const scope: TokenScope = { tenant: tenant ?? "", repo, env };
+  const url = scopeValid ? api.mcpUrl(scope.tenant, repo, env) : "";
+  const upload = scopeValid ? api.uploadUrl?.(scope.tenant, repo, env) : undefined;
+
+  const refresh = async () => {
+    if (!api.listMcpTokens || !scopeValid) return;
+    setTokens(await api.listMcpTokens(scope.tenant, repo, env));
+  };
 
   const create = async () => {
     setBusy(true);
     setError(undefined);
     try {
-      const created = await api.createMcpToken!(tenant!, repo!, env!, label || "MCP client");
+      const created = await api.createMcpToken!(scope.tenant, repo, env, label || "MCP client");
       setIssued(created.token);
       setLabel("");
       await refresh();
@@ -92,40 +173,17 @@ export default function AccessTokens() {
   };
 
   const revoke = async (id: string) => {
-    await api.revokeMcpToken?.(tenant!, repo!, env!, id);
+    await api.revokeMcpToken?.(scope.tenant, repo, env, id);
     await refresh();
   };
-
-  const configJson = JSON.stringify(
-    { mcpServers: { sdlb: { type: "http", url, headers: { Authorization: `Bearer ${issued ?? "<your token>"}` } } } },
-    null,
-    2,
-  );
-  const cliCommand = `claude mcp add --transport http sdlb ${url} --header "Authorization: Bearer ${issued ?? "<your token>"}"`;
-
-  // The env placeholder rather than the token itself: this snippet goes into a file
-  // that is usually committed, and SDLB resolves ###ENV#...### at read time.
-  const uiBackendHocon = [
-    "global.uiBackend {",
-    `  baseUrl = "${upload}"`,
-    `  tenant = ${tenant}`,
-    `  repo = ${repo}`,
-    `  env = ${env}`,
-    '  authMode { type = TokenAuthMode, token = "###ENV#SDLB_UI_TOKEN###" }',
-    '  stagePath = "/tmp/sdlb-ui-stage"',
-    "}",
-  ].join("\n");
 
   return (
     <Sheet sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2, overflow: "auto" }}>
       <Typography level="h4">Access token</Typography>
       <Typography level="body-sm">
         One token for both things that reach this backend without a browser: a coding agent over
-        MCP, and an SDLB job uploading its configuration and run history. It is scoped to{" "}
-        <b>
-          {repo}/{env}
-        </b>
-        , shown once, and can be revoked here at any time.
+        MCP, and an SDLB job uploading its configuration and run history. It is scoped to one
+        repository and environment, shown once, and can be revoked here at any time.
       </Typography>
 
       {error && (
@@ -136,17 +194,27 @@ export default function AccessTokens() {
 
       <Card variant="outlined" sx={{ gap: 1 }}>
         <Typography level="title-md">Issue a token</Typography>
-        <Stack direction="row" spacing={1}>
-          <Input
-            placeholder="What is it for, e.g. my laptop"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            sx={{ flexGrow: 1 }}
-          />
-          <Button onClick={create} loading={busy}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="flex-start">
+          <ScopeField label="Repository" value={repo} options={repos} onChange={changeScope("repo")} />
+          <ScopeField label="Environment" value={env} options={envs} onChange={changeScope("env")} />
+          <FormControl sx={{ flexGrow: 1, minWidth: "12rem" }}>
+            <FormLabel>Label</FormLabel>
+            <Input
+              placeholder="What is it for, e.g. my laptop"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+          </FormControl>
+          <Button onClick={create} loading={busy} disabled={!scopeValid} sx={{ mt: "1.5rem" }}>
             Issue
           </Button>
         </Stack>
+        <Typography level="body-xs">
+          The repository and environment do not have to exist yet - on a new installation they
+          cannot, because nothing creates one until SDLB uploads to it, and this token is what lets
+          it. They appear in the switcher above after that first upload; reload the page to see
+          them here.
+        </Typography>
         {issued && (
           <Alert color="success" variant="soft" sx={{ alignItems: "flex-start" }}>
             <Box>
@@ -171,8 +239,11 @@ export default function AccessTokens() {
           of the URL, so the agent never has to name them; change the last two segments to connect
           to a different environment.
         </Typography>
-        <CodeBlock title=".mcp.json" text={configJson} />
-        <CodeBlock title="or, in Claude Code" text={cliCommand} />
+        <CodeBlock title=".mcp.json" text={mcpClientConfig(url, issued)} />
+        <CodeBlock
+          title="or, in Claude Code"
+          text={`claude mcp add --transport http sdlb ${url} --header "Authorization: Bearer ${issued ?? "<your token>"}"`}
+        />
       </Card>
 
       {upload && (
@@ -184,7 +255,10 @@ export default function AccessTokens() {
             MCP the scope is not in the URL: SDLB names the tenant, repository and environment as
             configuration keys of its own.
           </Typography>
-          <CodeBlock title="global.uiBackend, in the SDLB configuration" text={uiBackendHocon} />
+          <CodeBlock
+            title="global.uiBackend, in the SDLB configuration"
+            text={uiBackendHocon(upload, scope)}
+          />
           <Typography level="body-xs">
             Put the token in the job's <code>SDLB_UI_TOKEN</code> environment variable rather than in
             the file. Set <code>stagePath</code> too: without it a failed upload fails the whole job,
@@ -195,7 +269,9 @@ export default function AccessTokens() {
 
       <Card variant="outlined">
         <Typography level="title-md">Your tokens</Typography>
-        {tokens === undefined ? (
+        {!scopeValid ? (
+          <Typography level="body-sm">Name a repository and environment to list their tokens.</Typography>
+        ) : tokens === undefined ? (
           <CircularProgress size="sm" />
         ) : tokens.length === 0 ? (
           <Typography level="body-sm">None yet.</Typography>
@@ -227,6 +303,38 @@ export default function AccessTokens() {
         )}
       </Card>
     </Sheet>
+  );
+}
+
+/**
+ * Controlled on inputValue, not value: with freeSolo, onChange fires only on Enter or
+ * on picking an option, so a name typed and left uncommitted would issue a token
+ * against the previous one. Picking an option routes through onInputChange too.
+ */
+function ScopeField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  const invalid = !!value && !isValidName(value);
+  return (
+    <FormControl error={invalid} sx={{ minWidth: "12rem" }}>
+      <FormLabel>{label}</FormLabel>
+      <Autocomplete
+        freeSolo
+        placeholder={`${label.toLowerCase()} name`}
+        options={options}
+        inputValue={value}
+        onInputChange={(_, next) => onChange(next)}
+      />
+      {invalid && <FormHelperText>Up to 50 characters: letters, digits, underscore, hyphen.</FormHelperText>}
+    </FormControl>
   );
 }
 

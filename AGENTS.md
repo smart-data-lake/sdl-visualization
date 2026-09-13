@@ -117,3 +117,7 @@ The fetchAPI classes live outside React, so they cannot read that context: the p
 ### documentation
 
 Write README.md in the corresponding folder.
+
+**Keep code comments to one or two lines.** Say why, once, and stop - the reasoning
+behind a decision belongs in a commit message, a README or this file, not in a block
+comment above the code. Longer prose already in the tree is not a licence to add more.

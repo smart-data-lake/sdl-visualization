@@ -2,9 +2,18 @@ import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useManifest } from "./useManifest";
 
+/**
+ * Which kind of page the URL names. The switcher has to tell "root" (a bare tenant,
+ * which it enters) from "settings" (which names no repository); neither contentPath
+ * nor workspaceEnabled can, both being falsy at a bare tenant too.
+ */
+type WorkspaceSection = "flat" | "root" | "content" | "settings";
+
 type WorkspaceContextType = {
   /** Whether URLs are tenant-routed. Decided by the manifest, fixed for the life of the app. */
   workspaceEnabled: boolean;
+  /** Which kind of page the URL names. */
+  section: WorkspaceSection;
   /** The tenant the URL names. Undefined in flat routing, and at "/" before one is chosen. */
   tenant: string | undefined;
   setTenant: (tenant: string) => void;
@@ -40,6 +49,10 @@ const WorkspaceProvider = (props: React.PropsWithChildren) => {
     and useFetchTenants is disabled until authenticated.
   */
   const workspaceEnabled = !!manifest?.auth;
+  const section: WorkspaceSection = (!workspaceEnabled ? "flat"
+    : content == "content" ? "content"
+    : content == "settings" ? "settings"
+    : "root");
   const tenant = (workspaceEnabled ? urlTenant : undefined);
   const contentPath = (!workspaceEnabled ? "/": (repo && env ? `/${tenant}/content/${repo}/${env}/` : undefined));
   const contentSubPath = (!workspaceEnabled || contentPath ? contentSubPathElements.join("/") : undefined);
@@ -88,7 +101,7 @@ const WorkspaceProvider = (props: React.PropsWithChildren) => {
 
   return (
     <WorkspaceContext.Provider
-      value={{ workspaceEnabled, tenant, setTenant, repo, setRepo, env, setEnv, contentPath, contentSubPath, navigateContent, navigateRel }}
+      value={{ workspaceEnabled, section, tenant, setTenant, repo, setRepo, env, setEnv, contentPath, contentSubPath, navigateContent, navigateRel }}
     >
       {props.children}
     </WorkspaceContext.Provider>
@@ -104,4 +117,5 @@ const useWorkspace = (): WorkspaceContextType => {
 };
 
 export { useWorkspace, WorkspaceProvider };
+export type { WorkspaceSection };
 
