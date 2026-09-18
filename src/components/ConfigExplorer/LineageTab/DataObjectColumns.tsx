@@ -1,8 +1,5 @@
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import KeyIcon from '@mui/icons-material/Key';
-import LinkIcon from '@mui/icons-material/Link';
-import LinkOffIcon from '@mui/icons-material/LinkOff';
 import Box from '@mui/joy/Box';
 import LinearProgress from '@mui/joy/LinearProgress';
 import Tooltip from '@mui/joy/Tooltip';
@@ -11,6 +8,7 @@ import { Handle, Position } from 'reactflow';
 
 import { useWorkspace } from '../../../hooks/useWorkspace';
 import { ColumnDisplay, ColumnInfo, lessColumns, moreColumns } from '../../../util/ConfigExplorer/ColumnModel';
+import { ForeignKeyIcon, PrimaryKeyIcon, UnresolvedForeignKeyIcon } from './ColumnIcons';
 import './LineageTab.css';
 
 /*
@@ -158,13 +156,9 @@ function ColumnRow({column}: {column: ColumnInfo}) {
         <Box className="lineage-column-label">
             {/* a key and a link, not two weights of the same key: at this size only the
                 shape is legible, and the colour is never the only difference */}
-            {column.isPrimaryKey &&
-                <KeyIcon className="lineage-column-icon lineage-column-icon-pk" titleAccess="primary key"/>}
-            {hasReference && !isUnresolved &&
-                <LinkIcon className="lineage-column-icon lineage-column-icon-fk" titleAccess="foreign key"/>}
-            {isUnresolved &&
-                <LinkOffIcon className="lineage-column-icon lineage-column-icon-unresolved"
-                             titleAccess="foreign key pointing outside this configuration"/>}
+            {column.isPrimaryKey && <PrimaryKeyIcon/>}
+            {hasReference && !isUnresolved && <ForeignKeyIcon/>}
+            {isUnresolved && <UnresolvedForeignKeyIcon/>}
             <Typography level="body-xs"
                         className={`lineage-column-name${relatedId ? ' lineage-column-link' : ''}`}
                         sx={{...columnTextStyle, fontStyle: column.declaredOnly ? 'italic' : undefined}}

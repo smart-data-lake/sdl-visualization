@@ -6,11 +6,8 @@
  */
 import { describe, expect, test } from 'vitest';
 import { ConfigData } from '../src/util/ConfigExplorer/ConfigData.ts';
-import {
-  RelationEdge,
-  getIncomingRefs,
-  isKnownDataObject,
-} from '../src/util/ConfigExplorer/RelationsGraph.ts';
+import { isKnownDataObject } from '../src/util/ConfigExplorer/ColumnModel.ts';
+import { RelationEdge, getIncomingRefs } from '../src/util/ConfigExplorer/RelationsGraph.ts';
 
 /** a configuration with no actions, so that only the foreign keys shape the relations graph */
 function config(dataObjects: any, connections: any = {}) {
@@ -45,13 +42,13 @@ describe('which foreign keys become edges', () => {
 
   test('a key in the pre 3.x db/table form is ignored', () => {
     // it names a table, not a data object, and guessing which one is meant would risk a wrong relation
-    expect(isKnownDataObject('airlines', configData)).toBe(false);
+    expect(isKnownDataObject(configData.dataObjects, 'airlines')).toBe(false);
     expect(configData.relationsGraph!.edges.some((e) => (e as RelationEdge).fkName === 'fk_legacy')).toBe(false);
   });
 
   test('a key naming a data object outside this configuration is known to be unresolved', () => {
-    expect(isKnownDataObject('int-airports', configData)).toBe(true);
-    expect(isKnownDataObject('ext-airlines', configData)).toBe(false);
+    expect(isKnownDataObject(configData.dataObjects, 'int-airports')).toBe(true);
+    expect(isKnownDataObject(configData.dataObjects, 'ext-airlines')).toBe(false);
   });
 });
 

@@ -1,0 +1,10 @@
+svg.lineage-column-icon {
+  height: 14px;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+/* colour supports the two shapes, it never carries the distinction on its own */
+svg.lineage-column-icon-pk { color: #b8860b; }
+svg.lineage-column-icon-fk { color: #096bde; }
+svg.lineage-column-icon-unresolved { color: #a9a9a9; }

@@ -1,14 +1,17 @@
-import { Box, FormControl, FormLabel, Select, Sheet, Tooltip } from '@mui/joy';
+import { Box, FormControl, FormLabel, Select, Sheet, Stack, Tooltip } from '@mui/joy';
 import Option from '@mui/joy/Option';
 import { useEffect, useMemo, useState } from 'react';
 import { useFetchDataObjectSchema, useFetchDataObjectStats } from '../../hooks/useFetchData';
 import { SchemaColumn, TstampEntry } from '../../types';
+import { ColumnRef, getForeignKeys, getPrimaryKey, isKnownDataObject } from '../../util/ConfigExplorer/ColumnModel';
 import { compareFunc, getPropertyByPath, onlyUnique } from '../../util/helpers';
 import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
 import CenteredCircularProgress from '../Common/CenteredCircularProgress';
+import { createDataObjectChip, createUnknownDataObjectChip } from './ConfigurationTab';
 import DataTable, { nestedPropertyRenderer } from './DataTable';
 import { getMissingSchemaFileCmp } from './ElementDetails';
 import InfoBox from './InfoBox';
+import { PrimaryKeyIcon } from './LineageTab/ColumnIcons';
 import { OverflowTooltip } from './OverflowTooltip';
 
 /**
@@ -51,7 +54,44 @@ export function tooltipCellRenderer() {
   }
 }
 
-export default function SchemaTab(props: {elementType: string, elementName: string, schemaEntries: TstampEntry[] | undefined, statsEntries: TstampEntry[] | undefined, columnDescriptions: object|undefined}){
+/**
+ * Table cell renderer marking a primary key column with the same symbol the graph node uses.
+ *
+ * A cell of a column that is not a key renders as empty rather than as undefined: the table falls
+ * back to printing the raw value where a renderer returns nothing.
+ */
+export function primaryKeyRenderer() {
+  // the flex box centres the symbol on the row, which a bare svg in a text cell is not
+  return (prop: any) => (prop.rowData.isPrimaryKey
+    ? <div style={{display: 'flex', alignItems: 'center', height: '100%'}}><PrimaryKeyIcon/></div>
+    : <></>);
+}
+
+/**
+ * Table cell renderer for the foreign keys a column is the referencing side of: a chip per
+ * referenced DataObject, leading to its configuration, saying on hover which key leads there.
+ *
+ * A reference this configuration does not describe keeps its name but is not a link, as in the
+ * Foreign Keys accordion and in the relations view.
+ */
+export function foreignKeyRenderer() {
+  return (prop: any) => {
+    const references: ColumnRef[] = prop.rowData.references ?? [];
+    if (references.length === 0) return <></>;
+    return (
+      <Stack spacing={0.5} direction="row">
+        {references.map((reference, idx) => {
+          const title = `${reference.fkName ? reference.fkName + ': ' : ''}\u2192 ${reference.dataObjectId}.${reference.column}`
+                      + (reference.resolved ? '' : ' (not in this configuration)');
+          return reference.resolved ? createDataObjectChip(reference.dataObjectId, 'sm', {mr: 0}, idx, title)
+                                    : createUnknownDataObjectChip(reference.dataObjectId, 'sm', {mr: 0}, idx, title);
+        })}
+      </Stack>
+    );
+  }
+}
+
+export default function SchemaTab(props: {elementType: string, elementName: string, schemaEntries: TstampEntry[] | undefined, statsEntries: TstampEntry[] | undefined, columnDescriptions: object|undefined, data?: any, dataObjects?: any}){
 
   // store the current schema entry to display
   const [schemaEntry, setSchemaEntry] = useState<TstampEntry>();
@@ -78,6 +118,27 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     }
   }, [props.statsEntries]);
   const { data: stats } = useFetchDataObjectStats(statsEntry);
+
+  /*
+      What the configuration says about this DataObject's columns: which of them are the primary key
+      and which ones reference another DataObject. Both are looked up by column name, lowercased -
+      a configuration writes the name as it likes and the exported schema carries the case the
+      storage layer reports (see ColumnModel).
+  */
+  const declaredKeys = useMemo(() => {
+    const primaryKey = new Set(getPrimaryKey(props.data).map(name => name.toLowerCase()));
+    const references = new Map<string, ColumnRef[]>();
+    getForeignKeys(props.data).forEach(fk => {
+      const resolved = isKnownDataObject(props.dataObjects, fk.dataObjectId);
+      Object.entries(fk.columns).forEach(([ownColumn, referencedColumn]) => {
+        const key = ownColumn.toLowerCase();
+        const refs = references.get(key) ?? [];
+        refs.push({dataObjectId: fk.dataObjectId, column: referencedColumn, fkName: fk.name, resolved});
+        references.set(key, refs);
+      });
+    });
+    return {primaryKey, references};
+  }, [props.data, props.dataObjects]);
 
   // convert schema to rows for DataTable
   // rows must be numbered and reference parent row Id for nested data types.
@@ -132,8 +193,11 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
       else if (column.comment) columnDescription = column.comment;
       // look for column stats
       const colStats = (stats?.columns ? stats.columns[currentPath] : {}) || {};
-      // create entry
-      const currentRow: any = {id: ++currentId, parentId: parentId, path: currentPath, name: column.name, description: columnDescription, stats: colStats};
+      // create entry. Only a top level column can be a key - a foreign key on a nested struct field
+      // is not a thing - and its path is its name, so the lookup is the same for both.
+      const currentRow: any = {id: ++currentId, parentId: parentId, path: currentPath, name: column.name, description: columnDescription, stats: colStats,
+                               isPrimaryKey: declaredKeys.primaryKey.has(currentPath.toLowerCase()),
+                               references: declaredKeys.references.get(currentPath.toLowerCase()) ?? []};
       rows.push(currentRow);
       // handle children
       const childRows = numberDataType(column.dataType, currentPath, currentRow.id)
@@ -142,10 +206,34 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     })
     return rows;
   } 
-  const schemaRows = useMemo(() => (schema?.schema ? numberSchemaTree(schema.schema) : undefined), [props.elementName, schema, stats]);
+  const schemaRows = useMemo(() => (schema?.schema ? numberSchemaTree(schema.schema) : undefined), [props.elementName, schema, stats, declaredKeys]);
 
-  // define columns for table
-  const baseColumns: any[] = [{
+  /*
+      The columns of the table. The two key columns are only offered where the configuration
+      declares a key at all - on a DataObject without one they could only ever be empty.
+
+      The foreign keys start hidden: they are a property of the data model rather than of the
+      schema, and the column is wide. The column selection menu above the table turns it on, and
+      remembers that (DataTable, useLocalStorageState).
+  */
+  const keyColumns: any[] = declaredKeys.primaryKey.size > 0 ? [{
+    title: 'PK',
+    property: 'isPrimaryKey',
+    renderer: primaryKeyRenderer(),
+    headRenderer: tooltipHeadRenderer("Primary key, as declared in table.primaryKey"),
+    width: '40px',
+    minWidth: 40
+  }] : [];
+  const foreignKeyColumns: any[] = declaredKeys.references.size > 0 ? [{
+    title: 'FK',
+    property: 'references',
+    renderer: foreignKeyRenderer(),
+    headRenderer: tooltipHeadRenderer("Foreign key: the DataObject this column references"),
+    width: '180px',
+    isSortable: false,
+    visible: false
+  }] : [];
+  const baseColumns: any[] = [...keyColumns, {
     title: 'Column',
     property: 'name',
     width: '200px'
@@ -153,7 +241,7 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     title: 'Datatype',
     property: 'dataType',
     width: '90px'
-  }, {
+  }, ...foreignKeyColumns, {
     title: 'Description',
     property: 'description',
     width: '200px',
@@ -219,14 +307,18 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     ).sort(compareFunc('colSort'))
     .forEach(c => cols.push(c));
     return cols;
-  }, [schemaRows]);
+  }, [schemaRows, declaredKeys]);
 
   // prepare info message
   const info = (schema ? schema.info : getMissingSchemaFileCmp(props.elementType, props.elementName));
 
+  // the column selection menu of the table, rendered above it - see DataTable.setToolbarElements.
+  // It is only shown while the table is, so that it cannot outlive the table it belongs to.
+  const [toolbarElements, setToolbarElements] = useState<JSX.Element>();
+
   return !schemaIsLoading ? (
     <Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem', gap: '1rem', width: '100%', height: '100%' }}>
-      <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem'}}>
+      <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'end', gap: '1rem'}}>
         {props.schemaEntries && <FormControl>
           <FormLabel>Schema exported at</FormLabel>
           <Select size='sm' value={schemaEntry?.key} onChange={(ev, value) => setSchemaEntry(props.schemaEntries?.find((e) => e.key === value))}>
@@ -239,9 +331,14 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
             {props.statsEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTimestamp(e.tstamp)}</Option>)}
           </Select>      
         </FormControl>}      
+        <Box sx={{flex: 1}}/>
+        {schemaRows && toolbarElements}
       </Box>
       {info && <InfoBox info={info}/>}
-      {schemaRows && columns && <DataTable key={schemaEntry?.key+'/'+statsEntry?.key} data={schemaRows} columns={columns} keyAttr="id" treeGroupKeyAttr={'parentId'}/>}
+      {schemaRows && columns && <DataTable key={schemaEntry?.key+'/'+statsEntry?.key} data={schemaRows} columns={columns} keyAttr="id"
+                                           // the nesting of a struct belongs on the column name, not on the PK column before it
+                                           treeGroupKeyAttr={'parentId'} treeExpandColumn="name"
+                                           name="schema" setToolbarElements={setToolbarElements}/>}
     </Sheet>
   ) : <CenteredCircularProgress/>
 }

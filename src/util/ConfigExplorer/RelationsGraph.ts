@@ -32,17 +32,6 @@ export class RelationEdge extends Edge {
     }
 }
 
-/**
- * Whether a foreign key's `dataObjectId` names a DataObject of this configuration.
- *
- * It need not: SDLB rejects an unknown id, but the explorer is regularly shown a configuration
- * narrowed by a feed selection, and a key out of that selection keeps its reference and renders as
- * unresolved rather than disappearing.
- */
-export function isKnownDataObject(dataObjectId: string, configData: ConfigData): boolean {
-    return configData.dataObjects?.[dataObjectId] !== undefined;
-}
-
 const columnPairs = (fk: ForeignKeyConfig) =>
     Object.entries(fk.columns).map(([from, to]) => ({from: from.toLowerCase(), to: String(to).toLowerCase()}));
 

@@ -10,9 +10,9 @@ import assert from 'assert';
 import { nodeHeight, nodeWidth } from '../../components/ConfigExplorer/LineageTab/LineageTabWithSeparateView';
 import { SchemaData, TaskStatus } from '../../types';
 import { findFirstKeyWithObject } from '../helpers';
-import { ColumnDisplay, ColumnInfo, buildColumnModel, filterColumns } from './ColumnModel';
+import { ColumnDisplay, ColumnInfo, buildColumnModel, filterColumns, isKnownDataObject } from './ColumnModel';
 import { ConfigData } from './ConfigData';
-import { RelationEdge, getIncomingRefs, isKnownDataObject } from './RelationsGraph';
+import { RelationEdge, getIncomingRefs } from './RelationsGraph';
 import { columnHandleId, nodeHeightFor, nodeRelationHandleId, nodeWidthFor } from '../../components/ConfigExplorer/LineageTab/DataObjectColumns';
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
@@ -258,7 +258,7 @@ function makeColumnsOf(props: flowProps): (node: GraphNode) => ColumnsFunc | und
         return (schema?: SchemaData) => {
             return buildColumnModel(configObj, {
                 schema,
-                isKnownDataObject: dataObjectId => isKnownDataObject(dataObjectId, configData),
+                isKnownDataObject: dataObjectId => isKnownDataObject(configData.dataObjects, dataObjectId),
                 referencedBy,
             }).columns;
         };
