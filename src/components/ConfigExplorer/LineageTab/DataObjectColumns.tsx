@@ -107,8 +107,8 @@ function referenceTitle(column: ColumnInfo): JSX.Element | undefined {
             {column.description && <div>{column.description}</div>}
             {column.references.map((reference, i) => (
                 <div key={`ref-${i}`}>
-                    → {(reference.db ? reference.db + '.' : '') + reference.table}.{reference.column}
-                    {reference.dataObjectId ? '' : ' (not in this configuration)'}
+                    → {reference.dataObjectId}.{reference.column}
+                    {reference.resolved ? '' : ' (not in this configuration)'}
                 </div>
             ))}
             {column.referencedBy.map((incoming, i) => (
@@ -133,9 +133,10 @@ function referenceTitle(column: ColumnInfo): JSX.Element | undefined {
 */
 function relatedDataObjectId(column: ColumnInfo): string | undefined {
     const related = new Set([
-        ...column.references.map(reference => reference.dataObjectId),
+        // a reference this configuration does not describe has nothing to navigate to
+        ...column.references.filter(reference => reference.resolved).map(reference => reference.dataObjectId),
         ...column.referencedBy.map(incoming => incoming.dataObjectId),
-    ].filter((id): id is string => id !== undefined));
+    ]);
     return related.size === 1 ? related.values().next().value : undefined;
 }
 
@@ -145,7 +146,7 @@ function relatedDataObjectId(column: ColumnInfo): string | undefined {
 */
 function ColumnRow({column}: {column: ColumnInfo}) {
     const hasReference = column.references.length > 0;
-    const isUnresolved = hasReference && column.references.every(reference => !reference.dataObjectId);
+    const isUnresolved = hasReference && column.references.every(reference => !reference.resolved);
     const hasAnyRelation = hasReference || column.referencedBy.length > 0;
     const { navigateContent } = useWorkspace();
 

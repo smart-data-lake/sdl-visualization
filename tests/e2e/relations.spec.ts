@@ -54,8 +54,13 @@ test.describe('columns of a data object', () => {
 
     await expandColumns(page, 'int-departures').click();
 
-    // the primary key, and the two columns the foreign keys run through. estDepartureAirport is
-    // both, and is spelled as the exported schema spells it rather than as the config does
+    /*
+        The primary key, and the two columns the foreign keys run through. estDepartureAirport is
+        both, and is spelled as the exported schema spells it rather than as the config does.
+
+        int-departures also declares a foreign key in the pre 3.x db/table form, which is ignored -
+        legacy_column is not among the rows.
+    */
     await expect.poll(() =>
       columnsOf(page, 'int-departures').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')))
     ).toEqual(['column-icao24', 'column-estdepartureairport', 'column-estarrivalairport', 'column-dt']);
@@ -168,9 +173,10 @@ test.describe('columns of a data object', () => {
     await page.waitForTimeout(600);
     await expect(page.locator('[role="tooltip"]')).toHaveCount(0);
 
-    // a column that takes part in a relation names the other end of it
+    // a column that takes part in a relation names the other end of it - the data object it
+    // references, which is what a foreign key names since SDLB 3.x
     await columnName(page, 'int-departures', 'estarrivalairport').hover();
-    await expect(page.locator('[role="tooltip"]')).toContainText('int_airports.ident');
+    await expect(page.locator('[role="tooltip"]')).toContainText('int-airports.ident');
   });
 
   test('the name of a related column leads to the data object at the other end', async ({ page }) => {
@@ -208,6 +214,45 @@ test.describe('columns of a data object', () => {
     await expect(nodes(page).first()).toBeVisible();
 
     await expect(page.locator('[data-testid^="columns-expand-"]')).toHaveCount(0);
+  });
+});
+
+test.describe('foreign keys in the configuration view', () => {
+  const foreignKeys = (page: Page) => page.getByRole('button', { name: 'Foreign Keys' });
+
+  test('a foreign key names the data object it references, and leads to it', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/int-departures');
+    await foreignKeys(page).click();
+
+    // the two keys of int-departures; the third one is in the pre 3.x db/table form and is ignored
+    const rows = page.getByRole('row');
+    await expect(rows.filter({ hasText: 'fk_departure_airport' })).toHaveCount(1);
+    await expect(rows.filter({ hasText: 'fk_arrival_airport' })).toHaveCount(1);
+    await expect(rows.filter({ hasText: 'fk_legacy' })).toHaveCount(0);
+
+    // the reference is a chip that leads to the referenced data object's configuration
+    await page.getByRole('link', { name: 'int-airports' }).first().click();
+
+    await expect.poll(() => page.url()).toContain('/config/dataObjects/int-airports');
+    await expect(page.getByRole('row', { name: 'table default.int_airports' })).toBeVisible();
+  });
+
+  test('a key naming a data object outside the configuration leads nowhere', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/btl-departures-arrivals-airports');
+    await foreignKeys(page).click();
+
+    // fk_airline points at a data object this configuration does not describe - it is named, as the
+    // relations view names it, but there is nothing to navigate to
+    await expect(page.getByRole('link', { name: 'int-airlines' })).toHaveCount(0);
+    await expect(page.getByRole('row').filter({ hasText: 'fk_airline' })).toContainText('int-airlines');
+    await expect(page.getByRole('link', { name: 'int-airports' }).first()).toBeVisible();
+  });
+
+  test('a data object without foreign keys has no such accordion', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/int-airports');
+    await expect(page.getByRole('button', { name: 'Raw Config' })).toBeVisible();
+
+    await expect(foreignKeys(page)).toHaveCount(0);
   });
 });
 

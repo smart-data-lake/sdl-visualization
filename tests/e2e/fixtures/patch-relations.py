@@ -15,15 +15,19 @@ from pathlib import Path
 
 FOREIGN_KEYS = {
     "int-departures": [
-        {"name": "fk_departure_airport", "table": "int_airports",
+        {"name": "fk_departure_airport", "dataObjectId": "int-airports",
          "columns": {"estdepartureairport": "ident"}},
-        {"name": "fk_arrival_airport", "table": "int_airports",
+        {"name": "fk_arrival_airport", "dataObjectId": "int-airports",
          "columns": {"estarrivalairport": "ident"}},
+        # the pre 3.x form, naming a table instead of a data object - ignored by the UI
+        {"name": "fk_legacy", "db": "reference", "table": "airlines",
+         "columns": {"legacy_column": "callsign"}},
     ],
     "btl-departures-arrivals-airports": [
-        {"name": "fk_arrival_airport", "table": "int_airports",
+        {"name": "fk_arrival_airport", "dataObjectId": "int-airports",
          "columns": {"estarrivalairport": "ident"}},
-        {"name": "fk_airline", "db": "reference", "table": "airlines",
+        # points at a data object this configuration does not describe
+        {"name": "fk_airline", "dataObjectId": "int-airlines",
          "columns": {"callsign": "callsign"}},
     ],
 }

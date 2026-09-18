@@ -16,11 +16,16 @@ import { SchemaColumn, SchemaData } from "../../types";
     edge whose handle does not exist.
 */
 
-/** One entry of a DataObject's `table.foreignKeys`. */
+/**
+ * One entry of a DataObject's `table.foreignKeys`.
+ *
+ * A foreign key names the DataObject it references, not its table: SDLB 3.x replaced the former
+ * `db`/`table` pair with `dataObjectId` (smart-data-lake#1148) and resolves the referenced table
+ * from that DataObject. An entry still written the old way is ignored - see getForeignKeys.
+ */
 export interface ForeignKeyConfig {
     name?: string;
-    db?: string;
-    table: string;
+    dataObjectId: string;
     /*
         The column mapping, read as {own column: referenced column} - the direction the Foreign Keys
         accordion renders it in (ConfigurationAccordions), and the only direction that makes sense
@@ -30,13 +35,18 @@ export interface ForeignKeyConfig {
     columns: Record<string, string>;
 }
 
-/** Where a foreign key points. `dataObjectId` is unset when it leaves this configuration. */
+/** Where a foreign key points. */
 export interface ColumnRef {
-    db?: string;
-    table: string;
+    /** the DataObject the foreign key names, whether or not this configuration describes it */
+    dataObjectId: string;
     column: string;
-    dataObjectId?: string;
     fkName?: string;
+    /**
+     * Whether `dataObjectId` is a DataObject of this configuration. It need not be: the explorer is
+     * regularly shown a configuration narrowed by a feed selection, and SDLB itself only warns when
+     * a referenced DataObject was filtered away.
+     */
+    resolved: boolean;
 }
 
 /**
@@ -99,11 +109,17 @@ export const emptyColumns: DataObjectColumns = { columns: [], source: 'none' };
 */
 const keyOf = (name: string) => name.toLowerCase();
 
-/** The `table.foreignKeys` of a DataObject configuration, defensively. */
+/**
+ * The `table.foreignKeys` of a DataObject configuration, defensively.
+ *
+ * An entry without a `dataObjectId` is dropped, which is also how a key in the pre 3.x `db`/`table`
+ * form is ignored: the table it names cannot be resolved to a DataObject without guessing, and a
+ * wrong relation is worse than none.
+ */
 export function getForeignKeys(configObj: any): ForeignKeyConfig[] {
     const foreignKeys = configObj?.table?.foreignKeys;
     if (!Array.isArray(foreignKeys)) return [];
-    return foreignKeys.filter(fk => fk && typeof fk === 'object' && typeof fk.table === 'string'
+    return foreignKeys.filter(fk => fk && typeof fk === 'object' && typeof fk.dataObjectId === 'string'
                                     && fk.columns && typeof fk.columns === 'object');
 }
 
@@ -134,8 +150,11 @@ export function getExportedColumns(schemaData: SchemaData | undefined): {name: s
 export interface ColumnModelOptions {
     /** the newest exported schema, if one has been fetched */
     schema?: SchemaData;
-    /** resolves a foreign key to the id of the DataObject it points at, if any */
-    resolveFk?: (fk: ForeignKeyConfig) => string | undefined;
+    /**
+     * Whether a referenced DataObject id is one this configuration describes. Without it nothing can
+     * be told apart from a reference leaving the configuration, so every reference stays unresolved.
+     */
+    isKnownDataObject?: (dataObjectId: string) => boolean;
     /** the foreign keys of other DataObjects pointing at this one, see RelationsGraph */
     referencedBy?: IncomingRef[];
 }
@@ -146,7 +165,7 @@ export interface ColumnModelOptions {
  * @param configObj the DataObject's configuration, as it sits in ConfigData.dataObjects
  */
 export function buildColumnModel(configObj: any, options: ColumnModelOptions = {}): DataObjectColumns {
-    const { schema: schemaData, resolveFk, referencedBy = [] } = options;
+    const { schema: schemaData, isKnownDataObject, referencedBy = [] } = options;
     const exported = getExportedColumns(schemaData);
     const primaryKey = getPrimaryKey(configObj);
     const foreignKeys = getForeignKeys(configObj);
@@ -178,10 +197,10 @@ export function buildColumnModel(configObj: any, options: ColumnModelOptions = {
     primaryKey.forEach(name => { add(name, undefined, true).isPrimaryKey = true; });
 
     foreignKeys.forEach(fk => {
-        const dataObjectId = resolveFk ? resolveFk(fk) : undefined;
+        const resolved = isKnownDataObject ? isKnownDataObject(fk.dataObjectId) : false;
         Object.entries(fk.columns).forEach(([ownColumn, referencedColumn]) => {
             add(ownColumn, undefined, true).references.push({
-                db: fk.db, table: fk.table, column: referencedColumn, dataObjectId, fkName: fk.name,
+                dataObjectId: fk.dataObjectId, column: referencedColumn, fkName: fk.name, resolved,
             });
         });
     });

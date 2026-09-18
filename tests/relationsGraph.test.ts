@@ -8,10 +8,8 @@ import { describe, expect, test } from 'vitest';
 import { ConfigData } from '../src/util/ConfigExplorer/ConfigData.ts';
 import {
   RelationEdge,
-  buildTableIndex,
   getIncomingRefs,
-  getRelationsGraph,
-  resolveFkTarget,
+  isKnownDataObject,
 } from '../src/util/ConfigExplorer/RelationsGraph.ts';
 
 /** a configuration with no actions, so that only the foreign keys shape the relations graph */
@@ -19,61 +17,41 @@ function config(dataObjects: any, connections: any = {}) {
   return new ConfigData({ dataObjects, actions: {}, connections });
 }
 
-const fk = (table: string, columns: Record<string, string>, extra: any = {}) =>
-  ({ table, columns, ...extra });
+/** a foreign key as SDLB 3.x writes it: it names the data object it references, not its table */
+const fk = (dataObjectId: string, columns: Record<string, string>, extra: any = {}) =>
+  ({ dataObjectId, columns, ...extra });
 
-describe('the table index', () => {
-  test('registers a table fully qualified, by db and bare', () => {
-    const index = buildTableIndex(config({
-      'int-airports': { table: { catalog: 'main', db: 'default', name: 'int_airports' } },
-    }));
-    expect(index.get('main.default.int_airports')).toBe('int-airports');
-    expect(index.get('default.int_airports')).toBe('int-airports');
-    expect(index.get('int_airports')).toBe('int-airports');
-  });
-
-  test('takes the db from the connection when the table does not name one', () => {
-    const index = buildTableIndex(config(
-      { 'int-airports': { connectionId: 'dwh', table: { name: 'int_airports' } } },
-      { dwh: { type: 'SnowflakeTableConnection', db: 'reporting' } },
-    ));
-    expect(index.get('reporting.int_airports')).toBe('int-airports');
-  });
-
-  test('a name two tables would claim is registered for neither', () => {
-    const index = buildTableIndex(config({
-      'stg-airports': { table: { db: 'staging', name: 'airports' } },
-      'int-airports': { table: { db: 'integration', name: 'airports' } },
-    }));
-    expect(index.get('airports')).toBeUndefined();
-    expect(index.get('staging.airports')).toBe('stg-airports');
-    expect(index.get('integration.airports')).toBe('int-airports');
-  });
-
-  test('a data object without a table is not in the index', () => {
-    expect(buildTableIndex(config({ 'ext-airports': { type: 'WebserviceFileDataObject' } })).size).toBe(0);
-  });
-});
-
-describe('resolving a foreign key target', () => {
+describe('which foreign keys become edges', () => {
   const configData = config({
-    'int-airports': { table: { db: 'default', name: 'int_airports' } },
-    'other-airports': { table: { db: 'reference', name: 'int_airports' } },
-    'int-departures': { table: { db: 'default', name: 'int_departures' } },
+    'int-airports': { table: { db: 'default', name: 'int_airports', primaryKey: ['ident'] } },
+    'int-departures': {
+      table: {
+        db: 'default', name: 'int_departures',
+        foreignKeys: [
+          fk('int-airports', { estdepartureairport: 'ident' }, { name: 'fk_resolved' }),
+          // a data object this configuration does not describe - legitimate, it may have been
+          // filtered away by a feed selection
+          fk('ext-airlines', { callsign: 'callsign' }, { name: 'fk_unknown' }),
+          // the pre 3.x form, naming a table instead of a data object
+          { name: 'fk_legacy', db: 'reference', table: 'airlines', columns: { callsign: 'callsign' } },
+        ],
+      },
+    },
   });
-  const departures = configData.dataObjects['int-departures'];
 
-  test('an unqualified key is read as living in the declaring data object\'s db', () => {
-    expect(resolveFkTarget(fk('int_airports', {}), departures, configData)).toBe('int-airports');
+  test('a key naming a data object of this configuration becomes an edge', () => {
+    expect(configData.relationsGraph!.edges.map((e) => (e as RelationEdge).fkName)).toEqual(['fk_resolved']);
   });
 
-  test('a key naming its own db wins over that fallback', () => {
-    expect(resolveFkTarget(fk('int_airports', {}, { db: 'reference' }), departures, configData))
-      .toBe('other-airports');
+  test('a key in the pre 3.x db/table form is ignored', () => {
+    // it names a table, not a data object, and guessing which one is meant would risk a wrong relation
+    expect(isKnownDataObject('airlines', configData)).toBe(false);
+    expect(configData.relationsGraph!.edges.some((e) => (e as RelationEdge).fkName === 'fk_legacy')).toBe(false);
   });
 
-  test('a key pointing outside the configuration resolves to nothing', () => {
-    expect(resolveFkTarget(fk('airlines', {}), departures, configData)).toBeUndefined();
+  test('a key naming a data object outside this configuration is known to be unresolved', () => {
+    expect(isKnownDataObject('int-airports', configData)).toBe(true);
+    expect(isKnownDataObject('ext-airlines', configData)).toBe(false);
   });
 });
 
@@ -84,9 +62,9 @@ describe('building the graph', () => {
       table: {
         db: 'default', name: 'int_departures',
         foreignKeys: [
-          fk('int_airports', { estdepartureairport: 'ident' }, { name: 'fk_departure_airport' }),
-          fk('int_airports', { estarrivalairport: 'ident' }, { name: 'fk_arrival_airport' }),
-          fk('airlines', { callsign: 'callsign' }, { name: 'fk_airline', db: 'reference' }),
+          fk('int-airports', { estdepartureairport: 'ident' }, { name: 'fk_departure_airport' }),
+          fk('int-airports', { estarrivalairport: 'ident' }, { name: 'fk_arrival_airport' }),
+          fk('ext-airlines', { callsign: 'callsign' }, { name: 'fk_airline' }),
         ],
       },
     },
