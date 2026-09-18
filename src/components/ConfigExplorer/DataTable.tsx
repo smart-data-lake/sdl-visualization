@@ -74,9 +74,9 @@ function getInitialColumnsVisible(columns: any[]): object {
   return Object.fromEntries(columnsVisibleMap)
 }
 
-export default function DataTable(props: { data: any[], columns: any[], keyAttr: string, name?: string, minColumnWidth?: number, treeGroupKeyAttr?: string, navigate?: (any) => void, setToolbarElements?: (elements: JSX.Element) => void}) {
+export default function DataTable(props: { data: any[], columns: any[], keyAttr: string, name?: string, minColumnWidth?: number, treeGroupKeyAttr?: string, treeExpandColumn?: string, navigate?: (any) => void, setToolbarElements?: (elements: JSX.Element) => void}) {
 
-  const { data, keyAttr, treeGroupKeyAttr, minColumnWidth: columnMinWidth, navigate, setToolbarElements } = props;
+  const { data, keyAttr, treeGroupKeyAttr, treeExpandColumn, minColumnWidth: columnMinWidth, navigate, setToolbarElements } = props;
   const [loading, setLoading] = useState(true)
   const dataTable = useTable();
   const [mouseDown, setMouseDown] = useState<number[]>(); // this is to capture mouse drag on row, and prevent click if mouse is moved... this allows to select text also if row click navigates to child page...
@@ -130,7 +130,8 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
       } else {
         col = { key: c, title: c, dataType: inferDataType(c) }
       }
-      col.colGroup = { style: { minWidth: columnMinWidth || 100 } }
+      // a column can ask for less than the table's minimum, e.g. one that holds a single icon
+      col.colGroup = { style: { minWidth: c.minWidth || columnMinWidth || 100 } }
       return col;
     })
     cols[cols.length-1].width = undefined // remove width of last element for smooth column resizing and horizontal scrollbar of table
@@ -172,6 +173,9 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
         table={dataTable}
         rowKeyField={keyAttr}
         treeGroupKeyField={treeGroupKeyAttr}
+        // the expand arrow and the indentation of a tree row go to the first column unless a column
+        // is named - a column holding nothing but an icon is the wrong place for both
+        treeExpandButtonColumnKey={treeExpandColumn}
         treeGroupsExpanded={[]}
         data={data}
         columns={tableColumns}

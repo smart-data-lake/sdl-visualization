@@ -92,6 +92,14 @@ Font sizes live in `DataObjectColumns.tsx` (`COLUMN_FONT_SIZE`), not in `Lineage
 wins. The line box is tied to `COLUMN_ROW_HEIGHT`, which is what the node declares its height from
 before it renders.
 
+The symbols a column is marked with are in `ColumnIcons.tsx`, with a stylesheet of their own, because
+the **Schema tab marks the same keys** — a `PK` column with the same key symbol and an `FK` column of
+data object chips (`SchemaTab.tsx`), offered only where the configuration declares such a key, the
+`FK` one hidden until the column selection menu above the table turns it on. Their rules cannot live
+in `LineageTab.css`: that file's own rules override ReactFlow's only because it is injected
+after ReactFlow's stylesheet, and importing it from outside the lineage tab moves it up the module
+graph and silently loses every one of those overrides — handle cursors and offsets included.
+
 ## Where the state lives
 
 - **Toolbar settings** are React context (`useLineage.tsx`). Any change to them re-creates the whole

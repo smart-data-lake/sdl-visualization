@@ -1,7 +1,7 @@
 import { Accordion, AccordionDetails, AccordionGroup, AccordionSummary, Link, Stack, Table } from '@mui/joy';
 import 'github-markdown-css/github-markdown.css';
 import { useManifest } from '../../hooks/useManifest';
-import { getForeignKeys } from '../../util/ConfigExplorer/ColumnModel';
+import { getForeignKeys, isKnownDataObject } from '../../util/ConfigExplorer/ColumnModel';
 import { getPropertyByPath, hoconify } from '../../util/helpers';
 import CodeViewComponent from './CodeViewComponent';
 import './ComponentsStyles.css';
@@ -37,10 +37,9 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
     DataObject, and there is nothing to link to.
   */
   function referencedDataObjectChip(dataObjectId: string){
-    // without the configuration there is nothing to check against, so the reference is taken as given
-    const isKnown = !props.dataObjects || props.dataObjects[dataObjectId] !== undefined;
-    return isKnown ? createDataObjectChip(dataObjectId, 'sm', {mr: 0})
-                   : createUnknownDataObjectChip(dataObjectId, 'sm', {mr: 0});
+    return isKnownDataObject(props.dataObjects, dataObjectId)
+      ? createDataObjectChip(dataObjectId, 'sm', {mr: 0})
+      : createUnknownDataObjectChip(dataObjectId, 'sm', {mr: 0});
   }
 
   function foreignKeysAccordion(){

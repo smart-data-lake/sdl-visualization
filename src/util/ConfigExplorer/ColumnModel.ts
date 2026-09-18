@@ -123,6 +123,20 @@ export function getForeignKeys(configObj: any): ForeignKeyConfig[] {
                                     && fk.columns && typeof fk.columns === 'object');
 }
 
+/**
+ * Whether `dataObjectId` names a DataObject of the configuration - which is what decides whether a
+ * foreign key leads anywhere. It need not: SDLB rejects an unknown id, but the explorer is regularly
+ * shown a configuration narrowed by a feed selection, and a key out of that selection keeps its
+ * reference and renders as unresolved rather than disappearing.
+ *
+ * @param dataObjects ConfigData.dataObjects. Undefined means the caller has no configuration to
+ *                    check against at all, and the reference is taken as given rather than reported
+ *                    as unresolved - saying "not in this configuration" needs a configuration.
+ */
+export function isKnownDataObject(dataObjects: any, dataObjectId: string): boolean {
+    return !dataObjects || dataObjects[dataObjectId] !== undefined;
+}
+
 /** The `table.primaryKey` of a DataObject configuration, defensively. */
 export function getPrimaryKey(configObj: any): string[] {
     const primaryKey = configObj?.table?.primaryKey;

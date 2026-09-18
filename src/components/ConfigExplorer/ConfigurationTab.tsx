@@ -6,7 +6,7 @@ import StyleIcon from '@mui/icons-material/Style';
 import { Box, Chip, Grid, Select, Stack, Table, Tooltip, Typography } from '@mui/joy';
 import Option from '@mui/joy/Option';
 import 'github-markdown-css/github-markdown.css';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link } from "react-router-dom";
 import { useFetchDataObjectStats, useFetchWorkflowRunsByElement } from '../../hooks/useFetchData';
 import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
@@ -84,17 +84,20 @@ export function createSearchChip(attr: string, value: string, route: string, ico
   return <SearchChip key={attr+':'+value} attr={attr} value={value} route={route} icon={icon} color={color} size={size} sx={sx}/>
 }
 
-function DataObjectChip({name, size, sx}: {name: string, size: ChipSize, sx: object}){
+function DataObjectChip({name, size, sx, title}: {name: string, size: ChipSize, sx: object, title?: ReactNode}){
   const {contentPath} = useWorkspace();
-  return(
+  const chip = (
     <Link to={`${contentPath}config/dataObjects/${name}`}>
       <Chip key={"dataObjects/"+name} color="primary" startDecorator={<TableViewTwoTone />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} onClick={(e) => e.stopPropagation()} size={size}>{name}</Chip>
     </Link>
   )
+  // the span gives the tooltip something to hold on to that is not the link itself
+  return (title ? <Tooltip title={title} size="sm" arrow enterDelay={500}><span>{chip}</span></Tooltip> : chip)
 }
 
-export function createDataObjectChip(name: string, size: ChipSize ="md", sx: object = {}, key?: any){
-  return <DataObjectChip key={key} name={name} size={size} sx={sx}/>
+/** @param title what the chip says on hover, e.g. which foreign key leads there. None by default. */
+export function createDataObjectChip(name: string, size: ChipSize ="md", sx: object = {}, key?: any, title?: ReactNode){
+  return <DataObjectChip key={key} name={name} size={size} sx={sx} title={title}/>
 }
 
 /*
@@ -102,9 +105,9 @@ export function createDataObjectChip(name: string, size: ChipSize ="md", sx: obj
   filtered away. It reads like a data object but leads nowhere, so it is not a link; the relations
   view marks the same reference as unresolved.
 */
-export function createUnknownDataObjectChip(name: string, size: ChipSize ="md", sx: object = {}, key?: any){
+export function createUnknownDataObjectChip(name: string, size: ChipSize ="md", sx: object = {}, key?: any, title: ReactNode = "not a DataObject of this configuration"){
   return (
-    <Tooltip key={key} title="not a DataObject of this configuration" size="sm" arrow>
+    <Tooltip key={key} title={title} size="sm" arrow enterDelay={500}>
       <Chip color="neutral" startDecorator={<TableViewTwoTone />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} size={size}>{name}</Chip>
     </Tooltip>
   )

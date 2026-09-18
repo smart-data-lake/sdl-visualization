@@ -1,3 +1,14 @@
+/*
+  This file overrides ReactFlow's own stylesheet - handle cursors, handle offsets, edge paths - with
+  rules of the same specificity, which win only because this file is injected *after*
+  reactflow/dist/style.css. That order is the module graph's: LineageTabWithSeparateView imports
+  ReactFlow's stylesheet, and this one arrives with the components below it.
+
+  So do not import this file, or a module that imports it, from outside the lineage tab: it would
+  move up the module graph, be injected first, and lose every one of those overrides. Shared bits
+  belong in a stylesheet that overrides nothing, the way ColumnIcons.css does.
+*/
+
 .react-flow__edge-path-selector:hover { cursor: pointer }
 .react-flow__edge-path-selector:hover + .react-flow__edge-path, .react-flow__edge-path:hover  {
     stroke: #555;
@@ -142,16 +153,7 @@ svg.data-node-partition-state-icon {
   max-width: 40%;
 }
 
-svg.lineage-column-icon {
-  height: 14px;
-  width: 14px;
-  flex-shrink: 0;
-}
-
-/* colour supports the two shapes, it never carries the distinction on its own */
-svg.lineage-column-icon-pk { color: #b8860b; }
-svg.lineage-column-icon-fk { color: #096bde; }
-svg.lineage-column-icon-unresolved { color: #a9a9a9; }
+/* the column icons and their colours are in ColumnIcons.css, see the note there */
 
 /* the column handles are anchors for the relation edges, nothing is ever dragged from them */
 .react-flow__handle.lineage-column-handle {

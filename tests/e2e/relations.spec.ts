@@ -217,6 +217,110 @@ test.describe('columns of a data object', () => {
   });
 });
 
+test.describe('keys in the schema tab', () => {
+  const schema = (page: Page) => page.getByRole('tabpanel', { name: 'Schema' });
+  const schemaRow = (page: Page, column: string) =>
+    schema(page).locator('.ka-row').filter({ has: page.getByText(column, { exact: true }) });
+  // the head cell itself carries the resize handle's &nbsp;, its content div is the title alone
+  const headCell = (page: Page, title: string) =>
+    schema(page).locator('.ka-thead-cell-content').filter({ hasText: new RegExp(`^${title}$`) });
+
+  const columnMenuItem = (page: Page, title: string) =>
+    page.getByRole('menuitem').filter({ hasText: new RegExp(`^${title}$`) });
+  async function openColumnMenu(page: Page) {
+    await schema(page).locator('.MuiMenuButton-root').click();
+  }
+  async function toggleColumn(page: Page, title: string) {
+    await openColumnMenu(page);
+    await columnMenuItem(page, title).getByRole('checkbox').click();
+    await page.keyboard.press('Escape');
+  }
+
+  /** the newest export of some fixtures failed, the oldest one carries the columns */
+  async function oldestExport(page: Page) {
+    await schema(page).getByRole('combobox', { name: 'Schema exported at' }).click();
+    await page.getByRole('option').last().click();
+  }
+
+  test('the schema table marks the primary key columns', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/int-departures/schema');
+    await expect(schema(page)).toContainText('icao24');
+
+    // the same key symbol the graph node marks a primary key with
+    await expect(schemaRow(page, 'icao24').locator('.lineage-column-icon-pk')).toHaveCount(1);
+    // estDepartureAirport is a primary key column and the referencing side of a foreign key
+    await expect(schemaRow(page, 'estDepartureAirport').locator('.lineage-column-icon-pk')).toHaveCount(1);
+    // a column that is neither is left blank
+    await expect(schemaRow(page, 'callsign').locator('.lineage-column-icon-pk')).toHaveCount(0);
+  });
+
+  test('the foreign keys are a column of their own, off until it is asked for', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/int-departures/schema');
+    await expect(schema(page)).toContainText('icao24');
+
+    // a property of the data model rather than of the schema, so the column starts hidden
+    await expect(headCell(page, 'FK')).toHaveCount(0);
+    await expect(schema(page).getByRole('link', { name: 'int-airports' })).toHaveCount(0);
+
+    await toggleColumn(page, 'FK');
+
+    await expect(headCell(page, 'FK')).toHaveCount(1);
+    await expect(schemaRow(page, 'estDepartureAirport').getByRole('link', { name: 'int-airports' })).toBeVisible();
+    await expect(schemaRow(page, 'callsign').getByRole('link')).toHaveCount(0);
+  });
+
+  test('a foreign key chip names its key on hover and leads to the referenced data object', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/int-departures/schema');
+    await expect(schema(page)).toContainText('icao24');
+    await toggleColumn(page, 'FK');
+    const chip = schemaRow(page, 'estArrivalAirport').getByRole('link', { name: 'int-airports' });
+
+    await chip.hover();
+
+    await expect(page.locator('[role="tooltip"]')).toContainText('fk_arrival_airport');
+    await expect(page.locator('[role="tooltip"]')).toContainText('int-airports.ident');
+
+    await chip.click();
+
+    await expect.poll(() => page.url()).toContain('/config/dataObjects/int-airports');
+  });
+
+  test('a data object with a primary key and no foreign key is offered only the PK column', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/int-airports/schema');
+    await oldestExport(page);
+    await expect(schema(page)).toContainText('latitude_deg');
+
+    await expect(schemaRow(page, 'ident').locator('.lineage-column-icon-pk')).toHaveCount(1);
+    await openColumnMenu(page);
+    await expect(columnMenuItem(page, 'PK')).toHaveCount(1);
+    await expect(columnMenuItem(page, 'FK')).toHaveCount(0);
+  });
+
+  test('a data object without keys is offered neither of the two columns', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/btl-distances/schema');
+    await oldestExport(page);
+    // a column name of its own - the failed newest export names the table, which contains 'distance'
+    await expect(schema(page)).toContainText('could_be_done_by_rail');
+
+    await expect(headCell(page, 'PK')).toHaveCount(0);
+    await openColumnMenu(page);
+    await expect(columnMenuItem(page, 'PK')).toHaveCount(0);
+    await expect(columnMenuItem(page, 'FK')).toHaveCount(0);
+  });
+
+  test('the column selection above the table hides a column', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/int-departures/schema');
+    await expect(headCell(page, 'PK')).toHaveCount(1);
+
+    await toggleColumn(page, 'PK');
+
+    await expect(headCell(page, 'PK')).toHaveCount(0);
+    // and the rest of the table is still there
+    await expect(headCell(page, 'Column')).toHaveCount(1);
+    await expect(schema(page)).toContainText('icao24');
+  });
+});
+
 test.describe('foreign keys in the configuration view', () => {
   const foreignKeys = (page: Page) => page.getByRole('button', { name: 'Foreign Keys' });
 
