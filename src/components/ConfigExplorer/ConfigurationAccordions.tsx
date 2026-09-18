@@ -34,7 +34,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
       let rows = foreignKeys.map((foreignKey: any) => 
         <tr>
           <td>{foreignKey.name}</td>
-          <td>{(foreignKey.db || props.connectionDb || "<db?>") + "." + foreignKey.name}</td>
+          <td>{(foreignKey.db || props.connectionDb || "<db?>") + "." + foreignKey.table}</td>
           <td><Stack spacing={0.5} direction="row">{Object.entries(foreignKey.columns).map(([k,v], idx) => createSimpleChip(k+" -> "+v, idx))}</Stack></td>
         </tr>
       )

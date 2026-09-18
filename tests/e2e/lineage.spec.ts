@@ -115,6 +115,145 @@ test.describe('lineage graph', () => {
     expect(reactWarnings).toEqual([]);
   });
 
+  test('the edges meet their nodes where nothing hides them, in both layouts', async ({ page }) => {
+    /*
+        A handle is where ReactFlow puts the end of an edge. On the node's border the edge meets it
+        exactly; an anchor inside the node would hide the end of the line under it and one further
+        out would leave a gap. Where the node shows a graph expand button the anchors on that border
+        move out to the button's outer edge instead, or the arrow head would sit behind it - and the
+        button is pushed back by the same amount, so it keeps straddling the border.
+    */
+    await openLineage(page, '/#/config/dataObjects/int-departures');
+
+    // one entry per node and border: how far outside it the anchors and the button sit, in graph
+    // units, so that the assertions do not depend on the zoom
+    const borders = async () => page.evaluate(() => {
+      const scale = new DOMMatrix(getComputedStyle(document.querySelector('.react-flow__viewport')!).transform).a;
+      const out: {id: string, side: string, hasButton: boolean, anchors: number[], button: number | null}[] = [];
+      document.querySelectorAll('.react-flow__node').forEach((node) => {
+        const nb = node.getBoundingClientRect();
+        const bySide = new Map<string, Element[]>();
+        node.querySelectorAll('.react-flow__handle').forEach((handle) => {
+          // the per column handles belong to their row, not to the node's border
+          if (handle.getAttribute('data-handleid')?.startsWith('col-')) return;
+          const side = handle.className.split(' ')[1].replace('react-flow__handle-', '');
+          bySide.set(side, [...(bySide.get(side) ?? []), handle]);
+        });
+        bySide.forEach((handles, side) => {
+          const vertical = side === 'top' || side === 'bottom';
+          const outside = (box: DOMRect) => {
+            const centre = vertical ? box.top + box.height / 2 - nb.top : box.left + box.width / 2 - nb.left;
+            const size = vertical ? nb.height : nb.width;
+            const v = Math.round(((side === 'top' || side === 'left') ? -centre : centre - size) / scale);
+            return v === 0 ? 0 : v;   // Object.is(-0, 0) is false
+          };
+          const withButton = handles.find((h) => h.querySelector('svg'));
+          out.push({
+            id: node.getAttribute('data-id')!, side,
+            hasButton: withButton !== undefined,
+            anchors: handles.map((h) => outside(h.getBoundingClientRect())),
+            button: withButton ? outside(withButton.querySelector('button')!.getBoundingClientRect()) : null,
+          });
+        });
+      });
+      return out;
+    });
+
+    const check = async (layout: string) => {
+      const all = await borders();
+      expect(all.length, layout).toBeGreaterThan(0);
+      for (const {id, side, hasButton, anchors, button} of all) {
+        const where = `${layout} ${id} ${side}`;
+        if (hasButton) {
+          // every anchor on that border clears the button, which still straddles the border
+          anchors.forEach((a) => expect(a, where).toBeGreaterThan(0));
+          expect(button, where).toBe(0);
+        } else {
+          anchors.forEach((a) => expect(a, where).toBe(0));
+        }
+      }
+    };
+
+    await check('TB');
+    await page.getByRole('button', { name: 'switch to horizontal layout' }).click();
+    await expect.poll(async () => (await borders()).length).toBeGreaterThan(0);
+    await check('LR');
+  });
+
+  test('the graph view menu marks the view that is shown', async ({ page }) => {
+    /*
+        The menu reads the view off the lineage state, not off anything it remembers: the lineage
+        tab re-creates the whole flow, and the toolbar with it, whenever a setting changes, so a
+        selection kept in the toolbar would be back to its initial value while the graph shows
+        something else.
+    */
+    await openLineage(page, '/#/config/dataObjects/int-airports');
+
+    const selected = async () => {
+      await graphViewMenu(page).click();
+      const marked = await page.getByRole('menuitem')
+        .evaluateAll((els) => els.findIndex((el) => el.className.includes('Mui-selected')));
+      await page.keyboard.press('Escape');
+      return marked;
+    };
+
+    expect(await selected()).toBe(0);           // the full graph, which is the default
+
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(1).click(); // data graph
+    await expect(nodes(page).first()).toBeVisible();
+
+    expect(await selected()).toBe(1);
+  });
+
+  test('a handle is an anchor for an edge, not something to interact with', async ({ page }) => {
+    await openLineage(page, '/#/config/dataObjects/int-departures');
+
+    /*
+        ReactFlow treats a handle as a point you drag a new connection from and gives it a
+        crosshair. This graph is not editable, so that would promise an interaction that does not
+        exist - the handle is only where an edge meets its node, and where the expand button sits.
+    */
+    const cursors = await page.locator('.react-flow__node .react-flow__handle')
+      .evaluateAll((els) => [...new Set(els.map((el) => getComputedStyle(el).cursor))]);
+    expect(cursors).toEqual(['default']);
+
+    // the expand button on a handle is still a button
+    const button = page.locator('.react-flow__node .react-flow__handle button').first();
+    expect(await button.evaluate((el) => getComputedStyle(el).cursor)).toBe('pointer');
+  });
+
+  test('a node that cannot be expanded in a direction has no button there', async ({ page }) => {
+    // an empty button is still a hover target, and shows up as a grey box against the node
+    await openLineage(page, '/#/config/dataObjects/btl-distances');
+
+    const sink = page.locator('.react-flow__node[data-id="btl-distances"]');
+    // btl-distances is written by an action and read by none, so it can only be expanded backwards
+    await expect(sink.locator('.react-flow__handle-top button')).toHaveCount(1);
+    await expect(sink.locator('.react-flow__handle-bottom button')).toHaveCount(0);
+  });
+
+  test('the title of a node clears the expand button beside it', async ({ page }) => {
+    /*
+        The expand button straddles the border and reaches EXPAND_BUTTON_OUTSET into the node, so
+        the node's horizontal padding has to be wider than that - otherwise the title starts right
+        against the button. In a left to right layout the two are at the same height.
+    */
+    await openLineage(page, '/#/config/dataObjects/int-departures');
+    await page.getByRole('button', { name: 'switch to horizontal layout' }).click();
+
+    const gap = async () => page.evaluate(() => {
+      const node = document.querySelector('.react-flow__node[data-id="int-departures"]')!;
+      const button = node.querySelector('.react-flow__handle-left button');
+      if (!button) return null;
+      const title = [...node.querySelectorAll('.MuiTypography-root')]
+        .find((t) => t.textContent === 'int-departures')!;
+      return title.getBoundingClientRect().left - button.getBoundingClientRect().right;
+    });
+
+    await expect.poll(gap).toBeGreaterThan(0);
+  });
+
   test('the expand handle of a node adds and removes its neighbours', async ({ page }) => {
     await openLineage(page, '/#/config/dataObjects/int-airports');
 
@@ -198,9 +337,10 @@ test.describe('lineage of the listed elements', () => {
     await openTableLineage(page, '/#/config/dataObjects');
 
     expect(await nodeIds(page)).toEqual([...DATA_OBJECTS].sort());
-    // the whole graph is shown, so there is nothing to expand, center or switch the view of.
-    // The expand handles hold their icon only where they can act (the button itself always renders)
+    // the whole graph is shown, so there is nothing to expand, center or switch the view of - and
+    // an expand button is only rendered where it can act, never empty
     await expect(nodes(page).locator('.react-flow__handle svg')).toHaveCount(0);
+    await expect(nodes(page).locator('.react-flow__handle button')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Expand graph' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Focus on central node' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Show graph view options' })).toHaveCount(0);

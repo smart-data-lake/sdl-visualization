@@ -406,12 +406,22 @@ export class DAGraph {
     //Returns the nodes and edges of a partial graph based on a specific node (predecessors and succesors) as a pair
     // TODO: can be oimplemented using getOu/In elements since we have the nodes and edges merged when the graph is created now.
     returnPartialGraphInputs(specificNodeId:id): [Node[], Edge[]]{
-        function predecessors(nodeId: id, graph: DAGraph){
+        /*
+            Both traversals remember which nodes they have already enumerated the neighbours of.
+            A lineage graph is a DAG, so this only saves walking a diamond twice; the relations
+            graph is not - a foreign key cycle would recurse until the stack runs out. The direct
+            neighbour and its edge are added before recursing, so a node reached a second time
+            still contributes itself, only its ancestors resp. descendants are not collected again
+            (the first traversal through them already merged those into the result).
+        */
+        function predecessors(nodeId: id, graph: DAGraph, seen: Set<id> = new Set<id>()){
             var nodes = new Set<Node>();
             var edges = new Set<Edge>();
+            if (seen.has(nodeId)) return [nodes, edges];
+            seen.add(nodeId);
             graph.edges.forEach(edge => {
                 if (edge.toNode.id === nodeId){
-                    let pred = predecessors(edge.fromNode.id, graph);
+                    let pred = predecessors(edge.fromNode.id, graph, seen);
                     nodes.add(edge.fromNode);
                     nodes = union(nodes, pred[0] as Set<Node>);
                     edges.add(edge);
@@ -421,12 +431,14 @@ export class DAGraph {
             return [nodes, edges];
         } 
 
-        function successors(nodeId: id, graph:DAGraph){
+        function successors(nodeId: id, graph:DAGraph, seen: Set<id> = new Set<id>()){
             var nodes = new Set<Node>();
             var edges = new Set<Edge>();
+            if (seen.has(nodeId)) return [nodes, edges];
+            seen.add(nodeId);
             graph.edges.forEach(edge =>{
                 if (edge.fromNode.id === nodeId){
-                    let succ = successors(edge.toNode.id, graph);
+                    let succ = successors(edge.toNode.id, graph, seen);
                     nodes.add(edge.toNode);
                     nodes = union(nodes, succ[0] as Set<Node>);
                     edges.add(edge);
@@ -440,7 +452,9 @@ export class DAGraph {
         this.setCenterNode(specificNode);
         const nodes = setAsArray(union(predecessors(specificNodeId, this)[0] as Set<Node>, 
                                  successors(specificNodeId, this)[0] as Set<Node>));//merge predeccessors and successors     
-        nodes.push(specificNode as Node); //add the central/origin node itself
+        // add the central/origin node itself - unless it is already there, which it is when it
+        // lies on a cycle and so is its own ancestor
+        if (!nodes.includes(specificNode as Node)) nodes.push(specificNode as Node);
         const edges = setAsArray(union(predecessors(specificNodeId, this)[1] as Set<Edge>, 
                                  successors(specificNodeId, this)[1] as Set<Edge>));   
 
@@ -903,7 +917,29 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
     return nodes;
 }
 
-export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string, nodeWidth: number, nodeHeight: number): ReactFlowNode[] {
+/*
+    The size a ReactFlow node should be laid out with: the size it declares through its style, else
+    the given default. A node showing its columns is taller than one that does not, so the layout
+    cannot assume one size for all of them - but the size is always *declared*, never measured, so
+    that laying out does not have to wait for a render pass.
+*/
+export function rfNodeSize(node: ReactFlowNode, defaultWidth: number, defaultHeight: number): {width: number, height: number} {
+    return {
+        width: Number(node.style?.width) || defaultWidth,
+        height: Number(node.style?.height) || defaultHeight,
+    };
+}
+
+/*
+    Set the declared size of a single node in the given ReactFlow instance.
+*/
+export function setRfNodeSize(rfi: ReactFlowInstance, nodeId: string, size: {width: number, height: number}) {
+    rfi.setNodes(nodes => nodes.map(node => node.id === nodeId
+        ? {...node, style: {...node.style, width: size.width, height: size.height}}
+        : node));
+}
+
+export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string, nodeWidth: number = 172, nodeHeight: number = 36): ReactFlowNode[] {
     
     //instantiate dagre Graph
     const dagreGraph = new dagre.graphlib.Graph();
@@ -914,14 +950,17 @@ export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], di
     dagreGraph.setGraph({ rankdir: direction, nodesep: 150, ranksep: 150});
     
     //add nodes + edges to the graph and calculate layout
-    nodes.forEach((node)=> dagreGraph.setNode(node.id, {width: nodeWidth, height: nodeHeight}));
+    nodes.forEach((node)=> dagreGraph.setNode(node.id, rfNodeSize(node, nodeWidth, nodeHeight)));
     edges.forEach((edge) => dagreGraph.setEdge(edge.source, edge.target));
     dagre.layout(dagreGraph); 
 
-    // set layouted nodes position
+    // Shift the dagre node position (anchor=center center) to the top left, so that it matches the
+    // React Flow node anchor point - as dagreLayout does. With one size for every node that is a
+    // constant shift of the whole graph, but nodes showing their columns have different heights.
     nodes.forEach((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
-        node.position = {x: nodeWithPosition.x, y: nodeWithPosition.y};
+        const {width, height} = rfNodeSize(node, nodeWidth, nodeHeight);
+        node.position = {x: nodeWithPosition.x - width / 2, y: nodeWithPosition.y - height / 2};
     });
 
     return nodes;

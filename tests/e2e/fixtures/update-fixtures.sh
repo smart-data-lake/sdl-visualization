@@ -36,12 +36,18 @@ curl -sfL "$RAW/config/departures.conf.part-3-solution" -o "$DIR/hocon/config/de
 curl -sfL "$RAW/config/btl.conf.part-3-solution"        -o "$DIR/hocon/config/btl.conf"
 curl -sfL "$RAW/envConfig/dev.conf"                  -o "$DIR/hocon/envConfig/dev.conf"
 
-# index file listing the config files, used when the web server cannot list directories
+# index file listing the config files, used when the web server cannot list directories.
+# relations.conf is ours, not the getting-started project's, and is not downloaded above - so it
+# survives a refresh and is picked up here.
 ( cd "$DIR/hocon/config" && ls *.conf > index )
 
 # --- exported config (branch a), what the deployed getting-started viz uses ----
 mkdir -p "$DIR/exported"
 curl -sfL "$PAGES/exportedConfig.json" -o "$DIR/exported/exportedConfig.json"
+
+# the exported config is downloaded whole, so the foreign keys of relations.conf have to be put
+# back into it after every refresh (see patch-relations.py)
+python3 "$DIR/patch-relations.py" "$DIR/exported/exportedConfig.json"
 
 # --- state files --------------------------------------------------------------
 mkdir -p "$DIR/shared/state/succeeded"
