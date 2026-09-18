@@ -21,6 +21,14 @@ The first three describe **what flows where** and are derived from the actions. 
 related without an action connecting them, and two data objects an action connects need not be
 related. It is built in `src/util/ConfigExplorer/RelationsGraph.ts`.
 
+A foreign key names the data object it references — `dataObjectId`, since SDLB 3.x replaced the
+former `db`/`table` pair ([smart-data-lake#1148](https://github.com/smart-data-lake/smart-data-lake/pull/1148)) —
+so an edge is a lookup by id rather than a resolution by table name. A key still written the old way
+names a table, not a data object, and is **ignored** (`getForeignKeys` in `ColumnModel.ts`): there is
+no way to turn it into a data object without guessing, and a wrong relation is worse than none. A
+key naming a data object this configuration does *not* describe — one filtered away by a feed
+selection, say — keeps its reference and renders as unresolved.
+
 Everything downstream of `getGraphFromConfig` — centering, expand and collapse, grouping, layout,
 search, the PNG download — works on all four, because all four are a `DAGraph`. The relations graph
 is the one that is **not acyclic**: foreign keys point in circles (orders reference customers,
@@ -63,7 +71,7 @@ not have.
 
 A column that takes part in a relation carries the way to its other end: its name links to that data
 object, and its tooltip names every relation it takes part in, in both directions. The name is only
-a link when there is **exactly one** data object at the other end — a primary key is typically
+a link when there is **exactly one** *resolved* data object at the other end — a primary key is typically
 referenced from several tables, and picking one of them would be a guess. Several relations to the
 *same* data object are not ambiguous, so what is counted is distinct data objects, not relations.
 A column with nothing to add to what its row already shows — a primary key and nothing else — gets

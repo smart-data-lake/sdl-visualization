@@ -1,10 +1,11 @@
 import { Accordion, AccordionDetails, AccordionGroup, AccordionSummary, Link, Stack, Table } from '@mui/joy';
 import 'github-markdown-css/github-markdown.css';
 import { useManifest } from '../../hooks/useManifest';
+import { getForeignKeys } from '../../util/ConfigExplorer/ColumnModel';
 import { getPropertyByPath, hoconify } from '../../util/helpers';
 import CodeViewComponent from './CodeViewComponent';
 import './ComponentsStyles.css';
-import { createSimpleChip } from './ConfigurationTab';
+import { createDataObjectChip, createSimpleChip, createUnknownDataObjectChip } from './ConfigurationTab';
 import { createPropertiesComponent } from './PropertiesComponent';
 
 function getTransformers(action: any | undefined): any[] {
@@ -18,7 +19,7 @@ interface AccordionCreatorProps {
   data: any; // config of object to display
   propsToIgnore: string[] // This shows which attributes should or should not be in the "additional attributes" accordion
   elementType: string;
-  connectionDb?: String;
+  dataObjects?: any; // every DataObject of the configuration, see foreignKeysAccordion
 }
 
 export default function ConfigurationAccordions(props: AccordionCreatorProps) {
@@ -27,24 +28,38 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   var accordionSections = new Map<string,[string | JSX.Element,JSX.Element]>();
   const {data: manifest} = useManifest();
   
+  /*
+    A foreign key names the DataObject it references - `dataObjectId`, since SDLB 3.x - so the
+    reference is rendered as a chip that leads to that DataObject's configuration. A key naming a
+    DataObject this configuration does not describe keeps its name but leads nowhere.
+
+    getForeignKeys drops a key written in the older `db`/`table` form: it names a table, not a
+    DataObject, and there is nothing to link to.
+  */
+  function referencedDataObjectChip(dataObjectId: string){
+    // without the configuration there is nothing to check against, so the reference is taken as given
+    const isKnown = !props.dataObjects || props.dataObjects[dataObjectId] !== undefined;
+    return isKnown ? createDataObjectChip(dataObjectId, 'sm', {mr: 0})
+                   : createUnknownDataObjectChip(dataObjectId, 'sm', {mr: 0});
+  }
+
   function foreignKeysAccordion(){
-    let foreignKeys = getAttribute('table.foreignKeys');
-    if (foreignKeys && foreignKeys.length>0){
-      //db, table, columns: Map[String,String], name
-      let rows = foreignKeys.map((foreignKey: any) => 
-        <tr>
+    let foreignKeys = getForeignKeys(props.data);
+    if (foreignKeys.length>0){
+      let rows = foreignKeys.map((foreignKey, idx) => 
+        <tr key={foreignKey.name ?? idx}>
           <td>{foreignKey.name}</td>
-          <td>{(foreignKey.db || props.connectionDb || "<db?>") + "." + foreignKey.table}</td>
+          <td>{referencedDataObjectChip(foreignKey.dataObjectId)}</td>
           <td><Stack spacing={0.5} direction="row">{Object.entries(foreignKey.columns).map(([k,v], idx) => createSimpleChip(k+" -> "+v, idx))}</Stack></td>
         </tr>
       )
 
       let tbl = (<Table size='md'
-        sx={{tableLayout: 'auto', width: 'max-content', maxWidth: '100%', borderCollapse: 'collapse', border: '1px solid var(--TableCell-borderColor)', '& td': {padding: '0px', height: '32px', borderLeft: '1px solid var(--TableCell-borderColor)', borderRight: '1px solid var(--TableCell-borderColor)'}}}>
+        sx={{tableLayout: 'auto', width: 'max-content', maxWidth: '100%', borderCollapse: 'collapse', border: '1px solid var(--TableCell-borderColor)', '& td': {padding: '0px 6px', height: '32px', borderLeft: '1px solid var(--TableCell-borderColor)', borderRight: '1px solid var(--TableCell-borderColor)'}}}>
           <thead>
             <tr>
               <td width="10%">Name</td>
-              <td>Target table</td>            
+              <td>Referenced DataObject</td>            
               <td>Column mapping</td>            
             </tr>
           </thead>

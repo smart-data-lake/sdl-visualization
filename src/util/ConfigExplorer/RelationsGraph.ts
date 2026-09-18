@@ -10,6 +10,10 @@ import { DAGraph, Edge, Node, NodeType } from "./Graphs";
     and two DataObjects an action connects need not be related - so it is built directly from
     `table.foreignKeys`, next to fullGraph/dataGraph/actionGraph in ConfigData.
 
+    A foreign key names the DataObject it references (`dataObjectId`), so an edge is a lookup rather
+    than a resolution; a key still written in the pre 3.x `db`/`table` form names no DataObject and
+    is dropped by getForeignKeys.
+
     It is a DAGraph so that everything the lineage tab already does - centering, expanding,
     collapsing, grouping, layouting - works on it unchanged. It is *not* acyclic though: foreign
     keys point in circles often enough that every traversal used on it has to tolerate that.
@@ -28,72 +32,15 @@ export class RelationEdge extends Edge {
     }
 }
 
-/** Where a DataObject's table lives, filling the gaps from its connection. */
-export function tableCoordinates(configObj: any, configData: ConfigData): {catalog?: string, db?: string, name?: string} {
-    const table = configObj?.table;
-    if (!table || typeof table.name !== 'string') return {};
-    // db and catalog may be declared on the connection instead of on the table, the same fallback
-    // the Configuration tab and the Foreign Keys accordion use
-    const connection = configObj?.connectionId ? configData.connections?.[configObj.connectionId] : undefined;
-    return {
-        catalog: table.catalog ?? connection?.catalog,
-        db: table.db ?? connection?.db,
-        name: table.name,
-    };
-}
-
-/*
-    An index from table name to DataObject id, so that a foreign key - which names a table, not a
-    DataObject - can be resolved. Every table is registered under its fully qualified name, under
-    db.name and under its bare name, so that a foreign key can be as unspecific as it likes. A key
-    two tables would claim is ambiguous and registered for neither.
-*/
-export function buildTableIndex(configData: ConfigData): Map<string, string> {
-    const index = new Map<string, string>();
-    const ambiguous = new Set<string>();
-    const register = (key: string | undefined, dataObjectId: string) => {
-        if (!key) return;
-        const lower = key.toLowerCase();
-        if (ambiguous.has(lower)) return;
-        const existing = index.get(lower);
-        if (existing === undefined) index.set(lower, dataObjectId);
-        else if (existing !== dataObjectId) { index.delete(lower); ambiguous.add(lower); }
-    };
-
-    Object.entries(configData.dataObjects ?? {}).forEach(([dataObjectId, configObj]) => {
-        const {catalog, db, name} = tableCoordinates(configObj, configData);
-        if (!name) return;
-        if (catalog && db) register(`${catalog}.${db}.${name}`, dataObjectId);
-        if (db) register(`${db}.${name}`, dataObjectId);
-        register(name, dataObjectId);
-    });
-    return index;
-}
-
 /**
- * The id of the DataObject a foreign key points at, or undefined when it points outside this
- * configuration - which is legitimate, not an error.
+ * Whether a foreign key's `dataObjectId` names a DataObject of this configuration.
  *
- * Tried from the most specific name to the least: the foreign key may name a db of its own, else
- * it is read as living in the same db as the DataObject that declares it.
+ * It need not: SDLB rejects an unknown id, but the explorer is regularly shown a configuration
+ * narrowed by a feed selection, and a key out of that selection keeps its reference and renders as
+ * unresolved rather than disappearing.
  */
-export function resolveFkTarget(fk: ForeignKeyConfig,
-                                configObj: any,
-                                configData: ConfigData,
-                                index: Map<string, string> = buildTableIndex(configData)): string | undefined {
-    const own = tableCoordinates(configObj, configData);
-    const db = fk.db ?? own.db;
-    const candidates = [
-        own.catalog && db ? `${own.catalog}.${db}.${fk.table}` : undefined,
-        db ? `${db}.${fk.table}` : undefined,
-        fk.table,
-    ];
-    for (const candidate of candidates) {
-        if (!candidate) continue;
-        const dataObjectId = index.get(candidate.toLowerCase());
-        if (dataObjectId) return dataObjectId;
-    }
-    return undefined;
+export function isKnownDataObject(dataObjectId: string, configData: ConfigData): boolean {
+    return configData.dataObjects?.[dataObjectId] !== undefined;
 }
 
 const columnPairs = (fk: ForeignKeyConfig) =>
@@ -108,18 +55,16 @@ const columnPairs = (fk: ForeignKeyConfig) =>
 export function getRelationsGraph(fullGraph: DAGraph, configData: ConfigData): DAGraph {
     const nodes = fullGraph.nodes.filter(node => node.nodeType === NodeType.DataNode);
     const nodesById = new Map(nodes.map(node => [node.id, node]));
-    const index = buildTableIndex(configData);
     const edges: RelationEdge[] = [];
 
     nodes.forEach(node => {
         const configObj = configData.dataObjects?.[node.id];
         getForeignKeys(configObj).forEach((fk, i) => {
-            const targetId = resolveFkTarget(fk, configObj, configData, index);
-            const targetNode = targetId ? nodesById.get(targetId) : undefined;
+            const targetNode = nodesById.get(fk.dataObjectId);
             if (!targetNode) {
-                // the foreign key points at a table this configuration does not describe. The
+                // the foreign key points at a DataObject this configuration does not describe. The
                 // column keeps the reference (see buildColumnModel) and renders it as unresolved.
-                console.debug(`Foreign key of '${node.id}' points at '${fk.table}', which is not a DataObject of this configuration`);
+                console.debug(`Foreign key of '${node.id}' points at '${fk.dataObjectId}', which is not a DataObject of this configuration`);
                 return;
             }
             // the foreign key name is part of the id, so that two foreign keys between the same

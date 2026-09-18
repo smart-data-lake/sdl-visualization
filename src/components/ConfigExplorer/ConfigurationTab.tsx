@@ -3,7 +3,7 @@ import AltRouteIcon from '@mui/icons-material/AltRoute';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import SellIcon from '@mui/icons-material/Sell';
 import StyleIcon from '@mui/icons-material/Style';
-import { Box, Chip, Grid, Select, Stack, Table, Typography } from '@mui/joy';
+import { Box, Chip, Grid, Select, Stack, Table, Tooltip, Typography } from '@mui/joy';
 import Option from '@mui/joy/Option';
 import 'github-markdown-css/github-markdown.css';
 import { useEffect, useState } from 'react';
@@ -21,7 +21,8 @@ import { useWorkspace } from '../../hooks/useWorkspace';
 
 interface ElementProps {
   data: any; // config of object to display
-  connection?: any; // connection config of object to display  
+  connection?: any; // connection config of object to display
+  dataObjects?: any; // every DataObject of the configuration, to tell a reference that leads somewhere from one that does not
   statsEntries?: TstampEntry[]; // list of available statistics entries, ordered from youngest to oldest
   elementName: string;
   elementType: string;
@@ -94,6 +95,19 @@ function DataObjectChip({name, size, sx}: {name: string, size: ChipSize, sx: obj
 
 export function createDataObjectChip(name: string, size: ChipSize ="md", sx: object = {}, key?: any){
   return <DataObjectChip key={key} name={name} size={size} sx={sx}/>
+}
+
+/*
+  A data object this configuration does not describe - a foreign key may name one that the exporter
+  filtered away. It reads like a data object but leads nowhere, so it is not a link; the relations
+  view marks the same reference as unresolved.
+*/
+export function createUnknownDataObjectChip(name: string, size: ChipSize ="md", sx: object = {}, key?: any){
+  return (
+    <Tooltip key={key} title="not a DataObject of this configuration" size="sm" arrow>
+      <Chip color="neutral" startDecorator={<TableViewTwoTone />} variant="outlined" className='chips' sx={{mr: 1, ...sx}} size={size}>{name}</Chip>
+    </Tooltip>
+  )
 }
 
 function ActionsChip({name, size, sx}: {name: string, size: ChipSize, sx: object}){
@@ -196,7 +210,7 @@ export default function ConfigurationTab(props: ElementProps) {
   function mainContent(){
     let propsToIgnore = topAttributes.map(x => x.key).concat(['metadata', 'type', 'inputId', 'inputIds', 'outputId', 'outputIds', 'id']);
     if (props.elementType === 'actions' || props.elementType === 'dataObjects' || props.elementType === 'connections'){
-      return(<ConfigurationAccordions data={props.data} elementType={props.elementType} propsToIgnore={propsToIgnore} connectionDb={(props.connection ? props.connection.db : undefined)} />)
+      return(<ConfigurationAccordions data={props.data} elementType={props.elementType} propsToIgnore={propsToIgnore} dataObjects={props.dataObjects} />)
     } else { 
       throw new Error(`Unknown element Type ${props.elementType}`);
     }

@@ -21,8 +21,8 @@ const intDepartures = {
     name: 'int_departures',
     primaryKey: ['icao24', 'estdepartureairport', 'dt'],
     foreignKeys: [
-      { name: 'fk_departure_airport', table: 'int_airports', columns: { estdepartureairport: 'ident' } },
-      { name: 'fk_arrival_airport', table: 'int_airports', columns: { estarrivalairport: 'ident' } },
+      { name: 'fk_departure_airport', dataObjectId: 'int-airports', columns: { estdepartureairport: 'ident' } },
+      { name: 'fk_arrival_airport', dataObjectId: 'int-airports', columns: { estarrivalairport: 'ident' } },
     ],
   },
   _columnDescriptions: { icao24: 'the transponder address' },
@@ -55,9 +55,29 @@ describe('reading the configuration', () => {
   });
 
   test('malformed entries are ignored rather than thrown on', () => {
-    const broken = { table: { primaryKey: 'ident', foreignKeys: [{ table: 'x' }, null, { columns: {} }] } };
+    const broken = { table: { primaryKey: 'ident', foreignKeys: [{ dataObjectId: 'x' }, null, { columns: {} }] } };
     expect(getPrimaryKey(broken)).toEqual([]);
     expect(getForeignKeys(broken)).toEqual([]);
+  });
+
+  test('a key in the pre 3.x db/table form is ignored', () => {
+    /*
+        SDLB 3.x replaced the referenced db/table by the id of the referenced data object
+        (smart-data-lake#1148). An old configuration names a table, which cannot be turned into a
+        data object without guessing - so the key is dropped rather than half resolved.
+    */
+    const legacy = {
+      table: {
+        name: 'int_departures',
+        foreignKeys: [
+          { name: 'fk_legacy', db: 'reference', table: 'airlines', columns: { callsign: 'callsign' } },
+          { name: 'fk_arrival_airport', dataObjectId: 'int-airports', columns: { estarrivalairport: 'ident' } },
+        ],
+      },
+    };
+    expect(getForeignKeys(legacy).map((fk) => fk.name)).toEqual(['fk_arrival_airport']);
+    // and the column the old key names does not make it into the model either
+    expect(buildColumnModel(legacy).columns.map((c) => c.name)).toEqual(['estarrivalairport']);
   });
 });
 
@@ -103,7 +123,7 @@ describe('merging', () => {
     expect(columns.filter((c) => c.isPrimaryKey).map((c) => c.name))
       .toEqual(['icao24', 'estdepartureairport', 'dt']);
     expect(byName(columns, 'estarrivalairport').references).toEqual([
-      { db: undefined, table: 'int_airports', column: 'ident', dataObjectId: undefined, fkName: 'fk_arrival_airport' },
+      { dataObjectId: 'int-airports', column: 'ident', fkName: 'fk_arrival_airport', resolved: false },
     ]);
     // one column can be both the primary key and a foreign key
     expect(byName(columns, 'estdepartureairport').isPrimaryKey).toBe(true);
@@ -120,12 +140,21 @@ describe('merging', () => {
     expect(columns[0].declaredOnly).toBe(false);
   });
 
-  test('resolveFk decides which data object a reference points at', () => {
+  test('a reference names its data object whether or not the configuration describes it', () => {
+    // the reference is kept either way - the column still carries a relation - but only a data
+    // object this configuration knows can be navigated to, which is what resolved says
     const { columns } = buildColumnModel(intDepartures, {
       schema,
-      resolveFk: (fk) => (fk.table === 'int_airports' ? 'int-airports' : undefined),
+      isKnownDataObject: (dataObjectId) => dataObjectId === 'int-airports',
     });
-    expect(byName(columns, 'estarrivalairport').references[0].dataObjectId).toBe('int-airports');
+    expect(byName(columns, 'estarrivalairport').references[0])
+      .toEqual({ dataObjectId: 'int-airports', column: 'ident', fkName: 'fk_arrival_airport', resolved: true });
+
+    const { columns: unresolved } = buildColumnModel(intDepartures, {
+      schema,
+      isKnownDataObject: () => false,
+    });
+    expect(byName(unresolved, 'estarrivalairport').references[0].resolved).toBe(false);
   });
 
   test('the referenced side of a relation is part of the model too', () => {

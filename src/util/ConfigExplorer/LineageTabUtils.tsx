@@ -12,7 +12,7 @@ import { SchemaData, TaskStatus } from '../../types';
 import { findFirstKeyWithObject } from '../helpers';
 import { ColumnDisplay, ColumnInfo, buildColumnModel, filterColumns } from './ColumnModel';
 import { ConfigData } from './ConfigData';
-import { RelationEdge, getIncomingRefs, resolveFkTarget } from './RelationsGraph';
+import { RelationEdge, getIncomingRefs, isKnownDataObject } from './RelationsGraph';
 import { columnHandleId, nodeHeightFor, nodeRelationHandleId, nodeWidthFor } from '../../components/ConfigExplorer/LineageTab/DataObjectColumns';
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
@@ -258,7 +258,7 @@ function makeColumnsOf(props: flowProps): (node: GraphNode) => ColumnsFunc | und
         return (schema?: SchemaData) => {
             return buildColumnModel(configObj, {
                 schema,
-                resolveFk: fk => resolveFkTarget(fk, configObj, configData),
+                isKnownDataObject: dataObjectId => isKnownDataObject(dataObjectId, configData),
                 referencedBy,
             }).columns;
         };

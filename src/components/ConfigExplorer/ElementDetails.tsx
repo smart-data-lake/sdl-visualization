@@ -107,7 +107,7 @@ export default function ElementDetails(props: {
 						}
 					</Sheet>
 					<TabPanel value="configuration" className="content-panel" sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
-						<ConfigurationTab data={configObj} connection={connectionConfigObj} statsEntries={statsEntries} elementName={elementName!} elementType={elementType!} />
+						<ConfigurationTab data={configObj} connection={connectionConfigObj} dataObjects={configData?.dataObjects} statsEntries={statsEntries} elementName={elementName!} elementType={elementType!} />
 					</TabPanel>
 					<TabPanel value="description" className="content-panel" sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
 						<DescriptionTab data={description!} elementName={elementName!} elementType={elementType!} />
