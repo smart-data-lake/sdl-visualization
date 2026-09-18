@@ -1,5 +1,6 @@
 import { getPropertyByPathIgnoreCase, isArray, onlyUnique } from "../helpers";
 import { DAGraph, DataObjectsAndActionsSep } from "./Graphs";
+import { getRelationsGraph } from "./RelationsGraph";
 
 export class ConfigData {
     public dataObjects = {};
@@ -10,6 +11,8 @@ export class ConfigData {
     public fullGraph: DAGraph | undefined = undefined;
     public dataGraph: DAGraph | undefined = undefined;
     public actionGraph: DAGraph | undefined = undefined;
+    // DataObjects and their declared foreign keys - the model behind the Entity Relation Diagram
+    public relationsGraph: DAGraph | undefined = undefined;
 
     constructor(data: any) {
         if (data.dataObjects && typeof data.dataObjects === 'object') {
@@ -26,7 +29,13 @@ export class ConfigData {
         }
         this.fullGraph = new DataObjectsAndActionsSep(this);
         this.dataGraph = this.fullGraph?.getDataGraph();
-        this.actionGraph = this.fullGraph?.getActionGraph();     
+        this.actionGraph = this.fullGraph?.getActionGraph();
+        try {
+            this.relationsGraph = getRelationsGraph(this.fullGraph, this);
+        } catch (e) {
+            // a malformed table.foreignKeys block costs the relations view, not the whole config
+            console.error("Could not build the relations graph", e);
+        }
     }    
 }
 

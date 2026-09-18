@@ -4,6 +4,7 @@ import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import {CloudDownload, Close} from '@mui/icons-material';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
+import HubOutlined from '@mui/icons-material/HubOutlined';
 import SchemaIcon from '@mui/icons-material/Schema';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
 import WorkspacesIcon from '@mui/icons-material/Workspaces';
@@ -20,9 +21,7 @@ import { useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { nodeAttributes, useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
-import { dagreLayoutRf } from '../../../util/ConfigExplorer/Graphs';
-import { computeNodePositionFromParent, computeParentNodePositionFromArray, flowProps, getGraphFromConfig, getNonParentNodesFromArray, getParentNodesFromArray, groupByFeed, groupBySubstring, prioritizeParentNodes, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { nodeHeight, nodeWidth } from './LineageTabWithSeparateView';
+import { flowProps, getGraphFromConfig, groupByFeed, groupBySubstring, recomputeLayout, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
 
 /*
   Styling
@@ -40,32 +39,50 @@ function downloadImage(dataUrl: string) {
     a.click();
 }
 
-function GraphViewSelector() {
-    const { graphView, setGraphView } = useLineageGraph();
-    const [selectedIndex, setSelectedIndex] = useState<number>(0);
+function GraphViewSelector({props}: {props: flowProps}) {
+    const { graphView, setGraphView, setLayout } = useLineageGraph();
 
     const options = {
         full: {title: 'show full graph', icon: SchemaIcon},
         data: {title: 'show data graph', icon: TableViewTwoTone},
         action: {title: 'show action graph', icon: RocketLaunchOutlined},
+        relations: {title: 'show relations between data objects', icon: HubOutlined},
     }
 
+    // nothing to show when the configuration declares no foreign key, which is the common case
+    const hasRelations = (props.configData?.relationsGraph?.edges.length ?? 0) > 0;
+
     const handleSelect = (value) => {
-        setSelectedIndex(value === 'full' ? 0 : value === 'data' ? 1 : value === 'action' ? 2 : 0);
         setGraphView(value);
+        /*
+            An entity relation diagram is drawn left to right, and so are the relations: a column
+            handle is on the left or the right border of its row, so in a top to bottom layout the
+            edges would leave a node's lower border only to come back into the next node's left one.
+            The layout button still switches it back for anyone who wants that.
+        */
+        if (value === 'relations') setLayout('LR');
     };
 
-    const createTooltip = (identifier, index, options) => {
+    /*
+        The view that is shown is the one in the context, not one this component remembers: the
+        lineage tab re-creates the whole flow, and the toolbar with it, on every settings change, so
+        anything kept here would be back to its initial value while the graph shows something else.
+
+        The items carry an icon and nothing else, so they centre it rather than laying it out from
+        the left the way a menu item with a label does.
+    */
+    const createTooltip = (identifier, options, disabled = false) => {
         const title = options[identifier]['title']
         const Icon = options[identifier]['icon']
 
         return (
-            <MenuItem selected={selectedIndex === index} onClick={() => { handleSelect(identifier); }}>
-                <ListItemDecorator>
-                    <Tooltip arrow title={title} enterDelay={500} enterNextDelay={500} placement='right'>
-                        <Icon />
-                    </Tooltip>
-                </ListItemDecorator>
+            <MenuItem selected={graphView === identifier} disabled={disabled}
+                      onClick={() => { if (!disabled) handleSelect(identifier); }}
+                      sx={{ justifyContent: 'center' }}>
+                <Tooltip arrow title={disabled ? title + ' (no foreign keys are configured)' : title}
+                         enterDelay={500} enterNextDelay={500} placement='right'>
+                    <Icon />
+                </Tooltip>
             </MenuItem>
         )
     }
@@ -79,10 +96,11 @@ function GraphViewSelector() {
                     <ToolbarIcon />
                 </Tooltip>
             </MenuButton>
-            <Menu sx={{ '--ListItemDecorator-size': '20px' }}>
-                {createTooltip('full', 0, options)}
-                {createTooltip('data', 1, options)}
-                {createTooltip('action', 2, options)}
+            <Menu>
+                {createTooltip('full', options)}
+                {createTooltip('data', options)}
+                {createTooltip('action', options)}
+                {createTooltip('relations', options, !hasRelations)}
             </Menu>
         </Dropdown>
     )
@@ -188,20 +206,6 @@ function CenterFocusButton() {
             </IconButton>
         </Tooltip>
     )
-}
-
-function recomputeLayout(rfi: any, layoutDirection: any) {
-    const rfNodes = rfi.getNodes();
-    const nonParentNodes = getNonParentNodesFromArray(rfNodes);
-    const parentNodes = getParentNodesFromArray(rfNodes);
-    const rfEdges = rfi.getEdges();
-
-    var layoutedNonParentNodes = dagreLayoutRf(nonParentNodes, rfEdges, layoutDirection, nodeWidth, nodeHeight);
-    var layoutedParentNodes = computeParentNodePositionFromArray(layoutedNonParentNodes, parentNodes);
-    layoutedNonParentNodes = computeNodePositionFromParent(layoutedNonParentNodes, layoutedParentNodes);
-
-    rfi.setNodes([...layoutedNonParentNodes, ...layoutedParentNodes])
-    prioritizeParentNodes(rfi);
 }
 
 function RecomputeLayoutButton() {
@@ -492,7 +496,7 @@ export default function LineageGraphToolbar({props}: {props: flowProps}) {
                     <Divider orientation="vertical" />
                     <ToggleButtonGroup variant="plain" spacing={0.1}>
                         {showCenterNodeOptions && isPropsConfigDefined && <GraphExpansionButton />}
-                        {showCenterNodeOptions && <GraphViewSelector />}
+                        {showCenterNodeOptions && <GraphViewSelector props={props} />}
                         {isPropsConfigDefined && <GroupingButton props={props} />}
                         {isPropsConfigDefined && <NodeAttributeSelector />}
                     </ToggleButtonGroup>

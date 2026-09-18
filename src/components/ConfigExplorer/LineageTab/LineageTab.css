@@ -9,6 +9,20 @@
     stroke-width: 40;
 }
 
+/*
+  ReactFlow treats a handle as a point you drag a new connection from and gives it
+  `cursor: crosshair` (.react-flow__handle.connectionindicator). This graph is not editable -
+  nodesConnectable is off - so a handle here is only where an edge meets its node, plus the place
+  the graph expand button sits. The crosshair would promise an interaction that does not exist.
+*/
+.react-flow__handle.connectionindicator {
+  cursor: default;
+}
+
+.react-flow__handle button {
+  cursor: pointer;
+}
+
 .react-flow__handle-top {
   top: -15px;
 }
@@ -68,4 +82,137 @@ svg.data-node-partition-state-icon {
   color: var(--letter-background);
   scale: 80%;
   z-index: 0;
+}
+
+/*
+  Columns of a DataObject node (see DataObjectColumns.tsx), laid out like the rows of a table in an
+  entity relation diagram. The row height here and COLUMN_ROW_HEIGHT there are the same number: the
+  node declares its height from the constants before it renders, so the two have to agree or the box
+  does not fit its content.
+*/
+.lineage-column-list {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* the rule that separates the columns from the title, drawn edge to edge like a table header */
+  border-top: 1px solid #c0c0c0;
+  /* undo the node's horizontal padding, so the rule above the columns runs edge to edge */
+  margin: 3px calc(-1 * var(--lineage-node-padding-x, 16px)) 0;
+  padding: 3px var(--lineage-node-padding-x, 16px) 0;
+}
+
+.lineage-column-row {
+  position: relative;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.lineage-column-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+}
+
+.lineage-column-name {
+  /* the font size and line box come from COLUMN_FONT_SIZE / COLUMN_ROW_HEIGHT in
+     DataObjectColumns.tsx - a Joy Typography overrides a stylesheet rule with its own */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the name of a column that takes part in a relation leads to the data object at its other end */
+.lineage-column-link {
+  cursor: pointer;
+}
+
+.lineage-column-link:hover {
+  color: #096bde;
+  text-decoration: underline;
+}
+
+.lineage-column-type {
+  opacity: 0.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40%;
+}
+
+svg.lineage-column-icon {
+  height: 14px;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+/* colour supports the two shapes, it never carries the distinction on its own */
+svg.lineage-column-icon-pk { color: #b8860b; }
+svg.lineage-column-icon-fk { color: #096bde; }
+svg.lineage-column-icon-unresolved { color: #a9a9a9; }
+
+/* the column handles are anchors for the relation edges, nothing is ever dragged from them */
+.react-flow__handle.lineage-column-handle {
+  min-width: 1px;
+  min-height: 1px;
+  border: 0;
+  background: transparent;
+}
+
+/*
+  The expand control at the lower border of a data object node. It spans the full width of the node,
+  so it escapes the node's 10px padding, and sits on the bottom border like the footer of a table.
+  Its buttons flank the node's own expand handle, which sits centred on that border.
+*/
+.lineage-column-toggle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 16px;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #c0c0c0;
+  background: inherit;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+  overflow: hidden;
+  /* under the graph expand handle, which is anchored on the middle of the same border */
+  z-index: 1;
+}
+
+ /* The two ends of the strip, and only they, are clickable: the middle of the border belongs to
+    the node's graph expand handle. A direction that is not available keeps its place as an empty
+    half, so that the remaining chevron does not move to the other end. */
+.lineage-column-toggle-button {
+  flex: 0 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+}
+
+.lineage-column-toggle-empty {
+  cursor: default;
+  pointer-events: none;
+}
+
+.lineage-column-toggle-button:hover {
+  background: #eef4fb;
+  color: #096bde;
+}
+
+.lineage-column-toggle-empty:hover {
+  background: transparent;
+}
+
+svg.lineage-column-toggle-icon {
+  height: 14px;
+  width: 14px;
 }

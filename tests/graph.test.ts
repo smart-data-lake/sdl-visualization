@@ -10,8 +10,8 @@
  *    an action id appears exactly once, so the graph needs no merging of duplicated action nodes.
  */
 import { graphlib } from 'dagre';
-import {DAGraph, NodeType, Node, Edge, ActionObject, DataObject, Action, DataObjectsAndActionsSep} from '../src/util/ConfigExplorer/Graphs.ts';
-import {expect, test, it} from 'vitest';
+import {DAGraph, NodeType, Node, Edge, ActionObject, DataObject, Action, DataObjectsAndActionsSep, dagreLayoutRf, rfNodeSize} from '../src/util/ConfigExplorer/Graphs.ts';
+import {describe, expect, test, it} from 'vitest';
 
 
 function construct_demo_example_graph(): DAGraph {
@@ -523,3 +523,39 @@ test("N:1 action, > 2 action types", () =>{
 
 
 // TODO: maybe add reachability tests
+
+/*
+    Laying out ReactFlow nodes. A node showing its columns is taller than the rest, so the layout
+    has to take each node's declared size rather than one size for all of them.
+*/
+describe('dagreLayoutRf', () => {
+    const rfNode = (id: string, style?: any) => ({id, position: {x: 0, y: 0}, data: {}, style} as any);
+
+    it('takes the size a node declares, else the given default', () => {
+        expect(rfNodeSize(rfNode('n'), 172, 36)).toEqual({width: 172, height: 36});
+        expect(rfNodeSize(rfNode('n', {width: 260, height: 200}), 172, 36)).toEqual({width: 260, height: 200});
+    });
+
+    it('anchors a node at its top left corner', () => {
+        const nodes = [rfNode('a'), rfNode('b')];
+        dagreLayoutRf(nodes, [{id: 'e', source: 'a', target: 'b'} as any], 'TB', 100, 40);
+        // dagre centers a node on its position, ReactFlow anchors it at the top left
+        expect(nodes[1].position.y - nodes[0].position.y).toBe(40 + 150); // height + ranksep
+        expect(nodes[0].position.x).toBe(nodes[1].position.x);
+    });
+
+    it('keeps nodes of different heights apart', () => {
+        const tall = rfNode('tall', {width: 200, height: 400});
+        const short = rfNode('short', {width: 200, height: 80});
+        const nodes = [tall, short];
+        dagreLayoutRf(nodes, [{id: 'e', source: 'tall', target: 'short'} as any], 'TB');
+        // the tall node's box has to end before the short one's begins
+        expect(tall.position.y + 400).toBeLessThanOrEqual(short.position.y);
+    });
+
+    it('defaults to the node size the lineage graph used before sizes were declared', () => {
+        const nodes = [rfNode('a'), rfNode('b')];
+        dagreLayoutRf(nodes, [{id: 'e', source: 'a', target: 'b'} as any], 'LR');
+        expect(nodes[1].position.x - nodes[0].position.x).toBe(172 + 150); // width + ranksep
+    });
+});

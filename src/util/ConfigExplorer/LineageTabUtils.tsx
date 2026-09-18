@@ -8,12 +8,15 @@ import {
 import assert from 'assert';
 
 import { nodeHeight, nodeWidth } from '../../components/ConfigExplorer/LineageTab/LineageTabWithSeparateView';
-import { TaskStatus } from '../../types';
+import { SchemaData, TaskStatus } from '../../types';
 import { findFirstKeyWithObject } from '../helpers';
+import { ColumnDisplay, ColumnInfo, buildColumnModel, filterColumns } from './ColumnModel';
 import { ConfigData } from './ConfigData';
+import { RelationEdge, getIncomingRefs, resolveFkTarget } from './RelationsGraph';
+import { columnHandleId, nodeHeightFor, nodeRelationHandleId, nodeWidthFor } from '../../components/ConfigExplorer/LineageTab/DataObjectColumns';
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
-import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, setRfNodeData } from './Graphs';
+import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
 
 
 /*
@@ -60,7 +63,7 @@ const groupingState: {
 */
 export type LayoutDirection = 'TB' | 'LR';
 export type ExpandDirection = 'forward' | 'backward';
-export type GraphView = 'full' | 'data' | 'action';
+export type GraphView = 'full' | 'data' | 'action' | 'relations';
 export type DataOrActionObject = DataObject | ActionObject;
 export type GraphElements = GraphNode[] | GraphEdge[] | [GraphNode[], GraphEdge[]];
 export type ReactFlowElements = ReactFlowNode[] | ReactFlowEdge[] | [ReactFlowNode[], ReactFlowEdge[]];
@@ -120,6 +123,15 @@ export interface graphNodeProps {
     isCenterNodeAncestor: boolean
 }
 
+/** What a relation edge stands for: one column pair of one declared foreign key. */
+export interface RelationEdgeProps {
+    fkName?: string;
+    /** the column of the referencing data object, lowercased - see columnHandleId */
+    sourceColumn: string;
+    /** the column of the referenced data object */
+    targetColumn: string;
+}
+
 /** The data a customEdge is rendered from, see CustomEdge */
 export interface CustomEdgeProps {
     output?: FlowMetric,          // what the source action wrote to the data object of this edge
@@ -127,6 +139,7 @@ export interface CustomEdgeProps {
     outputIndex: number,          // position among the edges leaving the source, to spread the labels
     inputIndex: number,           // position among the edges entering the target
     highlighted: boolean,
+    relation?: RelationEdgeProps, // set in the relations view, where an edge is a foreign key
 }
 
 export interface ReactFlowNodeProps {
@@ -149,7 +162,38 @@ export interface ReactFlowNodeProps {
     numFwdActiveEdges: number,
     numBwdActiveEdges: number,
     numFwdEdges: number, // not used for now, but might be helpful
-    numBwdEdges: number
+    numBwdEdges: number,
+    /*
+        Every column of a data object. What the node renders is this narrowed to columnDisplay.
+        Empty for an action node and in the run view, which has no configuration behind its nodes.
+    */
+    columns: ColumnInfo[],
+    /*
+        Recomputes those columns with an exported schema merged in. Undefined where there are no
+        columns to show at all, which is what decides whether the node offers to show them.
+    */
+    columnsFunc?: ColumnsFunc,
+    /*
+        How much of its columns this node shows. Per node, and deliberately kept in the node's data
+        rather than in React state: the lineage tab re-creates the whole flow whenever a setting in
+        useLineageGraph changes, so node local state would not survive, and the edges have to be
+        able to read it to pick the handle they attach to.
+    */
+    columnDisplay: ColumnDisplay,
+}
+
+/** Merges an exported schema into the columns a data object's configuration declares. */
+export type ColumnsFunc = (schema?: SchemaData) => ColumnInfo[];
+
+/** The size a node is laid out and rendered at, from what it shows. */
+export function nodeSizeFor(data: {columns?: ColumnInfo[], columnDisplay?: ColumnDisplay}): {width: number, height: number} {
+    const display = data.columnDisplay ?? 'none';
+    const visible = filterColumns(data.columns ?? [], display);
+    return {
+        width: nodeWidthFor(display !== 'none'),
+        // an open node with no columns still shows one row, saying so
+        height: nodeHeightFor(display === 'none' ? 0 : Math.max(visible.length, 1)),
+    };
 }
 
 
@@ -171,6 +215,10 @@ export function getGraphFromConfig(configData: any, graphView: GraphView): DAGra
             graph = configData!.actionGraph!;
             break;
         }
+        case 'relations': {
+            graph = configData!.relationsGraph!;
+            break;
+        }
         default: {
             throw Error("Unknown graph view " + graphView);
         }
@@ -187,6 +235,36 @@ export function getGraph(props: flowProps, graphView: GraphView): DAGraph {
 }
 
 
+/*
+    The columns to show on a data object node.
+
+    What comes back is a function per node rather than a list, because a node's columns are only
+    fully known once its exported schema has been fetched - which happens in the node itself, on
+    demand, and not here. Calling it without a schema gives what the configuration alone declares,
+    which is what the node shows until, and if, an export arrives. It returns every column; how many
+    of them a node shows is the node's own state (see ColumnsToggle).
+
+    Only the configuration knows about columns, so the run view - which builds its graph from a
+    state file - has none, and neither has an action node.
+*/
+function makeColumnsOf(props: flowProps): (node: GraphNode) => ColumnsFunc | undefined {
+    const configData = props.configData;
+    if (!configData || props.runContext) return () => undefined;
+    return (node: GraphNode) => {
+        if (node.nodeType !== NodeType.DataNode) return undefined;
+        const configObj = configData.dataObjects?.[node.id];
+        if (!configObj) return undefined;
+        const referencedBy = getIncomingRefs(node.id, configData.relationsGraph);
+        return (schema?: SchemaData) => {
+            return buildColumnModel(configObj, {
+                schema,
+                resolveFk: fk => resolveFkTarget(fk, configObj, configData),
+                referencedBy,
+            }).columns;
+        };
+    };
+}
+
 export function createReactFlowNodes(selectedNodes: GraphNode[],
     layoutDirection: LayoutDirection,
     isGraphFullyExpanded: boolean,
@@ -197,6 +275,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     props: flowProps
 ): ReactFlowNode[] {
     const dataObjectsAndActions = getGraph(props, graphView);
+    const columnsOf = makeColumnsOf(props);
     const isHorizontal = layoutDirection === 'LR';
 
     // there is no center node if the whole graph is shown (run view), so everything derived from it
@@ -234,6 +313,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
         const isCenterNodeDescendant = fwdNodes.includes(node);
         const isCenterNodeAncestor = bwdNodes.includes(node);
 
+        const columnsFunc = columnsOf(node);
         const data: ReactFlowNodeProps = {
             props: props.configData?.[props.elementType]?.[props.elementName],
             label: node.id,
@@ -267,7 +347,10 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             // the following are  hard coded for testing
             progress: nodeType === NodeType.ActionNode ? Math.round(Math.random() * 100) : undefined,
             jsonObject: node['jsonObject'],
-            highlighted: false // set by handlers in Core
+            highlighted: false, // set by handlers in Core
+            columnsFunc: columnsFunc,
+            columns: columnsFunc ? columnsFunc() : [],
+            columnDisplay: 'none',
         }
 
         const newNode = {
@@ -278,6 +361,9 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             targetPosition: targetPos, // required for the node positions to actually change internally
             sourcePosition: sourcePos,
             data: data,
+            // the node declares the size it is laid out at, see nodeSizeFor - the layout has to know
+            // how tall a node is before it is rendered
+            style: nodeSizeFor(data),
             extent: undefined,
             parentId: undefined
         } as ReactFlowNode
@@ -287,6 +373,80 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     return result;
 }
 
+/*
+    The edges of the relations view: one ReactFlow edge per column pair of a declared foreign key.
+
+    A foreign key over several columns is several edges, one per pair. While both of its ends are
+    collapsed they share the two node level handles and draw on top of each other - one line between
+    two data objects, which is what the collapsed view means - and they move apart onto their columns
+    as soon as a node is expanded (see updateRelationEdgeHandles). Creating them per pair up front
+    means expanding a node only re-points existing edges instead of creating and destroying them.
+*/
+function createRelationReactFlowEdges(relations: RelationEdge[],
+    edgeColor: string,
+    selectedEdgeId: string | undefined): ReactFlowEdge[] {
+
+    const result: ReactFlowEdge[] = [];
+    relations.forEach(relation => {
+        // a data object referencing itself has nothing to draw between two node level handles; the
+        // relation only becomes visible, and readable, once its columns are shown
+        const isSelfReference = relation.source === relation.target;
+        relation.columns.forEach(({from, to}) => {
+            const id = `${relation.id}::${from}->${to}`;
+            result.push({
+                type: 'customEdge',
+                id: id,
+                source: relation.source,
+                target: relation.target,
+                // every node starts closed, so every edge starts on the node's relation handles -
+                // which, unlike its layout driven one, are on the same left and right borders the
+                // column handles are on
+                sourceHandle: nodeRelationHandleId('source', relation.source),
+                targetHandle: nodeRelationHandleId('target', relation.target),
+                hidden: isSelfReference,
+                markerEnd: {
+                    type: MarkerType.ArrowClosed,
+                    width: 10,
+                    height: 10,
+                    color: edgeColor,
+                },
+                data: {
+                    outputIndex: 0,
+                    inputIndex: 0,
+                    highlighted: selectedEdgeId === id,
+                    relation: {fkName: relation.fkName, sourceColumn: from, targetColumn: to},
+                } as CustomEdgeProps,
+                style: { stroke: edgeColor, strokeWidth: EDGE_STROKE_WIDTH_DEFAULT },
+            } as ReactFlowEdge);
+        });
+    });
+    return result;
+}
+
+/**
+ * Point every relation edge at the column it belongs to, on the ends whose node shows its columns,
+ * and at the node itself on the ends whose node does not.
+ *
+ * The two ends are decided separately: expanding one of two related data objects gives an edge from
+ * a column to a node, which is the honest picture of what is known.
+ */
+export function updateRelationEdgeHandles(rfi: ReactFlowInstance) {
+    const expanded = new Set(rfi.getNodes().filter(node => node.data?.columnDisplay && node.data.columnDisplay !== 'none').map(node => node.id));
+    rfi.setEdges(edges => edges.map(edge => {
+        const relation = (edge.data as CustomEdgeProps)?.relation;
+        if (!relation) return edge;
+        const sourceHandle = expanded.has(edge.source) ? columnHandleId('source', relation.sourceColumn)
+                                                      : nodeRelationHandleId('source', edge.source);
+        const targetHandle = expanded.has(edge.target) ? columnHandleId('target', relation.targetColumn)
+                                                      : nodeRelationHandleId('target', edge.target);
+        const hidden = edge.source === edge.target && !expanded.has(edge.source);
+        if (sourceHandle === edge.sourceHandle && targetHandle === edge.targetHandle && hidden === (edge.hidden === true)) {
+            return edge;
+        }
+        return {...edge, sourceHandle, targetHandle, hidden};
+    }));
+}
+
 export function createReactFlowEdges(selectedEdges: GraphEdge[],
     props: flowProps,
     graphView: GraphView,
@@ -294,6 +454,9 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
     const dataObjectsAndActions = getGraph(props, graphView);
     const edges = dataObjectsAndActions.edges?.filter(edge => selectedEdges.includes(edge));
     const edgeColor = selectedEdgeId ? EDGE_COLOR_HIGHLIGHTED : EDGE_COLOR_DEFAULT;
+
+    // an edge of the relations graph is a foreign key, not a data flow, and is built differently
+    if (graphView === 'relations') return createRelationReactFlowEdges(edges as RelationEdge[], edgeColor, selectedEdgeId);
 
     var result: ReactFlowEdge[] = [];
     edges.forEach(edge => {
@@ -312,6 +475,12 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
             id: uniqueId, // has to be unique, linked to node ids
             source: fromNodeId,
             target: toNodeId,
+            // The node level handles are named after the node (see CustomDataNode). Naming them
+            // explicitly matters as soon as a node has more than one handle per type - a node
+            // showing its columns has one per column - because ReactFlow's fallback picks the
+            // first handle of the right type, which is then not necessarily the node's own.
+            sourceHandle: fromNodeId,
+            targetHandle: toNodeId,
             markerEnd: {
                 type: MarkerType.ArrowClosed,
                 width: 10,
@@ -399,6 +568,13 @@ export function prepareAndRenderGraph(rfi: ReactFlowInstance, lineageState: line
             const [neighours,] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
             navigateTo = `config/actions/${neighours[0].id}`;
         }
+    } else if (graphView === 'relations') {
+        doa = props.configData!.relationsGraph!;
+        if (props.elementType === 'actions') {
+            // the relations graph has no actions -> navigate to a data object the action touches
+            const [neighours,] = props.configData?.fullGraph?.returnDirectNeighbours(props.elementName)!;
+            navigateTo = `config/dataObjects/${neighours[0].id}`;
+        }
     } else {
         throw Error("Unknown graph view " + graphView);
     }
@@ -463,6 +639,9 @@ function expandNodeFunc(rfi: ReactFlowInstance, props: flowProps,
             neighbourEdges,
             layoutDirection,
         });
+        // the new edges were built for collapsed nodes; point them at the columns of the ones that
+        // are not, so that a neighbour expanded into an already expanded node connects to its rows
+        updateRelationEdgeHandles(rfi);
 
     } else {
         // collapse
@@ -816,18 +995,21 @@ export function getParentNodeFromArray(parentNodes: ReactFlowNode[], parentId: s
 
 function computeParentNodeCoordsFromChildren(rfElements: ReactFlowNode[]) {
     let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+    // the far corner is taken from each child's own size - a node showing its columns is taller
+    // than the default, and the box would clip it
     rfElements.forEach(elem => {
+        const {width, height} = rfNodeSize(elem, RF_NODE_WIDTH_CUSTOM, RF_NODE_HEIGHT_CUSTOM);
         xMin = Math.min(xMin, elem.position.x);
-        xMax = Math.max(xMax, elem.position.x);
+        xMax = Math.max(xMax, elem.position.x + width);
         yMin = Math.min(yMin, elem.position.y);
-        yMax = Math.max(yMax, elem.position.y);
+        yMax = Math.max(yMax, elem.position.y + height);
     });
 
     // Adjust by the border size B. (x, y) position is the upper left corner
     xMin -= SUBFLOW_BORDER_SIZE;
-    xMax += SUBFLOW_BORDER_SIZE + RF_NODE_WIDTH_CUSTOM;
+    xMax += SUBFLOW_BORDER_SIZE;
     yMin -= SUBFLOW_BORDER_SIZE;
-    yMax += SUBFLOW_BORDER_SIZE + RF_NODE_HEIGHT_CUSTOM;
+    yMax += SUBFLOW_BORDER_SIZE;
 
     const centerX = (xMin + xMax) / 2;
     const centerY = (yMin + yMax) / 2;
@@ -1260,4 +1442,40 @@ export function groupByConnectionId(rfi: ReactFlowInstance, G: DAGraph, args: an
         return graph.nodes.filter(node => (node as DataObject).jsonObject.connectionId === fargs.connectionId);
     }
     groupingRoutine(G, rfi, F, args);
+}
+
+/*
+    Lay the current content of the ReactFlow instance out again, keeping the grouping boxes around
+    their children. Used by the toolbar button and whenever a node changes size, e.g. when it starts
+    or stops showing its columns.
+*/
+/*
+    Lay out once for a burst of changes.
+
+    Several nodes' exported schemas can arrive within the same tick, and each of them changes the
+    height of its node. Laying out per arrival would run dagre over the whole graph N times and let
+    the user watch the nodes jump N times.
+*/
+let pendingRelayout: ReturnType<typeof setTimeout> | undefined;
+
+export function scheduleRelayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection) {
+    if (pendingRelayout) clearTimeout(pendingRelayout);
+    pendingRelayout = setTimeout(() => {
+        pendingRelayout = undefined;
+        recomputeLayout(rfi, layoutDirection);
+    }, 0);
+}
+
+export function recomputeLayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection) {
+    const rfNodes = rfi.getNodes();
+    const nonParentNodes = getNonParentNodesFromArray(rfNodes);
+    const parentNodes = getParentNodesFromArray(rfNodes);
+    const rfEdges = rfi.getEdges();
+
+    var layoutedNonParentNodes = dagreLayoutRf(nonParentNodes, rfEdges, layoutDirection, nodeWidth, nodeHeight);
+    var layoutedParentNodes = computeParentNodePositionFromArray(layoutedNonParentNodes, parentNodes);
+    layoutedNonParentNodes = computeNodePositionFromParent(layoutedNonParentNodes, layoutedParentNodes);
+
+    rfi.setNodes([...layoutedNonParentNodes, ...layoutedParentNodes]);
+    prioritizeParentNodes(rfi);
 }
