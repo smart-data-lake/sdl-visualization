@@ -506,6 +506,50 @@ export class DAGraph {
         return [inNodes, inEdges];
     }
 
+    /**
+        The shortest chain from a node to the nearest of the given ones, both ends included.
+
+        Undirected and breadth first: this answers "how do I get from what is shown to the element
+        that was just selected", where the direction the edges happen to point in says nothing.
+        Empty where there is no such chain, e.g. in another connected component.
+    */
+    shortestPathToAny(fromId: id, targetIds: id[]): [Node[], Edge[]] {
+        const targets = new Set(targetIds);
+        const cameFrom = new Map<id, Edge | undefined>([[fromId, undefined]]);
+        var frontier = [fromId];
+
+        while (frontier.length > 0) {
+            const reached = frontier.find(nodeId => targets.has(nodeId));
+            if (reached !== undefined) return this.#pathFrom(reached, cameFrom);
+            const next: id[] = [];
+            frontier.forEach(nodeId => {
+                this.edges.filter(edge => edge.fromNode.id === nodeId || edge.toNode.id === nodeId).forEach(edge => {
+                    const other = edge.fromNode.id === nodeId ? edge.toNode : edge.fromNode;
+                    if (cameFrom.has(other.id)) return;
+                    cameFrom.set(other.id, edge);
+                    next.push(other.id);
+                });
+            });
+            frontier = next;
+        }
+        return [[], []];
+    }
+
+    #pathFrom(nodeId: id, cameFrom: Map<id, Edge | undefined>): [Node[], Edge[]] {
+        const nodes: Node[] = [];
+        const edges: Edge[] = [];
+        var current: id | undefined = nodeId;
+        while (current !== undefined) {
+            const node = this.getNodeById(current);
+            if (node) nodes.unshift(node);
+            const edge: Edge | undefined = cameFrom.get(current);
+            if (!edge) break;
+            edges.unshift(edge);
+            current = edge.fromNode.id === current ? edge.toNode.id : edge.fromNode.id;
+        }
+        return [nodes, edges];
+    }
+
     // return a set of subgraphs spanned by the nodes associated to the given nodeIds. 
     getConnectedNodeComponents(nodeIds: string[], G: DAGraph): Map<string, Node[]>{
         const visited = new Set<string>();
@@ -918,6 +962,39 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
 }
 
 /*
+    Which sides of a node may extend the graph: the ones facing away from the selected node.
+
+    Breadth first from the selected node over the edges that are shown, so the last step of a node's
+    shortest path says which of its sides faces outwards - a node reached by following an edge
+    forwards can only lead further forwards. The selected node itself faces both ways, and so does a
+    node no path reaches, which nothing constrains. Without a selection nothing may extend: the run
+    view shows its graph whole.
+*/
+export type ExpandSides = 'forward' | 'backward' | 'both';
+
+export function expandSidesFrom(nodes: ReactFlowNode[], edges: ReactFlowEdge[], selectedId?: string): Map<string, ExpandSides> {
+    const sides = new Map<string, ExpandSides>();
+    if (!selectedId || !nodes.some(node => node.id === selectedId)) return sides;
+
+    sides.set(selectedId, 'both');
+    var frontier = [selectedId];
+    while (frontier.length > 0) {
+        const next: string[] = [];
+        frontier.forEach(nodeId => edges.forEach(edge => {
+            if (edge.source === edge.target) return;
+            const reached = edge.source === nodeId ? edge.target : edge.target === nodeId ? edge.source : undefined;
+            if (reached === undefined || sides.has(reached)) return;
+            sides.set(reached, edge.source === nodeId ? 'forward' : 'backward');
+            next.push(reached);
+        }));
+        frontier = next;
+    }
+
+    nodes.forEach(node => { if (!sides.has(node.id)) sides.set(node.id, 'both'); });
+    return sides;
+}
+
+/*
     The size a ReactFlow node should be laid out with: the size it declares through its style, else
     the given default. A node showing its columns is taller than one that does not, so the layout
     cannot assume one size for all of them - but the size is always *declared*, never measured, so
@@ -981,12 +1058,14 @@ export default class DataObjectsAndActions extends DAGraph{
 }
 
 export class PartialDataObjectsAndActions extends DAGraph{
-    constructor(public nodes: Node[], 
-                public edges: Edge[], 
+    // skipLayout: the node objects are shared with the graphs in ConfigData, and dagreLayout writes
+    // their positions - a caller that only needs the structure must not mutate them
+    constructor(public nodes: Node[],
+                public edges: Edge[],
                 public layoutDirection:  string = 'TB',
-                public jsonObject?: any){
-        const nodesWithPos = dagreLayout(nodes, edges, layoutDirection);
-        super(nodesWithPos, edges);
+                public jsonObject?: any,
+                skipLayout: boolean = false){
+        super(skipLayout ? nodes : dagreLayout(nodes, edges, layoutDirection), edges);
         this.jsonObject = jsonObject;
     }
 }

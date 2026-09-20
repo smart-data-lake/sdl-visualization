@@ -16,7 +16,8 @@ import { RelationEdge, getIncomingRefs } from './RelationsGraph';
 import { columnHandleId, nodeHeightFor, nodeRelationHandleId, nodeWidthFor } from '../../components/ConfigExplorer/LineageTab/DataObjectColumns';
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
-import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
+import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, ExpandSides, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, expandSidesFrom, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
+import { LayoutDirection, NodePlacement, assignCoordinates, layoutModelOf } from './LineageLayout';
 
 
 /*
@@ -61,7 +62,7 @@ const groupingState: {
 /*
     Types and Interfaces
 */
-export type LayoutDirection = 'TB' | 'LR';
+export type { LayoutDirection };
 export type ExpandDirection = 'forward' | 'backward';
 export type GraphView = 'full' | 'data' | 'action' | 'relations';
 export type DataOrActionObject = DataObject | ActionObject;
@@ -117,10 +118,6 @@ export interface graphNodeProps {
     isSink: boolean,
     isSource: boolean,
     isCenterNode: boolean,
-    // isCenterNodeDirectFwdNeighbour: boolean,
-    // isCenterNodeDirectBwdNeighbour: boolean,
-    isCenterNodeDescendant: boolean,
-    isCenterNodeAncestor: boolean
 }
 
 /** What a relation edge stands for: one column pair of one declared foreign key. */
@@ -180,6 +177,34 @@ export interface ReactFlowNodeProps {
         able to read it to pick the handle they attach to.
     */
     columnDisplay: ColumnDisplay,
+    /*
+        Whether this is the element the config explorer is showing. Distinct from
+        graphNodeProps.isCenterNode, which names the node the current node set was built around and
+        therefore decides which expand handles start out open.
+    */
+    isSelectedElement: boolean,
+    /*
+        Whether this node's neighbours are shown, per direction. Undefined until it is expanded or
+        collapsed once, which means "as the node was created", see the handles in CustomDataNode.
+    */
+    isExpandedForward?: boolean,
+    isExpandedBackward?: boolean,
+    /*
+        How far the user has dragged this node away from where the layout puts it. Kept as an offset
+        rather than as a position, so that the node still follows its neighbours when they move.
+    */
+    manualOffset?: {x: number, y: number},
+    /*
+        Which sides of this node may extend the graph - the ones facing away from the selected
+        element, see expandSidesFrom. Undefined where nothing may, i.e. where nothing is selected.
+    */
+    expandSides?: ExpandSides,
+    /*
+        Where this node sits in the layout, in ranks and cross axis order. Computed once per graph
+        and direction and carried on the node from there, so that laying out again needs nothing but
+        the current content of the ReactFlow instance. See LineageLayout.ts.
+    */
+    placement?: NodePlacement,
 }
 
 /** Merges an exported schema into the columns a data object's configuration declares. */
@@ -290,7 +315,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     const [centerNodeDirectFwdNodes,] = centerNode ? dataObjectsAndActions.getOutElems(centerNode.id) : [[], []];
     const [centerNodeDirectBwdNodes,] = centerNode ? dataObjectsAndActions.getInElems(centerNode.id) : [[], []];
     const [reachableNodes, reachableEdges] = [[...fwdNodes, ...bwdNodes], [...fwdEdges, ...bwdEdges]];
-    const reachableSubGraph = new PartialDataObjectsAndActions(reachableNodes, reachableEdges, layoutDirection);
+    const reachableSubGraph = new PartialDataObjectsAndActions(reachableNodes, reachableEdges, layoutDirection, undefined, true);
 
     // without a center node the reachable subgraph is empty, so the edge counts are taken from the
     // graph itself - all of its nodes are shown anyway
@@ -299,6 +324,8 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     // If we need more information to be displayed on the node,
     // just add more fields to the flowProps interface and access it in the custom node component.
     // The additional props can be passed in ElementDetails where the LineageTab is opened.
+    const layoutModel = layoutModelOf(dataObjectsAndActions, layoutDirection);
+
     var result: ReactFlowNode[] = [];
     selectedNodes.forEach((node) => {
         const nodeType = node.nodeType;
@@ -310,8 +337,6 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
         const isSource = sourceNodes.includes(node);
         const isCenterNodeDirectFwdNeighbour = centerNodeDirectFwdNodes.includes(node);
         const isCenterNodeDirectBwdNeighbour = centerNodeDirectBwdNodes.includes(node);
-        const isCenterNodeDescendant = fwdNodes.includes(node);
-        const isCenterNodeAncestor = bwdNodes.includes(node);
 
         const columnsFunc = columnsOf(node);
         const data: ReactFlowNodeProps = {
@@ -333,8 +358,6 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
                 isSource: isSource,
                 // isCenterNodeDirectFwdNeighbour: isCenterNodeDirectFwdNeighbour,
                 // isCenterNodeDirectBwdNeighbour: isCenterNodeDirectBwdNeighbour,
-                isCenterNodeDescendant: isCenterNodeDescendant,
-                isCenterNodeAncestor: isCenterNodeAncestor,
             },
             numBwdActiveEdges: (isGraphFullyExpanded || isCenterNode) ? currNodeDirectBwdNodes.length :
                 (isCenterNodeDirectFwdNeighbour || (isExpandedNode && expandDirection === 'forward')) ? 1 :
@@ -351,6 +374,8 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             columnsFunc: columnsFunc,
             columns: columnsFunc ? columnsFunc() : [],
             columnDisplay: 'none',
+            isSelectedElement: node.id === props.elementName,
+            placement: layoutModel.placement.get(node.id),
         }
 
         const newNode = {
@@ -514,7 +539,7 @@ function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: Gra
 
         // When the layout has changed, the nodes and edges have to be recomputed
         partialGraphPair = !isExpanded ? doa.returnDirectNeighbours(centralNodeId) : doa.returnPartialGraphInputs(centralNodeId);
-        const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0], partialGraphPair[1], layout, props.configData);
+        const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0], partialGraphPair[1], layout, props.configData, true);
         if (centralNode) partialGraph.setCenterNode(centralNode);
 
         let newNodes = createReactFlowNodes(partialGraphPair[0], layout, isExpanded, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props);
@@ -548,7 +573,7 @@ export function prepareAndRenderGraph(rfi: ReactFlowInstance, lineageState: line
     // a graph given through the props is shown as a whole, there is no element to center it on
     if (props.graph) {
         const [nodes, edges] = prepareGraphComplete(rfi, props.graph, graphView, props, layout);
-        return { nodes, edges };
+        return { nodes: applyExpandSides(nodes, edges, undefined), edges };
     }
 
     // get the right central node for the graph
@@ -585,7 +610,23 @@ export function prepareAndRenderGraph(rfi: ReactFlowInstance, lineageState: line
 
     // reset isCenterNode flags otherwise all previous ones will be colored
     const [nodes, edges] = prepareGraphDirect(rfi, doa, graphView, props, layout, isExpanded);
-    return { nodes, edges };
+    return { nodes: applyExpandSides(nodes, edges, props.elementName), edges };
+}
+
+/*
+    Which sides of each node may extend the graph, from the element that is selected. Has to be
+    redone whenever the selection or the set of shown nodes changes - the sides are relative to
+    both, see expandSidesFrom.
+*/
+export function applyExpandSides(nodes: ReactFlowNode[], edges: ReactFlowEdge[], selectedId?: string): ReactFlowNode[] {
+    const sides = expandSidesFrom(nodes, edges, selectedId);
+    return nodes.map(node => node.data.expandSides === sides.get(node.id)
+        ? node
+        : {...node, data: {...node.data, expandSides: sides.get(node.id)}});
+}
+
+export function updateExpandSides(rfi: ReactFlowInstance, selectedId?: string): void {
+    rfi.setNodes(nodes => applyExpandSides(nodes, rfi.getEdges(), selectedId));
 }
 
 /*
@@ -606,6 +647,7 @@ function expandNodeFunc(rfi: ReactFlowInstance, props: flowProps,
 
     // if expanded, show the direct out neighbours of the node with the id; if unexpanded, hide all descendants
     const graph = getGraph(props, graphView);
+    const selectedId = selectedNodeId(rfi);
     const isFwd = expandDirection === 'forward';
     const currNode = graph.getNodeById(id)!;
     const currRfNode = rfi.getNode(currNode?.id!)!;
@@ -652,7 +694,74 @@ function expandNodeFunc(rfi: ReactFlowInstance, props: flowProps,
         });
         //resetViewPortCentered(rfi, [currRfNode]);
     }
+    // the node's own handles read this, so that expanding it from elsewhere keeps them in step
+    setRfNodeData(rfi, {nodeId: id, path: isFwd ? 'isExpandedForward' : 'isExpandedBackward', value: !isExpanded});
+    setSelectedNode(rfi, selectedId); // the new nodes were built from the props of their creator
+    dropDanglingEdges(rfi);
+    updateExpandSides(rfi, selectedId);
     prioritizeParentNodes(rfi);
+}
+
+/*
+    Show the direct neighbours of a node that is already in the flow, in both directions - what
+    selecting an element does. The graph grows around the node instead of being rebuilt around it.
+*/
+export function expandNeighbours(rfi: ReactFlowInstance, props: flowProps, nodeId: string,
+    graphView: GraphView, layoutDirection: LayoutDirection) {
+
+    const graph = getGraph(props, graphView);
+    if (!graph.getNodeById(nodeId) || !rfi.getNode(nodeId)) return;
+    const shown = new Set(rfi.getNodes().map(node => node.id));
+
+    (['forward', 'backward'] as ExpandDirection[]).forEach(direction => {
+        const [neighbours] = direction === 'forward' ? graph.getOutElems(nodeId) : graph.getInElems(nodeId);
+        const path = direction === 'forward' ? 'isExpandedForward' : 'isExpandedBackward';
+        // expanding what is already expanded would only inflate the active edge counts collapse
+        // reads - but its neighbours are shown either way, which is what the handle has to say
+        if (neighbours.length === 0 || neighbours.every(node => shown.has(node.id))) {
+            if (neighbours.length > 0) setRfNodeData(rfi, {nodeId, path, value: true});
+            return;
+        }
+        expandNodeFunc(rfi, props, nodeId, false, direction, graphView, layoutDirection);
+    });
+}
+
+/*
+    Add a node that is not shown, together with the shortest chain of nodes connecting it to what
+    is. Everything that is already shown keeps its place - the graph only grows.
+*/
+export function spliceNodePath(rfi: ReactFlowInstance, props: flowProps, nodeId: string,
+    graphView: GraphView, layoutDirection: LayoutDirection) {
+
+    const graph = getGraph(props, graphView);
+    if (!graph.getNodeById(nodeId) || rfi.getNode(nodeId)) return;
+
+    const shownIds = rfi.getNodes().map(node => node.id);
+    const [pathNodes, pathEdges] = shownIds.length > 0 ? graph.shortestPathToAny(nodeId, shownIds) : [[], []];
+    // in another connected component there is no chain to it, so it comes on its own
+    const nodes = pathNodes.length > 0 ? pathNodes : [graph.getNodeById(nodeId)!];
+    const anchorId = pathNodes.length > 0 ? pathNodes[pathNodes.length - 1].id : undefined;
+
+    const newRfNodes = createReactFlowNodes(nodes.filter(node => !shownIds.includes(node.id)),
+        layoutDirection, false, true, undefined, graphView, makeExpandNodeFunc(rfi, props), props);
+    const newRfEdges = createReactFlowEdges(pathEdges, props, graphView, undefined);
+
+    rfi.setEdges(eds => [...eds, ...newRfEdges.filter(edge => !eds.some(e => e.id === edge.id))]);
+    rfi.setNodes(nds => [...nds, ...newRfNodes]);
+
+    // the same bookkeeping an expansion does, so that collapsing later takes the chain away again
+    const add = (x: number, y: number) => x + y;
+    pathEdges.forEach(edge => {
+        setRfNodeData(rfi, {nodeId: edge.fromNode.id, path: 'numFwdActiveEdges', value: 1, fromOwnProps: 'data.numFwdActiveEdges', combine: add});
+        setRfNodeData(rfi, {nodeId: edge.toNode.id, path: 'numBwdActiveEdges', value: 1, fromOwnProps: 'data.numBwdActiveEdges', combine: add});
+    });
+
+    if (!isGrouped(rfi)) {
+        rfi.setNodes(nds => assignCoordinates(nds, rfi.getEdges(), layoutDirection, {anchorId}));
+    } else {
+        recomputeLayout(rfi, layoutDirection, anchorId);
+    }
+    updateRelationEdgeHandles(rfi);
 }
 
 function updateLineageGraphOnExpand(rfi: ReactFlowInstance, rfEdges: ReactFlowEdge[], rfNodes: ReactFlowNode[], props: any) {
@@ -715,18 +824,23 @@ function updateLineageGraphOnExpand(rfi: ReactFlowInstance, rfEdges: ReactFlowEd
 
     // current workaround: auto layout in setNodes
     rfi.setEdges((eds) => {
-        rfEdges = Array.from(new Set([...eds, ...rfEdges]));
+        const byId = new Map(eds.map(edge => [edge.id, edge]));
+        rfEdges.forEach(edge => { if (!byId.has(edge.id)) byId.set(edge.id, edge); });
+        rfEdges = [...byId.values()];
         return rfEdges;
     });
 
     rfi.setNodes((nds) => {
-        // compute layout from non-parent nodes
         const newRfNodes = rfNodes;
-        rfNodes = rfNodes.concat(nds) // existing nodes with parent + new nodes without parent
-        const nonParentNodes = dagreLayoutRf(getNonParentNodesFromArray(rfNodes), rfEdges, layoutDirection, nodeWidth, nodeHeight);
-        rfNodes = Array.from(new Set(nonParentNodes)); // prevents adding the nodes twice in strict mode
+        rfNodes = Array.from(new Set(nds.concat(rfNodes))); // existing nodes first, then the new ones
+        if (!isGrouped(rfi)) {
+            // the new nodes bring their own place in the layout, so nothing that is shown reorders
+            return assignCoordinates(rfNodes, rfEdges, layoutDirection, {anchorId: currRfNode.id});
+        }
 
-        // assign layouted new rfNodes to parents and include new parent nodes if necessary
+        // grouped: the boxes have to follow their children, and a child's position is relative to its box
+        const nonParentNodes = dagreLayoutRf(getNonParentNodesFromArray(rfNodes), rfEdges, layoutDirection, nodeWidth, nodeHeight);
+        rfNodes = Array.from(new Set(nonParentNodes));
         rfNodes = rfNodes.map(rfNode => newRfNodes.includes(rfNode) ? assignNodeToParent(rfNode, rfi)! : rfNode);
         const parentNodes = computeParentNodePositionFromArray(rfNodes, getParentNodesFromRFI(rfi));
         rfNodes = Array.from(new Set([...rfNodes, ...parentNodes]));
@@ -740,13 +854,15 @@ function updateLineageGraphOnCollapse(rfi: ReactFlowInstance, props: any) {
     const [nodesIdsToRemove, edgesIdsToRemove] = dfsRemoveRfElems(rfi, currRfNode, expandDirection);
     rfi.setEdges((eds) => eds.filter(e => !edgesIdsToRemove.includes(e.id)));
     rfi.setNodes((nds) => {
-        // recompute parent positions from remaining elements
         var rfNodes = nds.filter(n => !nodesIdsToRemove.includes(n.id));
+        // taking nodes away leaves the rest where it is - there is nothing to lay out
+        if (!isGrouped(rfi)) return rfNodes;
+
+        // grouped: the boxes shrink onto what is left of their children
         var nonParentNodes = Array.from(new Set(dagreLayoutRf(getNonParentNodesFromArray(rfNodes), rfi.getEdges(), layoutDirection, nodeWidth, nodeHeight)));
         const parentNodes = computeParentNodePositionFromArray(nonParentNodes, getParentNodesFromArrayIds(rfi, nonParentNodes));
         nonParentNodes = computeNodePositionFromParent(nonParentNodes, parentNodes);
-        rfNodes = [...nonParentNodes, ...parentNodes];
-        return rfNodes;
+        return [...nonParentNodes, ...parentNodes];
     });
 }
 
@@ -781,8 +897,64 @@ export function setCenter(rfi: ReactFlowInstance, rfNode?: ReactFlowNode): void 
     const node = rfNode || rfi.getNodes().filter(node => node.data.graphNodeProps!['isCenterNode'])[0];
     const x = node.position.x + (node.width || 0)/2
     const y = node.position.y + (node.height || 0)/2
-    console.log("setCenter",x,y)
     rfi.setCenter(x,y, {zoom: rfi.getZoom()});
+}
+
+/*
+    An edge can only be drawn where both of its ends are shown.
+
+    dfsRemoveRfElems walks the edges it removes, so an edge that reached a removed node from another
+    branch stays behind - and ReactFlow draws it into empty space, as an arrow head with no node.
+*/
+export function dropDanglingEdges(rfi: ReactFlowInstance): void {
+    const shown = new Set(rfi.getNodes().map(node => node.id));
+    rfi.setEdges(edges => {
+        const kept = edges.filter(edge => shown.has(edge.source) && shown.has(edge.target));
+        return kept.length === edges.length ? edges : kept;
+    });
+}
+
+/*
+    The element the config explorer is showing, as the flow itself knows it.
+
+    The expand handler of a node carries the flowProps of the moment the node was created, so its
+    props.elementName is whatever was selected back then. Anything acting on the current selection
+    has to ask the flow instead.
+*/
+export function selectedNodeId(rfi: ReactFlowInstance): string | undefined {
+    return rfi.getNodes().find(node => node.data.isSelectedElement)?.id;
+}
+
+/*
+    Highlight the element the config explorer is showing. Styling only: selecting an element must
+    not move anything, so this touches neither the node set nor the positions.
+*/
+export function setSelectedNode(rfi: ReactFlowInstance, nodeId: string | undefined): void {
+    rfi.setNodes(nodes => nodes.map(node => node.data.isSelectedElement === (node.id === nodeId)
+        ? node
+        : {...node, data: {...node.data, isSelectedElement: node.id === nodeId}}));
+}
+
+/*
+    Bring a node into view at the current zoom, and only when it is not there already - panning to
+    something the user can see would move the graph under them for nothing.
+*/
+export function revealNode(rfi: ReactFlowInstance, nodeId: string, duration: number = 400): void {
+    const node = rfi.getNode(nodeId);
+    const container = document.querySelector('.react-flow');
+    if (!node || !container) return;
+
+    const {x, y, zoom} = rfi.getViewport();
+    const {width, height} = rfNodeSize(node, nodeWidth, nodeHeight);
+    const position = node.positionAbsolute ?? node.position; // a child of a grouping box is placed relative to it
+    const left = position.x * zoom + x;
+    const top = position.y * zoom + y;
+    const bounds = container.getBoundingClientRect();
+    const isInView = left >= 0 && top >= 0
+        && left + width * zoom <= bounds.width && top + height * zoom <= bounds.height;
+    if (isInView) return;
+
+    rfi.setCenter(position.x + width / 2, position.y + height / 2, {zoom, duration});
 }
 
 /*
@@ -1445,34 +1617,73 @@ export function groupByConnectionId(rfi: ReactFlowInstance, G: DAGraph, args: an
 }
 
 /*
-    Lay the current content of the ReactFlow instance out again, keeping the grouping boxes around
-    their children. Used by the toolbar button and whenever a node changes size, e.g. when it starts
-    or stops showing its columns.
+    Remember that the user moved nodes by hand, as the distance they were dragged. Laying out again
+    then keeps the displacement instead of snapping them back to where the layout puts them.
 */
+export function recordManualMoves(rfi: ReactFlowInstance, moves: Map<string, {x: number, y: number}>): void {
+    rfi.setNodes(nodes => nodes.map(node => {
+        const move = moves.get(node.id);
+        if (!move || (move.x === 0 && move.y === 0)) return node;
+        const offset = node.data.manualOffset ?? {x: 0, y: 0};
+        return {...node, data: {...node.data, manualOffset: {x: offset.x + move.x, y: offset.y + move.y}}};
+    }));
+}
+
+/* Forget every manual move - the toolbar's way back to the layout as it is computed. */
+export function clearManualMoves(rfi: ReactFlowInstance): void {
+    rfi.setNodes(nodes => nodes.map(node => node.data.manualOffset === undefined
+        ? node
+        : {...node, data: {...node.data, manualOffset: undefined}}));
+}
+
+/* Whether the flow currently holds grouping boxes, which own their children's coordinates. */
+export function isGrouped(rfi: ReactFlowInstance): boolean {
+    return getParentNodesFromRFI(rfi).length > 0;
+}
+
 /*
     Lay out once for a burst of changes.
 
     Several nodes' exported schemas can arrive within the same tick, and each of them changes the
-    height of its node. Laying out per arrival would run dagre over the whole graph N times and let
-    the user watch the nodes jump N times.
+    height of its node. Laying out per arrival would let the user watch the nodes move N times.
 */
 let pendingRelayout: ReturnType<typeof setTimeout> | undefined;
 
-export function scheduleRelayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection) {
+export function scheduleRelayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection, anchorId?: string) {
     if (pendingRelayout) clearTimeout(pendingRelayout);
     pendingRelayout = setTimeout(() => {
         pendingRelayout = undefined;
-        recomputeLayout(rfi, layoutDirection);
+        recomputeLayout(rfi, layoutDirection, anchorId);
     }, 0);
 }
 
-export function recomputeLayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection) {
+/*
+    Re-space the current content of the ReactFlow instance: the ranks and the order within them are
+    what the nodes carry, so only the gaps change. Used by the toolbar button and whenever a node
+    changes size, e.g. when it starts or stops showing its columns.
+
+    anchorId names the node that must not move - the one the user just acted on. Without it the
+    result is anchored on the center node, so that a change nobody asked for does not shift the view.
+*/
+/* Lay out again from scratch, giving up the nodes the user has moved by hand. */
+export function resetLayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection) {
+    clearManualMoves(rfi);
+    recomputeLayout(rfi, layoutDirection);
+}
+
+export function recomputeLayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection, anchorId?: string) {
     const rfNodes = rfi.getNodes();
+    const anchor = anchorId ?? rfNodes.find(node => node.data?.graphNodeProps?.isCenterNode)?.id;
+
+    if (!isGrouped(rfi)) {
+        rfi.setNodes(assignCoordinates(rfNodes, rfi.getEdges(), layoutDirection, {anchorId: anchor}));
+        return;
+    }
+
+    // grouped: the boxes have to keep surrounding their children, whose coordinates are relative to them
     const nonParentNodes = getNonParentNodesFromArray(rfNodes);
     const parentNodes = getParentNodesFromArray(rfNodes);
-    const rfEdges = rfi.getEdges();
-
-    var layoutedNonParentNodes = dagreLayoutRf(nonParentNodes, rfEdges, layoutDirection, nodeWidth, nodeHeight);
+    var layoutedNonParentNodes = dagreLayoutRf(nonParentNodes, rfi.getEdges(), layoutDirection, nodeWidth, nodeHeight);
     var layoutedParentNodes = computeParentNodePositionFromArray(layoutedNonParentNodes, parentNodes);
     layoutedNonParentNodes = computeNodePositionFromParent(layoutedNonParentNodes, layoutedParentNodes);
 
