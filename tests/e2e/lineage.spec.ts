@@ -314,11 +314,19 @@ test.describe('lineage graph', () => {
     expect(await nodeIds(page)).toEqual(expanded);
   });
 
-  test('navigating to another element re-centers the graph', async ({ page }) => {
+  test('navigating to another element grows the graph towards it', async ({ page }) => {
     await openLineage(page, '/#/config/dataObjects/int-airports');
+    const before = await nodeIds(page);
 
     await page.goto('/#/config/dataObjects/btl-distances');
-    await expect.poll(() => nodeIds(page)).toEqual(['btl-distances', 'compute-distances']);
+
+    // what was shown stays, and the element arrives with the chain leading to it and its neighbour
+    await expect.poll(() => nodeIds(page)).toEqual([
+      'btl-departures-arrivals-airports',
+      'btl-distances',
+      'compute-distances',
+      ...before,
+    ].sort());
   });
 });
 

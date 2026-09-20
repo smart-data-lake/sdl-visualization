@@ -102,14 +102,107 @@ graph and silently loses every one of those overrides — handle cursors and off
 
 ## Where the state lives
 
-- **Toolbar settings** are React context (`useLineage.tsx`). Any change to them re-creates the whole
-  flow (`reactFlowKey` in `LineageTabCore`), so per-node state cannot live there.
+- **Toolbar settings** are React context (`useLineage.tsx`). A change to one of them rebuilds the
+  node set, which is handed to the live flow rather than re-creating it, so per-node state that has
+  to survive that still cannot live there.
 - **How much of its columns a node shows** is `rfNode.data.columnDisplay`, written through
   `setRfNodeData`. It has to survive re-renders, and the *edges* have to be able to read it to pick
   the handle they attach to, which rules out node-local `useState`. `rfNode.data.columns` holds
   every column; what is rendered is that list narrowed by `filterColumns`.
+- **Whether a node's neighbours are shown** is `rfNode.data.isExpandedForward` / `isExpandedBackward`,
+  for the same reason: a node is expanded by its own handles *and* by selecting it, and the handles
+  have to show what is actually there. Undefined means "as the node was created".
+- **Which element is selected** is `rfNode.data.isSelectedElement`, and it is deliberately *not*
+  `graphNodeProps.isCenterNode`. The center node is the one the current node set was built around,
+  which decides which expand handles start out open; the selected element is what the config
+  explorer is showing and only decides the highlight.
 - The **ReactFlow instance** is not in context; components get it from `useReactFlow()` and the
   functions in `LineageTabUtils.tsx` take it as a parameter.
+
+## Layout stability
+
+The graph used to be laid out from scratch on every interaction - every selection, every expand
+handle, every column toggle - which reordered the nodes and moved the ones that had not changed.
+dagre is deterministic for a given insertion order but sensitive to it, and the node array order was
+the only ordering input it got: it changed with every `concat`, every `Array.from(new Set(...))` and
+every sort. The same graph therefore came out differently depending on which node the user had
+clicked last.
+
+The layout is now a **(rank, order) per node**, computed once per graph and direction and kept
+(`LineageLayout.ts`). `buildLayoutModel` lays the **whole** graph of the view out with dagre, at one
+size for every node, with its nodes and edges **sorted** first - so the model is a function of the
+graph, not of the traversal that produced a node list. `rank` is the node's layer, `order` its place
+along the other axis. `layoutModelOf` caches it per `DAGraph` instance, which is stable per
+`ConfigData`; a `WeakMap` at module level rather than context, because every node of the graph reads
+the context and rebuilding the model must not re-render all of them.
+
+`createReactFlowNodes` stamps that placement onto `rfNode.data.placement`, so laying out again needs
+nothing but the current content of the instance. `assignCoordinates` is then a pure function of
+(placement, declared sizes, which nodes are shown): it groups by rank, sorts by order, drops empty
+ranks, packs each axis and translates the result so that an **anchor** node - the one the user just
+acted on - keeps the position it came in with. Nothing minimises crossings any more, so **no node
+can change its order because another one appeared, grew or was selected**. What can still change is
+spacing: a rank that gains a node, or whose node grows its columns, pushes its neighbours apart.
+
+Packing a rank and centring it is only the starting point. `alignWithNeighbours` then sweeps down
+and up, placing each rank as close as it can to the median of its neighbours in the rank before resp.
+after it - the barycentre pass of a layered layout, except that the **order is fixed** and only the
+gaps are solved for. Without it a rank holding one node is centred on the whole graph, so a node
+with a single successor hangs in the middle instead of sitting over the node it feeds. Because the
+order is a constraint, the placement is exact rather than heuristic: subtracting the space taken by
+the nodes before it turns "keep a gap of `nodesep`" into "must not decrease", which pooling adjacent
+violators solves in one pass (`placeInOrder`).
+
+What that buys, per interaction:
+
+| interaction | what moves |
+|---|---|
+| selecting an element | nothing is re-laid out; it is highlighted, its neighbours are shown, the expand handles turn to face away from it, and the view pans to it only if it is off screen |
+| an element that is not shown | it is spliced in with the shortest chain connecting it to what is (`DAGraph.shortestPathToAny`), everything else stays |
+| `+` expand handle | the new nodes arrive at their own slots, anchored on the node that was expanded |
+| `-` collapse handle | nothing at all - taking nodes away leaves the rest where it is |
+| opening a node's columns | anchored on that node, so the graph opens around it |
+| dragging a node | it keeps that displacement through every later layout, see below |
+| switching view, direction or the expand-all toggle | a new node set, laid out from its model |
+
+`LineageTabCore` therefore no longer re-creates the `<ReactFlow>`. A selection is an effect that
+highlights, splices or expands against the live instance; it rebuilds the node set only where this
+graph view cannot reach the element at all - which is also how the "switch to a view that has this
+element" navigation still works. A rebuilt node set is handed over with `setNodes`/`setEdges`; only
+the first one goes through `defaultNodes`, at mount.
+
+The memo that builds the node set must **not** watch `props`. The config explorer hands the panel a
+new `flowProps` object on every navigation (`ElementDetails`), so watching it rebuilds the graph on
+every selection and throws away everything the previous selections grew - the bug looks like a node
+that arrived with one selection disappearing on the next. It watches the toolbar settings, the
+fields of `props` that decide *what* the graph is, and `builtAround`, the element the current set was
+built around; it *reads* `props.elementName`, so a rebuild that does happen for another reason is
+centred on whatever is selected at that moment.
+
+**A node the user drags keeps its place.** What is remembered is the *displacement* from where the
+layout puts the node (`rfNode.data.manualOffset`, written by `recordManualMoves` from the distance
+dragged), not the position: `assignCoordinates` adds it to the computed slot, so the node still
+follows its neighbours when their rank grows or the graph makes room, instead of being left behind
+in absolute coordinates. Expanding at one end of the graph therefore no longer undoes an arrangement
+made at the other. The offset is applied *before* the anchoring, which compares against where nodes
+actually are. A rebuild - a new graph view, direction or the expand-all toggle - creates new nodes
+and so starts without offsets.
+
+Two things this does not cover, deliberately:
+
+- **Grouping boxes own their children's coordinates** (`computeNodePositionFromParent` makes them
+  parent-relative), and that only works because dagre had just written them as absolute. Where the
+  flow holds group nodes (`isGrouped`), expand, collapse and re-layout keep the old `dagreLayoutRf`
+  path. `dagreLayoutRf` stays for that, and for `tests/graph.test.ts`.
+- **The toolbar's *Recompute layout* button** is the escape hatch: `resetLayout` forgets every manual
+  move and lays the current nodes out from the model again. The arrangement only ever grows as the
+  user explores, and only they take it apart; that button is how it is reset.
+
+`tests/lineageLayout.test.ts` pins the model and the coordinate assignment - including that the
+model is invariant under permuting the graph's nodes and edges - and
+`tests/e2e/lineage-stability.spec.ts` asserts the property the user actually sees: **zero order
+inversions** among the nodes that are shown before and after an interaction, and the node that was
+acted on not moving at all.
 
 ## Sizes and handles
 
@@ -137,6 +230,25 @@ border, so an edge ending there would have its arrow head behind it; every ancho
 moves out to the button's outer edge instead (`EXPAND_BUTTON_OUTSET`), and the button is pushed back
 inwards by the same amount so that it keeps straddling the border. In the `LR` layout that border is
 also where the node level *relation* handles sit, so they take the same offset.
+
+An **expand handle only carries a button on the side that can extend the graph**, and that side is
+the one facing *away from the selected element*: `expandSidesFrom` (`Graphs.ts`) walks the shown
+edges breadth first from the selection, and the last step of a node's shortest path says which of
+its sides faces outwards - a node reached by following an edge forwards can only lead further
+forwards. The selected node itself faces both ways; so does a node no path reaches, and a source or
+a sink never has a button on the side where the graph ends. The result is written onto
+`rfNode.data.expandSides` by `applyExpandSides` (when a node set is built) resp. `updateExpandSides`
+(when the selection or the shown nodes change), because the node itself cannot see the graph.
+
+One trap: **a node's expand handler carries the `flowProps` of the moment the node was created**
+(`makeExpandNodeFunc`), so its `props.elementName` is whatever was selected back then. Anything in
+`expandNodeFunc` that acts on the *current* selection - the sides, and the highlight of the nodes it
+creates - has to ask the flow instead, through `selectedNodeId`.
+
+This used to be decided at node creation from `isCenterNodeDescendant` / `isCenterNodeAncestor` -
+reachability from the node the set was built around. That only held while every selection rebuilt
+the graph around itself: once the graph grows, those flags describe a centre the user has long left,
+and the node the graph started from kept a button pointing back into what was already shown.
 
 Handles:
 
@@ -176,6 +288,15 @@ Two rules that are easy to break:
 2. **Every change to the columns or to the expansion state must be followed by
    `useUpdateNodeInternals()`**, or ReactFlow keeps the old handle geometry and the edges point into
    empty space.
+
+A third, about the edge set itself: **edges are merged by id, and an edge whose ends are not both
+shown is dropped**. Expanding a node adds the edges of its neighbours, and a neighbour can already
+be shown - merging those with `new Set([...eds, ...rfEdges])` compares object identity, so the same
+edge went in twice, and ReactFlow draws the copy into empty space, as an arrow head with no node at
+it. `dfsRemoveRfElems` can leave a real one behind too: it only removes the edges it walked, so an
+edge that reached a removed node from another branch stays. `dropDanglingEdges` is the invariant,
+and `tests/e2e/lineage-stability.spec.ts` asserts that every rendered edge starts and ends on a
+node.
 
 ## Fixtures
 

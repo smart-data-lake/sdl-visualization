@@ -10,7 +10,7 @@
  *    an action id appears exactly once, so the graph needs no merging of duplicated action nodes.
  */
 import { graphlib } from 'dagre';
-import {DAGraph, NodeType, Node, Edge, ActionObject, DataObject, Action, DataObjectsAndActionsSep, dagreLayoutRf, rfNodeSize} from '../src/util/ConfigExplorer/Graphs.ts';
+import {DAGraph, NodeType, Node, Edge, ActionObject, DataObject, Action, DataObjectsAndActionsSep, dagreLayoutRf, expandSidesFrom, rfNodeSize} from '../src/util/ConfigExplorer/Graphs.ts';
 import {describe, expect, test, it} from 'vitest';
 
 
@@ -557,5 +557,55 @@ describe('dagreLayoutRf', () => {
         const nodes = [rfNode('a'), rfNode('b')];
         dagreLayoutRf(nodes, [{id: 'e', source: 'a', target: 'b'} as any], 'LR');
         expect(nodes[1].position.x - nodes[0].position.x).toBe(172 + 150); // width + ranksep
+    });
+});
+
+/*
+    Which sides of a node may extend the graph: the ones facing away from the selected node, so that
+    expanding always grows outwards and never back into what is already shown.
+*/
+describe('expandSidesFrom', () => {
+    const node = (id: string) => ({id, data: {}} as any);
+    const edge = (source: string, target: string) => ({id: `${source}->${target}`, source, target} as any);
+    // a -> b -> c, and d -> b: d is upstream of b although it is reached by going forward first
+    const nodes = ['a', 'b', 'c', 'd'].map(node);
+    const edges = [edge('a', 'b'), edge('b', 'c'), edge('d', 'b')];
+
+    it('gives the selected node both sides', () => {
+        expect(expandSidesFrom(nodes, edges, 'b').get('b')).toBe('both');
+    });
+
+    it('gives a node the side its shortest path arrived from', () => {
+        const sides = expandSidesFrom(nodes, edges, 'b');
+
+        expect(sides.get('a')).toBe('backward'); // reached against an edge, so it leads further back
+        expect(sides.get('d')).toBe('backward');
+        expect(sides.get('c')).toBe('forward');
+    });
+
+    it('counts the steps, not the edges - a node two hops away faces the way it was reached', () => {
+        // from a: b forwards, then c forwards, and d backwards from b
+        const sides = expandSidesFrom(nodes, edges, 'a');
+
+        expect(sides.get('b')).toBe('forward');
+        expect(sides.get('c')).toBe('forward');
+        expect(sides.get('d')).toBe('backward');
+    });
+
+    it('leaves a node no path reaches unconstrained', () => {
+        const sides = expandSidesFrom([...nodes, node('lonely')], edges, 'a');
+
+        expect(sides.get('lonely')).toBe('both');
+    });
+
+    it('constrains nothing when nothing is selected - the run view shows its graph whole', () => {
+        expect(expandSidesFrom(nodes, edges, undefined).size).toBe(0);
+        expect(expandSidesFrom(nodes, edges, 'not-shown').size).toBe(0);
+    });
+
+    it('terminates on a cycle', () => {
+        const cyclic = [edge('a', 'b'), edge('b', 'c'), edge('c', 'a')];
+
+        expect(expandSidesFrom(nodes.slice(0, 3), cyclic, 'a').get('c')).toBe('backward');
     });
 });

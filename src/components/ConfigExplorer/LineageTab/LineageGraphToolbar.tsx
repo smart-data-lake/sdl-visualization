@@ -21,7 +21,7 @@ import { useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { nodeAttributes, useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
-import { flowProps, getGraphFromConfig, groupByFeed, groupBySubstring, recomputeLayout, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { flowProps, getGraphFromConfig, groupByFeed, groupBySubstring, recomputeLayout, resetLayout, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
 
 /*
   Styling
@@ -212,9 +212,10 @@ function RecomputeLayoutButton() {
     const rfi = useReactFlow();
     const { layout: layoutDirection } = useLineageGraph();
 
-    // recomputes the layout from the current nodes in the flow instance (rfi)
+    // lays the current nodes out again, and gives up the ones the user has moved by hand - this is
+    // the way back to the computed layout
     const handleOnClick = () => {
-        recomputeLayout(rfi, layoutDirection);
+        resetLayout(rfi, layoutDirection);
     }
 
     return (

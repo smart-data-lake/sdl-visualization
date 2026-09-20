@@ -253,27 +253,25 @@ export const CustomDataNode = ( {data} ) => {
           progress, jsonObject, isGraphFullyExpanded, graphView, layoutDirection,
           numBwdActiveEdges, numFwdActiveEdges,
           expandNodeFunc, graphNodeProps, highlighted, runContext, status, metrics,
-          columns, columnDisplay, columnsFunc
+          columns, columnDisplay, columnsFunc, isSelectedElement, expandSides
   }: ReactFlowNodeProps = data;
-  const {isSink,  isSource,  
-         isCenterNodeDescendant, isCenterNodeAncestor, isCenterNode
-  }: graphNodeProps = graphNodeProps
+  const {isExpandedForward: expandedFwd, isExpandedBackward: expandedBwd}: ReactFlowNodeProps = data;
+  const {isSink, isSource, isCenterNode}: graphNodeProps = graphNodeProps
 
   // init state
   const [ showDetails, setShowDetails ] = useState(false);
+  // neighbours are shown by default when creating the subgraph of the center node. Whether they
+  // still are lives in the node's data, not in component state: the node can be expanded from
+  // elsewhere - by selecting the element - and the handles have to follow
   const initStateBwd = (isCenterNode || isGraphFullyExpanded) && !isSource;
   const initStateFwd = (isCenterNode || isGraphFullyExpanded) && !isSink;
-  const [ isExpandedBackward, setIsExpandedBackward ] = useState(initStateBwd); // neighbours are shown by default when creating the subgraph of the center node
-  const [ isExpandedForward, setIsExpandedForward ] = useState(initStateFwd);
+  const isExpandedBackward = expandedBwd ?? initStateBwd;
+  const isExpandedForward = expandedFwd ?? initStateFwd;
   const chartBox = useRef<HTMLDivElement>(); 
 
-  useEffect(() => {
-    setIsExpandedBackward(initStateBwd);
-    setIsExpandedForward(initStateFwd);
-
-  }, [initStateBwd, initStateFwd]);
-
-  const bgcolor = isCenterNode ? nodeColors.centralNode : "#fff";
+  // the element the config explorer is showing, which is not the node the graph was built around:
+  // selecting another node highlights it where it is instead of rebuilding the graph
+  const bgcolor = isSelectedElement ? nodeColors.centralNode : "#fff";
   // in a run attempt the border tells the state the action ended up in, e.g. red for FAILED. The
   // status icon names that state, so it does not rely on the colour alone
   const borderColor = highlighted ? highLightedEdgeColor :
@@ -369,7 +367,8 @@ export const CustomDataNode = ( {data} ) => {
     // the edges have to move onto, resp. off, the column handles in the same go - ReactFlow drops
     // an edge whose handle does not exist, so this cannot wait for a later render
     updateRelationEdgeHandles(rfi);
-    recomputeLayout(rfi, layoutDirection);
+    // anchored on this node, so the graph opens around it instead of moving it
+    recomputeLayout(rfi, layoutDirection, label);
   };
 
   // handlers
@@ -377,13 +376,9 @@ export const CustomDataNode = ( {data} ) => {
   const {navigateContent} = useWorkspace();
   const { selectedNodeAttributes } = useLineageGraph();
   const handleOnExpandButtonClick = (direction) => {
-    if(direction === 'forward'){
-      setIsExpandedForward(!isExpandedForward); 
-      expandNodeFunc(label, isExpandedForward, direction, graphView, layoutDirection);
-    } else {
-      setIsExpandedBackward(!isExpandedBackward); 
-      expandNodeFunc(label, isExpandedBackward, direction, graphView, layoutDirection);
-    }
+    // expandNodeFunc writes the new state onto the node
+    expandNodeFunc(label, direction === 'forward' ? isExpandedForward : isExpandedBackward,
+                   direction, graphView, layoutDirection);
   }
 
   // navigate to object and show details on label click
@@ -489,11 +484,20 @@ export const CustomDataNode = ( {data} ) => {
   }
 
   const isVerticalLayout = sourcePosition === Position.Bottom; // maybe this is a bug because the hanle is not updated in the first change;
-  // an expand button is only shown where the graph can actually be expanded in that direction
-  const hasForwardButton = !isSink && (isCenterNodeDescendant || isCenterNode);
-  const hasBackwardButton = !isSource && (isCenterNodeAncestor || isCenterNode);
+  /*
+    An expand button is only shown on a side that can actually extend the graph: the sides facing
+    away from the selected element (expandSides, from expandSidesFrom), and never beyond a source
+    or a sink, which have nothing there.
+  */
+  const hasForwardButton = !isSink && (expandSides === 'forward' || expandSides === 'both');
+  const hasBackwardButton = !isSource && (expandSides === 'backward' || expandSides === 'both');
   const forwardOutset = hasForwardButton ? EXPAND_BUTTON_OUTSET : 0;
   const backwardOutset = hasBackwardButton ? EXPAND_BUTTON_OUTSET : 0;
+
+  // gaining or losing a button moves the handle on that border, see nodeHandleStyle
+  useEffect(() => {
+    updateNodeInternals(label);
+  }, [hasForwardButton, hasBackwardButton]);
   /*
     In a left to right layout the side handles would sit at the vertical middle of the node, which
     for a node showing its columns is somewhere among the rows - the expand button would cover a
