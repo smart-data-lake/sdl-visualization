@@ -28,16 +28,18 @@ interface ElementProps {
   elementType: string;
 }
 
-function getInputOutputIds(action: any | undefined): [string[], string[]]{
-  if (!action) return [[],[]];
-  let inputs: string[] = action['inputIds'] ? action['inputIds'] : [];
-  let outputs: string[] = action['outputIds'] ? action['outputIds'] : [];
+// a recursive input is declared apart from the other inputs, but it is read by the action all the same
+function getInputOutputIds(action: any | undefined): [string[], string[], string[]]{
+  if (!action) return [[],[],[]];
+  const recursiveInputs: string[] = action['recursiveInputIds'] ?? [];
+  const inputs: string[] = [...(action['inputIds'] ?? []), ...recursiveInputs];
+  const outputs: string[] = [...(action['outputIds'] ?? [])];
   if (action['inputId']) inputs.push(action['inputId']);
   if (action['outputId']) outputs.push(action['outputId']);
-  return [inputs, outputs];
+  return [inputs, outputs, recursiveInputs];
 }
 
-function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
+function formatInputsOutputs(inputs: string[], outputs: string[], recursiveInputs: string[] = []): JSX.Element {
   return ( 
   <Box sx={{display: 'flex', flexDirection: 'column'}}>
     <Box sx={{display: 'flex', pb: '3px'}}>
@@ -45,7 +47,9 @@ function formatInputsOutputs(inputs: string[], outputs: string[]): JSX.Element {
       <Box sx={{flex: 1, textAlign: 'right'}}>Outputs</Box>
     </Box>  
     <Box sx={{display: 'flex'}}>    
-      <Stack sx={{flex: 1, height: '100%', alignSelf: 'center', marginRight: '15px'}} spacing={1}>{inputs.map((name,idx) => createDataObjectChip(name,'md',{},idx))}</Stack>
+      <Stack sx={{flex: 1, height: '100%', alignSelf: 'center', marginRight: '15px'}} spacing={1}>
+        {inputs.map((name,idx) => createDataObjectChip(name,'md',{},idx, recursiveInputs.includes(name) ? 'recursive input' : undefined))}
+      </Stack>
       <Stack sx={{flex: 1, height: '100%', alignItems: 'end', alignSelf: 'center', marginLeft: '15px'}} spacing={1}>
         {outputs.map((name,idx) => createDataObjectChip(name,'md',{},idx))}
       </Stack>
@@ -211,7 +215,7 @@ export default function ConfigurationTab(props: ElementProps) {
     return createSearchChip("type", type, props.elementType, <StyleIcon />, "success");
   }
   function mainContent(){
-    let propsToIgnore = topAttributes.map(x => x.key).concat(['metadata', 'type', 'inputId', 'inputIds', 'outputId', 'outputIds', 'id']);
+    let propsToIgnore = topAttributes.map(x => x.key).concat(['metadata', 'type', 'inputId', 'inputIds', 'recursiveInputIds', 'outputId', 'outputIds', 'id']);
     if (props.elementType === 'actions' || props.elementType === 'dataObjects' || props.elementType === 'connections'){
       return(<ConfigurationAccordions data={props.data} elementType={props.elementType} propsToIgnore={propsToIgnore} dataObjects={props.dataObjects} />)
     } else { 
@@ -256,7 +260,7 @@ export default function ConfigurationTab(props: ElementProps) {
   }  
   
   let tags = getAttribute('metadata.tags') as string[] || [];
-  let [inputs, outputs] = getInputOutputIds(props.data)
+  let [inputs, outputs, recursiveInputs] = getInputOutputIds(props.data)
   let topAttributesCmp = createPropertiesComponent({properties: topAttributesPrep, orderProposal: ['table', 'path', 'partitions'], title: 'Main configuration'})
   let metadataDescriptionCmp = (props.data?.metadata?.description ? <MarkdownComponent markdown={props.data.metadata?.description}/> : <></>)
 
@@ -271,7 +275,7 @@ export default function ConfigurationTab(props: ElementProps) {
           {subjectAreaChip()}
           {tags.map(tag => createSearchChip("metadata.tags", tag, props.elementType, <SellIcon />, "warning"))}
         </Box>
-        {inputs.length > 0 && <Grid xs={12} xl={6}>{formatInputsOutputs(inputs,outputs)}</Grid>}
+        {inputs.length > 0 && <Grid xs={12} xl={6}>{formatInputsOutputs(inputs,outputs,recursiveInputs)}</Grid>}
       </Box>
       <Box sx={{display: 'flex', flexWrap: 'wrap', gap: '1rem'}}>
         {topAttributesCmp && <><Box>{topAttributesCmp}</Box></>}

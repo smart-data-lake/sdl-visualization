@@ -19,9 +19,9 @@ function listRenderer(prop: any) {
 }
 
 function inputsRenderer(prop: any) {
-	const v = prop.rowData.inputId || prop.rowData.inputIds
-	return (isArray(v) ? v.join(", ") : v);
-}	
+	const v = [prop.rowData.inputId ?? [], prop.rowData.inputIds ?? [], prop.rowData.recursiveInputIds ?? []].flat()
+	return (v.length > 0 ? v.join(", ") : undefined);
+}
 
 function outputsRenderer(prop: any) {
 	const v = prop.rowData.outputId || prop.rowData.outputIds
