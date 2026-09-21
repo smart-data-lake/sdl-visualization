@@ -141,6 +141,8 @@ export interface WorkflowRun {
   actionsStatus?: Partial<Record<TaskStatus, number>>;
   /** ids of all data objects written by this attempt */
   dataObjects?: string[];
+  /** partition values of the first action in the DAG that selected any, see stateFile.ts */
+  selectedPartitionValues?: string;
 }
 
 export interface SchemaColumn {

@@ -8,11 +8,10 @@ import { compareFunc, getPropertyByPath, onlyUnique } from '../../util/helpers';
 import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
 import CenteredCircularProgress from '../Common/CenteredCircularProgress';
 import { createDataObjectChip, createUnknownDataObjectChip } from './ConfigurationTab';
-import DataTable, { nestedPropertyRenderer } from './DataTable';
+import DataTable, { nestedPropertyRenderer, tooltipCellRenderer } from './DataTable';
 import { getMissingSchemaFileCmp } from './ElementDetails';
 import InfoBox from './InfoBox';
 import { PrimaryKeyIcon } from './LineageTab/ColumnIcons';
-import { OverflowTooltip } from './OverflowTooltip';
 
 /**
  * Table cell renderer calculating a percentage value against a given base value
@@ -46,14 +45,6 @@ export function tooltipHeadRenderer(msg: string) {
 /**
  * Table cell renderer showing a tooltip with cell content if content overflows
  */
-export function tooltipCellRenderer() {
-  return (prop: any) => {
-    return (
-      <OverflowTooltip text={getPropertyByPath(prop.rowData, prop.column.key)} maxWidth='500px'/>
-    );
-  }
-}
-
 /**
  * Table cell renderer marking a primary key column with the same symbol the graph node uses.
  *

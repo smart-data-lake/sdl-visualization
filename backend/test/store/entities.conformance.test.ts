@@ -152,6 +152,20 @@ describe.each(DRIVERS)('$name', ({ create }) => {
       expect(got!.dataObjects).toEqual(['x', 'y']);
       expect(got!.actionsStatus).toEqual({ FAILED: 1 });
     });
+
+    // every field is mapped by hand in both drivers, and an omission is silent there
+    test('the partition values an attempt selected survive', async () => {
+      const scope = freshScope();
+      await store.runs.putRun(
+        scope,
+        run({ runId: 1, attemptId: 0, selectedPartitionValues: 'dt=2024-01-01, dt=2024-01-02' }),
+      );
+      const got = await store.runs.getRun(scope, 'wf', 1, 0);
+      expect(got!.selectedPartitionValues).toBe('dt=2024-01-01, dt=2024-01-02');
+
+      const listed = await store.runs.listRuns(scope, 'wf', 10);
+      expect(listed[0]!.selectedPartitionValues).toBe('dt=2024-01-01, dt=2024-01-02');
+    });
   });
 
   /**

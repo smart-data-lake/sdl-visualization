@@ -53,6 +53,7 @@ export function registerRunTools(server: McpServer, scope: Scope): void {
           durationMillis: a.duration,
           feedSel: a.feedSel,
           actionsByState: a.actionsStatus,
+          selectedPartitionValues: a.selectedPartitionValues,
         })),
       });
     },

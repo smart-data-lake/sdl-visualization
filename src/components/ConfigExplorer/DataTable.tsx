@@ -12,6 +12,7 @@ import { formatDuration } from "../../util/WorkflowsExplorer/format";
 import { arrayEquals, getPropertyByPath } from "../../util/helpers";
 import CenteredCircularProgress from "../Common/CenteredCircularProgress";
 import useLocalStorageState from "../../hooks/useLocalStorageState";
+import { OverflowTooltip } from "./OverflowTooltip";
 
 export function nestedPropertyRenderer(defaultValue: string = "", paddingRight: string = '0') {
   return (prop: any) => {
@@ -36,13 +37,22 @@ export function durationRenderer(prop: any) {
   return formatDuration(prop.value)
 }
 
+/** A cell whose text is too long for its column, shown in full in a tooltip. */
+export function tooltipCellRenderer() {
+  return (prop: any) => {
+    return (
+      <OverflowTooltip text={getPropertyByPath(prop.rowData, prop.column.key)} maxWidth='500px'/>
+    );
+  }
+}
+
 export function fallbackRenderer(fallbackProperty: string) {
 	return (prop: any) => {
 		return  prop.value || prop.rowData[fallbackProperty];
     }
 }
 
-export function getColumnSelectionMenu(columns: any[], columnsVisible: {}, setColumnsVisible: ({}) => void, tableRef?: ITableInstance) {
+export function getColumnSelectionMenu(columns: any[], columnsVisible: {}, setColumnVisible: (property: string, visible: boolean) => void, tableRef?: ITableInstance) {
   return <>
     <Dropdown>
         <MenuButton size="sm" variant="plain"><ViewColumnOutlined/></MenuButton>               
@@ -55,9 +65,7 @@ export function getColumnSelectionMenu(columns: any[], columnsVisible: {}, setCo
                             if (tableRef) {
                                 if (x.target.checked) tableRef.showColumn(col.property);
                                 else tableRef.hideColumn(col.property);
-                                const newColumnsVisible = {...columnsVisible};
-                                newColumnsVisible[col.property] = x.target.checked;                                    
-                                setColumnsVisible(newColumnsVisible);
+                                setColumnVisible(col.property, x.target.checked);
                             } else console.log("OOPS")
                         }}                            
                     />
@@ -80,12 +88,16 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
   const [loading, setLoading] = useState(true)
   const dataTable = useTable();
   const [mouseDown, setMouseDown] = useState<number[]>(); // this is to capture mouse drag on row, and prevent click if mouse is moved... this allows to select text also if row click navigates to child page...
-  const [columnsVisible, setColumnsVisible] = useLocalStorageState<object>(props.name + ".columnsVisible", () => getInitialColumnsVisible(props.columns))
+  // only the columns the user changed are stored, so a column added later still starts out with
+  // the visibility its definition declares instead of appearing for everyone who used the menu once
+  const [storedColumnsVisible, setStoredColumnsVisible] = useLocalStorageState<object>(props.name + ".columnsVisible", {})
+  const columnsVisible = useMemo(() => ({...getInitialColumnsVisible(props.columns), ...storedColumnsVisible}), [props.columns, storedColumnsVisible]);
+  const setColumnVisible = (property: string, visible: boolean) => setStoredColumnsVisible({...storedColumnsVisible, [property]: visible});
 
   useEffect(() => {
     if (setToolbarElements) {
       if (!props.name) throw Error("DataTable name is needed if setToolbarElements is set!");
-      const menu = getColumnSelectionMenu(props.columns, columnsVisible, setColumnsVisible, dataTable)
+      const menu = getColumnSelectionMenu(props.columns, columnsVisible, setColumnVisible, dataTable)
       setToolbarElements(menu)
     }
   }, [props.columns, columnsVisible]);
@@ -134,7 +146,9 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
       col.colGroup = { style: { minWidth: c.minWidth || columnMinWidth || 100 } }
       return col;
     })
-    cols[cols.length-1].width = undefined // remove width of last element for smooth column resizing and horizontal scrollbar of table
+    // remove width of the last visible element for smooth column resizing and horizontal scrollbar
+    const lastVisible = cols.filter(col => col.visible !== false).pop();
+    if (lastVisible) lastVisible.width = undefined;
     return cols;
   }, [columns, loading]);
 

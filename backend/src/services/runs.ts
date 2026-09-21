@@ -90,6 +90,9 @@ async function indexState(scope: Scope, stateFile: StateFile): Promise<void> {
     ...run,
     buildVersion: run.buildVersion ?? undefined,
     appVersion: run.appVersion ?? undefined,
+    // a property over 32 768 characters is refused outright, and a run over thousands of
+    // partitions would otherwise fail the whole upload
+    selectedPartitionValues: truncate(run.selectedPartitionValues, 1_000),
     blobPath: blobPaths.state(scope, run.name, run.runId, run.attemptId),
   };
   await runs.putRun(scope, record);

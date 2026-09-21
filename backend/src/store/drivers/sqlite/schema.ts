@@ -141,6 +141,7 @@ export const SCHEMA = [
      actions_status_json TEXT,
      data_objects_json TEXT,
      actions_json TEXT,
+     selected_partition_values TEXT,
      build_version TEXT,
      app_version TEXT,
      blob_path TEXT,
@@ -179,4 +180,14 @@ export const SCHEMA = [
      action_id TEXT NOT NULL,
      PRIMARY KEY (repo, env, data_object_id, run_id DESC, attempt_id DESC, workflow, action_id)
    ) WITHOUT ROWID`,
+];
+
+/**
+ * Columns added to a table that already exists. CREATE TABLE IF NOT EXISTS leaves an older
+ * store without them, and db.upsert builds its column list from the record, so the write would
+ * fail rather than ignore the field. node:sqlite has no ADD COLUMN IF NOT EXISTS, hence the
+ * PRAGMA check in openDb.
+ */
+export const MIGRATIONS: { table: string; column: string; type: string }[] = [
+  { table: 'runs', column: 'selected_partition_values', type: 'TEXT' },
 ];

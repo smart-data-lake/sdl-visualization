@@ -6,12 +6,20 @@ import {
   InitialConfigDataLists,
 } from '../../../src/util/ConfigExplorer/ConfigData.ts';
 import { getMainInputCount, getMainOutputCount } from '../../../src/util/WorkflowsExplorer/metrics.ts';
+import {
+  formatPartitionValues,
+  selectedPartitionValues,
+} from '../../../src/util/WorkflowsExplorer/partitionValues.ts';
 import { ConfigDataLists_ } from '../../src/domain/filter.js';
 import { buildFullGraph } from '../../src/domain/graph.js';
 import {
   getMainInputCount as portedMainInput,
   getMainOutputCount as portedMainOutput,
 } from '../../src/domain/metrics.js';
+import {
+  formatPartitionValues as portedFormat,
+  selectedPartitionValues as portedSelected,
+} from '../../src/domain/partitionValues.js';
 import { FIXTURES } from '../../scripts/seed-fixtures.js';
 
 /**
@@ -133,5 +141,33 @@ describe('run metrics match the run table', () => {
     const action = stateFile.actionsState[name];
     expect(portedMainInput(action)).toEqual(getMainInputCount(action));
     expect(portedMainOutput(action)).toEqual(getMainOutputCount(action));
+  });
+});
+
+/**
+ * No fixture carries a partition value, so this pair is the one place where the two
+ * implementations need cases of their own rather than the real configuration.
+ */
+describe('partition values are formatted the same', () => {
+  const cases: any[][] = [
+    [],
+    [{ dt: '2024-01-01' }],
+    [{ dt: '2024-01-01', region: 'CH' }],
+    [{ dt: '2024-01-01' }, { dt: '2024-01-01' }, { dt: '2024-01-02' }],
+    [{ elements: { dt: '2024-01-01' } }],
+    [{}],
+    ['animal'],
+    [...Array(14).keys()].map((i) => ({ dt: `${i}` })),
+  ];
+
+  test.each(cases.map((values, index) => [index, values]))('case %i', (_index, values) => {
+    expect(portedFormat(values as any[])).toBe(formatPartitionValues(values as any[]));
+  });
+
+  test('and so is what an action selected', () => {
+    for (const values of cases) {
+      const action = { results: [{ dataObjectId: 'do', partitionValues: values }] } as any;
+      expect(portedSelected(action)).toBe(selectedPartitionValues(action));
+    }
   });
 });

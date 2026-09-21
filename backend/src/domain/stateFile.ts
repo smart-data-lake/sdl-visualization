@@ -1,5 +1,6 @@
 import type { Action, StateFile, TaskStatus, WorkflowRun, WorkflowRunAction } from './types.js';
 import { getMainInputCount, getMainOutputCount } from './metrics.js';
+import { selectedPartitionValues } from './partitionValues.js';
 
 /**
  * Everything that turns a raw SDLB state file into the records this service stores and serves.
@@ -159,6 +160,59 @@ export function endAnchorOf(stateFile: StateFile): number | undefined {
 }
 
 /**
+ * The actions of an attempt in topological order: an action follows every action that wrote one of
+ * the data objects it reads. Of the actions ready at each step the alphabetically first is taken,
+ * so the order does not depend on the iteration order of the state file. Plain string comparison,
+ * not localeCompare, because build_index.py has to reach the same order.
+ *
+ * An action left over by a cycle - which SDLB's DAG cannot produce, but a hand-written state file
+ * can - follows by name rather than hanging the loop.
+ */
+export function actionsInDagOrder(stateFile: StateFile): string[] {
+  const actions = Object.entries(stateFile.actionsState ?? {});
+  const producers = new Map<string, string[]>();
+  for (const [name, action] of actions) {
+    for (const id of writtenDataObjects(action)) producers.set(id, [...(producers.get(id) ?? []), name]);
+  }
+  // a set, so two actions sharing several data objects still count as one predecessor
+  const predecessors = new Map(
+    actions.map(([name, action]) => [
+      name,
+      new Set((action.inputIds ?? []).flatMap((id) => producers.get(id) ?? []).filter((p) => p !== name)),
+    ]),
+  );
+
+  const remaining = new Set(actions.map(([name]) => name));
+  const order: string[] = [];
+  while (remaining.size > 0) {
+    const ready = [...remaining].filter((name) =>
+      [...predecessors.get(name)!].every((predecessor) => !remaining.has(predecessor)),
+    );
+    if (ready.length === 0) {
+      order.push(...[...remaining].sort());
+      break;
+    }
+    const next = ready.sort()[0];
+    order.push(next);
+    remaining.delete(next);
+  }
+  return order;
+}
+
+/**
+ * The partition values of the first action in the DAG that selected any.
+ * An execution mode selecting partitions propagates them to everything downstream, so the first
+ * such action in the DAG is the one that made the selection.
+ */
+export function selectedPartitionValuesOfRun(stateFile: StateFile): string | undefined {
+  for (const name of actionsInDagOrder(stateFile)) {
+    const values = selectedPartitionValues(stateFile.actionsState[name]);
+    if (values) return values;
+  }
+  return undefined;
+}
+
+/**
  * The index record for one attempt: what GET /workflow returns, and what the Runs table stores.
  * Includes the three fields the local backend derives client-side in getIndex(), so the SPA
  * receives them ready-made.
@@ -202,6 +256,7 @@ export function toWorkflowRun(stateFile: StateFile): WorkflowRun {
     attemptStartTimeMillis: attemptStartMs,
     actionsStatus,
     dataObjects: [...dataObjects],
+    selectedPartitionValues: selectedPartitionValuesOfRun(stateFile),
   };
 }
 
