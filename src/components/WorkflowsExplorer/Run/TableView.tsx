@@ -2,7 +2,7 @@ import { SortDirection } from "ka-table";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { Row } from "../../../types";
 import { createActionsChip } from "../../ConfigExplorer/ConfigurationTab";
-import DataTable, { cellIconRenderer, dateRenderer, durationRenderer } from '../../ConfigExplorer/DataTable';
+import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, tooltipCellRenderer } from '../../ConfigExplorer/DataTable';
 import { useParams } from "react-router-dom";
 
 
@@ -85,6 +85,13 @@ const columns = [{
     title: 'Output Count',
     property: 'mainOutputCount',
     width: '150px'
+}, {
+    // what the action's execution mode selected, see util/WorkflowsExplorer/partitionValues.ts
+    title: 'Selected Partition Values',
+    property: 'selectedPartitionValues',
+    renderer: tooltipCellRenderer(),
+    width: '250px',
+    visible: false
 }];
 
 export const TableView = (props: { rows: Row[], stepName?: string, setToolbarElements: (lrElements: [JSX.Element?, JSX.Element?]) => void}) => {

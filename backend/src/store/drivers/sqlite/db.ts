@@ -2,7 +2,7 @@ import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { checkValues } from '../../limits.js';
-import { SCHEMA } from './schema.js';
+import { MIGRATIONS, SCHEMA } from './schema.js';
 
 /**
  * The SQLite handle, and the two things every repository here needs from it.
@@ -45,6 +45,12 @@ export function openDb(options: SqliteOptions): Db {
   database.exec('PRAGMA busy_timeout = 5000');
   database.exec('PRAGMA foreign_keys = ON');
   for (const statement of SCHEMA) database.exec(statement);
+  for (const { table, column, type } of MIGRATIONS) {
+    const columns = database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!columns.some((existing) => existing.name === column)) {
+      database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    }
+  }
 
   const cache = new Map<string, StatementSync>();
   const prepare = (sql: string): StatementSync => {

@@ -12,7 +12,7 @@ import PageHeader from "../../layouts/PageHeader";
 import { Filter, checkFiltersAvailability, stateFilters } from "../../util/WorkflowsExplorer/StatusInfo";
 import CenteredCircularProgress from "../Common/CenteredCircularProgress";
 import { createFeedChip } from "../ConfigExplorer/ConfigurationTab";
-import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, fallbackRenderer, nestedPropertyRenderer, titleIconRenderer } from '../ConfigExplorer/DataTable';
+import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, fallbackRenderer, nestedPropertyRenderer, titleIconRenderer, tooltipCellRenderer } from '../ConfigExplorer/DataTable';
 import HistoryBarChart from "./HistoryChart/HistoryBarChart";
 import ToolBar from "./ToolBar/ToolBar";
 import { useQueryClient } from "react-query";
@@ -107,6 +107,13 @@ const columns = [{
 	title: 'App Version',
 	property: 'appVersionInfo.version',
 	renderer: fallbackRenderer('appVersion')
+}, {
+	// what the first action in the DAG selected, precalculated when the attempt is indexed
+	title: 'Selected Partition Values',
+	property: 'selectedPartitionValues',
+	renderer: tooltipCellRenderer(),
+	width: '250px',
+	visible: false
 }]
 
 /**

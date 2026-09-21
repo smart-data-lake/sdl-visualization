@@ -45,28 +45,98 @@ def getRuns(files):
                 } for key in actionsState
             }
 
-            runs.append(
-                {
-                    "name": appConfig["applicationName"],
-                    "runId": data["runId"],
-                    "attemptId": data["attemptId"],
-                    "feedSel": appConfig["feedSel"],
-                    "runStartTime": data["runStartTime"],
-                    "attemptStartTime": data["attemptStartTime"],
-                    "runEndTime": runEndTime,
-                    "status": status,
-                    "actions": actions,
-                    "buildVersion": buildVersion,
-                    "appVersion": appVersion,
-                    "path": statefile["path"].lstrip("./"),
-                }
-            )
+            run = {
+                "name": appConfig["applicationName"],
+                "runId": data["runId"],
+                "attemptId": data["attemptId"],
+                "feedSel": appConfig["feedSel"],
+                "runStartTime": data["runStartTime"],
+                "attemptStartTime": data["attemptStartTime"],
+                "runEndTime": runEndTime,
+                "status": status,
+                "actions": actions,
+                "buildVersion": buildVersion,
+                "appVersion": appVersion,
+                "path": statefile["path"].lstrip("./"),
+            }
+            # left out rather than null when nothing was selected, as the backend leaves it out
+            selected = selectedPartitionValuesOfRun(actionsState)
+            if selected: run["selectedPartitionValues"] = selected
+            runs.append(run)
 
         except Exception as ex:
             print("ERROR while reading file "+statefile["path"])
             raise ex        
     
     return runs
+
+# Copied from backend/src/domain/partitionValues.ts and src/util/WorkflowsExplorer/
+# partitionValues.ts. There is no python test suite, so keep this a literal transcription.
+MAX_PARTITION_VALUES = 10
+
+def formatPartitionValue(value):
+    """One partition value: `dt=2024-01-01`, several keys joined by `/`."""
+    # older state files wrap the map in `elements`, and nothing normalizes them on this path
+    elements = value.get("elements", value) if isinstance(value, dict) else value
+    if elements is None: return ""
+    if not isinstance(elements, dict): return str(elements)
+    return "/".join(f"{key}={element}" for key, element in elements.items())
+
+def formatPartitionValues(values):
+    """Distinct partition values as one cell of a table, longest lists abbreviated."""
+    formatted = [v for v in (formatPartitionValue(value) for value in (values or [])) if v]
+    distinct = list(dict.fromkeys(formatted))
+    if len(distinct) <= MAX_PARTITION_VALUES: return ", ".join(distinct)
+    return ", ".join(distinct[:MAX_PARTITION_VALUES]) + f", \u2026 (+{len(distinct) - MAX_PARTITION_VALUES} more)"
+
+def partitionValuesOfAction(action):
+    """The partition values of every result of an action, old and new state file format."""
+    values = []
+    for result in action.get("results", []):
+        subFeed = result.get("subFeed", result)
+        values.extend(subFeed.get("partitionValues") or [])
+    return values
+
+def writtenDataObjects(action):
+    """The ids of the data objects an action wrote, with the pre-outputIds fallback."""
+    outputIds = [d if isinstance(d, str) else d.get("id") for d in action.get("outputIds", [])]
+    if outputIds: return outputIds
+    return [r.get("dataObjectId") or r["subFeed"]["dataObjectId"] for r in action.get("results", [])]
+
+def actionsInDagOrder(actionsState):
+    """
+    The actions in topological order: an action follows every action that wrote one of the data
+    objects it reads, and of the actions ready at each step the alphabetically first is taken.
+    Mirrors actionsInDagOrder in backend/src/domain/stateFile.ts.
+    """
+    producers = collections.defaultdict(list)
+    for name, action in actionsState.items():
+        for dataObjectId in writtenDataObjects(action):
+            producers[dataObjectId].append(name)
+    predecessors = {
+        name: {p for i in (action.get("inputIds") or []) for p in producers.get(i if isinstance(i, str) else i.get("id"), []) if p != name}
+        for name, action in actionsState.items()
+    }
+
+    remaining = set(actionsState.keys())
+    order = []
+    while remaining:
+        ready = [name for name in remaining if not (predecessors[name] & remaining)]
+        if not ready:
+            # a cycle SDLB's DAG cannot produce, but a hand written state file can
+            order.extend(sorted(remaining))
+            break
+        next = min(ready)
+        order.append(next)
+        remaining.remove(next)
+    return order
+
+def selectedPartitionValuesOfRun(actionsState):
+    """The partition values of the first action in the DAG that selected any."""
+    for name in actionsInDagOrder(actionsState):
+        values = formatPartitionValues(partitionValuesOfAction(actionsState[name]))
+        if values: return values
+    return None
 
 def getStatus(actionsState):
     """Get the status of a state file."""

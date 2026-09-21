@@ -1,5 +1,6 @@
 import { durationMillis } from "./util/WorkflowsExplorer/date";
 import { getMainInputCount, getMainOutputCount } from "./util/WorkflowsExplorer/metrics";
+import { selectedPartitionValues } from "./util/WorkflowsExplorer/partitionValues";
 
 export interface MetaDataBaseObject {
     flow_id: string;
@@ -39,6 +40,8 @@ export class Row implements MetaDataBaseObject {
     /** How much the action read from its main input resp. wrote to its main output, see metrics.ts */
     mainInputCount?: number;
     mainOutputCount?: number;
+    /** The partition values the action processed, as one line of text, see partitionValues.ts */
+    selectedPartitionValues?: string;
     /**
      * Where an unfinished phase is taken to end. Undefined while the attempt is still in flight,
      * in which case an unfinished phase runs up to now; for a finalised attempt it is the last
@@ -64,6 +67,7 @@ export class Row implements MetaDataBaseObject {
       this.details = action;
       this.mainInputCount = getMainInputCount(action);
       this.mainOutputCount = getMainOutputCount(action);
+      this.selectedPartitionValues = selectedPartitionValues(action);
       this.endAnchor = endAnchor;
     }
 
@@ -242,6 +246,8 @@ export class Row implements MetaDataBaseObject {
     attemptStartTimeMillis?: number; // needed for HistoryBarChart
     actionsStatus?: Partial<Record<TaskStatus, number>>; // number of actions per state
     dataObjects?: string[]; // ids of all data objects written by this attempt
+    // partition values of the first action in the DAG that selected any, see backend stateFile.ts
+    selectedPartitionValues?: string;
   }
 
   /**** Tenant administration ****/

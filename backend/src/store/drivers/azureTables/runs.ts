@@ -43,6 +43,7 @@ interface RunEntity {
   actionsStatusJson?: string;
   dataObjectsJson?: string;
   actionsJson?: string;
+  selectedPartitionValues?: string;
   buildVersion?: string;
   appVersion?: string;
   blobPath: string;
@@ -112,6 +113,7 @@ function toRunEntity(scope: Scope, run: RunRecord): RunEntity {
     // The property cap counts UTF-16 code units - see limits.ts. Over it, the index
     // simply does not carry the map.
     actionsJson: actionsJson.length <= MAX_PROPERTY_CHARS ? actionsJson : undefined,
+    selectedPartitionValues: run.selectedPartitionValues,
     buildVersion: run.buildVersion,
     appVersion: run.appVersion,
     blobPath: run.blobPath,
@@ -129,6 +131,7 @@ function toRunRecord(entity: RunEntity): RunRecord {
     attemptStartTime: entity.attemptStartTime,
     runEndTime: entity.runEndTime,
     actions: parse<Record<string, WorkflowRunAction>>(entity.actionsJson, {}),
+    selectedPartitionValues: entity.selectedPartitionValues,
     buildVersion: entity.buildVersion,
     appVersion: entity.appVersion,
     duration: entity.duration,

@@ -208,19 +208,24 @@ atomic-overwrite case is skipped for the Azure driver — see the comment there.
 
 ## Code copied from the frontend
 
-Five pieces of logic exist twice, in `src/domain/`, and must not drift:
+Six pieces of logic exist twice, in `src/domain/`, and must not drift:
 
 | here | copied from |
 |---|---|
 | `metrics.ts` | `src/util/WorkflowsExplorer/metrics.ts` |
+| `partitionValues.ts` | `src/util/WorkflowsExplorer/partitionValues.ts` |
 | `graph.ts` | `src/util/ConfigExplorer/Graphs.ts` (without the layout and ReactFlow parts) |
 | `filter.ts` | `src/util/ConfigExplorer/ConfigData.ts` and `src/util/helpers.ts` |
 | `stateFile.ts` (normalisation) | `src/util/WorkflowsExplorer/Attempt.ts` |
-| `stateFile.ts` (index record) | `build_index.py`'s `getRuns()` |
+| `stateFile.ts` (index record, including `actionsInDagOrder`) | `build_index.py`'s `getRuns()` |
 
 `test/unit/parity.test.ts` runs both implementations over the real getting-started
 configuration and asserts they agree, which catches drift that mirrored test cases
 would not. **Change the pair together.**
+
+`selectedPartitionValues` is derived when an attempt is indexed, so an attempt indexed
+before the field existed keeps an empty one until SDLB uploads it again. There is no
+backfill; the column it feeds is hidden by default.
 
 One deliberate divergence: `aggregateRunStatus` follows `build_index.py`'s priority
 order, not `row.ts`'s. The two disagree — a run with one FAILED and one RUNNING

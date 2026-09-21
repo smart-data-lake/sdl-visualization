@@ -2,12 +2,14 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
+  actionsInDagOrder,
   aggregateRunStatus,
   deriveRunEndTime,
   durationMillis,
   endAnchorOf,
   normalizeStateFile,
   runElementFacts,
+  selectedPartitionValuesOfRun,
   toWorkflowRun,
   writtenDataObjects,
 } from '../../src/domain/stateFile.js';
@@ -192,6 +194,68 @@ describe('the index record', () => {
   test('timestamps stay ISO strings; the SPA parses them itself', () => {
     expect(typeof run.attemptStartTime).toBe('string');
     expect(typeof run.runEndTime).toBe('string');
+  });
+});
+
+describe('the partition values of an attempt', () => {
+  /** An attempt of actions named by their id, each reading and writing one data object. */
+  const attempt = (actions: { name: string; in: string[]; out: string[]; values?: any[] }[]): any => ({
+    appConfig: { applicationName: 'app' },
+    runId: 1,
+    attemptId: 1,
+    actionsState: Object.fromEntries(
+      actions.map((action) => [
+        action.name,
+        {
+          state: 'SUCCEEDED',
+          duration: 'PT1S',
+          inputIds: action.in,
+          outputIds: action.out,
+          results: action.out.map((id) => ({ dataObjectId: id, partitionValues: action.values ?? [] })),
+        },
+      ]),
+    ),
+  });
+
+  test('an attempt that selected no partitions has no value', () => {
+    expect(toWorkflowRun(failedAttempt).selectedPartitionValues).toBeUndefined();
+  });
+
+  test('the values come from the first action in the DAG that has any', () => {
+    const run = attempt([
+      { name: 'load', in: [], out: ['raw'], values: [{ dt: '2024-01-01' }] },
+      { name: 'historize', in: ['raw'], out: ['int'], values: [{ dt: '2024-01-01' }] },
+    ]);
+    expect(actionsInDagOrder(run)).toEqual(['load', 'historize']);
+    expect(selectedPartitionValuesOfRun(run)).toBe('dt=2024-01-01');
+  });
+
+  test('an action upstream of the selecting one does not have to carry them', () => {
+    const run = attempt([
+      { name: 'download', in: [], out: ['raw'] },
+      { name: 'historize', in: ['raw'], out: ['int'], values: [{ dt: '2024-02-02' }] },
+    ]);
+    expect(selectedPartitionValuesOfRun(run)).toBe('dt=2024-02-02');
+  });
+
+  test('two independent branches are ordered by name, not by how the state file lists them', () => {
+    // 'download' runs before 'apply' although it sorts later, because 'apply' waits for 'raw'
+    const run = attempt([
+      { name: 'apply', in: ['raw'], out: ['int'], values: [{ dt: '2024-03-03' }] },
+      { name: 'download', in: [], out: ['raw'] },
+      { name: 'branch', in: [], out: ['other'], values: [{ dt: '2024-04-04' }] },
+    ]);
+    expect(actionsInDagOrder(run)).toEqual(['branch', 'download', 'apply']);
+    expect(selectedPartitionValuesOfRun(run)).toBe('dt=2024-04-04');
+  });
+
+  test('actions caught in a cycle still terminate, ordered by name', () => {
+    const run = attempt([
+      { name: 'b', in: ['x'], out: ['y'], values: [{ dt: '2024-05-05' }] },
+      { name: 'a', in: ['y'], out: ['x'] },
+    ]);
+    expect(actionsInDagOrder(run)).toEqual(['a', 'b']);
+    expect(selectedPartitionValuesOfRun(run)).toBe('dt=2024-05-05');
   });
 });
 

@@ -341,6 +341,7 @@ interface RunRow {
   actions_status_json: string | null;
   data_objects_json: string | null;
   actions_json: string | null;
+  selected_partition_values: string | null;
   build_version: string | null;
   app_version: string | null;
   blob_path: string | null;
@@ -349,7 +350,8 @@ interface RunRow {
 const RUN_COLUMNS =
   'workflow, run_id, attempt_id, feed_sel, status, run_start_time, attempt_start_time, ' +
   'run_end_time, duration, attempt_start_time_millis, actions_status_json, ' +
-  'data_objects_json, actions_json, build_version, app_version, blob_path';
+  'data_objects_json, actions_json, selected_partition_values, build_version, app_version, ' +
+  'blob_path';
 
 const toRunRecord = (row: RunRow): RunRecord => ({
   name: row.workflow,
@@ -361,6 +363,7 @@ const toRunRecord = (row: RunRow): RunRecord => ({
   attemptStartTime: opt(row.attempt_start_time),
   runEndTime: opt(row.run_end_time),
   actions: parse<Record<string, WorkflowRunAction>>(row.actions_json, {}),
+  selectedPartitionValues: opt(row.selected_partition_values),
   buildVersion: opt(row.build_version),
   appVersion: opt(row.app_version),
   duration: opt(row.duration),
@@ -476,6 +479,7 @@ function runRepository(db: Db): RunRepository {
         // No property-size limit here, so the map is always indexed - unlike the Azure
         // driver, which has to drop it past 32 768 characters.
         actions_json: actionsJson,
+        selected_partition_values: run.selectedPartitionValues,
         build_version: run.buildVersion,
         app_version: run.appVersion,
         blob_path: run.blobPath,

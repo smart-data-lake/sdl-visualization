@@ -7,8 +7,7 @@ import { useWorkspace } from "../../hooks/useWorkspace";
 import { ConfigData, ConfigDataLists } from "../../util/ConfigExplorer/ConfigData";
 import { flowProps } from "../../util/ConfigExplorer/LineageTabUtils";
 import { isArray } from "../../util/helpers";
-import DataTable from "./DataTable";
-import { tooltipCellRenderer } from "./SchemaTab";
+import DataTable, { tooltipCellRenderer } from "./DataTable";
 
 
 function tableRenderer(prop: any) {

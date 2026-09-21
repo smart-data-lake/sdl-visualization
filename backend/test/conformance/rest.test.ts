@@ -130,6 +130,49 @@ describe('workflows and runs match what build_index.py derived from the same sta
     expect(failed.attemptStartTimeMillis).toBe(Date.parse(failed.attemptStartTime));
   });
 
+  test('an attempt reports the partition values its first action selected', async () => {
+    // no fixture attempt selects partitions, so this one is uploaded here rather than seeded -
+    // the seeded state directory is also what the attempt counts above are compared against
+    const attempt = {
+      appConfig: { applicationName: 'partitioned', feedSel: '.*' },
+      runId: 1,
+      attemptId: 1,
+      runStartTime: '2024-03-17T22:12:18.065Z',
+      attemptStartTime: '2024-03-17T22:12:18.065Z',
+      isFinal: true,
+      actionsState: {
+        'load-stg': {
+          executionId: { type: 'SDLExecutionId', runId: 1, attemptId: 1 },
+          state: 'SUCCEEDED',
+          duration: 'PT1S',
+          startTstmp: '2024-03-17T22:12:19.000Z',
+          endTstmp: '2024-03-17T22:12:20.000Z',
+          outputIds: ['stg'],
+          results: [{ type: 'SparkSubFeed', dataObjectId: 'stg', partitionValues: [{ dt: '2024-01-01' }] }],
+        },
+        'load-int': {
+          executionId: { type: 'SDLExecutionId', runId: 1, attemptId: 1 },
+          state: 'SUCCEEDED',
+          duration: 'PT1S',
+          startTstmp: '2024-03-17T22:12:21.000Z',
+          endTstmp: '2024-03-17T22:12:22.000Z',
+          inputIds: ['stg'],
+          outputIds: ['int'],
+          results: [{ type: 'SparkSubFeed', dataObjectId: 'int', partitionValues: [{ dt: '2024-01-01' }] }],
+        },
+      },
+    };
+    const uploaded = await app.inject({ method: 'POST', url: `/api/v1/state?${Q}`, payload: attempt });
+    expect(uploaded.statusCode, uploaded.body).toBeLessThan(300);
+
+    const runs = await json(`/api/v1/workflow?${Q}&application=partitioned`);
+    expect(runs[0].selectedPartitionValues).toBe('dt=2024-01-01');
+
+    // and the attempts that selected nothing say so rather than inventing a value
+    const gettingStarted = await json(`/api/v1/workflow?${Q}&application=getting-started`);
+    expect(gettingStarted.every((r: any) => r.selectedPartitionValues === undefined)).toBe(true);
+  });
+
   test('timestamps are ISO strings, because the SPA parses them itself', async () => {
     const runs = await json(`/api/v1/workflow?${Q}&application=getting-started`);
     for (const run of runs) {
