@@ -16,6 +16,8 @@ import { FilterParams, filterSearchText } from "./WorkflowHistory";
 const columns = [{
     title: 'Name',
     property: 'name',
+    flex: true,
+    minWidth: 150
 }, {
     title: 'Last status',
     property: 'lastStatus',

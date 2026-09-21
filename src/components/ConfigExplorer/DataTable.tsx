@@ -146,9 +146,11 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
       col.colGroup = { style: { minWidth: c.minWidth || columnMinWidth || 100 } }
       return col;
     })
-    // remove width of the last visible element for smooth column resizing and horizontal scrollbar
-    const lastVisible = cols.filter(col => col.visible !== false).pop();
-    if (lastVisible) lastVisible.width = undefined;
+    // the table layout is fixed, so the column left without a width takes what the others leave:
+    // the one asking for it, else the last visible, for smooth resizing and horizontal scrollbar
+    const flexible = cols.find((col, i) => columns[i].flex && col.visible !== false)
+      ?? cols.filter(col => col.visible !== false).pop();
+    if (flexible) flexible.width = undefined;
     return cols;
   }, [columns, loading]);
 
