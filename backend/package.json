@@ -38,6 +38,7 @@
     "azurite": "^3.36.0",
     "esbuild": "^0.28.2",
     "fastify": "^5.12.1",
+    "minisearch": "^7.2.0",
     "tsx": "^4.20.0",
     "typescript": "5.9.3",
     "vitest": "^4.1.11",

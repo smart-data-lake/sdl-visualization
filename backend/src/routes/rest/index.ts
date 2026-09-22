@@ -8,6 +8,7 @@ import * as scopes from '../../services/scope.js';
 import { listTokens, mintToken, revokeToken } from '../../auth/mcpTokens.js';
 import { relayTokenRequest } from '../../auth/databricks.js';
 import { RateLimiter, rateLimit } from '../rateLimit.js';
+import * as search from '../../services/search.js';
 import { settings } from '../../config.js';
 import { notFound } from '../../errors.js';
 
@@ -126,6 +127,36 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
       const { scope } = await scopedRequest(request);
       // The SPA reads parsedJson.config, so the configuration is wrapped.
       return { config: await config.getConfig(scope, request.query.version) };
+    },
+  );
+
+  /*
+    The global search index. Not in spec/upstream-openapi.json - an extension of this
+    backend, like /runs/byAction. The blob is served verbatim, metadata and all, and its
+    fingerprint is the ETag so a reload after no rebuild costs a 304 rather than the
+    whole index again.
+  */
+  app.get<{ Querystring: ScopeQuery & { version?: string } }>(
+    '/search/index',
+    { schema: { querystring: schemas.scopeWithOptionalVersion } },
+    async (request, reply) => {
+      const { scope } = await scopedRequest(request);
+      const version = await config.resolveVersion(scope, request.query.version);
+      const { body, etag } = await search.readSearchIndexBlob(scope, version);
+      reply.header('etag', etag);
+      reply.header('cache-control', 'private, max-age=0, must-revalidate');
+      if (request.headers['if-none-match'] === etag) return reply.code(304).send();
+      return reply.type('application/json').send(body);
+    },
+  );
+
+  app.get<{ Querystring: ScopeQuery & { version?: string } }>(
+    '/search/meta',
+    { schema: { querystring: schemas.scopeWithOptionalVersion } },
+    async (request) => {
+      const { scope } = await scopedRequest(request);
+      const version = await config.resolveVersion(scope, request.query.version);
+      return (await search.searchIndexMeta(scope, version)) ?? null;
     },
   );
 

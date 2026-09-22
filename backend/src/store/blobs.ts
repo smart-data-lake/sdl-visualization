@@ -61,6 +61,13 @@ export const blobPaths = {
   stats: (scope: Scope, dataObjectId: string, tstamp: number) =>
     `${prefix(scope)}/stats/${assertPathSegment(dataObjectId, 'dataObjectId')}` +
     `/${assertPathNumber(tstamp, 'tstamp')}.json`,
+  /** Every schema blob of the scope in one listing, so the index builder needs no per-element call. */
+  schemaPrefix: (scope: Scope) => `${prefix(scope)}/schema/`,
+  /** The serialized MiniSearch index, served to the browser verbatim. */
+  searchIndex: (scope: Scope, version: string) =>
+    `${prefix(scope)}/search/${assertPathSegment(version, 'version')}/index.json`,
+  searchMeta: (scope: Scope, version: string) =>
+    `${prefix(scope)}/search/${assertPathSegment(version, 'version')}/meta.json`,
 };
 
 export async function writeJson(path: string, value: unknown): Promise<void> {

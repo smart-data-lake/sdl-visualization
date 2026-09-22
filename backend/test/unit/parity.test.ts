@@ -10,6 +10,7 @@ import {
   formatPartitionValues,
   selectedPartitionValues,
 } from '../../../src/util/WorkflowsExplorer/partitionValues.ts';
+import * as frontendSearch from '../../../src/util/ConfigExplorer/searchDocuments.ts';
 import { ConfigDataLists_ } from '../../src/domain/filter.js';
 import { buildFullGraph } from '../../src/domain/graph.js';
 import {
@@ -20,13 +21,14 @@ import {
   formatPartitionValues as portedFormat,
   selectedPartitionValues as portedSelected,
 } from '../../src/domain/partitionValues.js';
+import * as portedSearch from '../../src/domain/search.js';
 import { FIXTURES } from '../../scripts/seed-fixtures.js';
 
 /**
  * The ported domain logic, checked against the frontend originals it was copied from.
  *
- * This is the test that matters for the three copies in src/domain: metrics, the
- * graph model and the configuration filters. Mirroring the frontend's own test cases
+ * This is the test that matters for the copies in src/domain: metrics, the graph
+ * model, the configuration filters and the search documents. Mirroring the frontend's own test cases
  * would only prove the copy passes the same examples; running both implementations
  * over the real getting-started configuration and asserting they agree is what
  * actually catches drift, including in cases nobody thought to write a case for.
@@ -169,5 +171,42 @@ describe('partition values are formatted the same', () => {
       const action = { results: [{ dataObjectId: 'do', partitionValues: values }] } as any;
       expect(portedSelected(action)).toBe(selectedPartitionValues(action));
     }
+  });
+});
+
+const columnSchema = JSON.parse(
+  await readFile(path.join(FIXTURES, 'shared/schema/btl-distances.schema.1702279427.json'), 'utf8'),
+);
+const descriptionMarkdown = await readFile(
+  path.join(FIXTURES, 'shared/description/dataObjects/btl-distances.md'), 'utf8',
+);
+
+describe('the search documents are extracted the same way on both sides', () => {
+  const schema = columnSchema;
+  const markdown = descriptionMarkdown;
+  const byDocId = (docs: any[]) => [...docs].sort((a, b) => a.docId.localeCompare(b.docId));
+
+  test('every element of the configuration', () => {
+    expect(byDocId(portedSearch.elementDocuments(configJson)))
+      .toEqual(byDocId(frontendSearch.elementDocuments(configJson)));
+  });
+
+  test('a description file', () => {
+    const filename = 'dataObjects/btl-distances.md';
+    expect(portedSearch.descriptionDocument(filename, markdown))
+      .toEqual(frontendSearch.descriptionDocument(filename, markdown));
+  });
+
+  test('the columns of a data object, descriptions and all', () => {
+    const configObj = configJson.dataObjects['btl-distances'];
+    expect(byDocId(portedSearch.columnDocuments('btl-distances', configObj, schema, 17)))
+      .toEqual(byDocId(frontendSearch.columnDocuments('btl-distances', configObj, schema, 17)));
+  });
+
+  test('and the options, which MiniSearch.loadJS needs to be identical on both sides', () => {
+    expect(portedSearch.SEARCH_INDEX_OPTIONS).toEqual(frontendSearch.SEARCH_INDEX_OPTIONS);
+    expect(portedSearch.SEARCH_SCHEMA_VERSION).toBe(frontendSearch.SEARCH_SCHEMA_VERSION);
+    expect(portedSearch.LIMITS).toEqual(frontendSearch.LIMITS);
+    expect(portedSearch.KIND_BOOST).toEqual(frontendSearch.KIND_BOOST);
   });
 });

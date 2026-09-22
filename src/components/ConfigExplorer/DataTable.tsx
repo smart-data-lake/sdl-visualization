@@ -82,7 +82,7 @@ function getInitialColumnsVisible(columns: any[]): object {
   return Object.fromEntries(columnsVisibleMap)
 }
 
-export default function DataTable(props: { data: any[], columns: any[], keyAttr: string, name?: string, minColumnWidth?: number, treeGroupKeyAttr?: string, treeExpandColumn?: string, navigate?: (any) => void, setToolbarElements?: (elements: JSX.Element) => void}) {
+export default function DataTable(props: { data: any[], columns: any[], keyAttr: string, name?: string, minColumnWidth?: number, treeGroupKeyAttr?: string, treeExpandColumn?: string, navigate?: (any) => void, setToolbarElements?: (elements: JSX.Element) => void, treeGroupsExpanded?: any[], highlightRowKey?: any}) {
 
   const { data, keyAttr, treeGroupKeyAttr, treeExpandColumn, minColumnWidth: columnMinWidth, navigate, setToolbarElements } = props;
   const [loading, setLoading] = useState(true)
@@ -182,7 +182,9 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
       '& .ka-cell': { paddingTop: '4px', paddingBottom: '4px' },
       '& .ka-cell-text': { height: '25px' },
       '& .ka-thead-cell-resize': { left: '3px' },
-      '& .ka': { height: '100%', width: '100%' }
+      '& .ka': { height: '100%', width: '100%' },
+      // a row a deep link points at, e.g. the column a search hit named
+      '& .sdlb-row-highlighted': { backgroundColor: 'var(--joy-palette-primary-softBg)' }
     }}>
       <Table
         table={dataTable}
@@ -191,7 +193,7 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
         // the expand arrow and the indentation of a tree row go to the first column unless a column
         // is named - a column holding nothing but an icon is the wrong place for both
         treeExpandButtonColumnKey={treeExpandColumn}
-        treeGroupsExpanded={[]}
+        treeGroupsExpanded={props.treeGroupsExpanded ?? []}
         data={data}
         columns={tableColumns}
         columnResizing={true}
@@ -201,7 +203,9 @@ export default function DataTable(props: { data: any[], columns: any[], keyAttr:
         }}
         childComponents={{
           dataRow: {
-            elementAttributes: () => ({
+            elementAttributes: (data) => ({
+              'data-rowkey': data.rowKeyValue,
+              className: (data.rowKeyValue === props.highlightRowKey ? 'sdlb-row-highlighted' : undefined),
               onMouseDown: (e, data) => {
                 // remember mouse down to evaluate click
                 setMouseDown([e.clientX, e.clientY]);
