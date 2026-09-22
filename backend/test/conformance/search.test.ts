@@ -22,7 +22,7 @@ let store: Awaited<ReturnType<typeof useTempStore>>;
 
 const Q = new URLSearchParams(SEED_SCOPE).toString();
 
-const rebuild = (body: unknown = {}) =>
+const rebuild = (body: { force?: boolean } = {}) =>
   app.inject({ method: 'POST', url: `/api/v1/search/index?${Q}`, payload: body });
 
 beforeAll(async () => {
