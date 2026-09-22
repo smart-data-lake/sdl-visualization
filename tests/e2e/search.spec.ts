@@ -39,13 +39,17 @@ test.describe('global search without an index', () => {
 
   test('ctrl+K opens it too', async ({ page }) => {
     await page.goto('/#/config/dataObjects/int-airports');
-    await expect(page.getByTestId('global-search')).toBeVisible();
 
-    // retried: a press landing before the header's effect has run is lost, which a person cannot do
-    await expect(async () => {
-      await page.keyboard.press('Control+k');
-      await expect(palette(page)).toBeVisible({ timeout: 2_000 });
-    }).toPass({ timeout: 30_000 });
+    // Open and close with the mouse first. The shortcut's listener is attached in an effect,
+    // so a press fired the instant the header paints is lost - which a person cannot do, but
+    // Playwright can. Going round once proves the effect has run, so the press below is a
+    // test of the shortcut rather than of how loaded the machine is.
+    await openPalette(page);
+    await page.keyboard.press('Escape');
+    await expect(palette(page)).toBeHidden();
+
+    await page.keyboard.press('Control+k');
+    await expect(palette(page)).toBeVisible();
   });
 
   test('a search finds its data object and enter navigates to it', async ({ page }) => {
