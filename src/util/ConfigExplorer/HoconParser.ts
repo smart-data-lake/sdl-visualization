@@ -1,4 +1,4 @@
-import {Context} from "@pushcorn/hocon-parser/lib/core/Context";
+import {Context} from "@pushcorn/hocon-parser/lib/core/Context.js";
 
 /**
  * Parse Hocon file from url

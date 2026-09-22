@@ -70,6 +70,12 @@ export const schemas = {
     required: ['tenant', 'repo', 'env', 'version'],
     properties: { tenant: NAME, repo: NAME, env: NAME, version: VERSION },
   },
+  /** The search routes resolve a missing version themselves, so the SPA need not know one. */
+  scopeWithOptionalVersion: {
+    type: 'object',
+    required: ['tenant', 'repo', 'env'],
+    properties: { tenant: NAME, repo: NAME, env: NAME, version: VERSION },
+  },
   scopeWithTstamp: {
     type: 'object',
     required: ['tenant', 'repo', 'env', 'tstamp'],

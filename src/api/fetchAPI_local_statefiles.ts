@@ -2,7 +2,7 @@ import { LicenseInfo, SchemaData, StateFile, Stats, TaskStatus, TstampEntry, Use
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { getUrlContent, listConfigFiles, parseTextStrict, readConfigIndexFile } from "../util/ConfigExplorer/HoconParser";
 import { compareFunc, formatFileSize, onlyUnique } from "../util/helpers";
-import { fetchAPI } from "./fetchAPI";
+import { fetchAPI, SearchIndexBundle } from "./fetchAPI";
 import { processRun } from "./fetchAPI_rest";
 
 export class fetchAPI_local_statefiles implements fetchAPI {
@@ -203,6 +203,21 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         return getUrlContent(filename).catch((error) => { console.log(error); return undefined; });
     }
     
+    /**
+     * Kept in one place: a statically served project has no configuration versions today,
+     * so a versioned layout would be a change here and nowhere else.
+     */
+    private searchIndexUrl(_version: string | undefined): string {
+        return (this.baseUrl ?? "./") + "search/index.json";
+    }
+
+    /** Built by scripts/buildSearchIndex.ts; absent until someone runs it, which is fine. */
+    getSearchIndex(tenant: string, repo: string, env: string, version: string | undefined): Promise<SearchIndexBundle | undefined> {
+        return getUrlContent(this.searchIndexUrl(version))
+            .then((text) => JSON.parse(text) as SearchIndexBundle)
+            .catch(() => undefined);
+    }
+
     getTstampFromFilename(filename: string): Date {
         const matches = filename.match(/\.([0-9]+)\./);
         if (!matches || matches.length < 2) {

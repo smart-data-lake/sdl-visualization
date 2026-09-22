@@ -54,6 +54,33 @@ export interface fetchAPI {
      * schemas and run state. The same token authenticates it as authenticates MCP.
      */
     uploadUrl?: (tenant: string, repo: string, env: string) => string;
+
+    /**** Global search ****/
+
+    /**
+     * The prebuilt search index of one configuration version, or undefined where none was
+     * built. Only an explicit rebuild creates one, so absence is a normal state and the
+     * search falls back to the configuration it already has in memory.
+     */
+    getSearchIndex?: (tenant: string, repo: string, env: string, version: string | undefined) => Promise<SearchIndexBundle | undefined>;
+}
+
+/** What GET /search/index returns: the serialized MiniSearch plus what is in it. */
+export interface SearchIndexBundle {
+    index: object;
+    meta: SearchIndexMeta;
+}
+
+export interface SearchIndexMeta {
+    version?: string;
+    builtAt: string;
+    /** Guards MiniSearch.loadJS, which fails silently against an index built with other options. */
+    schemaVersion: number;
+    documentCount: number;
+    counts: { element: number; description: number; column: number };
+    sizeBytes?: number;
+    /** Kinds the builder had to cut to stay within its caps. */
+    truncated?: ('description' | 'column')[];
 }
 
 export interface BackendCapabilities {

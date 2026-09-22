@@ -5,6 +5,7 @@ import { resetSettings } from '../../src/config.js';
 import { resetStore } from '../../src/store/repositories.js';
 import { resetBlobStore } from '../../src/store/blobs.js';
 import { clearConfigCache } from '../../src/services/config.js';
+import { clearSearchCache } from '../../src/services/search.js';
 
 /**
  * A store of its own for one test file.
@@ -43,4 +44,5 @@ function reset(): void {
   resetStore();
   resetBlobStore();
   clearConfigCache();
+  clearSearchCache();
 }

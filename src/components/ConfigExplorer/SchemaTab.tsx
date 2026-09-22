@@ -1,6 +1,7 @@
 import { Box, FormControl, FormLabel, Select, Sheet, Stack, Tooltip } from '@mui/joy';
 import Option from '@mui/joy/Option';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useFetchDataObjectSchema, useFetchDataObjectStats } from '../../hooks/useFetchData';
 import { SchemaColumn, TstampEntry } from '../../types';
 import { ColumnRef, getForeignKeys, getPrimaryKey, isKnownDataObject } from '../../util/ConfigExplorer/ColumnModel';
@@ -12,6 +13,40 @@ import DataTable, { nestedPropertyRenderer, tooltipCellRenderer } from './DataTa
 import { getMissingSchemaFileCmp } from './ElementDetails';
 import InfoBox from './InfoBox';
 import { PrimaryKeyIcon } from './LineageTab/ColumnIcons';
+
+/**
+ * The timestamp of an entry in seconds. Only the REST backend fills `ts`; the local one
+ * carries the date it parsed out of the filename, so both are accepted.
+ */
+export function tstampSeconds(entry: TstampEntry | undefined): number | undefined {
+  if (entry?.ts) return entry.ts;
+  const millis = entry?.tstamp?.getTime();
+  return millis === undefined || Number.isNaN(millis) ? undefined : Math.round(millis / 1000);
+}
+
+/**
+ * The rows that have to be open for a column to be visible: every ancestor of the row whose
+ * path matches. Matching ignores case, because a schema exported from the storage layer spells
+ * a column the way that layer does - the same rule ColumnModel applies.
+ */
+export function ancestorRowIds(rows: any[] | undefined, columnPath: string | undefined): number[] {
+  if (!rows || !columnPath) return [];
+  const wanted = columnPath.toLowerCase();
+  let current = rows.find(row => String(row.path).toLowerCase() === wanted);
+  const ids: number[] = [];
+  while (current?.parentId !== undefined && current?.parentId !== null) {
+    ids.push(current.parentId);
+    current = rows.find(row => row.id === current.parentId);
+  }
+  return ids;
+}
+
+/** The row a column path names, if the schema has it. */
+export function rowIdOfColumn(rows: any[] | undefined, columnPath: string | undefined): number | undefined {
+  if (!rows || !columnPath) return undefined;
+  const wanted = columnPath.toLowerCase();
+  return rows.find(row => String(row.path).toLowerCase() === wanted)?.id;
+}
 
 /**
  * Table cell renderer calculating a percentage value against a given base value
@@ -84,17 +119,24 @@ export function foreignKeyRenderer() {
 
 export default function SchemaTab(props: {elementType: string, elementName: string, schemaEntries: TstampEntry[] | undefined, statsEntries: TstampEntry[] | undefined, columnDescriptions: object|undefined, data?: any, dataObjects?: any}){
 
+  const [urlSearchParams] = useSearchParams();
+
   // store the current schema entry to display
   const [schemaEntry, setSchemaEntry] = useState<TstampEntry>();
+
+  // a search hit on a column names the export it was indexed from, which is not always the
+  // newest one - a failed export carries an error message and no columns at all
+  const linkedTstamp = Number(urlSearchParams.get('tstamp')) || undefined;
 
   // initialize schema entry if not yet set
   useEffect(() => {
     if (schemaEntry && !props.schemaEntries) {
       setSchemaEntry(undefined);
     } else if (props.schemaEntries && (!schemaEntry  || (schemaEntry && props.schemaEntries && props.schemaEntries.findIndex((e) => e.key == schemaEntry.key) < 0))) {
-      setSchemaEntry(props.schemaEntries[0]);
+      const linked = linkedTstamp ? props.schemaEntries.find((e) => tstampSeconds(e) === linkedTstamp) : undefined;
+      setSchemaEntry(linked ?? props.schemaEntries[0]);
     }
-  }, [props.schemaEntries]);
+  }, [props.schemaEntries, linkedTstamp]);
   const { data: schema, isLoading: schemaIsLoading } = useFetchDataObjectSchema(schemaEntry);
 
   // store the current stats entry to display
@@ -198,6 +240,20 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     return rows;
   } 
   const schemaRows = useMemo(() => (schema?.schema ? numberSchemaTree(schema.schema) : undefined), [props.elementName, schema, stats, declaredKeys]);
+
+  // a search hit on a column links here with ?column=<dotted path>: open its ancestors and mark it
+  const targetColumn = urlSearchParams.get('column') ?? undefined;
+  const targetRowId = useMemo(() => rowIdOfColumn(schemaRows, targetColumn), [schemaRows, targetColumn]);
+  const expandedRowIds = useMemo(() => ancestorRowIds(schemaRows, targetColumn), [schemaRows, targetColumn]);
+
+  useEffect(() => {
+    if (targetRowId === undefined) return;
+    // the table is virtualized, so the row may not be mounted on the first frame
+    const scroll = () => document.querySelector(`[data-rowkey="${targetRowId}"]`)?.scrollIntoView?.({ block: 'center' });
+    scroll();
+    const retry = setTimeout(scroll, 150);
+    return () => clearTimeout(retry);
+  }, [targetRowId]);
 
   /*
       The columns of the table. The two key columns are only offered where the configuration
@@ -329,7 +385,8 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
       {schemaRows && columns && <DataTable key={schemaEntry?.key+'/'+statsEntry?.key} data={schemaRows} columns={columns} keyAttr="id"
                                            // the nesting of a struct belongs on the column name, not on the PK column before it
                                            treeGroupKeyAttr={'parentId'} treeExpandColumn="name"
-                                           name="schema" setToolbarElements={setToolbarElements}/>}
+                                           name="schema" setToolbarElements={setToolbarElements}
+                                           treeGroupsExpanded={expandedRowIds} highlightRowKey={targetRowId}/>}
     </Sheet>
   ) : <CenteredCircularProgress/>
 }

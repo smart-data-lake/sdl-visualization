@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, PanelGroup } from "react-resizable-panels";
 import { Route, Routes } from "react-router-dom";
 import { useFetchConfig, useFetchConfigVersions } from '../../hooks/useFetchData';
+import { useConfigVersion } from '../../hooks/useConfigVersion';
 import { useUser } from '../../hooks/useUser';
 import ErrorBoundary from '../../layouts/ErrorBoundary';
 import PageHeader from '../../layouts/PageHeader';
@@ -77,7 +78,8 @@ function ConfigVersionSelector({
 
 function ConfigExplorer() {
   const userContext = useUser();
-  const [version, setVersion] = useState<string|undefined>();
+  // in a context, so the global search in the title bar looks at the same version
+  const { version, setVersion } = useConfigVersion();
 	const { data: configVersionData, isFetching: isFetchingConfigVersion } = useFetchConfigVersions(!userContext || userContext.authenticated);
 	const { data: configData, isFetching: isFetchingConfig } = useFetchConfig(version, configVersionData?.length==0 || version!=undefined);
 	const listRef = useRef<HTMLDivElement>(null);

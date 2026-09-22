@@ -22,6 +22,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 const viteCmd = 'yarn vite --config vite.config.e2e.ts';
 
+/**
+ * Specs that only make sense on the exported fixture: it is the one carrying a prebuilt
+ * search index, so it is the only place the full search coverage can be asserted.
+ */
+const EXPORTED_ONLY = ['**/exported-config.spec.ts', '**/search-index.spec.ts'];
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -45,17 +51,17 @@ export default defineConfig({
   projects: [
     {
       name: 'hocon',
-      testIgnore: '**/exported-config.spec.ts',
+      testIgnore: EXPORTED_ONLY,
       use: { baseURL: 'http://localhost:3000' },
     },
     {
       name: 'exported',
-      testMatch: '**/exported-config.spec.ts',
+      testMatch: EXPORTED_ONLY,
       use: { baseURL: 'http://localhost:3001' },
     },
     {
       name: 'azure',
-      testIgnore: '**/exported-config.spec.ts',
+      testIgnore: EXPORTED_ONLY,
       use: { baseURL: 'http://localhost:3002' },
     },
   ],

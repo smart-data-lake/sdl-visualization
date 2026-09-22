@@ -31,6 +31,7 @@ const fixturePrefixes = [
   '/state',
   '/schema',
   '/description',
+  '/search',
 ];
 
 const contentTypes: Record<string, string> = {

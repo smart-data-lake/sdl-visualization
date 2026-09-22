@@ -82,4 +82,14 @@ done
 curl -sfL "$RAW/viz/description/dataObjects/btl-distances.md" -o "$DIR/shared/description/dataObjects/btl-distances.md"
 curl -sfL "$RAW/viz/description/dataObjects/int-airports.md" -o "$DIR/shared/description/dataObjects/int-airports.md"
 
+# --- search index -------------------------------------------------------------
+# The exported fixture carries a prebuilt index, which is what search-index.spec.ts runs
+# against. It is derived from the files above, so it has to be rebuilt with them.
+ROOT="$DIR/../../.."
+node "$ROOT/scripts/buildSearchIndex.ts" \
+  --public "$DIR/exported" \
+  --description "$DIR/shared/description" \
+  --schema "$DIR/shared/schema" \
+  --out "$DIR/exported/search/index.json"
+
 echo "Done. Fixture runs: ${RUNS[*]}"

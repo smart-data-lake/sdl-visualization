@@ -18,6 +18,7 @@ import RootLayout from './layouts/RootLayout';
 import { WorkspaceEmpty } from './layouts/RootLayoutSpinner';
 import { amplifyTheme } from './theme';
 import { LineageProvider } from './hooks/useLineage';
+import { ConfigVersionProvider } from './hooks/useConfigVersion';
 
 function Routing() {
   const userContext = useUser();
@@ -47,13 +48,15 @@ function Routing() {
   // the lineage state is kept above the routes, so that it survives navigating away from the config explorer
   return (
     <LineageProvider>
-      <Routes>
-        <Route element={<RootLayout />} errorElement={<ErrorBoundary/>}>
-        {userContext?.loginElement ? <Route path='*' element={userContext.loginElement}/> : 
-          workspace.workspaceEnabled ? workspaceRouting() : contentRouting()
-        }
-        </Route>
-      </Routes>
+      <ConfigVersionProvider>
+        <Routes>
+          <Route element={<RootLayout />} errorElement={<ErrorBoundary/>}>
+          {userContext?.loginElement ? <Route path='*' element={userContext.loginElement}/> : 
+            workspace.workspaceEnabled ? workspaceRouting() : contentRouting()
+          }
+          </Route>
+        </Routes>
+      </ConfigVersionProvider>
     </LineageProvider>
   )
 };

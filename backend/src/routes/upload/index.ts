@@ -4,6 +4,8 @@ import * as runs from '../../services/runs.js';
 import * as config from '../../services/config.js';
 import * as descriptions from '../../services/descriptions.js';
 import * as schemaStats from '../../services/schemaStats.js';
+import * as search from '../../services/search.js';
+import { RateLimiter, rateLimit } from '../rateLimit.js';
 import { badRequest } from '../../errors.js';
 
 /**
@@ -76,6 +78,27 @@ export async function registerUploadRoutes(app: FastifyInstance): Promise<void> 
       const configJson = wrapped && typeof wrapped === 'object' ? wrapped : body;
       await config.putConfig(scope, request.query.version, configJson);
       return {};
+    },
+  );
+
+  /* -------------------------------------------------------------- search index */
+
+  /*
+    Rebuilding the index is the one expensive operation here, and the only thing that
+    ever builds it: nothing is indexed implicitly on upload, because SDLB pushes the
+    configuration before the descriptions and schemas and a non-2xx here fails the job.
+    Without `force` an unchanged configuration is a no-op, so a job can call it every run.
+  */
+  const rebuildRateLimit = rateLimit(new RateLimiter(10, 60_000));
+
+  app.post<{ Querystring: ScopeQuery & { version?: string }; Body: { force?: boolean } | null }>(
+    '/search/index',
+    { schema: { querystring: schemas.scopeWithOptionalVersion }, preHandler: rebuildRateLimit },
+    async (request) => {
+      const { scope } = await scopedRequest(request);
+      const version = await config.resolveVersion(scope, request.query.version);
+      const body = request.body as { force?: boolean } | null;
+      return search.rebuildSearchIndex(scope, version, { force: body?.force === true });
     },
   );
 

@@ -105,7 +105,7 @@ describe('what the bundle contains', () => {
   });
 
   test('everything else is inlined', () => {
-    for (const inlined of ['fastify', '@azure/data-tables', '@azure/storage-blob']) {
+    for (const inlined of ['fastify', '@azure/data-tables', '@azure/storage-blob', 'minisearch']) {
       expect(
         inputsOf().some((i) => i.includes(`node_modules/${inlined}/`)),
         `${inlined} was not bundled`,
@@ -117,6 +117,12 @@ describe('what the bundle contains', () => {
     // If these leak into the entry, every SDLB upload pays to parse them again.
     expect(eagerInputs()).not.toContain('node_modules/@modelcontextprotocol/');
     expect(eagerInputs()).not.toContain('node_modules/zod/');
+  });
+
+  test('the search library is only parsed when an index is actually built', () => {
+    // services/search.ts is imported at module level by the routes, so only the lazy
+    // import of minisearch itself keeps it off the upload path.
+    expect(eagerInputs()).not.toContain('node_modules/minisearch/');
   });
 
   /**

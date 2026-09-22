@@ -10,6 +10,11 @@ import { sortIfArray } from "../util/helpers";
  **/
 
 
+/**
+ * Rethrows so the ErrorBoundary catches. Note what that means for a caller mounted outside
+ * the page - anything in the title bar takes the whole page down with it - which is why the
+ * global search uses the quiet variants below.
+ */
 function handleError<TData, TError>(result: UseQueryResult<TData, TError>): UseQueryResult<TData, TError> {
   if (result.isError) throw new Error((result.error as Error).message || String(result.error));
   else return result;
@@ -82,6 +87,47 @@ export function useFetchConfigVersions(enabled: boolean) {
     retry: false,
     staleTime: 1000 * 60 * 60 * 24,
   })); //24h
+}
+
+/**
+ * The same queries as above, without the rethrow, for the global search in the title bar.
+ * The query keys are identical, so whichever of the two asks first fills the cache for both.
+ */
+export function useFetchConfigQuiet(version: string | undefined, enabled: boolean) {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["config", tenant, repo, env, version],
+    queryFn: () => fetcher().getConfig(tenant!, repo!, env!, version),
+    enabled: enabled,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+}
+
+export function useFetchConfigVersionsQuiet(enabled: boolean) {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["config", tenant, repo, env],
+    queryFn: () => fetcher().getConfigVersions(tenant!, repo!, env!),
+    enabled: enabled,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+}
+
+/**
+ * The prebuilt search index. Also quiet, and doubly so: an index exists only after an
+ * explicit rebuild, so a backend without one resolves to undefined rather than erroring.
+ */
+export function useFetchSearchIndex(version: string | undefined, enabled: boolean) {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["searchIndex", tenant, repo, env, version],
+    queryFn: () => fetcher().getSearchIndex?.(tenant!, repo!, env!, version) ?? Promise.resolve(undefined),
+    enabled: enabled,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
 }
 
 /**** DataObject schema entries with tstamp  ****/

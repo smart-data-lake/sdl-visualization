@@ -3,7 +3,7 @@ import { LicenseInfo, SchemaData, StateFile, Stats, TstampEntry, User, Workflow,
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { dateFromNumber, sortIfArray } from "../util/helpers";
 import { parseUtcDate } from "../util/WorkflowsExplorer/date";
-import { fetchAPI } from "./fetchAPI";
+import { fetchAPI, SearchIndexBundle } from "./fetchAPI";
 
 export function processWorkflows(entries: any[]): Workflow[] {
     return entries.map((entry) => {
@@ -67,6 +67,11 @@ export class fetchAPI_rest implements fetchAPI {
         return await response.json();
     }
 
+    /** Lets a subclass fill in a scope the caller did not supply - see fetchAPI_bundled. */
+    protected scopedUrl(url: string): string {
+        return url;
+    }
+
     protected async getRequestInfo(method: string = 'GET', headers?: any): Promise<RequestInit> {
         try {
             const currentUserSession = await Auth.currentSession();
@@ -109,6 +114,20 @@ export class fetchAPI_rest implements fetchAPI {
     
     getConfigVersions = async (tenant: string, repo: string, env: string): Promise<string[] | undefined> => {
         return this.fetch(`${this.url}/versions?tenant=${tenant}&repo=${repo}&env=${env}`).then(x => sortIfArray(x).reverse())
+    }
+
+    /**
+     * The prebuilt search index, or undefined when none was built for this version.
+     * Not this.fetch: that turns every non-2xx into a throw, and a 404 here means
+     * "nobody has run the rebuild yet", which the search box handles by covering less.
+     */
+    getSearchIndex = async (tenant: string, repo: string, env: string, version: string | undefined): Promise<SearchIndexBundle | undefined> => {
+        const scope = `tenant=${tenant}&repo=${repo}&env=${env}` + (version ? `&version=${version}` : '');
+        const response = await fetch(this.scopedUrl(`${this.url}/search/index?${scope}`), await this.getRequestInfo());
+        if (response.status === 404) return undefined;
+        if (!response.ok) throw new Error(`could not load the search index (${response.status})`);
+        const bundle = await response.json() as SearchIndexBundle;
+        return bundle?.index ? bundle : undefined;
     }
 
     getDescription = async (

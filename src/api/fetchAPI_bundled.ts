@@ -53,7 +53,7 @@ export class fetchAPI_bundled extends fetchAPI_rest {
         return super.fetch(this.withScope(url), init);
     }
 
-    private withScope(url: string): string {
+    protected withScope(url: string): string {
         const parsed = new URL(url, window.location.origin);
         const fill = (name: 'tenant' | 'repo' | 'env', fallback?: string) => {
             const value = parsed.searchParams.get(name);
@@ -66,6 +66,10 @@ export class fetchAPI_bundled extends fetchAPI_rest {
         fill('env', this.defaultScope.env);
         // Keep the original form when it was already absolute or relative as given.
         return url.startsWith('http') ? parsed.toString() : `${parsed.pathname}${parsed.search}`;
+    }
+
+    protected scopedUrl(url: string): string {
+        return this.withScope(url);
     }
 
     protected async getRequestInfo(method: string = 'GET', headers?: any): Promise<RequestInit> {

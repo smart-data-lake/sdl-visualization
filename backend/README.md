@@ -206,9 +206,52 @@ real Blob Storage's are. With the emulator busy elsewhere, `downloadToBuffer` re
 torn body roughly once per hundred reads, which is why the conformance suite's
 atomic-overwrite case is skipped for the Azure driver — see the comment there.
 
+## The search index
+
+The SPA's global search runs in the browser over a prebuilt index, so there is no search
+endpoint here - only one that builds the index and one that serves it.
+
+| route | does |
+|---|---|
+| `POST /api/v1/search/index?…&version=` | builds it; body `{force?: boolean}` |
+| `GET /api/v1/search/index?…&version=` | the `{meta, index}` bundle, `ETag` = fingerprint |
+| `GET /api/v1/search/meta?…&version=` | what is in it, without the index itself |
+
+**Nothing builds it implicitly.** Not on upload: SDLB pushes the configuration before the
+descriptions and schemas, so an index built in `PUT /config` would miss both, and a non-2xx
+there fails the job - reading every description and schema blob is seconds of I/O that does
+not belong on that path. Wire the rebuild into the job or into CI instead. Without `force` an
+unchanged configuration is a no-op (`built: false, reason: "fresh"`), so it is safe to call at
+the end of every run. Until it has run, the SPA's search covers the configuration only and
+says so.
+
+One index per configuration version, at `{repo}/{env}/search/{version}/index.json`, holding
+`{meta, index}` - the same shape `scripts/buildSearchIndex.ts` writes for a statically served
+project, so the SPA reads both the same way. The metadata travels in the body rather than a
+response header because a custom header is invisible to a cross-origin browser unless it is
+explicitly exposed, and that failure would be silent: the search would just quietly cover less.
+`{repo}/{env}/search/{version}/meta.json` holds the metadata on its own, so `GET /search/meta`
+does not have to read the whole index. Note the
+asymmetry it has to bridge: descriptions are per version, schemas are not. Two rules follow:
+
+- **only data objects the configuration version contains** are indexed, because the store
+  keeps exports of data objects that have since been removed or renamed;
+- **the newest export is taken as it is.** A failed export carries an error message and no
+  columns, and that data object then has none in the index. Reaching back to an older export
+  would describe columns that may not exist any more, which is worse than describing none.
+
+The export's timestamp goes on every column document, so a hit can link to the one it came
+from.
+
+`minisearch` is a devDependency like everything else here (esbuild inlines it) and is imported
+lazily, so it is not parsed on the upload path; `test/unit/bundle.test.ts` asserts that.
+
+Serving the index through an authenticated API forfeits CDN caching. The ETag recovers most of
+it: a reload after no rebuild is a 304.
+
 ## Code copied from the frontend
 
-Six pieces of logic exist twice, in `src/domain/`, and must not drift:
+Seven pieces of logic exist twice, in `src/domain/`, and must not drift:
 
 | here | copied from |
 |---|---|
@@ -218,6 +261,7 @@ Six pieces of logic exist twice, in `src/domain/`, and must not drift:
 | `filter.ts` | `src/util/ConfigExplorer/ConfigData.ts` and `src/util/helpers.ts` |
 | `stateFile.ts` (normalisation) | `src/util/WorkflowsExplorer/Attempt.ts` |
 | `stateFile.ts` (index record, including `actionsInDagOrder`) | `build_index.py`'s `getRuns()` |
+| `search.ts` | `src/util/ConfigExplorer/searchDocuments.ts` |
 
 `test/unit/parity.test.ts` runs both implementations over the real getting-started
 configuration and asserts they agree, which catches drift that mirrored test cases
