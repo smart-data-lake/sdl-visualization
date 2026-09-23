@@ -168,6 +168,7 @@ export default function ConfigurationTab(props: ElementProps) {
 	const { data: stats } = useFetchDataObjectStats(statsEntry);
 
 	const { data: runs } = useFetchWorkflowRunsByElement(props.elementType, props.elementName);
+  const {contentPath} = useWorkspace();
 
   function getAttribute(attributeName: string) {
     return getPropertyByPath(props.data, attributeName);
@@ -242,9 +243,9 @@ export default function ConfigurationTab(props: ElementProps) {
       <tr key={idx}>        
         <td style={{padding: '2px 5px'}}>{formatTimestamp(run.attemptStartTime)}</td>
         <td style={{padding: '2px 5px', width: 'auto'}}>
-          <Link to={`/workflows/${run.name}/${run.runId}.${run.attemptId}/table`}>{getIcon(run.status, '0px', {display: 'block', margin: 'auto'})}</Link>
+          <Link to={`${contentPath}workflows/${run.name}/${run.runId}.${run.attemptId}/table`}>{getIcon(run.status, '0px', {display: 'block', margin: 'auto'})}</Link>
         </td>
-        <td style={{padding: '2px 5px'}}><Link to={`/workflows/${run.name}`}>{run.name}</Link></td>
+        <td style={{padding: '2px 5px'}}><Link to={`${contentPath}workflows/${run.name}`}>{run.name}</Link></td>
       </tr>
     )
     return (    
