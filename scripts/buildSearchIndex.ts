@@ -40,7 +40,7 @@ function parseArgs(argv: string[]): Options {
 
 /**
  * The exported configuration where SDLB wrote one, else the HOCON files. The exported form
- * is richer: _sourceDoc, _origin and _columnDescriptions only exist there, so an index built
+ * is richer: _sourceDoc and _origin only exist there, so an index built
  * from HOCON covers less and says so.
  */
 async function readConfig(options: Options): Promise<{ config: any; source: 'exported' | 'hocon' }> {
@@ -112,7 +112,7 @@ async function main(): Promise<void> {
 
   for (const dataObjectId of Object.keys(config.dataObjects ?? {})) {
     const found = newestSchema(options.schemaDir, dataObjectId);
-    if (found) documents.push(...columnDocuments(dataObjectId, config.dataObjects[dataObjectId], found.schema, found.tstamp));
+    if (found) documents.push(...columnDocuments(dataObjectId, found.schema, found.tstamp));
   }
   const columns = documents.length - elements - descriptions;
 
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
   const size = (Buffer.byteLength(JSON.stringify(bundle), 'utf8') / 1024).toFixed(0);
   console.log(`${options.out}: ${documents.length} documents (${elements} elements, ${descriptions} descriptions, ${columns} columns), ${size} kB, from ${source} config`);
   if (source === 'hocon') {
-    console.log('note: HOCON config has no _sourceDoc or _columnDescriptions - those are written by SDLB\'s exporter');
+    console.log('note: HOCON config has no _sourceDoc or _origin - those are written by SDLB\'s exporter');
   }
   if (bundle.meta.sizeBytes > LIMITS.maxIndexBytes) {
     console.error(`warning: the index is over the ${LIMITS.maxIndexBytes} byte limit and the app will refuse to load it`);

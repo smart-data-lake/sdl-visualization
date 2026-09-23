@@ -109,6 +109,7 @@ export default function ConfigurationAccordions(props: AccordionCreatorProps) {
   }
 
   function additionalPropertiesAccordion(){
+    // _columnDescriptions only appears in exports of older SDLB versions, the schema comment replaces it
     const propsToIgnore = props.propsToIgnore.concat(["transformer","_origin",'_columnDescriptions']).concat(Array.from(accordionSections.keys()))
     const cmp = createPropertiesComponent({obj: props.data, propsToIgnore: propsToIgnore})
     if (cmp) accordionSections.set('additionalAttrs', ['Additional configurations', cmp]);

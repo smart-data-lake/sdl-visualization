@@ -159,7 +159,7 @@ async function buildDocuments(scope: Scope, version: string, config: ConfigJson)
   }));
   for (const { dataObjectId, tstamp, schema } of schemas) {
     if (documents.length >= LIMITS.maxDocuments) { truncated.push('column'); break; }
-    documents.push(...columnDocuments(dataObjectId, config.dataObjects?.[dataObjectId], schema, tstamp));
+    documents.push(...columnDocuments(dataObjectId, schema, tstamp));
   }
 
   return { documents, sources: { descriptionFiles: descriptionBlobs.length, schemaBlobs: schemaBlobs.length }, truncated };

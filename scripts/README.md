@@ -24,8 +24,8 @@ when parsing HOCON; `--version` is written into the index metadata.
 
 It reads `exportedConfig.json` where SDLB wrote one, and otherwise parses the HOCON files —
 the parser runs under plain Node with its own `file` source, whereas the browser remaps that
-source to `http` (`patches/`, `HoconParser.ts`). **The two are not equivalent:** `_sourceDoc`,
-`_origin` and `_columnDescriptions` are written by SDLB's config exporter and simply do not
+source to `http` (`patches/`, `HoconParser.ts`). **The two are not equivalent:** `_sourceDoc`
+and `_origin` are written by SDLB's config exporter and simply do not
 exist in HOCON, so an index built from HOCON covers less. The script says so on stdout.
 
 For schemas it takes the **newest export of each data object the configuration contains**,

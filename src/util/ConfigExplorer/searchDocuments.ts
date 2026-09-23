@@ -130,7 +130,7 @@ export function elementDocuments(config: any): SearchDocument[] {
 
 function elementDocument(elementType: ElementType, id: string, element: any): SearchDocument {
   const metadata = element.metadata ?? {};
-  // _origin becomes the source link and _columnDescriptions become column documents; neither is body text
+  // _origin becomes the source link; _columnDescriptions only appears in exports of older SDLB versions
   const { _origin, _columnDescriptions, metadata: _metadata, ...rest } = element;
   return {
     docId: `e:${elementType}:${id}`,
@@ -199,7 +199,7 @@ export function flattenColumns(columns: SchemaColumn[] | undefined,
       if (!column?.name) continue;
       const path = parentPath ? `${parentPath}.${column.name}` : column.name;
       const dataType: any = column.dataType;
-      flat.push({ path, name: column.name, dataType: typeOf(dataType), comment: (column as any).comment });
+      flat.push({ path, name: column.name, dataType: typeOf(dataType), comment: column.comment });
       walkDataType(dataType, path, depth + 1);
     }
   };
@@ -229,22 +229,17 @@ function typeOf(dataType: any): string {
 }
 
 /**
- * One document per column of a data object. Descriptions come from the configuration's
- * _columnDescriptions (matched case-insensitively, as ColumnModel does) plus the schema's
- * own comment. A schema that only carries `info` is a failed export and is not indexed.
+ * One document per column of a data object, described by the schema's comment - SDLB merges
+ * the markdown @column descriptions into it. A schema that only carries `info` is a failed
+ * export and is not indexed.
  */
-export function columnDocuments(dataObjectId: string, configObj: any,
-                                schema: SchemaData | undefined, tstamp?: number): SearchDocument[] {
+export function columnDocuments(dataObjectId: string, schema: SchemaData | undefined,
+                                tstamp?: number): SearchDocument[] {
   if (!schema?.schema?.length) return [];
-  const declared = new Map<string, string>();
-  for (const [path, text] of Object.entries<any>(configObj?._columnDescriptions ?? {})) {
-    if (typeof text === 'string') declared.set(path.toLowerCase(), text);
-  }
   return flattenColumns(schema.schema)
     .slice(0, LIMITS.columnsPerDataObject)
     .map((column) => {
-      const declaredText = declared.get(column.path.toLowerCase());
-      const description = [declaredText, column.comment].filter(Boolean).join('\n') || undefined;
+      const description = column.comment || undefined;
       return {
         docId: `c:${dataObjectId}:${column.path.toLowerCase()}`,
         kind: 'column' as const,

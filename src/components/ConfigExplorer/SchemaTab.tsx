@@ -117,7 +117,7 @@ export function foreignKeyRenderer() {
   }
 }
 
-export default function SchemaTab(props: {elementType: string, elementName: string, schemaEntries: TstampEntry[] | undefined, statsEntries: TstampEntry[] | undefined, columnDescriptions: object|undefined, data?: any, dataObjects?: any}){
+export default function SchemaTab(props: {elementType: string, elementName: string, schemaEntries: TstampEntry[] | undefined, statsEntries: TstampEntry[] | undefined, data?: any, dataObjects?: any}){
 
   const [urlSearchParams] = useSearchParams();
 
@@ -184,9 +184,8 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
       rows.push(...childRows);
     } else if (dataType?.dataType === 'array') {
       const currentPath = path+'.[]';
-      const columnDescription = (props.columnDescriptions ? props.columnDescriptions[currentPath] as string : undefined);      
       // create entry
-      const currentRow: any = {id: ++currentId, parentId: parentId, path: currentPath, name: '-element-', description: columnDescription, stats: {}}
+      const currentRow: any = {id: ++currentId, parentId: parentId, path: currentPath, name: '-element-', stats: {}}
       rows.push(currentRow)
       // handle children
       const childRows = numberDataType(dataType.elementType, currentPath, currentRow.id);
@@ -195,9 +194,8 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     } else if (dataType?.dataType === 'map') {
       // handle key
       const keyCurrentPath = path+'.key';
-      const keyColumnDescription = (props.columnDescriptions ? props.columnDescriptions[keyCurrentPath] as string : undefined);      
       // create key entry
-      const keyCurrentRow: any = {id: ++currentId, parentId: parentId, path: keyCurrentPath, name: '-key-', description: keyColumnDescription, stats: {}}
+      const keyCurrentRow: any = {id: ++currentId, parentId: parentId, path: keyCurrentPath, name: '-key-', stats: {}}
       rows.push(keyCurrentRow)
       // handle key children
       const keyChildRows = numberDataType(dataType.elementType, keyCurrentPath, keyCurrentRow.id);
@@ -205,9 +203,8 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
       rows.push(...keyChildRows);
       // handle value
       const valueCurrentPath = path+'.value';
-      const valueColumnDescription = (props.columnDescriptions ? props.columnDescriptions[valueCurrentPath] as string : undefined);      
       // create value entry
-      const valueCurrentRow: any = {id: ++currentId, parentId: parentId, path: valueCurrentPath, name: '-value-', description: valueColumnDescription, stats: {}}
+      const valueCurrentRow: any = {id: ++currentId, parentId: parentId, path: valueCurrentPath, name: '-value-', stats: {}}
       rows.push(valueCurrentRow)
       // handle value children
       const valueChildRows = numberDataType(dataType.elementType, valueCurrentPath, valueCurrentRow.id);
@@ -220,15 +217,11 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     const rows: any[] = [];
     columns.map((column: any) => {
       const currentPath = (path ? path+'.'+column.name : column.name);      
-      // consolidate column description (from description markdown) and comment from schema
-      var columnDescription = (props.columnDescriptions ? props.columnDescriptions[currentPath] as string : undefined);      
-      if (column.comment && columnDescription) columnDescription = columnDescription + '\n' + column.comment;
-      else if (column.comment) columnDescription = column.comment;
       // look for column stats
       const colStats = (stats?.columns ? stats.columns[currentPath] : {}) || {};
       // create entry. Only a top level column can be a key - a foreign key on a nested struct field
       // is not a thing - and its path is its name, so the lookup is the same for both.
-      const currentRow: any = {id: ++currentId, parentId: parentId, path: currentPath, name: column.name, description: columnDescription, stats: colStats,
+      const currentRow: any = {id: ++currentId, parentId: parentId, path: currentPath, name: column.name, description: column.comment, stats: colStats,
                                isPrimaryKey: declaredKeys.primaryKey.has(currentPath.toLowerCase()),
                                references: declaredKeys.references.get(currentPath.toLowerCase()) ?? []};
       rows.push(currentRow);

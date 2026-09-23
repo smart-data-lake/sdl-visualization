@@ -15,12 +15,14 @@ import {
 
 const config = JSON.parse(readFileSync('tests/e2e/fixtures/exported/exportedConfig.json', 'utf8'));
 const schema = JSON.parse(readFileSync('tests/e2e/fixtures/shared/schema/btl-distances.schema.1702279427.json', 'utf8'));
+// the pinned fixture predates SDLB writing the markdown column descriptions into the schema comment
+schema.schema.find((c: any) => c.name === 'distance').comment = 'computed as length on a sphere with radius 6371km';
 const markdown = readFileSync('tests/e2e/fixtures/shared/description/dataObjects/btl-distances.md', 'utf8');
 
 const documents = [
   ...elementDocuments(config),
   descriptionDocument('dataObjects/btl-distances.md', markdown)!,
-  ...columnDocuments('btl-distances', config.dataObjects['btl-distances'], schema, 1702279427),
+  ...columnDocuments('btl-distances', schema, 1702279427),
 ];
 
 function index() {
@@ -50,7 +52,7 @@ test('a description document is found by its body alone', () => {
   expect(hits).toContain('d:dataObjects/btl-distances.md');
 });
 
-test('a column is found by its name and by its configured description', () => {
+test('a column is found by its name and by its schema comment', () => {
   expect(ids('could_be_done_by_rail')).toContain('c:btl-distances:could_be_done_by_rail');
   expect(ids('sphere')).toContain('c:btl-distances:distance');
 });

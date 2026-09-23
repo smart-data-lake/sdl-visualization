@@ -25,12 +25,13 @@ const intDepartures = {
       { name: 'fk_arrival_airport', dataObjectId: 'int-airports', columns: { estarrivalairport: 'ident' } },
     ],
   },
-  _columnDescriptions: { icao24: 'the transponder address' },
+  // exports of older SDLB versions carry this, the schema comment replaces it
+  _columnDescriptions: { firstseen: 'ignored' },
 };
 
 const schema: SchemaData = {
   schema: [
-    { name: 'icao24', dataType: 'string', nullable: false },
+    { name: 'icao24', dataType: 'string', nullable: false, comment: 'the transponder address' },
     { name: 'estdepartureairport', dataType: 'string' },
     { name: 'estarrivalairport', dataType: 'string' },
     { name: 'firstseen', dataType: 'bigint' },
@@ -171,7 +172,7 @@ describe('merging', () => {
     expect(byName(columns, 'iata_code').isPrimaryKey).toBe(false);
   });
 
-  test('column descriptions are merged in', () => {
+  test('a column is described by its schema comment', () => {
     const { columns } = buildColumnModel(intDepartures, { schema });
     expect(byName(columns, 'icao24').description).toBe('the transponder address');
     expect(byName(columns, 'firstseen').description).toBeUndefined();

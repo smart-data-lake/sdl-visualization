@@ -115,7 +115,7 @@ export default function ElementDetails(props: {
 					{elementType === "dataObjects" &&
 						// key is needed to force rerender of DataTable in SchemaTab, otherwise column changes might not be reflected.
 						<TabPanel key={elementName} value="schema" className="content-panel" sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
-							<SchemaTab columnDescriptions={configObj?._columnDescriptions} schemaEntries={schemaEntries} statsEntries={statsEntries} elementName={elementName!} elementType={elementType!} data={configObj} dataObjects={configData?.dataObjects} />
+							<SchemaTab schemaEntries={schemaEntries} statsEntries={statsEntries} elementName={elementName!} elementType={elementType!} data={configObj} dataObjects={configData?.dataObjects} />
 						</TabPanel>}
 				</Tabs>
 			</Sheet>

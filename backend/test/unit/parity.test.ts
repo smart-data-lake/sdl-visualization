@@ -198,9 +198,10 @@ describe('the search documents are extracted the same way on both sides', () => 
   });
 
   test('the columns of a data object, descriptions and all', () => {
-    const configObj = configJson.dataObjects['btl-distances'];
-    expect(byDocId(portedSearch.columnDocuments('btl-distances', configObj, schema, 17)))
-      .toEqual(byDocId(frontendSearch.columnDocuments('btl-distances', configObj, schema, 17)));
+    // the pinned fixture predates SDLB writing column comments into the schema
+    const commented = { ...schema, schema: schema.schema.map((c: any) => (c.name === 'distance' ? { ...c, comment: 'the computed distance' } : c)) };
+    expect(byDocId(portedSearch.columnDocuments('btl-distances', commented, 17)))
+      .toEqual(byDocId(frontendSearch.columnDocuments('btl-distances', commented, 17)));
   });
 
   test('and the options, which MiniSearch.loadJS needs to be identical on both sides', () => {
