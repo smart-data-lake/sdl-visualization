@@ -59,7 +59,7 @@ test('_origin becomes the source link and never body text, and column descriptio
   const doc = byId(elementDocuments(config), 'e:dataObjects:btl-distances')!;
   expect(doc.source).toBe('btl.conf:20');
   expect(doc.body).not.toContain('btl.conf');
-  // _columnDescriptions become column documents of their own
+  // _columnDescriptions, still in exports of older SDLB versions, is not body text either
   expect(doc.body).not.toContain('less than 500km');
 });
 
@@ -83,31 +83,32 @@ test('an empty description file yields no document', () => {
   expect(descriptionDocument('dataObjects/x.md', '   \n ')).toBeUndefined();
 });
 
-test('a column document per schema column, with the configured description merged in', () => {
-  const docs = columnDocuments('btl-distances', config.dataObjects['btl-distances'], schema, 1702279427);
+test('a column document per schema column, described by its comment', () => {
+  // the pinned fixture predates SDLB writing column comments into the schema
+  const commented = { ...schema, schema: schema.schema.map((c: any) => (c.name === 'distance' ? { ...c, comment: 'the computed distance' } : c)) };
+  const docs = columnDocuments('btl-distances', commented, 1702279427);
   expect(docs.length).toBe(schema.schema.length);
   const distance = byId(docs, 'c:btl-distances:distance')!;
   expect(distance.kind).toBe('column');
   expect(distance.name).toBe('distance');
   expect(distance.type).toBe('double');
-  expect(distance.description).toContain('computed distance between the departure and arrival airports');
+  expect(distance.description).toBe('the computed distance');
   expect(distance.elementType).toBe('dataObjects');
   expect(distance.elementId).toBe('btl-distances');
   expect(distance.columnPath).toBe('distance');
   expect(distance.tstamp).toBe(1702279427);
 });
 
-test('column descriptions are matched ignoring case, as ColumnModel does', () => {
-  const configObj = { _columnDescriptions: { Distance: 'described once' } };
-  const docs = columnDocuments('d1', configObj, { schema: [{ name: 'DISTANCE', dataType: 'double' }] } as any);
+test('the doc id is the lowercased column path', () => {
+  const docs = columnDocuments('d1', { schema: [{ name: 'DISTANCE', dataType: 'double' }] } as any);
   expect(docs[0].docId).toBe('c:d1:distance');
-  expect(docs[0].description).toBe('described once');
+  expect(docs[0].description).toBeUndefined();
 });
 
 test('a failed schema export carries only info and is never indexed', () => {
   expect(failedSchema.info).toBeDefined();
-  expect(columnDocuments('btl-distances', config.dataObjects['btl-distances'], failedSchema)).toEqual([]);
-  expect(columnDocuments('x', {}, undefined)).toEqual([]);
+  expect(columnDocuments('btl-distances', failedSchema)).toEqual([]);
+  expect(columnDocuments('x', undefined)).toEqual([]);
 });
 
 test('nested columns flatten to the dotted paths the schema table uses', () => {
@@ -126,18 +127,13 @@ test('flattening stops at the depth limit rather than following a recursive sche
   expect(paths.every(p => p.split('.').length <= 3)).toBe(true);
 });
 
-test('the schema comment is kept alongside the configured description', () => {
-  const docs = columnDocuments('d1', { _columnDescriptions: { c: 'from config' } },
-    { schema: [{ name: 'c', dataType: 'string', comment: 'from schema' }] } as any);
-  expect(docs[0].description).toBe('from config\nfrom schema');
-});
 
 test('each kind routes to the tab that shows it', () => {
   const docs = elementDocuments(config);
   expect(routeOf(byId(docs, 'e:dataObjects:int-airports')!)).toBe('dataObjects/int-airports/configuration');
   expect(routeOf(descriptionDocument('dataObjects/int-airports.md', '# Airports\n\ntext')!))
     .toBe('dataObjects/int-airports/description');
-  expect(routeOf(columnDocuments('btl-distances', {}, schema)[0])).toBe('dataObjects/btl-distances/schema');
+  expect(routeOf(columnDocuments('btl-distances', schema)[0])).toBe('dataObjects/btl-distances/schema');
 });
 
 test('a snippet is plain text, cut on a word boundary', () => {

@@ -151,13 +151,14 @@ export function getPrimaryKey(configObj: any): string[] {
     make a node arbitrarily tall. The Schema tab flattens the whole tree instead, which is the right
     thing for a table and the wrong thing for a graph node.
 */
-export function getExportedColumns(schemaData: SchemaData | undefined): {name: string, dataType?: string}[] {
+export function getExportedColumns(schemaData: SchemaData | undefined): {name: string, dataType?: string, comment?: string}[] {
     if (!schemaData?.schema || !Array.isArray(schemaData.schema)) return [];
     return schemaData.schema
         .filter((column: SchemaColumn) => column && typeof column.name === 'string')
         .map((column: SchemaColumn) => ({
             name: column.name,
             dataType: typeof column.dataType === 'string' ? column.dataType : column.dataType?.dataType,
+            comment: column.comment,
         }));
 }
 
@@ -183,19 +184,18 @@ export function buildColumnModel(configObj: any, options: ColumnModelOptions = {
     const exported = getExportedColumns(schemaData);
     const primaryKey = getPrimaryKey(configObj);
     const foreignKeys = getForeignKeys(configObj);
-    const columnDescriptions = configObj?._columnDescriptions ?? {};
 
     // with nothing to compare against, "absent from the exported schema" is not a statement
     const hasExportedSchema = exported.length > 0;
     const columns: ColumnInfo[] = [];
     const byKey = new Map<string, ColumnInfo>();
-    const add = (name: string, dataType: string | undefined, declaredOnly: boolean) => {
+    const add = (name: string, dataType: string | undefined, declaredOnly: boolean, description?: string) => {
         const key = keyOf(name);
         var column = byKey.get(key);
         if (!column) {
             column = {
                 name, key, dataType,
-                description: columnDescriptions[name] ?? columnDescriptions[key],
+                description,
                 isPrimaryKey: false, references: [], referencedBy: [],
                 declaredOnly: declaredOnly && hasExportedSchema,
             };
@@ -206,7 +206,7 @@ export function buildColumnModel(configObj: any, options: ColumnModelOptions = {
     };
 
     // the exported schema first, so that the column order is the schema's
-    exported.forEach(column => add(column.name, column.dataType, false));
+    exported.forEach(column => add(column.name, column.dataType, false, column.comment));
 
     primaryKey.forEach(name => { add(name, undefined, true).isPrimaryKey = true; });
 

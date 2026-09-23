@@ -149,6 +149,7 @@ export interface SchemaColumn {
   name: string;
   dataType: string | SchemaArrayType | SchemaStructType;
   nullable?: boolean;
+  comment?: string;
 }
 export interface SchemaArrayType {
   dataType: 'array';
