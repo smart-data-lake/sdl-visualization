@@ -13,7 +13,7 @@ import { findFirstKeyWithObject } from '../helpers';
 import { ColumnDisplay, ColumnInfo, buildColumnModel, filterColumns, isKnownDataObject } from './ColumnModel';
 import { ConfigData } from './ConfigData';
 import { RelationEdge, getIncomingRefs } from './RelationsGraph';
-import { ColumnLineage, ColumnTransformation, columnEdgesOf, columnKey } from './columnLineage';
+import { ColumnLineage, ColumnLineageIndex, ColumnRef, ColumnTransformation, IndexEdge, buildColumnLineageIndex, columnEdgesOf, columnId, columnKey, traceColumn } from './columnLineage';
 import { columnHandleId, nodeHeightFor, nodeRelationHandleId, nodeWidthFor } from '../../components/ConfigExplorer/LineageTab/DataObjectColumns';
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
@@ -195,6 +195,8 @@ export interface ReactFlowNodeProps {
         the node once fetched; the edges between columns are built from the lineage of their target.
     */
     columnLineage?: ColumnLineage[],
+    /** the keys of this node's columns on the column trace that is shown, see traceHighlights */
+    tracedColumns?: string[],
     /*
         How much of its columns this node shows. Per node, and deliberately kept in the node's data
         rather than in React state: the lineage tab re-creates the whole flow whenever a setting in
@@ -593,6 +595,139 @@ function syncColumnLineageEdges(rfi: ReactFlowInstance) {
 export function updateColumnEdges(rfi: ReactFlowInstance) {
     syncColumnLineageEdges(rfi);
     updateColumnEdgeHandles(rfi);
+    // edges created just now know nothing of a trace that is shown
+    if (traceState.trace) applyColumnTrace(rfi, traceState.trace);
+}
+
+/* ------------------------------------------------------------ column trace */
+
+/** A column traced both ways: everything it depends on and everything that depends on it. */
+export interface GraphTrace {
+    start: ColumnRef;
+    /** the traced column keys per data object, the start column included */
+    columns: Map<string, Set<string>>;
+    edges: IndexEdge[];
+}
+
+export function buildGraphTrace(index: ColumnLineageIndex, start: ColumnRef): GraphTrace {
+    const upstream = traceColumn(index, start, 'upstream');
+    const downstream = traceColumn(index, start, 'downstream');
+    const columns = new Map<string, Set<string>>();
+    const add = (dataObjectId: string, column: string) =>
+        columns.set(dataObjectId, (columns.get(dataObjectId) ?? new Set()).add(columnKey(column)));
+    add(start.dataObjectId, start.column);
+    const edges = [...upstream.edges, ...downstream.edges];
+    edges.forEach(([fromDo, fromCol, toDo, toCol]) => { add(fromDo, fromCol); add(toDo, toCol); });
+    return {start, columns, edges};
+}
+
+/**
+ * The index to trace with: the one that was built, or else one assembled from the lineage the shown
+ * nodes have read - which covers those nodes only, and says so through `complete`.
+ */
+export function traceIndex(built: ColumnLineageIndex | undefined, rfNodes: ReactFlowNode[]): {index: ColumnLineageIndex, complete: boolean} {
+    if (built) return {index: built, complete: true};
+    const lineage = rfNodes.flatMap(node => (node.data?.columnLineage ?? []) as ColumnLineage[]);
+    return {index: buildColumnLineageIndex(lineage.map(doc => ({lineage: doc})), ''), complete: false};
+}
+
+/*
+    What a trace lights up in the flow that is shown.
+
+    A column edge is on the trace when its column pair is. Any other edge only when the trace
+    actually runs along it - a data object reading one traced column of another is not a dependency
+    of every column of it: in the data view a traced pair between its two data objects, in the full
+    view a traced pair read resp. written by its action, and in the action view two traced pairs
+    meeting on the same column of the data object it stands for. A relation is never on it.
+*/
+export function traceHighlights(trace: GraphTrace, rfNodes: ReactFlowNode[], rfEdges: ReactFlowEdge[]): {nodeIds: Set<string>, edgeIds: Set<string>} {
+    const isAction = new Map(rfNodes.map(node => [node.id, node.data?.nodeType === NodeType.ActionNode]));
+    const edgeIds = new Set<string>();
+    const nodeIds = new Set<string>();
+    const pairKey = (fromDo: string, fromCol: string, toDo: string, toCol: string) =>
+        `${fromDo}.${columnKey(fromCol)}>${toDo}.${columnKey(toCol)}`;
+    const pairs = new Set(trace.edges.map(([fromDo, fromCol, toDo, toCol]) => pairKey(fromDo, fromCol, toDo, toCol)));
+
+    const onTrace = (edge: ReactFlowEdge): boolean => {
+        const data = edge.data as CustomEdgeProps | undefined;
+        if (data?.relation) return false;
+        if (data?.columnLineage) {
+            return pairs.has(pairKey(edge.source, data.columnLineage.sourceColumn, edge.target, data.columnLineage.targetColumn));
+        }
+        const sourceIsAction = isAction.get(edge.source), targetIsAction = isAction.get(edge.target);
+        if (!sourceIsAction && !targetIsAction) {
+            return trace.edges.some(([fromDo, , toDo]) => fromDo === edge.source && toDo === edge.target);
+        }
+        if (!sourceIsAction) return trace.edges.some(([fromDo, , , , actionId]) => fromDo === edge.source && actionId === edge.target);
+        if (!targetIsAction) return trace.edges.some(([, , toDo, , actionId]) => actionId === edge.source && toDo === edge.target);
+        // action graph edges are named `${from}->${dataObject}->${to}`, and an id cannot contain "->"
+        const via = edge.id.split('->')[1];
+        const written = new Set(trace.edges.filter(e => e[4] === edge.source && e[2] === via).map(e => columnKey(e[3])));
+        return trace.edges.some(e => e[4] === edge.target && e[0] === via && written.has(columnKey(e[1])));
+    };
+
+    rfEdges.forEach(edge => {
+        if (!onTrace(edge)) return;
+        edgeIds.add(edge.id);
+        nodeIds.add(edge.source);
+        nodeIds.add(edge.target);
+    });
+    // a traced column of a node no edge on the trace reaches, e.g. while its neighbours are hidden
+    rfNodes.forEach(node => { if (trace.columns.has(node.id)) nodeIds.add(node.id); });
+    return {nodeIds, edgeIds};
+}
+
+/*
+    The trace that is shown. Module state for the same reason the grouping state is: only the
+    imperative code in this file reads it, and it has to be re-applied whenever the column edges are
+    rebuilt, which happens far from the component that set it.
+*/
+const traceState: {trace?: GraphTrace} = {};
+
+function applyColumnTrace(rfi: ReactFlowInstance, trace: GraphTrace) {
+    const {nodeIds, edgeIds} = traceHighlights(trace, rfi.getNodes(), rfi.getEdges());
+    rfi.setEdges(edges => edges.map(edge => {
+        const highlighted = edgeIds.has(edge.id);
+        if ((edge.data?.highlighted === true) === highlighted) return edge;
+        const color = highlighted ? EDGE_COLOR_HIGHLIGHTED : EDGE_COLOR_DEFAULT;
+        return {
+            ...edge,
+            data: {...edge.data, highlighted},
+            zIndex: highlighted ? SELECTED_ELEMENT_Z_INDEX : 0,
+            style: {...edge.style, stroke: color, strokeWidth: strokeWidthOf(edge, highlighted)},
+            markerEnd: {type: MarkerType.ArrowClosed, width: 10, height: 10, color},
+        };
+    }));
+    rfi.setNodes(nodes => nodes.map(node => {
+        const highlighted = nodeIds.has(node.id);
+        const columns = trace.columns.get(node.id);
+        const tracedColumns = columns ? [...columns].sort() : undefined;
+        if ((node.data.highlighted === true) === highlighted
+            && (node.data.tracedColumns ?? []).join() === (tracedColumns ?? []).join()) return node;
+        return {...node, zIndex: highlighted ? SELECTED_ELEMENT_Z_INDEX : 0, data: {...node.data, highlighted, tracedColumns}};
+    }));
+}
+
+const indexedColumnsCache = new WeakMap<ColumnLineageIndex, Set<string>>();
+
+/** Every column the index knows, as columnIds - which is what decides whether a row can be traced. */
+export function indexedColumnIds(index: ColumnLineageIndex): Set<string> {
+    let ids = indexedColumnsCache.get(index);
+    if (!ids) {
+        ids = new Set(index.edges.flatMap(([fromDo, fromCol, toDo, toCol]) =>
+            [columnId({dataObjectId: fromDo, column: fromCol}), columnId({dataObjectId: toDo, column: toCol})]));
+        indexedColumnsCache.set(index, ids);
+    }
+    return ids;
+}
+
+/** Highlight a trace, replacing whatever was highlighted; undefined takes it away again. */
+export function showColumnTrace(rfi: ReactFlowInstance, trace: GraphTrace | undefined) {
+    if (!trace && !traceState.trace) return; // leave another highlight alone
+    traceState.trace = trace;
+    resetEdgeStyles(rfi);
+    resetNodeStyles(rfi);
+    if (trace) applyColumnTrace(rfi, trace);
 }
 
 export function createReactFlowEdges(selectedEdges: GraphEdge[],
@@ -1116,7 +1251,8 @@ export function resetNodeStyles(rfi: ReactFlowInstance) {
                 zIndex: 0,
                 data: {
                     ...elem.data,
-                    highlighted: false
+                    highlighted: false,
+                    tracedColumns: undefined,
                 }
             }
             return newElem;
@@ -1197,6 +1333,7 @@ export type SelectableEdge = {id: string, source: string, target: string};
 
 /** Select one edge: highlight it, the nodes it connects and its metric labels, and nothing else */
 export function selectEdge(rfi: ReactFlowInstance, edge: SelectableEdge) {
+    traceState.trace = undefined; // selecting an edge replaces a column trace
     resetEdgeStyles(rfi);
     resetNodeStyles(rfi);
     setNodeStylesOnEdgeClick(rfi, edge);

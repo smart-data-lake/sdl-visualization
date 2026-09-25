@@ -1,5 +1,6 @@
 import React from "react";
 import { flowProps, GraphView, LayoutDirection } from "../util/ConfigExplorer/LineageTabUtils";
+import type { ColumnRef } from "../util/ConfigExplorer/columnLineage";
 
 /*
   State of the lineage graph in the config explorer.
@@ -32,6 +33,9 @@ type LineageGraphContextType = {
   setIsExpanded: (isExpanded: boolean) => void;
   selectedNodeAttributes: string[];
   setSelectedNodeAttributes: (attributes: string[]) => void;
+  /** the column whose dependencies and impact are highlighted, see traceHighlights */
+  tracedColumn: ColumnRef | undefined;
+  setTracedColumn: (column: ColumnRef | undefined) => void;
 };
 
 export const nodeAttributes = [
@@ -59,14 +63,16 @@ const LineageProvider = (props: React.PropsWithChildren) => {
   const [layout, setLayout] = React.useState<LayoutDirection>('TB');
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [selectedNodeAttributes, setSelectedNodeAttributes] = React.useState<string[]>(nodeAttributes.map(attr => attr.value));
+  const [tracedColumn, setTracedColumn] = React.useState<ColumnRef | undefined>(undefined);
 
   const panelContext = React.useMemo(() => ({
     lineageTabOpen, setLineageTabOpen, lineageTabProps, setLineageTabProps
   }), [lineageTabOpen, lineageTabProps]);
 
   const graphContext = React.useMemo(() => ({
-    graphView, setGraphView, layout, setLayout, isExpanded, setIsExpanded, selectedNodeAttributes, setSelectedNodeAttributes
-  }), [graphView, layout, isExpanded, selectedNodeAttributes]);
+    graphView, setGraphView, layout, setLayout, isExpanded, setIsExpanded, selectedNodeAttributes, setSelectedNodeAttributes,
+    tracedColumn, setTracedColumn,
+  }), [graphView, layout, isExpanded, selectedNodeAttributes, tracedColumn]);
 
   return (
     <LineagePanelContext.Provider value={panelContext}>
