@@ -357,7 +357,8 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
   const [toolbarElements, setToolbarElements] = useState<JSX.Element>();
 
   return !schemaIsLoading ? (
-    <Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem', gap: '1rem', width: '100%', height: '100%' }}>
+    // only the table scrolls: it takes the height the selects and the info box leave, and keeps its header sticky
+    <Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem', gap: '1rem', width: '100%', height: '100%', minHeight: 0 }}>
       <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'end', gap: '1rem'}}>
         {props.schemaEntries && <FormControl>
           <FormLabel>Schema exported at</FormLabel>
@@ -375,11 +376,11 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
         {schemaRows && toolbarElements}
       </Box>
       {info && <InfoBox info={info}/>}
-      {schemaRows && columns && <DataTable key={schemaEntry?.key+'/'+statsEntry?.key} data={schemaRows} columns={columns} keyAttr="id"
+      {schemaRows && columns && <Box sx={{ flex: 1, minHeight: 0 }}><DataTable key={schemaEntry?.key+'/'+statsEntry?.key} data={schemaRows} columns={columns} keyAttr="id"
                                            // the nesting of a struct belongs on the column name, not on the PK column before it
                                            treeGroupKeyAttr={'parentId'} treeExpandColumn="name"
                                            name="schema" setToolbarElements={setToolbarElements}
-                                           treeGroupsExpanded={expandedRowIds} highlightRowKey={targetRowId}/>}
+                                           treeGroupsExpanded={expandedRowIds} highlightRowKey={targetRowId}/></Box>}
     </Sheet>
   ) : <CenteredCircularProgress/>
 }
