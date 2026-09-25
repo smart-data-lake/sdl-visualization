@@ -1,4 +1,5 @@
 import { SchemaColumn, SchemaData } from "../../types";
+import { ColumnLineage, ColumnLineageInput } from "./columnLineage";
 
 /*
     The columns of a DataObject, merged from the two places the app knows about them.
@@ -82,6 +83,18 @@ export interface ColumnInfo {
      * from; without one every column would be declaredOnly, which says nothing.
      */
     declaredOnly: boolean;
+    /** how the actions writing this DataObject create the column, from its exported column lineage */
+    lineage: ColumnLineageInfo[];
+}
+
+/** One action's share in a column, see columnLineage.ts. */
+export interface ColumnLineageInfo {
+    actionId: string;
+    inputs: ColumnLineageInput[];
+    /** what creates a column without input columns */
+    expression?: string;
+    /** SDLB could not trace the column back */
+    unresolved?: boolean;
 }
 
 export interface DataObjectColumns {
@@ -172,6 +185,8 @@ export interface ColumnModelOptions {
     isKnownDataObject?: (dataObjectId: string) => boolean;
     /** the foreign keys of other DataObjects pointing at this one, see RelationsGraph */
     referencedBy?: IncomingRef[];
+    /** the exported column lineage of this DataObject, one document per action writing it */
+    lineage?: ColumnLineage[];
 }
 
 /**
@@ -180,7 +195,7 @@ export interface ColumnModelOptions {
  * @param configObj the DataObject's configuration, as it sits in ConfigData.dataObjects
  */
 export function buildColumnModel(configObj: any, options: ColumnModelOptions = {}): DataObjectColumns {
-    const { schema: schemaData, isKnownDataObject, referencedBy = [] } = options;
+    const { schema: schemaData, isKnownDataObject, referencedBy = [], lineage = [] } = options;
     const exported = getExportedColumns(schemaData);
     const primaryKey = getPrimaryKey(configObj);
     const foreignKeys = getForeignKeys(configObj);
@@ -198,6 +213,7 @@ export function buildColumnModel(configObj: any, options: ColumnModelOptions = {
                 description,
                 isPrimaryKey: false, references: [], referencedBy: [],
                 declaredOnly: declaredOnly && hasExportedSchema,
+                lineage: [],
             };
             byKey.set(key, column);
             columns.push(column);
@@ -221,7 +237,16 @@ export function buildColumnModel(configObj: any, options: ColumnModelOptions = {
 
     referencedBy.forEach(incoming => add(incoming.column, undefined, true).referencedBy.push(incoming));
 
-    const hasKeys = primaryKey.length > 0 || foreignKeys.length > 0 || referencedBy.length > 0;
+    // a lineage edge needs its column's handle as much as a relation does
+    lineage.forEach(document => {
+        document.fields.forEach(field => add(field.column, undefined, true).lineage.push(
+            {actionId: document.actionId, inputs: field.inputs, expression: field.expression}));
+        document.unresolved.forEach(name => add(name, undefined, true).lineage.push(
+            {actionId: document.actionId, inputs: [], unresolved: true}));
+    });
+
+    const hasKeys = primaryKey.length > 0 || foreignKeys.length > 0 || referencedBy.length > 0
+        || lineage.some(document => document.fields.length > 0 || document.unresolved.length > 0);
     const source = exported.length > 0 ? (hasKeys ? 'merged' : 'exported')
                  : hasKeys ? 'keys'
                  : 'none';

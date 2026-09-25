@@ -8,7 +8,7 @@
 */
 import dagre from 'dagre';
 import { Edge as ReactFlowEdge, Node as ReactFlowNode } from 'reactflow';
-import { DAGraph, rfNodeSize } from './Graphs';
+import { DAGraph, isColumnLineageEdge, rfNodeSize } from './Graphs';
 
 export type LayoutDirection = 'TB' | 'LR';
 
@@ -160,7 +160,7 @@ export function assignCoordinates(nodes: ReactFlowNode[], edges: ReactFlowEdge[]
         const shift = (widestRank - crossExtent.get(rank)!) / 2;
         rankNodes.forEach(node => crossOf.set(node.id, crossStart.get(node.id)! + shift));
     });
-    alignWithNeighbours(byRank, edges, crossOf, node => sizeOf(node)[crossSize], nodesep);
+    alignWithNeighbours(byRank, edges.filter(edge => !isColumnLineageEdge(edge)), crossOf, node => sizeOf(node)[crossSize], nodesep);
 
     // the main axis: empty ranks are left out, so hiding a whole rank closes the gap it leaves
     const mainCentre = new Map<number, number>();

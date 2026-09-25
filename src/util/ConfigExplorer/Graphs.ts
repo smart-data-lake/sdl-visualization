@@ -600,12 +600,19 @@ export class DAGraph {
 /*
     Helper functions
 */
+/*
+    A column lineage edge runs beside the data flow edge between the same two nodes, see
+    syncColumnLineageEdges. It is not an edge of the graph: the expansion bookkeeping and the layout
+    must not count it.
+*/
+export const isColumnLineageEdge = (edge: ReactFlowEdge) => edge.data?.columnLineage !== undefined;
+
 function getFwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEdge[]{
-    return edges.filter(e => e.source === node.data.label);
+    return edges.filter(e => e.source === node.data.label && !isColumnLineageEdge(e));
 }
 
 function getBwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEdge[]{
-    return edges.filter(e => e.target === node.data.label)
+    return edges.filter(e => e.target === node.data.label && !isColumnLineageEdge(e))
 }
 
 export interface RfNodeDataUpdate {

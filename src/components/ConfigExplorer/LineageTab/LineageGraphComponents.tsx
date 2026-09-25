@@ -8,7 +8,7 @@
 */
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
-import { EdgeLabelRenderer, EdgeProps, Handle, getSmoothStepPath, useReactFlow, useUpdateNodeInternals } from 'reactflow';
+import { EdgeLabelRenderer, EdgeProps, Handle, getBezierPath, getSmoothStepPath, useReactFlow, useUpdateNodeInternals } from 'reactflow';
 
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
@@ -22,11 +22,12 @@ import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
 
 import { Position } from 'reactflow';
-import { useFetchDataObjectSchema, useFetchDataObjectSchemaEntries, useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
+import { useFetchDataObjectLineage, useFetchDataObjectLineageEntries, useFetchDataObjectSchema, useFetchDataObjectSchemaEntries, useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
+import { SchemaData } from '../../../types';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
-import { CustomEdgeProps, flowProps, graphNodeProps, nodeSizeFor, ReactFlowNodeProps, recomputeLayout, SELECTED_ELEMENT_Z_INDEX, scheduleRelayout, selectEdge, updateRelationEdgeHandles } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { ColumnLineageEdgeProps, CustomEdgeProps, flowProps, graphNodeProps, nodeSizeFor, ReactFlowNodeProps, recomputeLayout, SELECTED_ELEMENT_Z_INDEX, scheduleRelayout, selectEdge, updateColumnEdges } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { setRfNodeData, setRfNodeSize } from '../../../util/ConfigExplorer/Graphs';
-import { ColumnList, ColumnsToggle, NODE_BORDER_VAR, NODE_HEADER_HEIGHT, NodeRelationHandles } from './DataObjectColumns';
+import { ColumnList, ColumnsToggle, NODE_BORDER_VAR, NODE_HEADER_HEIGHT, NodeRelationHandles, transformationText } from './DataObjectColumns';
 import { ColumnDisplay, filterColumns } from '../../../util/ConfigExplorer/ColumnModel';
 import { FlowMetric } from '../../../util/WorkflowsExplorer/metrics';
 import { getIcon, getPartitionStatus, getExecutionMode } from '../../../util/WorkflowsExplorer/StatusInfo';
@@ -340,33 +341,49 @@ export const CustomDataNode = ( {data} ) => {
   const hasMoreColumns = columnDisplay === 'none' || isSchemaLoading
     || (columns ?? []).length > filterColumns(columns ?? [], 'keys').length;
 
+  /*
+    The exported column lineage of this data object. Only the data view draws column edges, and it
+    draws them from the lineage of their target, which is why every data object node reads its own.
+  */
+  const wantsLineage = isDataObject && graphView === 'data';
+  const { data: lineageEntries } = useFetchDataObjectLineageEntries(label, wantsLineage);
+  const { data: lineage } = useFetchDataObjectLineage(wantsLineage ? lineageEntries?.[0] : undefined);
+
   useEffect(() => {
     updateNodeInternals(label);
   }, [columnDisplay, columns?.length]);
 
   /*
-    Merge the schema into the columns once it arrives. It can add columns, so the node changes size
-    and the graph has to be laid out again - coalesced, because several nodes can resolve at once.
+    Merge the schema and the lineage into the columns once they arrive. That can add columns, so the
+    node changes size and the graph has to be laid out again - coalesced, because several nodes can
+    resolve at once. The schema is kept once merged: the query goes idle when the columns close.
   */
+  const mergedSchema = useRef<SchemaData>();
   useEffect(() => {
-    if (!wantsSchema || !exportedSchema || !columnsFunc) return;
-    const merged = columnsFunc(exportedSchema);
+    if (wantsSchema && exportedSchema) mergedSchema.current = exportedSchema;
+    if (!columnsFunc || (!mergedSchema.current && !lineage)) return;
+    if (lineage) setRfNodeData(rfi, {nodeId: label, path: 'columnLineage', value: lineage});
+    const merged = columnsFunc(mergedSchema.current, lineage);
     const unchanged = merged.length === columns.length
-      && merged.every((column, i) => column.key === columns[i].key && column.dataType === columns[i].dataType);
-    if (unchanged) return;
+      && merged.every((column, i) => column.key === columns[i].key && column.dataType === columns[i].dataType
+                                     && column.lineage.length === columns[i].lineage.length);
+    if (unchanged) {
+      if (lineage) updateColumnEdges(rfi);
+      return;
+    }
     setRfNodeData(rfi, {nodeId: label, path: 'columns', value: merged});
     setRfNodeSize(rfi, label, nodeSizeFor({columns: merged, columnDisplay}));
     updateNodeInternals(label);
-    updateRelationEdgeHandles(rfi);
+    updateColumnEdges(rfi);
     scheduleRelayout(rfi, layoutDirection);
-  }, [exportedSchema, wantsSchema]);
+  }, [exportedSchema, wantsSchema, lineage]);
 
   const handleColumnDisplay = (display: ColumnDisplay) => {
     setRfNodeData(rfi, {nodeId: label, path: 'columnDisplay', value: display});
     setRfNodeSize(rfi, label, nodeSizeFor({columns, columnDisplay: display}));
     // the edges have to move onto, resp. off, the column handles in the same go - ReactFlow drops
     // an edge whose handle does not exist, so this cannot wait for a later render
-    updateRelationEdgeHandles(rfi);
+    updateColumnEdges(rfi);
     // anchored on this node, so the graph opens around it instead of moving it
     recomputeLayout(rfi, layoutDirection, label);
   };
@@ -660,6 +677,18 @@ function metricLabelTransform(x: number, y: number, position: Position, index: n
   }
 }
 
+/*
+  What a column lineage edge says when hovered: the two columns, then per action how the one is made
+  from the other. Several lines where several actions create the same column pair.
+*/
+function columnLineageTitle(source: string, target: string, lineage: ColumnLineageEdgeProps): string {
+  const how = lineage.via.map(({actionId, transformations}) => {
+    const texts = transformations.map(transformationText).filter((text): text is string => text !== undefined);
+    return `${actionId}: ${texts.length > 0 ? texts.join('; ') : 'unchanged'}`;
+  });
+  return [`${source}.${lineage.sourceName} → ${target}.${lineage.targetName}`, ...how].join('\n');
+}
+
 //https://github.com/xyflow/xyflow/discussions/2347
 export const CustomEdge = ({
   id,
@@ -672,15 +701,18 @@ export const CustomEdge = ({
 }: EdgeProps<CustomEdgeProps>) => {
 
   const reactFlow = useReactFlow();
-  const [edgePath] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-    borderRadius: 10,
-  });
+  // column lineage edges run many to a node, and curves keep them apart where right angles would overlap
+  const [edgePath] = data?.columnLineage
+    ? getBezierPath({sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition})
+    : getSmoothStepPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+      borderRadius: 10,
+    });
 
   // the metrics of the data object this edge stands for, only known within a run attempt
   const {output, input} = data || {};
@@ -705,6 +737,7 @@ export const CustomEdge = ({
         the visible line drawn on top of it - and a title on either would only show over that one.
       */}
       {data?.relation?.fkName && <title>{data.relation.fkName}</title>}
+      {data?.columnLineage && <title>{columnLineageTitle(source, target, data.columnLineage)}</title>}
       <path style={style} className="react-flow__edge-path-selector" d={edgePath} markerEnd={markerEnd} fillRule="evenodd"/>
       <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={markerEnd}/>
       {(output || input) &&
