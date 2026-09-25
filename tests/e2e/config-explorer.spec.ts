@@ -21,7 +21,7 @@ test.describe('config explorer', () => {
     await page.goto('/#/config/dataObjects/int-airports');
 
     await expect(page.getByRole('tab', { name: 'Configuration' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('link', { name: 'DeltaLakeTableDataObject' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'DeltaLakeTableDataObject', exact: true })).toBeVisible();
     await expect(page.getByRole('row', { name: 'table default.int_airports' })).toBeVisible();
     // path comes from envConfig/dev.conf via hocon substitution (${env.basePathWithId})
     await expect(page.getByRole('row', { name: 'path ./~{id}' })).toBeVisible();
@@ -58,7 +58,7 @@ test.describe('config explorer', () => {
   test('a property chip filters the list by that property', async ({ page }) => {
     await page.goto('/#/config/dataObjects/int-airports');
 
-    await page.getByRole('link', { name: 'DeltaLakeTableDataObject' }).click();
+    await page.getByRole('link', { name: 'DeltaLakeTableDataObject', exact: true }).click();
 
     await expect(page).toHaveURL(/elementSearchType=property&elementSearch=type:DeltaLakeTableDataObject/);
     await expect(page.getByPlaceholder('Search element')).toHaveValue('type:DeltaLakeTableDataObject');
@@ -71,6 +71,14 @@ test.describe('config explorer', () => {
 
     await expect(element(page, 'int-airports')).toBeVisible();
     await expect(element(page, 'ext-airports')).toBeHidden();
+  });
+
+  test('the type chip links to the configuration schema viewer', async ({ page }) => {
+    await page.goto('/#/config/actions/compute-distances');
+
+    const link = page.getByRole('link', { name: 'CopyAction in configuration schema viewer' });
+    await expect(link).toHaveAttribute('href', 'https://smartdatalake.ch/json-schema-viewer?path=actions/CopyAction');
+    await expect(link).toHaveAttribute('target', '_blank');
   });
 
   test('renders the description of a data object', async ({ page }) => {
