@@ -29,6 +29,8 @@ import './LineageTab.css';
 */
 export const NODE_WIDTH = 200;
 export const NODE_WIDTH_WITH_COLUMNS = 260;
+/** an action showing its ports has two columns of names and the connections between them */
+export const ACTION_NODE_WIDTH_WITH_PORTS = 440;
 /** the title of the node, and the expand control at its lower border */
 export const NODE_HEADER_HEIGHT = 92;
 export const COLUMN_ROW_HEIGHT = 20;
@@ -56,6 +58,9 @@ export const columnHandleId = (kind: 'source' | 'target', columnKey: string) => 
     layout - but these two, which are always left and right.
 */
 export const nodeRelationHandleId = (kind: 'source' | 'target', nodeId: string) => `node-${kind}:${nodeId}`;
+
+/** The handle of a port of an action, see ActionPortsView. `portKey` is `${dataObjectId}.${column}`. */
+export const portHandleId = (kind: 'source' | 'target', portKey: string) => `port-${kind}:${portKey}`;
 
 /** How tall a node is that shows the given number of column rows. */
 export function nodeHeightFor(columnCount: number | undefined): number {
@@ -93,7 +98,8 @@ const sideHandleStyle = (side: 'left' | 'right', inset: string, outset: number =
     transform: `translate(${side === 'left' ? '-50%' : '50%'}, -50%)`,
 });
 /** inside a column row, so it has to clear the node's border and its padding */
-const columnHandleStyle = (side: 'left' | 'right') => sideHandleStyle(side, COLUMN_INSET_VAR);
+export const columnHandleStyle = (side: 'left' | 'right') => sideHandleStyle(side, COLUMN_INSET_VAR);
+export const COLUMN_TEXT_STYLE = columnTextStyle;
 
 /*
     What a column has to say for itself, or nothing.
@@ -323,17 +329,19 @@ export function ColumnList({nodeId, columns, isLoading, tracedColumns}: {
     middle. A direction that is not available keeps its place as an empty half, so that the other
     chevron does not wander to the other end.
 */
-export function ColumnsToggle({display, onChange, nodeId, hasMore}: {
+export function ColumnsToggle({display, onChange, nodeId, hasMore, titles}: {
     display: ColumnDisplay,
     onChange: (display: ColumnDisplay) => void,
     nodeId: string,
     /** whether opening further would actually show anything that is not shown already */
     hasMore: boolean,
+    /** what opening and closing say, where the steps are not the columns of a data object */
+    titles?: {open: string, close: string},
 }) {
     const canOpen = display !== 'all' && hasMore;
     const canClose = display !== 'none';
-    const openTitle = display === 'none' ? 'Show key columns' : 'Show all columns';
-    const closeTitle = display === 'all' ? 'Show key columns only' : 'Hide columns';
+    const openTitle = titles?.open ?? (display === 'none' ? 'Show key columns' : 'Show all columns');
+    const closeTitle = titles?.close ?? (display === 'all' ? 'Show key columns only' : 'Hide columns');
 
     return (
         <Box className="lineage-column-toggle">

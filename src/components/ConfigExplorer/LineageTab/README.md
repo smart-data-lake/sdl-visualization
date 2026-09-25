@@ -326,6 +326,23 @@ Three things that are easy to break:
   column.
 - The hover text is an SVG `<title>`, first child of the edge's group, like the foreign key name.
 
+### The ports of an action (full view)
+
+In the full view an action opens, in one step, on its **ports**: the columns it reads on the left,
+grouped under their data objects, the columns it writes on the right, and a curve per input column
+feeding an output column in between - dashed where the column is transformed, solid where it is
+taken over. The ports come from the lineage of the data objects the action *writes*
+(`useFetchNewestLineageOf`, `buildActionPorts` in `src/util/ConfigExplorer/ActionPorts.ts`), since
+SDLB exports lineage per output; an action without any offers nothing to open. Hovering a curve
+tells the transformation, hovering a port the column and, for an output, the expression creating it.
+
+`columnLineageEdges` gives the full view one edge per column the action reads resp. writes, as soon
+as the port or the column at the other end is shown, from the column of the data object to the
+port - `sourcePort`/`targetPort` on the edge name the port, `portHandleId` its handle. Data objects
+read their own lineage in the full view too, so that the columns the ports attach to exist.
+The trace lights up the port edges and the curves inside the action it runs through
+(`data.tracedConnections`).
+
 ### Tracing a column
 
 A row with lineage offers a trace button on hover. It sets `tracedColumn` in `useLineageGraph()`,
@@ -345,7 +362,7 @@ The trace that is shown is module state in `LineageTabUtils.tsx`, like the group
 `updateColumnEdges` has to re-apply it whenever it rebuilds the column edges. Clicking the pane or an
 edge ends it; so does the trace button of the start row.
 
-`tests/columnLineageEdges.test.ts` covers the derivation and the trace, `tests/e2e/column-lineage.spec.ts` the rendering.
+`tests/columnLineageEdges.test.ts` covers the derivation, the ports and the trace, `tests/e2e/column-lineage.spec.ts` the rendering.
 
 ## Touchpad and mouse wheel
 

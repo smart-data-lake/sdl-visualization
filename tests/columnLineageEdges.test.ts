@@ -3,6 +3,7 @@ import type { Edge, Node } from 'reactflow';
 import { buildColumnModel, ColumnDisplay } from '../src/util/ConfigExplorer/ColumnModel';
 import { buildColumnLineageIndex, parseColumnLineage } from '../src/util/ConfigExplorer/columnLineage';
 import { NodeType } from '../src/util/ConfigExplorer/Graphs';
+import { buildActionPorts, portRowCount } from '../src/util/ConfigExplorer/ActionPorts';
 import { buildGraphTrace, columnLineageEdges, CustomEdgeProps, traceHighlights, traceIndex } from '../src/util/ConfigExplorer/LineageTabUtils';
 
 const identity = (name: string, field: string) =>
@@ -134,5 +135,66 @@ describe('what a column trace highlights', () => {
     expect(traceIndex(undefined, shown).complete).toBe(false);
     expect(traceIndex(undefined, shown).index.edges.length).toBeGreaterThan(0);
     expect(traceIndex(index, shown)).toEqual({ index, complete: true });
+  });
+});
+
+describe('the ports of an action', () => {
+  const docs = parseColumnLineage([
+    { actionId: 'join', dataObjectId: 'out', columnLineage: { fields: {
+      a: { inputFields: [identity('left', 'A')] },
+      b: { inputFields: [identity('left', 'A'), transformed('right', 'b', 'upper(b)')] },
+      c: { inputFields: [], expression: 'now()' } } }, unresolvedFields: ['d'] },
+    { actionId: 'other', dataObjectId: 'out', columnLineage: { fields: { x: { inputFields: [identity('left', 'x')] } } } },
+  ]);
+
+  test('one port per column read and written, grouped by data object, and only this action\'s', () => {
+    const ports = buildActionPorts('join', docs);
+    expect(ports.inputs.map((p) => p.key)).toEqual(['left.a', 'right.b']);
+    expect(ports.outputs.map((p) => p.key)).toEqual(['out.a', 'out.b', 'out.c', 'out.d']);
+    expect(ports.outputs[2].expression).toBe('now()');
+    expect(ports.outputs[3].unresolved).toBe(true);
+    expect(ports.inputRows).toEqual([{ caption: 'left' }, { port: ports.inputs[0] }, { caption: 'right' }, { port: ports.inputs[1] }]);
+    expect(ports.connections.map((c) => `${c.from}>${c.to}`)).toEqual(['left.a>out.a', 'left.a>out.b', 'right.b>out.b']);
+    expect(portRowCount(ports)).toBe(5);
+  });
+
+  test('in the full view, the edges of an open action run per column to its ports', () => {
+    const ports = buildActionPorts('join', docs);
+    const action: Node = { id: 'join', position: { x: 0, y: 0 }, data: { graphView: 'full', nodeType: NodeType.ActionNode, ports, columnDisplay: 'all' } };
+    const left = { ...node('left', 'none'), data: { ...node('left', 'none').data, graphView: 'full' } };
+    const out = { ...node('out', 'none'), data: { ...node('out', 'none').data, graphView: 'full' } };
+    const { replaced, wanted } = columnLineageEdges([left, action, out], [
+      { id: 'join_from_left', source: 'left', target: 'join' }, { id: 'join_to_out', source: 'join', target: 'out' },
+    ]);
+    expect([...replaced].sort()).toEqual(['join_from_left', 'join_to_out']);
+    expect(idsOf(wanted)).toEqual([
+      'join->out.a::port', 'join->out.b::port', 'join->out.c::port', 'join->out.d::port', 'left.a->join::port',
+    ]);
+  });
+
+  test('a closed action gets port edges only for the columns an open data object shows', () => {
+    const ports = buildActionPorts('join', docs);
+    const action: Node = { id: 'join', position: { x: 0, y: 0 }, data: { graphView: 'full', nodeType: NodeType.ActionNode, ports, columnDisplay: 'none' } };
+    const left = { ...node('left', 'keys', { primaryKey: ['a'] }), data: { ...node('left', 'keys', { primaryKey: ['a'] }).data, graphView: 'full' } };
+    const { wanted } = columnLineageEdges([left, action], [{ id: 'join_from_left', source: 'left', target: 'join' }]);
+    expect(idsOf(wanted)).toEqual(['left.a->join::port']);
+  });
+
+  test('a trace lights up a port edge where the traced column is read resp. written by that action', () => {
+    const index = buildColumnLineageIndex(docs.map((lineage) => ({ lineage })), '');
+    const trace = buildGraphTrace(index, { dataObjectId: 'right', column: 'b' });
+    const portEdge = (id: string, source: string, target: string, column: string, port: 'sourcePort' | 'targetPort'): Edge =>
+      ({ id, source, target, data: { columnLineage: { sourceColumn: column, targetColumn: column, sourceName: column, targetName: column, via: [], [port]: 'x' } } });
+    const nodes: Node[] = [
+      { id: 'join', position: { x: 0, y: 0 }, data: { nodeType: NodeType.ActionNode } },
+      { id: 'left', position: { x: 0, y: 0 }, data: { nodeType: NodeType.DataNode } },
+    ];
+    const { edgeIds } = traceHighlights(trace, nodes, [
+      portEdge('right.b->join::port', 'right', 'join', 'b', 'targetPort'),
+      portEdge('left.a->join::port', 'left', 'join', 'a', 'targetPort'),
+      portEdge('join->out.b::port', 'join', 'out', 'b', 'sourcePort'),
+      portEdge('join->out.a::port', 'join', 'out', 'a', 'sourcePort'),
+    ]);
+    expect([...edgeIds].sort()).toEqual(['join->out.b::port', 'right.b->join::port']);
   });
 });
