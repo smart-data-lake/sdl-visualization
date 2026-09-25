@@ -1,7 +1,7 @@
 import { useAuth } from "../auth/AuthProvider";
-import { useMutation, useQuery, UseQueryResult } from "react-query";
+import { useMutation, useQueries, useQuery, UseQueryResult } from "react-query";
 import { fetcher } from "../api/Fetcher";
-import { TstampEntry, WorkflowRun } from "../types";
+import { StateFile, TstampEntry, WorkflowRun } from "../types";
 import { useWorkspace } from "./useWorkspace";
 import { sortIfArray } from "../util/helpers";
 
@@ -64,6 +64,20 @@ export const useFetchRun = (application: string, runId: number, attemptId: numbe
     retry: false,
     staleTime: 1000 * 60 * 60 * 24,
   })); //24h
+};
+
+/**
+ * The state files of several runs, keyed like useFetchRun so the run view shares the cache. Quiet: a
+ * missing state file only leaves the details of that run empty in the "Last 5 runs" panel.
+ */
+export const useFetchRunsQuiet = (runs: WorkflowRun[]) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQueries(runs.map(run => ({
+    queryKey: ["run", tenant, repo, env, run.name, run.runId, run.attemptId],
+    queryFn: () => fetcher().getRun(tenant!, repo!, env!, run.name, run.runId, run.attemptId),
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  }))) as UseQueryResult<StateFile>[];
 };
 
 /**** Config ****/
