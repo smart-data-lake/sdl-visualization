@@ -27,6 +27,16 @@ test.describe('config explorer', () => {
     await expect(page.getByRole('row', { name: 'path ./~{id}' })).toBeVisible();
   });
 
+  test('the last runs say what each run wrote to a data object', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/int-airports');
+
+    const lastRuns = page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: 'Written' }) });
+    // newest first; the details come from the state file of each run
+    await expect(lastRuns.getByRole('row').nth(1)).toContainText('83330 records');
+    await lastRuns.getByRole('row').nth(1).getByRole('link', { name: 'historize-airports' }).click();
+    await expect(page).toHaveURL(/config\/actions\/historize-airports/);
+  });
+
   test('search filters the element list by id', async ({ page }) => {
     await page.goto('/#/config/dataObjects/int-airports');
     await expect(element(page, 'btl-distances')).toBeVisible();

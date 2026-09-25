@@ -8,7 +8,7 @@ import Option from '@mui/joy/Option';
 import 'github-markdown-css/github-markdown.css';
 import { ReactNode, useEffect, useState } from 'react';
 import { Link } from "react-router-dom";
-import { useFetchDataObjectStats, useFetchWorkflowRunsByElement } from '../../hooks/useFetchData';
+import { useFetchDataObjectStats, useFetchRunsQuiet, useFetchWorkflowRunsByElement } from '../../hooks/useFetchData';
 import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
 import { getPropertyByPath } from '../../util/helpers';
 import './ComponentsStyles.css';
@@ -16,8 +16,10 @@ import ConfigurationAccordions from './ConfigurationAccordions';
 import MarkdownComponent from './MarkdownComponent';
 import { createPropertiesComponent } from './PropertiesComponent';
 import { getIcon } from '../../util/WorkflowsExplorer/StatusInfo';
-import { Stats, TstampEntry } from '../../types';
+import { Stats, TstampEntry, WorkflowRun } from '../../types';
 import { useWorkspace } from '../../hooks/useWorkspace';
+import { updateStateFile } from '../../util/WorkflowsExplorer/Attempt';
+import { ElementRunDetails, elementRunDetails } from '../../util/WorkflowsExplorer/elementRunDetails';
 
 interface ElementProps {
   data: any; // config of object to display
@@ -151,6 +153,78 @@ export function createSimpleChip(name: string, key?: any) {
   return <Chip key={key} size="sm">{name}</Chip>
 }
 
+function TruncatedCell({text, title}: {text?: ReactNode, title?: ReactNode}) {
+  if (text === undefined) return <td/>;
+  return (
+    <td style={{padding: '2px 5px'}}>
+      <Tooltip title={title ?? text} size="sm" arrow enterDelay={500} sx={{maxWidth: '500px'}}>
+        <Box sx={{maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{text}</Box>
+      </Tooltip>
+    </td>
+  )
+}
+
+function startMillis(run: WorkflowRun): number {
+  return run.attemptStartTime ? new Date(run.attemptStartTime).getTime() : 0;
+}
+
+// the details come from the runs' state files, so their columns appear once those are loaded and only if any run has a value
+function LastRuns({runs, elementType, elementName}: {runs: WorkflowRun[], elementType: string, elementName: string}) {
+  const {contentPath} = useWorkspace();
+  // the local fetcher lists runs oldest first, the backend newest first
+  const lastRuns = [...runs].sort((a, b) => startMillis(b) - startMillis(a)).slice(0, 5);
+  const stateFiles = useFetchRunsQuiet(lastRuns);
+  // a run whose state file is not loaded, or that has no details, still gets one row
+  const details: ElementRunDetails[][] = stateFiles.map(query =>
+    query.data ? elementRunDetails(updateStateFile(query.data), elementType, elementName) : []);
+  const has = (key: keyof ElementRunDetails) => details.some(writes => writes.some(d => d[key] !== undefined));
+  const columns = {actionId: has('actionId'), partitionValues: has('partitionValues'), incrementalState: has('incrementalState'), outputMetric: has('outputMetric')};
+  const hasDetails = Object.values(columns).some(x => x);
+  const rows = lastRuns.flatMap((run,runIdx) => {
+    const writes: (ElementRunDetails | undefined)[] = details[runIdx].length > 0 ? details[runIdx] : [undefined];
+    // several actions writing the same data object get one row each, below one set of run cells
+    return writes.map((d, writeIdx) => {
+      const metric = d?.outputMetric;
+      return (
+        <tr key={`${runIdx}.${writeIdx}`}>
+          {writeIdx === 0 && <>
+            <td rowSpan={writes.length} style={{padding: '2px 5px'}}>{formatTimestamp(run.attemptStartTime!)}</td>
+            <td rowSpan={writes.length} style={{padding: '2px 5px', width: 'auto'}}>
+              <Link to={`${contentPath}workflows/${run.name}/${run.runId}.${run.attemptId}/table`}>{getIcon(run.status!, '0px', {display: 'block', margin: 'auto'})}</Link>
+            </td>
+            <td rowSpan={writes.length} style={{padding: '2px 5px'}}><Link to={`${contentPath}workflows/${run.name}`}>{run.name}</Link></td>
+          </>}
+          {columns.actionId && <td style={{padding: '2px 5px'}}>{d?.actionId && createActionsChip(d.actionId, 'sm')}</td>}
+          {columns.partitionValues && <TruncatedCell text={d?.partitionValues}/>}
+          {columns.incrementalState && <TruncatedCell text={d?.incrementalState}/>}
+          {columns.outputMetric && <TruncatedCell text={metric && `${metric.value} ${metric.name === 'files_written' ? 'files' : 'records'}`} title={metric?.all.map(m => `${m.name}: ${m.value}`).join(', ')}/>}
+        </tr>
+      )
+    })
+  })
+  return (
+    <Box>
+      <Typography level="title-sm" >Last 5 runs</Typography>
+      <Table size='md' sx={{tableLayout: 'auto', width: 'max-content', maxWidth: '100%', borderCollapse: 'collapse', '& td, & th': {padding: '0px', height: '32px', border: '1px solid var(--TableCell-borderColor)'}, '& th': {padding: '2px 5px', verticalAlign: 'middle'}}}>
+        {hasDetails && <thead>
+          <tr>
+            <th>Started</th>
+            <th>Status</th>
+            <th>Workflow</th>
+            {columns.actionId && <th>Action</th>}
+            {columns.partitionValues && <th>{elementType === 'actions' ? 'Selected partitions' : 'Written partitions'}</th>}
+            {columns.incrementalState && <th>Incremental state</th>}
+            {columns.outputMetric && <th>Written</th>}
+          </tr>
+        </thead>}
+        <tbody>
+          {rows}
+        </tbody>
+      </Table>
+    </Box>
+  )
+}
+
 export default function ConfigurationTab(props: ElementProps) {
 
   // store the current stats entry to display
@@ -168,7 +242,6 @@ export default function ConfigurationTab(props: ElementProps) {
 	const { data: stats } = useFetchDataObjectStats(statsEntry);
 
 	const { data: runs } = useFetchWorkflowRunsByElement(props.elementType, props.elementName);
-  const {contentPath} = useWorkspace();
 
   function getAttribute(attributeName: string) {
     return getPropertyByPath(props.data, attributeName);
@@ -238,28 +311,6 @@ export default function ConfigurationTab(props: ElementProps) {
       </Box>
     )
   }
-  function createRunsCmp(runs: any[]) {
-    const rows = runs.slice(-5).reverse().map((run,idx) => 
-      <tr key={idx}>        
-        <td style={{padding: '2px 5px'}}>{formatTimestamp(run.attemptStartTime)}</td>
-        <td style={{padding: '2px 5px', width: 'auto'}}>
-          <Link to={`${contentPath}workflows/${run.name}/${run.runId}.${run.attemptId}/table`}>{getIcon(run.status, '0px', {display: 'block', margin: 'auto'})}</Link>
-        </td>
-        <td style={{padding: '2px 5px'}}><Link to={`${contentPath}workflows/${run.name}`}>{run.name}</Link></td>
-      </tr>
-    )
-    return (    
-      <Box>
-        <Typography level="title-sm" >Last 5 runs</Typography>
-        <Table size='md' sx={{tableLayout: 'auto', width: 'max-content', maxWidth: '100%', borderCollapse: 'collapse', '& td': {padding: '0px', height: '32px', border: '1px solid var(--TableCell-borderColor)'}}}>
-          <tbody>
-            {rows}
-          </tbody>
-        </Table>        
-      </Box>
-    )
-  }  
-  
   let tags = getAttribute('metadata.tags') as string[] || [];
   let [inputs, outputs, recursiveInputs] = getInputOutputIds(props.data)
   let topAttributesCmp = createPropertiesComponent({properties: topAttributesPrep, orderProposal: ['table', 'path', 'partitions'], title: 'Main configuration'})
@@ -280,7 +331,7 @@ export default function ConfigurationTab(props: ElementProps) {
       </Box>
       <Box sx={{display: 'flex', flexWrap: 'wrap', gap: '1rem'}}>
         {topAttributesCmp && <><Box>{topAttributesCmp}</Box></>}
-        {runs && runs.length>0 && <><Box flex={1}/><Box>{createRunsCmp(runs)}</Box></>}
+        {runs && runs.length>0 && <><Box flex={1}/><Box><LastRuns runs={runs} elementType={props.elementType} elementName={props.elementName}/></Box></>}
         {stats && <><Box flex={1}/><Box>{createStatsCmp(stats)}</Box></>}
       </Box>
       {mainContent()}

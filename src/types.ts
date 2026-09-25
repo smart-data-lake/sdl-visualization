@@ -159,6 +159,12 @@ export class Row implements MetaDataBaseObject {
     endTstmpInit?: Date,
     inputIds?: string[],
     outputIds?: string[],
+    dataObjectsState?: DataObjectState[],
+  }
+  /** The state an incremental execution mode keeps for one input data object, e.g. the highest value read */
+  export interface DataObjectState {
+    dataObjectId: string,
+    state: string,
   }
   /**
    * The metrics SDLB recorded for one result of an action. The bag is open ended - the named
