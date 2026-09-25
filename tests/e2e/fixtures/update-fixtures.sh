@@ -92,4 +92,9 @@ node "$ROOT/scripts/buildSearchIndex.ts" \
   --schema "$DIR/shared/schema" \
   --out "$DIR/exported/search/index.json"
 
+# --- column lineage -----------------------------------------------------------
+# getting-started does not export column lineage yet, so shared/schema/*.lineage.* are written
+# by hand after its actions; nothing above touches them. Only their index is derived.
+node "$ROOT/scripts/buildLineageIndex.ts" --schema "$DIR/shared/schema"
+
 echo "Done. Fixture runs: ${RUNS[*]}"

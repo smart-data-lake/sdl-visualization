@@ -11,3 +11,7 @@ deactivate
 # SEARCH INDEX (global search). Optional: without it the search falls back to configuration only.
 node scripts/buildSearchIndex.ts --public public --env "${SDLB_ENV:-dev}" \
   || echo "search index not built - global search will cover the configuration only"
+
+# COLUMN LINEAGE INDEX. Optional: without it tracing a column covers the nodes shown only.
+node scripts/buildLineageIndex.ts --schema public/schema \
+  || echo "column lineage index not built - tracing a column will cover the nodes shown only"

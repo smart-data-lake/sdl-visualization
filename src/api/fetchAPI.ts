@@ -1,5 +1,6 @@
 import { LicenseInfo, SchemaData, StateFile, Stats, TstampEntry, User, Workflow, WorkflowRun } from "../types";
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
+import type { ColumnLineage, ColumnLineageIndex } from "../util/ConfigExplorer/columnLineage";
 
 /**
  * The fetchApi interface is the skeletton for any API implementation. It methods must be implemented to create entry points for the data sources used by the UI.
@@ -63,6 +64,13 @@ export interface fetchAPI {
      * search falls back to the configuration it already has in memory.
      */
     getSearchIndex?: (tenant: string, repo: string, env: string, version: string | undefined) => Promise<SearchIndexBundle | undefined>;
+
+    /**** Column lineage, as SDLB's dry-run-with-lineage-export writes it ****/
+
+    /** The lineage documents of one DataObject at one export; entries come from getTstampEntries("schema", "lineage", ...). */
+    getColumnLineage?: (lineageTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => Promise<ColumnLineage[] | undefined>;
+    /** Every column dependency of the scope, or undefined where no index was built - a normal state. */
+    getColumnLineageIndex?: (tenant: string, repo: string, env: string) => Promise<ColumnLineageIndex | undefined>;
 }
 
 /** What GET /search/index returns: the serialized MiniSearch plus what is in it. */

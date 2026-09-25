@@ -9,6 +9,7 @@ import { listTokens, mintToken, revokeToken } from '../../auth/mcpTokens.js';
 import { relayTokenRequest } from '../../auth/databricks.js';
 import { RateLimiter, rateLimit } from '../rateLimit.js';
 import * as search from '../../services/search.js';
+import * as columnLineage from '../../services/columnLineage.js';
 import { settings } from '../../config.js';
 import { notFound } from '../../errors.js';
 
@@ -169,9 +170,25 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  /* -------------------------------------------------------- schema and statistics */
+  /* ------------------------------------------- schema, statistics and column lineage */
 
-  for (const subtype of ['schema', 'stats'] as const) {
+  const readers = { schema: schemaStats.getSchema, stats: schemaStats.getStats, lineage: schemaStats.getLineage };
+
+  // An extension like /search/index. The ETag follows the lineage blobs, so an unchanged index costs a 304.
+  app.get<{ Querystring: ScopeQuery }>(
+    '/lineage/index',
+    { schema: { querystring: schemas.scope } },
+    async (request, reply) => {
+      const { scope } = await scopedRequest(request);
+      const { body, etag } = await columnLineage.readLineageIndex(scope);
+      reply.header('etag', etag);
+      reply.header('cache-control', 'private, max-age=0, must-revalidate');
+      if (request.headers['if-none-match'] === etag) return reply.code(304).send();
+      return reply.type('application/json').send(body);
+    },
+  );
+
+  for (const subtype of ['schema', 'stats', 'lineage'] as const) {
     app.get<{ Params: { dataObjectId: string }; Querystring: ScopeQuery }>(
       `/dataobject/${subtype}/:dataObjectId/tstamps`,
       { schema: { params: schemas.dataObjectParam, querystring: schemas.scope } },
@@ -188,9 +205,7 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
         const { scope } = await scopedRequest(request);
         const { dataObjectId } = request.params;
         const { tstamp } = request.query;
-        return subtype === 'schema'
-          ? schemaStats.getSchema(scope, dataObjectId, tstamp)
-          : schemaStats.getStats(scope, dataObjectId, tstamp);
+        return readers[subtype](scope, dataObjectId, tstamp);
       },
     );
   }

@@ -5,6 +5,7 @@ import * as config from '../../services/config.js';
 import * as descriptions from '../../services/descriptions.js';
 import * as schemaStats from '../../services/schemaStats.js';
 import * as search from '../../services/search.js';
+import * as columnLineage from '../../services/columnLineage.js';
 import { RateLimiter, rateLimit } from '../rateLimit.js';
 import { badRequest } from '../../errors.js';
 
@@ -102,9 +103,33 @@ export async function registerUploadRoutes(app: FastifyInstance): Promise<void> 
     },
   );
 
-  /* -------------------------------------------------------- schema and statistics */
+  /*
+    The column lineage index. Rebuilt on the next read anyway, so this is only for forcing it.
+    Like the search index, an extension that is not in spec/upstream-openapi.json.
+  */
+  app.post<{ Querystring: ScopeQuery }>(
+    '/lineage/index',
+    { schema: { querystring: schemas.scope }, preHandler: rebuildRateLimit },
+    async (request) => {
+      const { scope } = await scopedRequest(request);
+      await columnLineage.readLineageIndex(scope, { force: true });
+      return {};
+    },
+  );
 
-  for (const subtype of ['schema', 'stats'] as const) {
+  /* ------------------------------------------- schema, statistics and column lineage */
+
+  // Several lineage documents at once. Registered before the per-DataObject route below.
+  app.put<{ Querystring: ScopeQuery & { tstamp: number }; Body: unknown }>(
+    '/dataobject/lineage',
+    { schema: { querystring: schemas.scopeWithTstamp } },
+    async (request) => {
+      const { scope } = await scopedRequest(request);
+      return columnLineage.putLineageBatch(scope, request.query.tstamp, request.body);
+    },
+  );
+
+  for (const subtype of ['schema', 'stats', 'lineage'] as const) {
     app.put<{
       Params: { dataObjectId: string };
       Querystring: ScopeQuery & { tstamp: number };

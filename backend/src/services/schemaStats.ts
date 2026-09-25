@@ -6,7 +6,7 @@ import { notFound } from '../errors.js';
 import { registerScope } from './scope.js';
 
 /**
- * Schemas and statistics: a blob per timestamp, and one table partition per data
+ * Schemas, statistics and column lineage: a blob per timestamp, and one table partition per data
  * object listing the timestamps newest first.
  *
  * The local backend derives its timestamp list by parsing filenames; here it comes
@@ -16,9 +16,7 @@ import { registerScope } from './scope.js';
 export type { Subtype };
 
 function blobPathFor(scope: Scope, subtype: Subtype, dataObjectId: string, tstamp: number): string {
-  return subtype === 'schema'
-    ? blobPaths.schema(scope, dataObjectId, tstamp)
-    : blobPaths.stats(scope, dataObjectId, tstamp);
+  return blobPaths[subtype](scope, dataObjectId, tstamp);
 }
 
 export async function putSchemaOrStats(
@@ -68,6 +66,13 @@ export async function getStats(
   // The SPA reads `parsedJson.stats`, so the payload is wrapped even though the
   // blob holds it bare - see fetchAPI_rest.getStats.
   return { stats: data };
+}
+
+/** Bare like a schema. A blob holds one document, or an array where several actions write the DataObject. */
+export async function getLineage(scope: Scope, dataObjectId: string, tstamp: number): Promise<unknown> {
+  const data = await readJson<unknown>(blobPaths.lineage(scope, dataObjectId, tstamp));
+  if (data === undefined) throw notFound(`column lineage of ${dataObjectId} at ${tstamp}`);
+  return data;
 }
 
 /** The newest timestamp at or before a moment, for "what did the schema look like then". */

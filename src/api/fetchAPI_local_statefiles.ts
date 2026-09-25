@@ -2,6 +2,7 @@ import { LicenseInfo, SchemaData, StateFile, Stats, TaskStatus, TstampEntry, Use
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { getUrlContent, listConfigFiles, parseTextStrict, readConfigIndexFile } from "../util/ConfigExplorer/HoconParser";
 import { compareFunc, formatFileSize, onlyUnique } from "../util/helpers";
+import { ColumnLineage, ColumnLineageIndex, parseColumnLineage, parseColumnLineageIndex } from "../util/ConfigExplorer/columnLineage";
 import { fetchAPI, SearchIndexBundle } from "./fetchAPI";
 import { processRun } from "./fetchAPI_rest";
 
@@ -263,6 +264,20 @@ export class fetchAPI_local_statefiles implements fetchAPI {
                 return obj as Stats;
             })
             .catch((error) => { console.log(error); return undefined; });
+    }
+
+    getColumnLineage(lineageTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<ColumnLineage[] | undefined> {
+        if (!lineageTstampEntry?.key) return Promise.resolve(undefined);
+        return getUrlContent("/schema/" + lineageTstampEntry.key) // written next to the schemas
+            .then((str) => parseColumnLineage(JSON.parse(str)))
+            .catch((error) => { console.log(error); return undefined; });
+    }
+
+    /** Built by scripts/buildLineageIndex.ts; absent until someone runs it, which is fine. */
+    getColumnLineageIndex(tenant: string, repo: string, env: string): Promise<ColumnLineageIndex | undefined> {
+        return getUrlContent("/schema/columnLineage.json")
+            .then((str) => parseColumnLineageIndex(JSON.parse(str)))
+            .catch(() => undefined);
     }
 
     clearCache = () => {

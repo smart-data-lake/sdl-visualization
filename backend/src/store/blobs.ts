@@ -61,6 +61,14 @@ export const blobPaths = {
   stats: (scope: Scope, dataObjectId: string, tstamp: number) =>
     `${prefix(scope)}/stats/${assertPathSegment(dataObjectId, 'dataObjectId')}` +
     `/${assertPathNumber(tstamp, 'tstamp')}.json`,
+  lineage: (scope: Scope, dataObjectId: string, tstamp: number) =>
+    `${prefix(scope)}/lineage/${assertPathSegment(dataObjectId, 'dataObjectId')}` +
+    `/${assertPathNumber(tstamp, 'tstamp')}.json`,
+  /** Every lineage blob of the scope in one listing, like schemaPrefix. */
+  lineagePrefix: (scope: Scope) => `${prefix(scope)}/lineage/`,
+  /** The column lineage index, beside the lineage blobs rather than under them. */
+  lineageIndex: (scope: Scope) => `${prefix(scope)}/lineage-index/index.json`,
+  lineageIndexMeta: (scope: Scope) => `${prefix(scope)}/lineage-index/meta.json`,
   /** Every schema blob of the scope in one listing, so the index builder needs no per-element call. */
   schemaPrefix: (scope: Scope) => `${prefix(scope)}/schema/`,
   /** The serialized MiniSearch index, served to the browser verbatim. */

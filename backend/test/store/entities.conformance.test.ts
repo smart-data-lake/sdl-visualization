@@ -247,10 +247,11 @@ describe.each(DRIVERS)('$name', ({ create }) => {
       ]);
     });
 
-    test('the two series are separate', async () => {
+    test('the series are separate', async () => {
       const scope = freshScope();
       await store.schemaStats.put(scope, 'schema', 'obj', { tstamp: 1, blobPath: 'p', sizeBytes: 1 });
       expect(await store.schemaStats.listTstamps(scope, 'stats', 'obj')).toEqual([]);
+      expect(await store.schemaStats.listTstamps(scope, 'lineage', 'obj')).toEqual([]);
     });
 
     test('a limit truncates in that order rather than arbitrarily', async () => {

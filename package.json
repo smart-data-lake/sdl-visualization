@@ -84,6 +84,7 @@
     "start": "vite --force",
     "build": "vite build",
     "build:search-index": "node scripts/buildSearchIndex.ts",
+    "build:lineage-index": "node scripts/buildLineageIndex.ts",
     "serve": "vite preview",
     "deploy-azure": "./backend/infra_azure/deploy-frontend.sh",
     "lint": "eslint src tests",

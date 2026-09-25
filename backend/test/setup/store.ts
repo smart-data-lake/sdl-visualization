@@ -6,6 +6,7 @@ import { resetStore } from '../../src/store/repositories.js';
 import { resetBlobStore } from '../../src/store/blobs.js';
 import { clearConfigCache } from '../../src/services/config.js';
 import { clearSearchCache } from '../../src/services/search.js';
+import { clearLineageIndexCache } from '../../src/services/columnLineage.js';
 
 /**
  * A store of its own for one test file.
@@ -45,4 +46,5 @@ function reset(): void {
   resetBlobStore();
   clearConfigCache();
   clearSearchCache();
+  clearLineageIndexCache();
 }
