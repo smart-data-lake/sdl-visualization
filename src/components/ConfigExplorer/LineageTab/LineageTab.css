@@ -157,7 +157,8 @@ svg.data-node-partition-state-icon {
 
 /*
   The column trace (see traceHighlights): a button that shows on hover of a row that has lineage,
-  and stays on the row the trace starts from, and the rows on the trace in the highlight colour.
+  and stays on the row the trace starts from, and the names of the rows on the trace in the
+  highlight colour.
   The row keeps its box - the column handles are positioned against it.
 */
 .lineage-column-trace {
@@ -187,16 +188,78 @@ svg.data-node-partition-state-icon {
   font-size: 14px !important;
 }
 
-.lineage-column-traced {
-  background: rgba(9, 107, 222, 0.12);
-}
-
 .lineage-column-traced .lineage-column-name {
   color: #096bde;
 }
 
 .lineage-column-trace-start .lineage-column-name {
   font-weight: 600;
+}
+
+/*
+  The ports of an expanded action node (see ActionPortsView): input columns, the connections, output
+  columns. The two sides start and end at the node's padding like a data object's rows do, which is
+  what places their handles on the node's border.
+*/
+.lineage-port-body {
+  display: flex;
+  position: relative;
+}
+
+/* as wide as its longest name, so that a long name is not cut for a wider band of curves */
+.lineage-port-side {
+  flex: 0 0 auto;
+  max-width: 45%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* from nothing, taking what the two sides leave */
+.lineage-port-connections {
+  flex: 1 1 0;
+  min-width: 24px;
+  overflow: visible;
+}
+
+/* as far from its name as the name is from the node's border */
+.lineage-port-lead {
+  /* from nothing, as an svg would otherwise claim its default 300px */
+  flex: 1 1 0;
+  min-width: 6px;
+  margin-left: var(--lineage-node-padding-x, 10px);
+}
+
+.lineage-port-output .lineage-port-lead {
+  margin-left: 0;
+  margin-right: var(--lineage-node-padding-x, 10px);
+}
+
+.lineage-column-traced .lineage-port-lead .lineage-port-connection-line {
+  stroke: #096bde;
+  stroke-width: 2.5;
+}
+
+.lineage-port-connection-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 8;
+}
+
+.lineage-port-connection-line {
+  fill: none;
+  stroke: #b1b1b7;
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.lineage-port-connection:hover .lineage-port-connection-line {
+  stroke: #555;
+}
+
+.lineage-port-connection-traced .lineage-port-connection-line {
+  stroke: #096bde;
+  stroke-width: 2.5;
 }
 
 /* the column handles are anchors for the relation edges, nothing is ever dragged from them */

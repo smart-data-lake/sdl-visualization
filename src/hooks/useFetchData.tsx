@@ -236,6 +236,24 @@ export const useFetchDataObjectLineage = (lineageEntry: TstampEntry | undefined)
   });
 };
 
+/**
+ * The newest lineage documents of several data objects - an action node reads those of the data
+ * objects it writes. Quiet like the two above.
+ */
+export const useFetchNewestLineageOf = (dataObjectIds: string[], enabled = true) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQueries(dataObjectIds.map(dataObjectId => ({
+    queryKey: ["lineageNewest", dataObjectId, tenant, repo, env],
+    queryFn: async () => {
+      const entries = await fetcher().getTstampEntries("schema", "lineage", dataObjectId, tenant!, repo!, env!);
+      return entries?.[0] ? fetcher().getColumnLineage?.(entries[0], tenant!, repo!, env!) : undefined;
+    },
+    enabled: enabled && !!fetcher().getColumnLineage,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  })));
+};
+
 /** Quiet too: an index exists only once it was built. */
 export const useFetchColumnLineageIndex = (enabled = true) => {
   const { tenant, repo, env } = useWorkspace();

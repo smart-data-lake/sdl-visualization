@@ -101,7 +101,8 @@ test.describe('columns of a data object', () => {
   });
 
   test('a table whose columns are all key columns is not offered a further step', async ({ page }) => {
-    await openLineage(page, '/#/config/dataObjects/int-airports');
+    // the relations view, which reads no column lineage - the lineage fixtures name more columns
+    await openRelations(page, '/#/config/dataObjects/int-airports');
     await expandColumns(page, 'int-airports').click();
 
     // int-airports has one column, its primary key, and no schema export to add anything to it
@@ -164,7 +165,8 @@ test.describe('columns of a data object', () => {
   });
 
   test('a column only says something when it has something to say', async ({ page }) => {
-    await openLineage(page, '/#/config/dataObjects/int-departures');
+    // the relations view, which reads no column lineage - with it every column has something to say
+    await openRelations(page, '/#/config/dataObjects/int-departures');
     await expandColumns(page, 'int-departures').click();
     await expect(columnsOf(page, 'int-departures')).not.toHaveCount(0);
 

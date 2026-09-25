@@ -151,12 +151,83 @@ test.describe('tracing a column', () => {
     await row(page, 'int-departures', 'dt').hover();
     await traceButton(page, 'int-departures', 'dt').click();
     await expect(panel(page)).toContainText('int-departures.dt: 1 column in 2 data objects');
-    // dt comes from ext-departures through download-deduplicate-departures, and nothing reads it
-    await expect.poll(() => isHighlighted(page, 'download-deduplicate-departures_to_int-departures')).toBe('rgb(9, 107, 222)');
-    expect(await isHighlighted(page, 'join-departures-airports_from_int-departures')).not.toBe('rgb(9, 107, 222)');
+    // dt comes from ext-departures through download-deduplicate-departures, and nothing reads it. The
+    // open data object shows its columns, so the actions' edges run per column to their ports
+    await expect.poll(() => isHighlighted(page, 'download-deduplicate-departures->int-departures.dt::port')).toBe('rgb(9, 107, 222)');
+    expect(await isHighlighted(page, 'download-deduplicate-departures->int-departures.icao24::port')).not.toBe('rgb(9, 107, 222)');
+    expect(await isHighlighted(page, 'int-departures.estdepartureairport->join-departures-airports::port')).not.toBe('rgb(9, 107, 222)');
 
     // tracing it again stops it
     await traceButton(page, 'int-departures', 'dt').click();
     await expect(panel(page)).toHaveCount(0);
+  });
+});
+
+test.describe('the ports of an action in the full view', () => {
+  const port = (page: Page, side: 'input' | 'output', key: string) =>
+    node(page, 'join-departures-airports').getByTestId(`port-${side}-${key}`);
+  const connection = (page: Page, from: string, to: string) =>
+    node(page, 'join-departures-airports').getByTestId(`connection-${from}>${to}`);
+
+  async function openAction(page: Page) {
+    await page.goto('/#/config/actions/join-departures-airports');
+    await page.getByRole('button', { name: 'Open lineage' }).click();
+    await expect(node(page, 'join-departures-airports')).toBeVisible();
+    await expandColumns(page, 'join-departures-airports').click();
+  }
+
+  test('an action opens on the columns it reads and writes, and the connections between them', async ({ page }) => {
+    await openAction(page);
+    await expect(port(page, 'input', 'int-airports.name')).toBeVisible();
+    await expect(port(page, 'output', 'btl-departures-arrivals-airports.dep_longitude_deg')).toBeVisible();
+    // one input feeds two outputs
+    await expect(connection(page, 'int-airports.name', 'btl-departures-arrivals-airports.arr_name')).toHaveCount(1);
+    await expect(connection(page, 'int-airports.name', 'btl-departures-arrivals-airports.dep_name')).toHaveCount(1);
+    await expect(connection(page, 'int-departures.estdepartureairport', 'btl-departures-arrivals-airports.estdepartureairport')
+      .locator('title')).toHaveText(
+      'int-departures.estDepartureAirport → btl-departures-arrivals-airports.estdepartureairport\nunchanged', { useInnerText: false });
+
+    // every port is connected to its data object, which is closed, so the edge ends on the node
+    await expect(edge(page, 'int-airports.name->join-departures-airports::port')).toHaveCount(1);
+    await expect(edge(page, 'join-departures-airports->btl-departures-arrivals-airports.arr_name::port')).toHaveCount(1);
+    await expect(edge(page, 'join-departures-airports_from_int-airports')).toHaveCount(0);
+
+    await collapseColumns(page, 'join-departures-airports').click();
+    await expect(page.locator('.react-flow__edge[data-testid$="::port"]')).toHaveCount(0);
+    await expect(edge(page, 'join-departures-airports_from_int-airports')).toHaveCount(1);
+  });
+
+  test('a column trace runs through the ports it passes', async ({ page }) => {
+    await openAction(page);
+    await expandColumns(page, 'int-airports').click();
+    await expandColumns(page, 'int-airports').click();
+    await node(page, 'int-airports').getByTestId('column-name').hover();
+    await node(page, 'int-airports').getByTestId('trace-name').click();
+
+    await expect(connection(page, 'int-airports.name', 'btl-departures-arrivals-airports.dep_name'))
+      .toHaveClass(/lineage-port-connection-traced/);
+    await expect(connection(page, 'int-airports.latitude_deg', 'btl-departures-arrivals-airports.dep_latitude_deg'))
+      .not.toHaveClass(/lineage-port-connection-traced/);
+    await expect(port(page, 'output', 'btl-departures-arrivals-airports.arr_name')).toHaveClass(/lineage-column-traced/);
+    await expect.poll(() => edge(page, 'int-airports.name->join-departures-airports::port').locator('path.react-flow__edge-path')
+      .evaluate((el) => (el as SVGPathElement).style.stroke)).toBe('rgb(9, 107, 222)');
+  });
+});
+
+test.describe('rebuilding the graph', () => {
+  test('a new layout keeps what the nodes know of their lineage', async ({ page }) => {
+    await page.goto('/#/config/actions/compute-distances');
+    await page.getByRole('button', { name: 'Open lineage' }).click();
+    await expect(expandColumns(page, 'compute-distances')).toBeVisible();
+    await expect(expandColumns(page, 'btl-distances')).toBeVisible();
+
+    // the layout builds the node set anew, the nodes themselves stay mounted
+    await page.locator('.react-flow [data-testid="AlignVerticalTopIcon"]').click();
+    await expect(page.locator('.react-flow [data-testid="AlignHorizontalLeftIcon"]')).toBeVisible();
+    await expect(expandColumns(page, 'compute-distances')).toBeVisible();
+    await expect(expandColumns(page, 'btl-distances')).toBeVisible();
+
+    await expandColumns(page, 'compute-distances').click();
+    await expect(node(page, 'compute-distances').getByTestId('port-output-btl-distances.distance')).toBeVisible();
   });
 });

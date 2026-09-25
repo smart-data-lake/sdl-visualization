@@ -22,8 +22,10 @@ import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
 
 import { Position } from 'reactflow';
-import { useFetchDataObjectLineage, useFetchDataObjectLineageEntries, useFetchDataObjectSchema, useFetchDataObjectSchemaEntries, useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
+import { useFetchNewestLineageOf, useFetchDataObjectLineage, useFetchDataObjectLineageEntries, useFetchDataObjectSchema, useFetchDataObjectSchemaEntries, useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { SchemaData } from '../../../types';
+import { ActionPorts, buildActionPorts } from '../../../util/ConfigExplorer/ActionPorts';
+import { ActionPortsView } from './ActionPortsView';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { ColumnLineageEdgeProps, CustomEdgeProps, flowProps, graphNodeProps, nodeSizeFor, ReactFlowNodeProps, recomputeLayout, SELECTED_ELEMENT_Z_INDEX, scheduleRelayout, selectEdge, updateColumnEdges } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { setRfNodeData, setRfNodeSize } from '../../../util/ConfigExplorer/Graphs';
@@ -342,10 +344,11 @@ export const CustomDataNode = ( {data} ) => {
     || (columns ?? []).length > filterColumns(columns ?? [], 'keys').length;
 
   /*
-    The exported column lineage of this data object. Only the data view draws column edges, and it
-    draws them from the lineage of their target, which is why every data object node reads its own.
+    The exported column lineage of this data object. The data view draws column edges from the
+    lineage of their target, which is why every data object node reads its own; in the full view
+    the columns it names are what the ports of the actions attach to.
   */
-  const wantsLineage = isDataObject && graphView === 'data';
+  const wantsLineage = isDataObject && (graphView === 'data' || graphView === 'full');
   const { data: lineageEntries } = useFetchDataObjectLineageEntries(label, wantsLineage);
   const { data: lineage } = useFetchDataObjectLineage(wantsLineage ? lineageEntries?.[0] : undefined);
 
@@ -359,6 +362,7 @@ export const CustomDataNode = ( {data} ) => {
     resolve at once. The schema is kept once merged: the query goes idle when the columns close.
   */
   const mergedSchema = useRef<SchemaData>();
+  const lacksLineage = data.columnLineage === undefined;
   useEffect(() => {
     if (wantsSchema && exportedSchema) mergedSchema.current = exportedSchema;
     if (!columnsFunc || (!mergedSchema.current && !lineage)) return;
@@ -376,11 +380,39 @@ export const CustomDataNode = ( {data} ) => {
     updateNodeInternals(label);
     updateColumnEdges(rfi);
     scheduleRelayout(rfi, layoutDirection);
-  }, [exportedSchema, wantsSchema, lineage]);
+    // a rebuild of the node set - a new layout, say - hands this node fresh data without what was
+    // merged, while the node stays mounted and its queries do not change: hence the last one
+  }, [exportedSchema, wantsSchema, lineage, lacksLineage]);
+
+  /*
+    The ports of an action in the full view: the columns it reads and writes, from the lineage of
+    the data objects it writes - SDLB exports the lineage per output. An action without any has
+    nothing to open.
+  */
+  const isPortAction = nodeType === NodeType.ActionNode && !runContext && graphView === 'full' && jsonObject !== undefined;
+  const outputIds: string[] = isPortAction
+    ? [jsonObject.outputId, ...(Array.isArray(jsonObject.outputIds) ? jsonObject.outputIds : [])].filter(id => typeof id === 'string')
+    : [];
+  const outputLineage = useFetchNewestLineageOf(outputIds, isPortAction);
+  const outputLineageVersion = outputLineage.map(result => result.dataUpdatedAt).join();
+  const ports: ActionPorts | undefined = data.ports;
+  useEffect(() => {
+    if (!isPortAction) return;
+    const found = buildActionPorts(label, outputLineage.flatMap(result => result.data ?? []));
+    if (found.inputs.length === 0 && found.outputs.length === 0) return;
+    setRfNodeData(rfi, {nodeId: label, path: 'ports', value: found});
+    setRfNodeSize(rfi, label, nodeSizeFor({ports: found, columnDisplay}));
+    updateNodeInternals(label);
+    updateColumnEdges(rfi);
+    if (showColumns) scheduleRelayout(rfi, layoutDirection);
+    // outputLineage is a new array on every render; its version says when what it holds changed.
+    // A rebuild of the node set hands the node fresh data without ports, see the merge above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outputLineageVersion, isPortAction, ports === undefined]);
 
   const handleColumnDisplay = (display: ColumnDisplay) => {
     setRfNodeData(rfi, {nodeId: label, path: 'columnDisplay', value: display});
-    setRfNodeSize(rfi, label, nodeSizeFor({columns, columnDisplay: display}));
+    setRfNodeSize(rfi, label, nodeSizeFor({columns, columnDisplay: display, ports}));
     // the edges have to move onto, resp. off, the column handles in the same go - ReactFlow drops
     // an edge whose handle does not exist, so this cannot wait for a later render
     updateColumnEdges(rfi);
@@ -596,12 +628,18 @@ export const CustomDataNode = ( {data} ) => {
         {showObjectTitle()}
         {showObjectName(layoutDirection)}
       </div>
-      {showColumns && <ColumnList nodeId={label} columns={visibleColumns} isLoading={isSchemaLoading}
+      {showColumns && !ports && <ColumnList nodeId={label} columns={visibleColumns} isLoading={isSchemaLoading}
                                   tracedColumns={data.tracedColumns}/>}
       {/* the columns of a data object, only known where there is a configuration behind the node */}
       {canShowColumns &&
         <ColumnsToggle nodeId={label} display={columnDisplay ?? 'none'} onChange={handleColumnDisplay}
                        hasMore={hasMoreColumns}/>}
+      {/* an action opens in one step, on everything it reads and writes */}
+      {ports && showColumns && <ActionPortsView ports={ports} tracedConnections={data.tracedConnections}/>}
+      {ports &&
+        <ColumnsToggle nodeId={label} display={columnDisplay ?? 'none'} hasMore={columnDisplay === 'none'}
+                       onChange={() => handleColumnDisplay(showColumns ? 'none' : 'all')}
+                       titles={{open: 'Show the columns it reads and writes', close: 'Hide its columns'}}/>}
       {metrics && showDanglingMetrics(metrics.outputs, 'output')}
       {metrics && showDanglingMetrics(metrics.inputs, 'input')}
       {/*showProperties()*/}

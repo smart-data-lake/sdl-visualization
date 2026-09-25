@@ -13,8 +13,9 @@ import { findFirstKeyWithObject } from '../helpers';
 import { ColumnDisplay, ColumnInfo, buildColumnModel, filterColumns, isKnownDataObject } from './ColumnModel';
 import { ConfigData } from './ConfigData';
 import { RelationEdge, getIncomingRefs } from './RelationsGraph';
+import { ActionPorts, connectionKey, portRowCount } from './ActionPorts';
 import { ColumnLineage, ColumnLineageIndex, ColumnRef, ColumnTransformation, IndexEdge, buildColumnLineageIndex, columnEdgesOf, columnId, columnKey, traceColumn } from './columnLineage';
-import { columnHandleId, nodeHeightFor, nodeRelationHandleId, nodeWidthFor } from '../../components/ConfigExplorer/LineageTab/DataObjectColumns';
+import { ACTION_NODE_WIDTH_WITH_PORTS, columnHandleId, nodeHeightFor, nodeRelationHandleId, nodeWidthFor, portHandleId } from '../../components/ConfigExplorer/LineageTab/DataObjectColumns';
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
 import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, ExpandSides, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, expandSidesFrom, isColumnLineageEdge, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
@@ -146,6 +147,13 @@ export interface ColumnLineageEdgeProps {
     targetName: string;
     /** every action creating the target column from the source column - usually one */
     via: {actionId: string, transformations: ColumnTransformation[]}[];
+    /*
+        Set where that end is a port of an action rather than a column, in the full view. The
+        column on the other end is then the one read resp. written, and `via` is empty: how the
+        action transforms it is drawn inside the action.
+    */
+    sourcePort?: string;
+    targetPort?: string;
 }
 
 /** The data a customEdge is rendered from, see CustomEdge */
@@ -197,6 +205,10 @@ export interface ReactFlowNodeProps {
     columnLineage?: ColumnLineage[],
     /** the keys of this node's columns on the column trace that is shown, see traceHighlights */
     tracedColumns?: string[],
+    /** an action's ports, from the column lineage of what it writes. Undefined for a data object. */
+    ports?: ActionPorts,
+    /** an action's connections on the column trace that is shown, see connectionKey */
+    tracedConnections?: string[],
     /*
         How much of its columns this node shows. Per node, and deliberately kept in the node's data
         rather than in React state: the lineage tab re-creates the whole flow whenever a setting in
@@ -238,8 +250,14 @@ export interface ReactFlowNodeProps {
 export type ColumnsFunc = (schema?: SchemaData, lineage?: ColumnLineage[]) => ColumnInfo[];
 
 /** The size a node is laid out and rendered at, from what it shows. */
-export function nodeSizeFor(data: {columns?: ColumnInfo[], columnDisplay?: ColumnDisplay}): {width: number, height: number} {
+export function nodeSizeFor(data: {columns?: ColumnInfo[], columnDisplay?: ColumnDisplay, ports?: ActionPorts}): {width: number, height: number} {
     const display = data.columnDisplay ?? 'none';
+    // an action node opens on its ports, see ActionPortsView
+    if (data.ports) {
+        return display === 'none'
+            ? {width: nodeWidthFor(false), height: nodeHeightFor(0)}
+            : {width: ACTION_NODE_WIDTH_WITH_PORTS, height: nodeHeightFor(Math.max(portRowCount(data.ports), 1))};
+    }
     const visible = filterColumns(data.columns ?? [], display);
     return {
         width: nodeWidthFor(display !== 'none'),
@@ -503,10 +521,13 @@ function updateColumnEdgeHandles(rfi: ReactFlowInstance) {
         // lineage edge runs beside a data flow edge and ends where that one does
         const nodeHandle = (kind: 'source' | 'target', nodeId: string) =>
             data?.relation ? nodeRelationHandleId(kind, nodeId) : nodeId;
-        const sourceHandle = showsColumn(source, ends.sourceColumn) ? columnHandleId('source', ends.sourceColumn)
-                                                                   : nodeHandle('source', edge.source);
-        const targetHandle = showsColumn(target, ends.targetColumn) ? columnHandleId('target', ends.targetColumn)
-                                                                   : nodeHandle('target', edge.target);
+        const lineage = data?.columnLineage;
+        const sourceHandle = lineage?.sourcePort ? (isOpen(source) ? portHandleId('source', lineage.sourcePort) : edge.source)
+                           : showsColumn(source, ends.sourceColumn) ? columnHandleId('source', ends.sourceColumn)
+                           : nodeHandle('source', edge.source);
+        const targetHandle = lineage?.targetPort ? (isOpen(target) ? portHandleId('target', lineage.targetPort) : edge.target)
+                           : showsColumn(target, ends.targetColumn) ? columnHandleId('target', ends.targetColumn)
+                           : nodeHandle('target', edge.target);
         const hidden = data?.relation !== undefined && edge.source === edge.target && !isOpen(source);
         if (sourceHandle === edge.sourceHandle && targetHandle === edge.targetHandle && hidden === (edge.hidden === true)) {
             return edge;
@@ -530,8 +551,44 @@ function updateColumnEdgeHandles(rfi: ReactFlowInstance) {
 export function columnLineageEdges(rfNodes: ReactFlowNode[], rfEdges: ReactFlowEdge[]): {replaced: Set<string>, wanted: ReactFlowEdge[]} {
     const nodes = new Map(rfNodes.map(node => [node.id, node]));
     const inDataView = rfNodes.some(node => node.data?.graphView === 'data');
+    const inFullView = rfNodes.some(node => node.data?.graphView === 'full');
     const replaced = new Set<string>();
     const wanted: ReactFlowEdge[] = [];
+    const lineageEdge = (id: string, source: string, target: string, lineage: ColumnLineageEdgeProps): ReactFlowEdge => ({
+        type: 'customEdge', id, source, target, sourceHandle: source, targetHandle: target,
+        markerEnd: {type: MarkerType.ArrowClosed, width: 10, height: 10, color: EDGE_COLOR_DEFAULT},
+        data: {outputIndex: 0, inputIndex: 0, highlighted: false, columnLineage: lineage} as CustomEdgeProps,
+        style: {stroke: EDGE_COLOR_DEFAULT, strokeWidth: COLUMN_EDGE_STROKE_WIDTH_DEFAULT},
+    } as ReactFlowEdge);
+
+    /*
+        The full view: an edge between a data object and an action makes way for one edge per
+        column the action reads resp. writes, from the column to the action's port, as soon as the
+        column or the port is shown. The ports know which columns those are.
+    */
+    if (inFullView) rfEdges.forEach(edge => {
+        if (isColumnLineageEdge(edge) || edge.data?.relation) return;
+        const source = nodes.get(edge.source), target = nodes.get(edge.target);
+        if (!source || !target) return;
+        const reads = target.data?.ports as ActionPorts | undefined;
+        const writes = source.data?.ports as ActionPorts | undefined;
+        const shown: ReactFlowEdge[] = [];
+        if (reads) reads.inputs.filter(port => port.dataObjectId === source.id).forEach(port => {
+            const column = columnKey(port.column);
+            if (!isOpen(target) && !showsColumn(source, column)) return;
+            shown.push(lineageEdge(`${source.id}.${column}->${target.id}::port`, source.id, target.id,
+                {sourceColumn: column, targetColumn: column, sourceName: port.column, targetName: port.column, via: [], targetPort: port.key}));
+        });
+        if (writes) writes.outputs.filter(port => port.dataObjectId === target.id).forEach(port => {
+            const column = columnKey(port.column);
+            if (!isOpen(source) && !showsColumn(target, column)) return;
+            shown.push(lineageEdge(`${source.id}->${target.id}.${column}::port`, source.id, target.id,
+                {sourceColumn: column, targetColumn: column, sourceName: port.column, targetName: port.column, via: [], sourcePort: port.key}));
+        });
+        if (shown.length === 0) return;
+        replaced.add(edge.id);
+        wanted.push(...shown);
+    });
 
     if (inDataView) rfEdges.forEach(edge => {
         const data = edge.data as CustomEdgeProps | undefined;
@@ -555,17 +612,8 @@ export function columnLineageEdges(rfNodes: ReactFlowNode[], rfEdges: ReactFlowE
         if (shown.length === 0) return;
 
         replaced.add(edge.id);
-        shown.forEach(pair => wanted.push({
-            type: 'customEdge',
-            id: `${source.id}.${pair.sourceColumn}->${target.id}.${pair.targetColumn}::lineage`,
-            source: source.id,
-            target: target.id,
-            sourceHandle: source.id,
-            targetHandle: target.id,
-            markerEnd: {type: MarkerType.ArrowClosed, width: 10, height: 10, color: EDGE_COLOR_DEFAULT},
-            data: {outputIndex: 0, inputIndex: 0, highlighted: false, columnLineage: pair} as CustomEdgeProps,
-            style: {stroke: EDGE_COLOR_DEFAULT, strokeWidth: COLUMN_EDGE_STROKE_WIDTH_DEFAULT},
-        } as ReactFlowEdge));
+        shown.forEach(pair => wanted.push(lineageEdge(
+            `${source.id}.${pair.sourceColumn}->${target.id}.${pair.targetColumn}::lineage`, source.id, target.id, pair)));
     });
     return {replaced, wanted};
 }
@@ -652,7 +700,12 @@ export function traceHighlights(trace: GraphTrace, rfNodes: ReactFlowNode[], rfE
         const data = edge.data as CustomEdgeProps | undefined;
         if (data?.relation) return false;
         if (data?.columnLineage) {
-            return pairs.has(pairKey(edge.source, data.columnLineage.sourceColumn, edge.target, data.columnLineage.targetColumn));
+            const lineage = data.columnLineage;
+            if (lineage.targetPort) return trace.edges.some(([fromDo, fromCol, , , actionId]) =>
+                fromDo === edge.source && columnKey(fromCol) === lineage.sourceColumn && actionId === edge.target);
+            if (lineage.sourcePort) return trace.edges.some(([, , toDo, toCol, actionId]) =>
+                actionId === edge.source && toDo === edge.target && columnKey(toCol) === lineage.targetColumn);
+            return pairs.has(pairKey(edge.source, lineage.sourceColumn, edge.target, lineage.targetColumn));
         }
         const sourceIsAction = isAction.get(edge.source), targetIsAction = isAction.get(edge.target);
         if (!sourceIsAction && !targetIsAction) {
@@ -702,9 +755,14 @@ function applyColumnTrace(rfi: ReactFlowInstance, trace: GraphTrace) {
         const highlighted = nodeIds.has(node.id);
         const columns = trace.columns.get(node.id);
         const tracedColumns = columns ? [...columns].sort() : undefined;
+        const connections = trace.edges.filter(edge => edge[4] === node.id)
+            .map(([fromDo, fromCol, toDo, toCol]) => connectionKey(`${fromDo}.${columnKey(fromCol)}`, `${toDo}.${columnKey(toCol)}`));
+        const tracedConnections = connections.length > 0 ? connections.sort() : undefined;
         if ((node.data.highlighted === true) === highlighted
-            && (node.data.tracedColumns ?? []).join() === (tracedColumns ?? []).join()) return node;
-        return {...node, zIndex: highlighted ? SELECTED_ELEMENT_Z_INDEX : 0, data: {...node.data, highlighted, tracedColumns}};
+            && (node.data.tracedColumns ?? []).join() === (tracedColumns ?? []).join()
+            && (node.data.tracedConnections ?? []).join() === (tracedConnections ?? []).join()) return node;
+        return {...node, zIndex: highlighted ? SELECTED_ELEMENT_Z_INDEX : 0,
+                data: {...node.data, highlighted, tracedColumns, tracedConnections}};
     }));
 }
 
@@ -1253,6 +1311,7 @@ export function resetNodeStyles(rfi: ReactFlowInstance) {
                     ...elem.data,
                     highlighted: false,
                     tracedColumns: undefined,
+                    tracedConnections: undefined,
                 }
             }
             return newElem;
