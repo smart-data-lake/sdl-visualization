@@ -298,6 +298,29 @@ edge that reached a removed node from another branch stays. `dropDanglingEdges` 
 and `tests/e2e/lineage-stability.spec.ts` asserts that every rendered edge starts and ends on a
 node.
 
+## Touchpad and mouse wheel
+
+ReactFlow maps the wheel either to zooming (`zoomOnScroll`) or to panning (`panOnScroll`), for every
+device alike: a touchpad slide zoomed, and turning on panning would have made a mouse wheel pan
+too. Its pinch zoom is also scaled for macOS only, so on other systems it barely moved. So the
+graph takes the wheel away from ReactFlow (`useGraphWheelGestures`, capture phase on the panel's
+container) and decides per gesture (`src/util/ConfigExplorer/wheelGestures.ts`):
+
+| input | arrives as | does |
+|---|---|---|
+| two finger slide | wheel, small or fractional or sideways deltas | pans, 1:1 with the fingers |
+| pinch | Ctrl+wheel with such deltas; `gesture*` events in Safari | zooms around the pointer, following the fingers |
+| mouse wheel, Ctrl+wheel | wheel in line mode, or a notch of at least 50px | zooms, as fast as ReactFlow did |
+
+Browsers do not say which device sent a wheel event, so `guessWheelDevice` is a heuristic: line
+mode is a mouse (Firefox), a sideways or fractional delta is a touchpad, and otherwise the size of
+the step decides — a wheel notch is 53px (Chrome on Linux) to 100px and more (Windows), a touchpad
+step a few pixels. Events less than `GESTURE_GAP_MS` apart keep the device the gesture started
+with, so the occasional large step of a fast slide does not turn it into a zoom. A mouse whose
+wheel scrolls smoothly in small steps is therefore taken for a touchpad and pans; Ctrl+wheel still
+zooms it. Elements marked `nowheel`, and the toolbar and controls outside the renderer, keep the
+wheel to themselves.
+
 ## Fixtures
 
 Nothing in the getting-started project declares a foreign key, so the relations view would have

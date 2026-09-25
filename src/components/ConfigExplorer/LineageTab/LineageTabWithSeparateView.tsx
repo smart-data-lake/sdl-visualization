@@ -50,6 +50,7 @@ import CenteredCirularProgress from '../../Common/CenteredCircularProgress';
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
 import LineageGraphToolbar from './LineageGraphToolbar';
 import { useWorkspace } from '../../../hooks/useWorkspace';
+import { useGraphWheelGestures } from '../../../hooks/useGraphWheelGestures';
 
 /*
  Add custom node and edge types
@@ -65,6 +66,8 @@ const edgeTypes = {
 //TODO: refactor as layout settings
 export const nodeWidth = 172;
 export const nodeHeight = 36;
+const minZoom = 0.02;
+const maxZoom = 1;
 
 /*
   Implements the Lineage tab for separated action and dataObject view
@@ -120,6 +123,8 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
   useEffect(() => {
     setRfContainerMounted(true); // need the container's width/height before ReactFlow can fit the view
   }, [rfContainer])
+
+  useGraphWheelGestures(rfContainer, reactFlow, minZoom, maxZoom, rfContainerMounted);
 
   /*
     Hand a rebuilt node set to the live ReactFlow instance instead of re-creating the component.
@@ -208,8 +213,8 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           connectOnClick={false}
-          minZoom={0.02}
-          maxZoom={1}
+          minZoom={minZoom}
+          maxZoom={maxZoom}
           fitView
           fitViewOptions={centerNodes.length > 0 ? {maxZoom: 0.5, nodes: centerNodes} : {nodes}}
         >

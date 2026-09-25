@@ -298,6 +298,35 @@ test.describe('lineage graph', () => {
     expect(await nodeIds(page)).toEqual(before);
   });
 
+  test('a touchpad slide pans, a pinch and a mouse wheel zoom', async ({ page }) => {
+    await openLineage(page, '/#/config/dataObjects/int-airports');
+    const viewport = () => page.locator('.react-flow__viewport').evaluate((el) => {
+      const m = new DOMMatrix(getComputedStyle(el).transform);
+      return { x: m.e, y: m.f, zoom: m.a };
+    });
+    const pane = await page.locator('.react-flow__pane').boundingBox();
+    await page.mouse.move(pane!.x + pane!.width / 2, pane!.y + pane!.height / 2);
+    // let the initial fitView settle
+    await page.waitForTimeout(300);
+
+    const start = await viewport();
+    await page.mouse.wheel(15, 20);
+    await expect.poll(viewport).toEqual({ x: start.x - 15, y: start.y - 20, zoom: start.zoom });
+
+    // a gap between the gestures, so each one is classified on its own
+    await page.waitForTimeout(300);
+    const beforePinch = await viewport();
+    await page.keyboard.down('Control');
+    await page.mouse.wheel(0, 10);
+    await page.keyboard.up('Control');
+    await expect.poll(async () => (await viewport()).zoom).toBeCloseTo(beforePinch.zoom * Math.exp(-0.1));
+
+    await page.waitForTimeout(300);
+    const beforeWheel = await viewport();
+    await page.mouse.wheel(0, 100);
+    await expect.poll(async () => (await viewport()).zoom).toBeCloseTo(beforeWheel.zoom * Math.pow(2, -0.2));
+  });
+
   test('the toolbar settings survive closing and reopening the panel', async ({ page }) => {
     await openLineage(page, '/#/config/dataObjects/int-airports');
 
