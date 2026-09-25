@@ -326,7 +326,26 @@ Three things that are easy to break:
   column.
 - The hover text is an SVG `<title>`, first child of the edge's group, like the foreign key name.
 
-`tests/columnLineageEdges.test.ts` covers the derivation, `tests/e2e/column-lineage.spec.ts` the rendering.
+### Tracing a column
+
+A row with lineage offers a trace button on hover. It sets `tracedColumn` in `useLineageGraph()`,
+and `LineageTabCore` traces that column both ways through the **index**
+(`useFetchColumnLineageIndex`, `buildGraphTrace`) - the documents of the nodes shown would only
+reach as far as the graph does. Without a built index it falls back to exactly those documents
+(`traceIndex`), and the panel under the graph says so.
+
+`traceHighlights` decides what lights up, and only what the trace actually runs along: a column
+edge by its column pair; in the data view a flow edge carrying a traced pair; in the full view the
+edges of the actions reading or writing a traced column; in the action view an edge whose data
+object has a traced column written by the one action and read by the other. A relation never.
+The rows on the trace are the node's `data.tracedColumns`. The panel (`ColumnTracePanel`) counts
+the whole trace and splices in (`spliceNodePath`) what the graph does not show.
+
+The trace that is shown is module state in `LineageTabUtils.tsx`, like the grouping state, because
+`updateColumnEdges` has to re-apply it whenever it rebuilds the column edges. Clicking the pane or an
+edge ends it; so does the trace button of the start row.
+
+`tests/columnLineageEdges.test.ts` covers the derivation and the trace, `tests/e2e/column-lineage.spec.ts` the rendering.
 
 ## Touchpad and mouse wheel
 

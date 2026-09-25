@@ -596,7 +596,8 @@ export const CustomDataNode = ( {data} ) => {
         {showObjectTitle()}
         {showObjectName(layoutDirection)}
       </div>
-      {showColumns && <ColumnList columns={visibleColumns} isLoading={isSchemaLoading}/>}
+      {showColumns && <ColumnList nodeId={label} columns={visibleColumns} isLoading={isSchemaLoading}
+                                  tracedColumns={data.tracedColumns}/>}
       {/* the columns of a data object, only known where there is a configuration behind the node */}
       {canShowColumns &&
         <ColumnsToggle nodeId={label} display={columnDisplay ?? 'none'} onChange={handleColumnDisplay}

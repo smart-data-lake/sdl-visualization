@@ -44,8 +44,11 @@ import {
   selectEdge,
   setSelectedNode,
   spliceNodePath,
-  updateExpandSides
+  updateExpandSides,
+  buildGraphTrace, showColumnTrace, traceIndex,
 } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { useFetchColumnLineageIndex } from '../../../hooks/useFetchData';
+import { ColumnTracePanel } from './ColumnTracePanel';
 import CenteredCirularProgress from '../../Common/CenteredCircularProgress';
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
 import LineageGraphToolbar from './LineageGraphToolbar';
@@ -168,13 +171,32 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
     if (!justBuilt) revealNode(reactFlow, props.elementName);
   }, [props.elementName, props.elementType, rfContainerMounted])
 
+  /*
+    The column trace: every column the traced one depends on and every column depending on it,
+    highlighted where the graph shows them. Recomputed when the graph is rebuilt; an expansion
+    re-applies it by itself, see updateColumnEdges.
+  */
+  const { tracedColumn, setTracedColumn } = useLineageGraph();
+  const { data: builtIndex } = useFetchColumnLineageIndex(!props.runContext);
+  const trace = useMemo(() => {
+    if (!rfContainerMounted || !tracedColumn || props.runContext) return undefined;
+    const {index, complete} = traceIndex(builtIndex, reactFlow.getNodes());
+    return {trace: buildGraphTrace(index, tracedColumn), complete};
+  }, [tracedColumn, builtIndex, rfContainerMounted, props.runContext, reactFlow]);
+  // again after a rebuild, which starts from unstyled nodes
+  useEffect(() => {
+    if (rfContainerMounted) showColumnTrace(reactFlow, trace?.trace);
+  }, [trace, nodes, rfContainerMounted, reactFlow]);
+
   const onPaneClick = () => {
+    setTracedColumn(undefined);
     resetEdgeStyles(reactFlow);
     resetNodeStyles(reactFlow);
   }
 
   // highlight edge, its metric labels and src, target nodes' border
   const onEdgeClick = (_event, edge: ReactFlowEdge) => {
+    setTracedColumn(undefined);
     selectEdge(reactFlow, edge);
   }
 
@@ -221,6 +243,8 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
           <Controls showFitView={false} showInteractive={false} />
           <Background /> {/* Background macht fehler "<pattern> attribute x: Expected length, "NaN"!*/}
           <LineageGraphToolbar props={props}/>
+          {trace && <ColumnTracePanel trace={trace.trace} complete={trace.complete} props={props}
+                                      graphView={graphView} layout={layout} onClose={() => setTracedColumn(undefined)}/>}
         </ReactFlow>
       }
       {!rfContainerMounted && <CenteredCirularProgress/>}

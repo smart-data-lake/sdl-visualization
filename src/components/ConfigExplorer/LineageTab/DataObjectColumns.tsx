@@ -1,5 +1,6 @@
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import Box from '@mui/joy/Box';
 import LinearProgress from '@mui/joy/LinearProgress';
 import Tooltip from '@mui/joy/Tooltip';
@@ -7,8 +8,11 @@ import Typography from '@mui/joy/Typography';
 import { Handle, Position } from 'reactflow';
 
 import { useWorkspace } from '../../../hooks/useWorkspace';
+import { useFetchColumnLineageIndex } from '../../../hooks/useFetchData';
+import { useLineageGraph } from '../../../hooks/useLineage';
+import { indexedColumnIds } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { ColumnDisplay, ColumnInfo, ColumnLineageInfo, lessColumns, moreColumns } from '../../../util/ConfigExplorer/ColumnModel';
-import { ColumnTransformation } from '../../../util/ConfigExplorer/columnLineage';
+import { ColumnTransformation, columnId } from '../../../util/ConfigExplorer/columnLineage';
 import { ForeignKeyIcon, PrimaryKeyIcon, UnresolvedForeignKeyIcon } from './ColumnIcons';
 import './LineageTab.css';
 
@@ -161,7 +165,18 @@ function relatedDataObjectId(column: ColumnInfo): string | undefined {
     One column. The key icons are siblings of the handles, never their children - a handle with
     content in it would be draggable and would show up as an interactive part of the graph.
 */
-function ColumnRow({column}: {column: ColumnInfo}) {
+/** How a row takes part in the column trace that is shown, see traceHighlights. */
+interface RowTrace {
+    /** whether the column has any lineage to trace */
+    traceable: boolean;
+    /** on the trace that is shown */
+    traced: boolean;
+    /** the column the trace starts from */
+    isStart: boolean;
+    onTrace: () => void;
+}
+
+function ColumnRow({column, trace}: {column: ColumnInfo, trace: RowTrace}) {
     const hasReference = column.references.length > 0;
     const isUnresolved = hasReference && column.references.every(reference => !reference.resolved);
     const { navigateContent } = useWorkspace();
@@ -190,9 +205,11 @@ function ColumnRow({column}: {column: ColumnInfo}) {
                 </Typography>}
         </Box>
     );
+    const traceTitle = trace.isStart ? 'Stop tracing this column' : 'Trace this column: what it depends on, and what depends on it';
 
     return (
-        <Box className="lineage-column-row" data-testid={`column-${column.key}`}>
+        <Box className={`lineage-column-row${trace.traced ? ' lineage-column-traced' : ''}${trace.isStart ? ' lineage-column-trace-start' : ''}`}
+             data-testid={`column-${column.key}`}>
             {/* on every row, not only a key's: a column lineage edge can end on any column, and
                 ReactFlow silently drops an edge whose handle does not exist */}
             <Handle type="target" position={Position.Left} id={columnHandleId('target', column.key)}
@@ -203,6 +220,13 @@ function ColumnRow({column}: {column: ColumnInfo}) {
                     {label}
                   </Tooltip>
                 : label}
+            {trace.traceable &&
+                <Tooltip title={traceTitle} arrow disableInteractive size="sm" enterDelay={300}>
+                    <button type="button" className="lineage-column-trace nodrag" aria-label={traceTitle}
+                            data-testid={`trace-${column.key}`} onClick={trace.onTrace}>
+                        <AccountTreeOutlinedIcon className="lineage-column-trace-icon"/>
+                    </button>
+                </Tooltip>}
             <Handle type="source" position={Position.Right} id={columnHandleId('source', column.key)}
                     className="lineage-column-handle" style={columnHandleStyle('right')}/>
         </Box>
@@ -246,10 +270,29 @@ export function NodeRelationHandles({nodeId, outsetLeft = 0, outsetRight = 0}: {
  * row's height, so that the node does not change size between the placeholder and the columns that
  * replace it.
  */
-export function ColumnList({columns, isLoading}: {columns: ColumnInfo[], isLoading?: boolean}) {
+export function ColumnList({nodeId, columns, isLoading, tracedColumns}: {
+    nodeId: string,
+    columns: ColumnInfo[],
+    isLoading?: boolean,
+    /** the keys of the columns on the trace that is shown */
+    tracedColumns?: string[],
+}) {
+    const { tracedColumn, setTracedColumn } = useLineageGraph();
+    const { data: index } = useFetchColumnLineageIndex();
+    const inIndex = index ? indexedColumnIds(index) : undefined;
+    const rowTrace = (column: ColumnInfo): RowTrace => {
+        const isStart = tracedColumn?.dataObjectId === nodeId && columnId(tracedColumn) === columnId({dataObjectId: nodeId, column: column.key});
+        return {
+            // without an index, what this node's own lineage knows
+            traceable: inIndex ? inIndex.has(columnId({dataObjectId: nodeId, column: column.key})) : column.lineage.length > 0,
+            traced: tracedColumns?.includes(column.key) ?? false,
+            isStart,
+            onTrace: () => setTracedColumn(isStart ? undefined : {dataObjectId: nodeId, column: column.name}),
+        };
+    };
     return (
         <Box className="lineage-column-list">
-            {columns.map(column => <ColumnRow key={column.key} column={column}/>)}
+            {columns.map(column => <ColumnRow key={column.key} column={column} trace={rowTrace(column)}/>)}
             {isLoading && columns.length === 0 &&
                 <Box className="lineage-column-row">
                     <LinearProgress size="sm" sx={{width: '100%'}}/>

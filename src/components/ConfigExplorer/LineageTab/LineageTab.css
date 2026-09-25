@@ -155,6 +155,50 @@ svg.data-node-partition-state-icon {
 
 /* the column icons and their colours are in ColumnIcons.css, see the note there */
 
+/*
+  The column trace (see traceHighlights): a button that shows on hover of a row that has lineage,
+  and stays on the row the trace starts from, and the rows on the trace in the highlight colour.
+  The row keeps its box - the column handles are positioned against it.
+*/
+.lineage-column-trace {
+  visibility: hidden;
+  display: inline-flex;
+  flex: none;
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+}
+
+.lineage-column-row:hover .lineage-column-trace,
+.lineage-column-trace-start .lineage-column-trace,
+.lineage-column-trace:focus-visible {
+  visibility: visible;
+}
+
+.lineage-column-trace:hover,
+.lineage-column-trace-start .lineage-column-trace {
+  color: #096bde;
+}
+
+.lineage-column-trace-icon {
+  font-size: 14px !important;
+}
+
+.lineage-column-traced {
+  background: rgba(9, 107, 222, 0.12);
+}
+
+.lineage-column-traced .lineage-column-name {
+  color: #096bde;
+}
+
+.lineage-column-trace-start .lineage-column-name {
+  font-weight: 600;
+}
+
 /* the column handles are anchors for the relation edges, nothing is ever dragged from them */
 .react-flow__handle.lineage-column-handle {
   min-width: 1px;

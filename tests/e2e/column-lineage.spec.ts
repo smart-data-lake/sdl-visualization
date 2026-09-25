@@ -101,3 +101,62 @@ test.describe('column lineage in the data view', () => {
     await expect(page.getByRole('tooltip')).toContainText('historize-airports: current_timestamp()');
   });
 });
+
+test.describe('tracing a column', () => {
+  const traceButton = (page: Page, nodeId: string, column: string) =>
+    node(page, nodeId).getByTestId(`column-${column}`).getByTestId(`trace-${column}`);
+  const row = (page: Page, nodeId: string, column: string) => node(page, nodeId).getByTestId(`column-${column}`);
+  const panel = (page: Page) => page.getByTestId('column-trace-panel');
+  const isHighlighted = (page: Page, id: string) =>
+    edge(page, id).locator('path.react-flow__edge-path').evaluate((el) => (el as SVGPathElement).style.stroke);
+
+  test('highlights what a column depends on and what depends on it, and nothing else', async ({ page }) => {
+    await openDataView(page, 'int-airports');
+    await expandColumns(page, 'int-airports').click();
+    await expandColumns(page, 'int-airports').click();
+
+    await row(page, 'int-airports', 'name').hover();
+    await traceButton(page, 'int-airports', 'name').click();
+
+    // stg-airports.name upstream; arr_name and dep_name downstream, each once more in btl-distances
+    await expect(panel(page)).toContainText('int-airports.name: 5 columns in 4 data objects');
+    await expect(row(page, 'int-airports', 'name')).toHaveClass(/lineage-column-trace-start/);
+    await expect(row(page, 'int-airports', 'ident')).not.toHaveClass(/lineage-column-traced/);
+
+    await expect.poll(() => isHighlighted(page, 'stg-airports.name->int-airports.name::lineage')).toBe('rgb(9, 107, 222)');
+    await expect.poll(() => isHighlighted(page, 'int-airports.name->btl-departures-arrivals-airports.dep_name::lineage')).toBe('rgb(9, 107, 222)');
+    expect(await isHighlighted(page, 'stg-airports.ident->int-airports.ident::lineage')).not.toBe('rgb(9, 107, 222)');
+
+    // btl-distances is on the trace but not in the graph
+    await page.getByTestId('column-trace-show').click();
+    await expect(node(page, 'btl-distances')).toBeVisible();
+    await expect(page.getByTestId('column-trace-show')).toHaveCount(0);
+    await expect.poll(() => isHighlighted(page, 'btl-departures-arrivals-airports->compute-distances->btl-distances')).toBe('rgb(9, 107, 222)');
+
+    // clicking the pane ends it
+    // at its right border, clear of the toolbar, the controls and the nodes
+    const pane = (await page.locator('.react-flow__pane').boundingBox())!;
+    await page.locator('.react-flow__pane').click({ position: { x: pane.width - 5, y: pane.height / 2 } });
+    await expect(panel(page)).toHaveCount(0);
+    await expect(row(page, 'int-airports', 'name')).not.toHaveClass(/lineage-column-traced/);
+  });
+
+  test('in the full view, only the edges of the actions the column passes through', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/int-departures');
+    await page.getByRole('button', { name: 'Open lineage' }).click();
+    await expect(node(page, 'int-departures')).toBeVisible();
+    await expandColumns(page, 'int-departures').click();
+    await expandColumns(page, 'int-departures').click();
+
+    await row(page, 'int-departures', 'dt').hover();
+    await traceButton(page, 'int-departures', 'dt').click();
+    await expect(panel(page)).toContainText('int-departures.dt: 1 column in 2 data objects');
+    // dt comes from ext-departures through download-deduplicate-departures, and nothing reads it
+    await expect.poll(() => isHighlighted(page, 'download-deduplicate-departures_to_int-departures')).toBe('rgb(9, 107, 222)');
+    expect(await isHighlighted(page, 'join-departures-airports_from_int-departures')).not.toBe('rgb(9, 107, 222)');
+
+    // tracing it again stops it
+    await traceButton(page, 'int-departures', 'dt').click();
+    await expect(panel(page)).toHaveCount(0);
+  });
+});
