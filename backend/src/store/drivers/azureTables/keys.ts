@@ -2,7 +2,7 @@ import {
   assertKeyPart,
   assertKeySafe,
 } from '../../limits.js';
-import type { Scope } from '../../types.js';
+import type { Scope, Subtype } from '../../types.js';
 
 /**
  * Partition and row keys for the Azure Tables driver.
@@ -76,7 +76,7 @@ export const keys = {
   configElements: (scope: Scope, version: string) =>
     `${scopeKey(scope)}|${assertKeyPart(version, 'version')}`,
   elements: (scope: Scope, elementType: string) => `${scopeKey(scope)}|${elementType}`,
-  tstamps: (scope: Scope, subtype: 'schema' | 'stats', elementName: string) =>
+  tstamps: (scope: Scope, subtype: Subtype, elementName: string) =>
     `${scopeKey(scope)}|${subtype}|${assertKeyPart(elementName, 'dataObjectId')}`,
   mcpTokens: (scope: Scope) => scopeKey(scope),
   workspaces: () => 'WS',

@@ -81,8 +81,8 @@ async function seedStates(app: FastifyInstance): Promise<void> {
   }
 }
 
-/** Fixture filenames are "{dataObjectId}.{schema|stats}.{tstamp}.json". */
-const SCHEMA_FILE = /^(.+)\.(schema|stats)\.(\d+)\.json$/;
+/** Fixture filenames are "{dataObjectId}.{schema|stats|lineage}.{tstamp}.json". */
+const SCHEMA_FILE = /^(.+)\.(schema|stats|lineage)\.(\d+)\.json$/;
 
 async function seedSchemaAndStats(app: FastifyInstance): Promise<void> {
   const dir = path.join(FIXTURES, 'shared/schema');

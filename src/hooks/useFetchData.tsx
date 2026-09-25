@@ -208,6 +208,46 @@ export const useFetchDataObjectStats = (statsEntry: TstampEntry | undefined) => 
   })); //24h
 };
 
+/**** DataObject column lineage ****/
+
+/**
+ * Quiet, like the search: the lineage is read inside every node of the lineage graph, and most
+ * DataObjects have none - a source is written by no DataFrame action.
+ */
+export const useFetchDataObjectLineageEntries = (dataObjectId: string | undefined, enabled = true) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["lineageEntries", dataObjectId, tenant, repo, env],
+    queryFn: () => fetcher().getTstampEntries("schema", "lineage", dataObjectId!, tenant!, repo!, env!),
+    enabled: enabled && !!dataObjectId && !!fetcher().getColumnLineage,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+};
+
+export const useFetchDataObjectLineage = (lineageEntry: TstampEntry | undefined) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["lineage", lineageEntry, tenant, repo, env],
+    queryFn: () => fetcher().getColumnLineage?.(lineageEntry, tenant!, repo!, env!) ?? Promise.resolve(undefined),
+    enabled: !!lineageEntry,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+};
+
+/** Quiet too: an index exists only once it was built. */
+export const useFetchColumnLineageIndex = (enabled = true) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQuery({
+    queryKey: ["lineageIndex", tenant, repo, env],
+    queryFn: () => fetcher().getColumnLineageIndex?.(tenant!, repo!, env!) ?? Promise.resolve(undefined),
+    enabled: enabled,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+};
+
 /**** Element description markdown files ****/
 export const useFetchDescription = (
   elementType: string | undefined,

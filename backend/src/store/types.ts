@@ -48,10 +48,10 @@ export interface StoredToken {
   lastUsedAt?: string;
 }
 
-/** Which of the two per-timestamp series a record belongs to. */
-export type Subtype = 'schema' | 'stats';
+/** Which of the per-timestamp series a record belongs to. */
+export type Subtype = 'schema' | 'stats' | 'lineage';
 
-/** One recorded schema or statistics snapshot: the index entry beside its blob. */
+/** One recorded schema, statistics or column lineage snapshot: the index entry beside its blob. */
 export interface TstampEntry {
   tstamp: number;
   blobPath: string;

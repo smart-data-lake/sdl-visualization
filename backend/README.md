@@ -249,9 +249,29 @@ lazily, so it is not parsed on the upload path; `test/unit/bundle.test.ts` asser
 Serving the index through an authenticated API forfeits CDN caching. The ETag recovers most of
 it: a reload after no rebuild is a 304.
 
+## Column lineage
+
+SDLB's `--test dry-run-with-lineage-export` uploads one document per output DataObject, in the
+OpenLineage `columnLineage` format, to `PUT /api/v1/dataobject/lineage/{dataObjectId}?…&tstamp=`.
+It is stored beside the schemas and statistics, as a third timestamp series.
+
+| route | does |
+|---|---|
+| `PUT /api/v1/dataobject/lineage/{id}?…&tstamp=` | one document, what SDLB sends today |
+| `PUT /api/v1/dataobject/lineage?…&tstamp=` | an array of documents, e.g. every action of a dry-run in one request |
+| `GET /api/v1/dataobject/lineage/{id}[/tstamps]?…` | a stored document, and its timestamps newest first |
+| `GET /api/v1/lineage/index?…` | every column dependency, without the transformation text; `ETag` follows the blobs |
+| `POST /api/v1/lineage/index?…` | forces a rebuild |
+
+In a batch, documents naming the same DataObject are stored together as an array, so one
+action's document does not replace another's; a batch with one malformed document is refused as
+a whole. The index is **rebuilt lazily**, on the first read after the newest blob of any
+DataObject changed, so a dry-run uploading two hundred single documents costs one rebuild, not
+two hundred. Like the search index, none of this is in `spec/upstream-openapi.json`.
+
 ## Code copied from the frontend
 
-Seven pieces of logic exist twice, in `src/domain/`, and must not drift:
+Eight pieces of logic exist twice, in `src/domain/`, and must not drift:
 
 | here | copied from |
 |---|---|
@@ -262,6 +282,7 @@ Seven pieces of logic exist twice, in `src/domain/`, and must not drift:
 | `stateFile.ts` (normalisation) | `src/util/WorkflowsExplorer/Attempt.ts` |
 | `stateFile.ts` (index record, including `actionsInDagOrder`) | `build_index.py`'s `getRuns()` |
 | `search.ts` | `src/util/ConfigExplorer/searchDocuments.ts` |
+| `columnLineage.ts` | `src/util/ConfigExplorer/columnLineage.ts` |
 
 `test/unit/parity.test.ts` runs both implementations over the real getting-started
 configuration and asserts they agree, which catches drift that mirrored test cases
@@ -338,7 +359,7 @@ not expire mid-run, so `OAuthMode` buys nothing here.
 
 Things that are easy to get wrong, and fail quietly:
 
-- Configuration, schema and statistics are **PUT**, not POST. Only the initial state
+- Configuration, schema, statistics and column lineage are **PUT**, not POST. Only the initial state
   is POST; an action update is PATCH.
 - `descriptions/list` must answer with snake_case `last_modified` and a field
   literally called `type` — SDLB camelises the response and renames `type` to
@@ -441,4 +462,5 @@ anything it decides to in the user's own working copy.
 | `compare_runs` | what changed since it last worked |
 | `diagnose_run` | the six calls above, composed, with upstream blame and schema drift |
 | `get_dataobject_schema` / `get_dataobject_stats` / `diff_schema` | recorded schemas and statistics |
+| `get_column_lineage` | the exported column lineage of a data object, or a column traced up- or downstream, `maxDepth` actions far (default 10) |
 | `list_scopes` | which repositories and environments this deployment serves |

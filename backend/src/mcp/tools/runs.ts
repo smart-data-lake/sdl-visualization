@@ -4,6 +4,12 @@ import type { Scope } from '../../store/types.js';
 import * as runsService from '../../services/runs.js';
 import * as diagnostics from '../../services/diagnostics.js';
 import * as schemaStats from '../../services/schemaStats.js';
+import * as columnLineage from '../../services/columnLineage.js';
+import {
+  columnId, columnKey, indexedColumns, parseColumnLineage, parseColumnLineageIndex, traceColumn,
+  type ColumnLineageIndex,
+} from '../../domain/columnLineage.js';
+import { HttpError } from '../../errors.js';
 import { json, truncateList } from '../format.js';
 
 /**
@@ -13,6 +19,19 @@ import { json, truncateList } from '../format.js';
  * actions that did not succeed; the full detail of one action is get_action_result;
  * and diagnose_run composes the six calls an agent would otherwise make into one.
  */
+
+const DEFAULT_TRACE_DEPTH = 10;
+
+/** Undefined only where nothing was recorded; any other failure is the caller's to see. */
+async function readIndex(scope: Scope): Promise<ColumnLineageIndex | undefined> {
+  try {
+    const { body } = await columnLineage.readLineageIndex(scope);
+    return parseColumnLineageIndex(JSON.parse(body.toString('utf8')));
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) return undefined;
+    throw error;
+  }
+}
 
 export function registerRunTools(server: McpServer, scope: Scope): void {
   server.registerTool(
@@ -186,6 +205,55 @@ export function registerRunTools(server: McpServer, scope: Scope): void {
       if (at === undefined) return json({ error: `No statistics recorded for ${dataObjectId}` });
       const { stats } = await schemaStats.getStats(scope, dataObjectId, at);
       return json({ dataObjectId, tstamp: at, stats });
+    },
+  );
+
+  server.registerTool(
+    'get_column_lineage',
+    {
+      title: 'Get the column lineage of a data object',
+      description:
+        'From which columns of which input data objects each column of a data object is created, ' +
+        'and how, as SDLB exported it (dry-run-with-lineage-export). With a column, instead every ' +
+        'column it depends on (upstream) or that depends on it (downstream), across actions, up to ' +
+        'maxDepth actions away. Not the same as get_lineage, which is the data object graph of the configuration.',
+      inputSchema: z.object({
+        dataObjectId: z.string(),
+        column: z.string().optional(),
+        direction: z.enum(['upstream', 'downstream']).optional().describe('with a column; default upstream'),
+        maxDepth: z.number().int().min(1).optional()
+          .describe(`with a column: how many actions away to follow it; default ${DEFAULT_TRACE_DEPTH}`),
+      }),
+    },
+    async ({ dataObjectId, column, direction = 'upstream', maxDepth = DEFAULT_TRACE_DEPTH }) => {
+      if (column) {
+        const index = await readIndex(scope);
+        if (!index) return json({ error: 'No column lineage recorded' });
+        const known = indexedColumns(index, dataObjectId);
+        if (known.length === 0) return json({ error: `No column lineage recorded for ${dataObjectId}` });
+        const exported = known.find((c) => columnKey(c) === columnKey(column));
+        if (!exported) return json({ error: `${dataObjectId} has no column ${column} in its lineage`, columns: known });
+
+        const trace = traceColumn(index, { dataObjectId, column }, direction, maxDepth);
+        const ref = (dataObject: string, col: string) => `${dataObject}.${col}`;
+        // the columns reached, spelled as exported and nearest first, from the edges that reached them
+        const reached = new Map<string, string>();
+        for (const [fromDo, fromCol, toDo, toCol] of trace.edges) {
+          const [dataObject, col] = direction === 'upstream' ? [fromDo, fromCol] : [toDo, toCol];
+          const id = columnId({ dataObjectId: dataObject, column: col });
+          if (id !== columnId({ dataObjectId, column }) && !reached.has(id)) reached.set(id, ref(dataObject, col));
+        }
+        return json({
+          dataObjectId, column: exported, direction, maxDepth,
+          columns: [...reached.values()],
+          dependencies: trace.edges.map(([fromDo, fromCol, toDo, toCol, actionId]) =>
+            ({ from: ref(fromDo, fromCol), to: ref(toDo, toCol), actionId })),
+          ...(trace.truncated ? { truncated: `more columns lie beyond ${maxDepth} actions; raise maxDepth to see them` } : {}),
+        });
+      }
+      const at = await schemaStats.tstampAt(scope, 'lineage', dataObjectId);
+      if (at === undefined) return json({ error: `No column lineage recorded for ${dataObjectId}` });
+      return json({ dataObjectId, tstamp: at, documents: parseColumnLineage(await schemaStats.getLineage(scope, dataObjectId, at)) });
     },
   );
 

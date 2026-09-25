@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
@@ -11,6 +11,7 @@ import {
   selectedPartitionValues,
 } from '../../../src/util/WorkflowsExplorer/partitionValues.ts';
 import * as frontendSearch from '../../../src/util/ConfigExplorer/searchDocuments.ts';
+import * as frontendLineage from '../../../src/util/ConfigExplorer/columnLineage.ts';
 import { ConfigDataLists_ } from '../../src/domain/filter.js';
 import { buildFullGraph } from '../../src/domain/graph.js';
 import {
@@ -22,13 +23,14 @@ import {
   selectedPartitionValues as portedSelected,
 } from '../../src/domain/partitionValues.js';
 import * as portedSearch from '../../src/domain/search.js';
+import * as portedLineage from '../../src/domain/columnLineage.js';
 import { FIXTURES } from '../../scripts/seed-fixtures.js';
 
 /**
  * The ported domain logic, checked against the frontend originals it was copied from.
  *
  * This is the test that matters for the copies in src/domain: metrics, the graph
- * model, the configuration filters and the search documents. Mirroring the frontend's own test cases
+ * model, the configuration filters, the search documents and the column lineage. Mirroring the frontend's own test cases
  * would only prove the copy passes the same examples; running both implementations
  * over the real getting-started configuration and asserting they agree is what
  * actually catches drift, including in cases nobody thought to write a case for.
@@ -218,5 +220,53 @@ describe('the search documents are extracted the same way on both sides', () => 
     expect(portedSearch.SEARCH_SCHEMA_VERSION).toBe(frontendSearch.SEARCH_SCHEMA_VERSION);
     expect(portedSearch.LIMITS).toEqual(frontendSearch.LIMITS);
     expect(portedSearch.KIND_BOOST).toEqual(frontendSearch.KIND_BOOST);
+  });
+});
+
+const lineageDir = path.join(FIXTURES, 'shared/schema');
+const lineageFiles = (await readdir(lineageDir)).filter((f) => /\.lineage\.\d+\.json$/.test(f)).sort();
+const lineageRaws = await Promise.all(lineageFiles.map(async (f) => JSON.parse(await readFile(path.join(lineageDir, f), 'utf8'))));
+
+describe('column lineage is read, indexed and traced the same way on both sides', () => {
+  const raws = lineageRaws;
+  const malformed = [null, { dataObjectId: 'x' }, { actionId: 'a', dataObjectId: 'x', columnLineage: { fields: { c: 'no', d: { inputFields: [{ name: 'i' }] } } } }];
+
+  test('the documents, malformed ones included', () => {
+    for (const raw of [...raws, malformed, ...malformed]) {
+      expect(portedLineage.parseColumnLineage(raw)).toEqual(frontendLineage.parseColumnLineage(raw));
+    }
+  });
+
+  const sourcesOf = (lib: typeof frontendLineage) =>
+    raws.flatMap((raw, i) => lib.parseColumnLineage(raw).map((lineage) => ({ lineage, tstamp: i })));
+
+  test('the index', () => {
+    expect(portedLineage.buildColumnLineageIndex(sourcesOf(portedLineage as any), 'x'))
+      .toEqual(frontendLineage.buildColumnLineageIndex(sourcesOf(frontendLineage), 'x'));
+    expect(portedLineage.COLUMN_LINEAGE_INDEX_VERSION).toBe(frontendLineage.COLUMN_LINEAGE_INDEX_VERSION);
+  });
+
+  test('a trace from every column, in both directions', () => {
+    const index = frontendLineage.buildColumnLineageIndex(sourcesOf(frontendLineage), 'x');
+    for (const [fromDo, fromCol, toDo, toCol] of index.edges) {
+      for (const direction of ['upstream', 'downstream'] as const) {
+        for (const start of [{ dataObjectId: fromDo, column: fromCol }, { dataObjectId: toDo, column: toCol }]) {
+          for (const maxDepth of [1, undefined]) {
+            const ported = portedLineage.traceColumn(index, start, direction, maxDepth);
+            const frontend = frontendLineage.traceColumn(index, start, direction, maxDepth);
+            expect([...ported.columns]).toEqual([...frontend.columns]);
+            expect(ported.edges).toEqual(frontend.edges);
+            expect(ported.truncated).toBe(frontend.truncated);
+          }
+        }
+      }
+    }
+  });
+
+  test('the columns known per DataObject', () => {
+    const index = frontendLineage.buildColumnLineageIndex(sourcesOf(frontendLineage), 'x');
+    for (const id of new Set(index.edges.flatMap((e) => [e[0], e[2]]))) {
+      expect(portedLineage.indexedColumns(index, id)).toEqual(frontendLineage.indexedColumns(index, id));
+    }
   });
 });

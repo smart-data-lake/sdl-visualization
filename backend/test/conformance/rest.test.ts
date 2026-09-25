@@ -260,6 +260,66 @@ describe('schema and statistics', () => {
   });
 });
 
+describe('column lineage', () => {
+  const lineageDoc = (actionId: string, dataObjectId: string, from: string) => ({
+    actionId, dataObjectId,
+    columnLineage: { fields: { id: { inputFields: [{ namespace: 'sdlb', name: from, field: 'id', transformations: [] }] } } },
+  });
+  const put = (url: string, payload: unknown) => app.inject({ method: 'PUT', url, payload: payload as any });
+
+  test('a document comes back as it was uploaded', async () => {
+    const original = JSON.parse(
+      await readFile(path.join(FIXTURES, 'shared/schema/int-airports.lineage.1758800000.json'), 'utf8'),
+    );
+    expect(await json(`/api/v1/dataobject/lineage/int-airports/tstamps?${Q}`)).toEqual([1758800000]);
+    expect(await json(`/api/v1/dataobject/lineage/int-airports?${Q}&tstamp=1758800000`)).toEqual(original);
+  });
+
+  test('the index covers the uploaded documents, without their transformations', async () => {
+    const index = await json(`/api/v1/lineage/index?${Q}`);
+    expect(index.documents.map((d: any) => d.dataObjectId)).toEqual(
+      ['btl-departures-arrivals-airports', 'btl-distances', 'int-airports', 'int-departures'],
+    );
+    expect(index.edges).toContainEqual(['stg-airports', 'ident', 'int-airports', 'ident', 'historize-airports']);
+    expect(JSON.stringify(index)).not.toContain('IDENTITY');
+  });
+
+  test('an unchanged index is answered with a 304', async () => {
+    const first = await get(`/api/v1/lineage/index?${Q}`);
+    const again = await app.inject({
+      method: 'GET', url: `/api/v1/lineage/index?${Q}`, headers: { 'if-none-match': first.headers.etag as string },
+    });
+    expect(again.statusCode).toBe(304);
+  });
+
+  test('a batch stores one blob per DataObject, keeping every action that wrote it', async () => {
+    const response = await put(`/api/v1/dataobject/lineage?${Q}&tstamp=1758800100`, [
+      lineageDoc('a1', 'lineage-batch-out', 'lineage-batch-in'),
+      lineageDoc('a2', 'lineage-batch-out', 'lineage-batch-other'),
+      lineageDoc('a3', 'lineage-batch-next', 'lineage-batch-out'),
+    ]);
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().dataObjectIds).toEqual(['lineage-batch-out', 'lineage-batch-next']);
+
+    const stored = await json(`/api/v1/dataobject/lineage/lineage-batch-out?${Q}&tstamp=1758800100`);
+    expect(stored.map((d: any) => d.actionId)).toEqual(['a1', 'a2']);
+
+    // the index follows on the next read
+    const index = await json(`/api/v1/lineage/index?${Q}`);
+    expect(index.edges).toContainEqual(['lineage-batch-other', 'id', 'lineage-batch-out', 'id', 'a2']);
+    expect(index.edges).toContainEqual(['lineage-batch-out', 'id', 'lineage-batch-next', 'id', 'a3']);
+  });
+
+  test('a batch that is not an array of lineage documents is refused as a whole', async () => {
+    expect((await put(`/api/v1/dataobject/lineage?${Q}&tstamp=1758800200`, { not: 'an array' })).statusCode).toBe(400);
+    const response = await put(`/api/v1/dataobject/lineage?${Q}&tstamp=1758800200`, [
+      lineageDoc('a1', 'lineage-refused', 'x'), { dataObjectId: 'no-action' },
+    ]);
+    expect(response.statusCode).toBe(400);
+    expect((await get(`/api/v1/dataobject/lineage/lineage-refused/tstamps?${Q}`)).json()).toEqual([]);
+  });
+});
+
 describe('descriptions', () => {
   test('markdown comes back as JSON with a content field', async () => {
     const body = await json(

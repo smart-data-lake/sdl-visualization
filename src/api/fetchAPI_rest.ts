@@ -3,6 +3,7 @@ import { LicenseInfo, SchemaData, StateFile, Stats, TstampEntry, User, Workflow,
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import { dateFromNumber, sortIfArray } from "../util/helpers";
 import { parseUtcDate } from "../util/WorkflowsExplorer/date";
+import { ColumnLineage, ColumnLineageIndex, parseColumnLineage, parseColumnLineageIndex } from "../util/ConfigExplorer/columnLineage";
 import { fetchAPI, SearchIndexBundle } from "./fetchAPI";
 
 export function processWorkflows(entries: any[]): Workflow[] {
@@ -248,6 +249,23 @@ export class fetchAPI_rest implements fetchAPI {
             console.log(error);
             return undefined;
         });
+    }
+
+    getColumnLineage = async (lineageTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<ColumnLineage[] | undefined> => {
+        if (!lineageTstampEntry?.elementName || !lineageTstampEntry?.tstamp) return undefined;
+        return this.fetch(`${this.url}/dataobject/lineage/${lineageTstampEntry.elementName}?tenant=${tenant}&repo=${repo}&env=${env}&tstamp=${lineageTstampEntry.ts}`)
+        .then((parsedJson) => parsedJson && parseColumnLineage(parsedJson))
+        .catch((error) => {
+            console.log(error);
+            return undefined;
+        });
+    }
+
+    getColumnLineageIndex = async (tenant: string, repo: string, env: string): Promise<ColumnLineageIndex | undefined> => {
+        const response = await fetch(this.scopedUrl(`${this.url}/lineage/index?tenant=${tenant}&repo=${repo}&env=${env}`), await this.getRequestInfo());
+        if (response.status === 404) return undefined;
+        if (!response.ok) throw new Error(`could not load the column lineage index (${response.status})`);
+        return parseColumnLineageIndex(await response.json());
     }
 
     clearCache = () => undefined    

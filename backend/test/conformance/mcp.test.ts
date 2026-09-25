@@ -66,6 +66,7 @@ describe('the tool surface', () => {
       'diff_schema',
       'find_similar_dataobjects',
       'get_action_result',
+      'get_column_lineage',
       'get_config_element',
       'get_dataobject_schema',
       'get_dataobject_stats',
@@ -274,6 +275,54 @@ describe('schema tools', () => {
 
   test('a data object with nothing recorded says so rather than failing', async () => {
     const { value } = await callTool('get_dataobject_stats', { dataObjectId: 'stg-airports' });
+    expect(value.error).toContain('stg-airports');
+  });
+});
+
+describe('column lineage tool', () => {
+  test('without a column it returns the documents of the newest export', async () => {
+    const { value } = await callTool('get_column_lineage', { dataObjectId: 'int-airports' });
+    expect(value.tstamp).toBe(1758800000);
+    expect(value.documents[0].actionId).toBe('historize-airports');
+  });
+
+  test('with a column it traces it across actions, nearest first', async () => {
+    const { value } = await callTool('get_column_lineage', { dataObjectId: 'btl-distances', column: 'dep_name' });
+    expect(value.columns).toEqual(['btl-departures-arrivals-airports.dep_name', 'int-airports.name', 'stg-airports.name']);
+    expect(value.dependencies[0]).toEqual({
+      from: 'btl-departures-arrivals-airports.dep_name', to: 'btl-distances.dep_name', actionId: 'compute-distances',
+    });
+    expect(value).not.toHaveProperty('truncated');
+  });
+
+  test('columns are named as exported, whatever case they were asked in', async () => {
+    const { value } = await callTool('get_column_lineage', {
+      dataObjectId: 'int-departures', column: 'ESTDEPARTUREAIRPORT', direction: 'downstream',
+    });
+    expect(value.column).toBe('estDepartureAirport');
+    expect(value.columns).toEqual([
+      'btl-departures-arrivals-airports.estdepartureairport', 'btl-distances.estdepartureairport',
+    ]);
+    const upstream = await callTool('get_column_lineage', { dataObjectId: 'int-departures', column: 'estdepartureairport' });
+    expect(upstream.value.columns).toEqual(['ext-departures.estDepartureAirport']);
+  });
+
+  test('maxDepth stops the trace and says there is more', async () => {
+    const { value } = await callTool('get_column_lineage', { dataObjectId: 'btl-distances', column: 'dep_name', maxDepth: 1 });
+    expect(value.columns).toEqual(['btl-departures-arrivals-airports.dep_name']);
+    expect(value.truncated).toContain('maxDepth');
+  });
+
+  test('an unknown column is an error that lists the known ones', async () => {
+    const { value } = await callTool('get_column_lineage', { dataObjectId: 'btl-distances', column: 'dep_nmae' });
+    expect(value.error).toContain('dep_nmae');
+    expect(value.columns).toContain('dep_name');
+    const other = await callTool('get_column_lineage', { dataObjectId: 'no-such-object', column: 'x' });
+    expect(other.value.error).toContain('no-such-object');
+  });
+
+  test('a data object without lineage says so rather than failing', async () => {
+    const { value } = await callTool('get_column_lineage', { dataObjectId: 'stg-airports' });
     expect(value.error).toContain('stg-airports');
   });
 });
