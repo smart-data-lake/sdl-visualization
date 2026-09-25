@@ -298,15 +298,25 @@ export class Row implements MetaDataBaseObject {
     tstamp: Date;
   }
 
+  export type SchemaDataType = string|SchemaArrayType|SchemaMapType|SchemaStructType;
   export interface SchemaColumn {
     name : string;
-    dataType: string|SchemaArrayType|SchemaStructType;
+    dataType: SchemaDataType;
     nullable?: boolean;
     comment?: string;
   }
+  // the element and key/value comments describe the pseudo-rows, which have no field of their own
   export interface SchemaArrayType {
     dataType: 'array';
-    elementType: string|SchemaArrayType|SchemaStructType;
+    elementType: SchemaDataType;
+    elementComment?: string;
+  }
+  export interface SchemaMapType {
+    dataType: 'map';
+    keyType: SchemaDataType;
+    valueType: SchemaDataType;
+    keyComment?: string;
+    valueComment?: string;
   }
   export interface SchemaStructType {
     dataType: 'struct';

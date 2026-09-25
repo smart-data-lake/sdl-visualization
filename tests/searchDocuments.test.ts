@@ -121,6 +121,19 @@ test('nested columns flatten to the dotted paths the schema table uses', () => {
     .toEqual(['addr', 'addr.city', 'legs', 'legs.[]', 'props', 'props.key', 'props.value']);
 });
 
+test('the array element and map key/value rows take their comment from the parent data type', () => {
+  // SDLB writes a markdown description of `a.[]`, `m.key`, `m.value` there, having no field to put it on
+  const columns = [
+    { name: 'tags', dataType: { dataType: 'array', elementType: 'string', elementComment: 'a free-text tag' } },
+    { name: 'attrs', dataType: { dataType: 'map', keyType: 'string', keyComment: 'attribute name',
+      valueType: { dataType: 'struct', fields: [{ name: 'v', dataType: 'string', comment: 'the value' }] }, valueComment: 'attribute value' } },
+  ] as any;
+  const comments = Object.fromEntries(flattenColumns(columns).map(c => [c.path, c.comment]));
+  expect(comments).toEqual({ 'tags': undefined, 'tags.[]': 'a free-text tag', 'attrs': undefined,
+    'attrs.key': 'attribute name', 'attrs.value': 'attribute value', 'attrs.value.v': 'the value' });
+  expect(byId(columnDocuments('d1', { schema: columns }), 'c:d1:attrs.key')!.description).toBe('attribute name');
+});
+
 test('flattening stops at the depth limit rather than following a recursive schema', () => {
   const deep = (n: number): any => (n === 0 ? 'string' : { dataType: 'struct', fields: [{ name: `l${n}`, dataType: deep(n - 1) }] });
   const paths = flattenColumns([{ name: 'root', dataType: deep(10) }] as any, 3).map(c => c.path);

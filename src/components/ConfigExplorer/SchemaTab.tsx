@@ -185,7 +185,7 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
     } else if (dataType?.dataType === 'array') {
       const currentPath = path+'.[]';
       // create entry
-      const currentRow: any = {id: ++currentId, parentId: parentId, path: currentPath, name: '-element-', stats: {}}
+      const currentRow: any = {id: ++currentId, parentId: parentId, path: currentPath, name: '-element-', description: dataType.elementComment, stats: {}}
       rows.push(currentRow)
       // handle children
       const childRows = numberDataType(dataType.elementType, currentPath, currentRow.id);
@@ -195,19 +195,19 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
       // handle key
       const keyCurrentPath = path+'.key';
       // create key entry
-      const keyCurrentRow: any = {id: ++currentId, parentId: parentId, path: keyCurrentPath, name: '-key-', stats: {}}
+      const keyCurrentRow: any = {id: ++currentId, parentId: parentId, path: keyCurrentPath, name: '-key-', description: dataType.keyComment, stats: {}}
       rows.push(keyCurrentRow)
       // handle key children
-      const keyChildRows = numberDataType(dataType.elementType, keyCurrentPath, keyCurrentRow.id);
+      const keyChildRows = numberDataType(dataType.keyType, keyCurrentPath, keyCurrentRow.id);
       keyCurrentRow.dataType = (keyChildRows.length === 0 ? dataType.keyType : dataType.keyType.dataType);
       rows.push(...keyChildRows);
       // handle value
       const valueCurrentPath = path+'.value';
       // create value entry
-      const valueCurrentRow: any = {id: ++currentId, parentId: parentId, path: valueCurrentPath, name: '-value-', stats: {}}
+      const valueCurrentRow: any = {id: ++currentId, parentId: parentId, path: valueCurrentPath, name: '-value-', description: dataType.valueComment, stats: {}}
       rows.push(valueCurrentRow)
       // handle value children
-      const valueChildRows = numberDataType(dataType.elementType, valueCurrentPath, valueCurrentRow.id);
+      const valueChildRows = numberDataType(dataType.valueType, valueCurrentPath, valueCurrentRow.id);
       valueCurrentRow.dataType = (valueChildRows.length === 0 ? dataType.valueType : dataType.valueType.dataType);
       rows.push(...valueChildRows);
     }
