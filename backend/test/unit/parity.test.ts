@@ -204,6 +204,15 @@ describe('the search documents are extracted the same way on both sides', () => 
       .toEqual(byDocId(frontendSearch.columnDocuments('btl-distances', commented, 17)));
   });
 
+  test('the comments of array element and map key/value rows', () => {
+    const nested = { schema: [
+      { name: 'tags', dataType: { dataType: 'array', elementType: 'string', elementComment: 'a tag' } },
+      { name: 'attrs', dataType: { dataType: 'map', keyType: 'string', valueType: 'string', keyComment: 'name', valueComment: 'value' } },
+    ] } as any;
+    expect(byDocId(portedSearch.columnDocuments('d1', nested)))
+      .toEqual(byDocId(frontendSearch.columnDocuments('d1', nested)));
+  });
+
   test('and the options, which MiniSearch.loadJS needs to be identical on both sides', () => {
     expect(portedSearch.SEARCH_INDEX_OPTIONS).toEqual(frontendSearch.SEARCH_INDEX_OPTIONS);
     expect(portedSearch.SEARCH_SCHEMA_VERSION).toBe(frontendSearch.SEARCH_SCHEMA_VERSION);

@@ -188,6 +188,7 @@ export interface FlatColumn { path: string; name: string; dataType: string; comm
 /**
  * The schema tree flattened to dotted paths, following SchemaTab's convention:
  * a struct field keeps its parent's path, an array adds ".[]", a map ".key" and ".value".
+ * Those pseudo-rows take their comment from the parent's data type (elementComment, keyComment, valueComment).
  */
 export function flattenColumns(columns: SchemaColumn[] | undefined,
                                maxDepth: number = LIMITS.columnDepth): FlatColumn[] {
@@ -208,12 +209,13 @@ export function flattenColumns(columns: SchemaColumn[] | undefined,
       walkColumns(dataType.fields, path, depth);
     } else if (dataType.dataType === 'array') {
       const elementPath = `${path}.[]`;
-      flat.push({ path: elementPath, name: '-element-', dataType: typeOf(dataType.elementType) });
+      flat.push({ path: elementPath, name: '-element-', dataType: typeOf(dataType.elementType), comment: dataType.elementComment });
       walkDataType(dataType.elementType, elementPath, depth + 1);
     } else if (dataType.dataType === 'map') {
-      for (const [suffix, label, child] of [['key', '-key-', dataType.keyType], ['value', '-value-', dataType.valueType]] as const) {
+      for (const [suffix, label, child, comment] of [['key', '-key-', dataType.keyType, dataType.keyComment],
+                                                     ['value', '-value-', dataType.valueType, dataType.valueComment]] as const) {
         const childPath = `${path}.${suffix}`;
-        flat.push({ path: childPath, name: label, dataType: typeOf(child) });
+        flat.push({ path: childPath, name: label, dataType: typeOf(child), comment });
         walkDataType(child, childPath, depth + 1);
       }
     }
