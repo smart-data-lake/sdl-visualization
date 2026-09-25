@@ -1,4 +1,4 @@
-import { ExploreOutlined, LayersOutlined, RocketLaunchOutlined, TableViewTwoTone } from '@mui/icons-material';
+import { ExploreOutlined, LayersOutlined, OpenInNew, RocketLaunchOutlined, TableViewTwoTone } from '@mui/icons-material';
 import AltRouteIcon from '@mui/icons-material/AltRoute';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import SellIcon from '@mui/icons-material/Sell';
@@ -20,6 +20,7 @@ import { Stats, TstampEntry, WorkflowRun } from '../../types';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { updateStateFile } from '../../util/WorkflowsExplorer/Attempt';
 import { ElementRunDetails, elementRunDetails } from '../../util/WorkflowsExplorer/elementRunDetails';
+import { schemaViewerUrl } from '../../util/ConfigExplorer/schemaViewer';
 
 interface ElementProps {
   data: any; // config of object to display
@@ -71,23 +72,34 @@ function formatInputsOutputs(inputs: string[], outputs: string[], recursiveInput
 type ChipSize = 'sm' | 'md' | 'lg';
 type ChipColor = "primary" | "neutral" | "success" | "danger" | "warning" | undefined;
 
-function SearchChip({attr, value, route, icon, color, size, sx}:
-                    {attr: string, value: string, route: string, icon: JSX.Element, color: ChipColor, size: ChipSize, sx: object}) {
+// the search link is the chip's action slot rather than a wrapper, so an end decorator may hold a link of its own
+function SearchChip({attr, value, route, icon, color, size, sx, endDecorator}:
+                    {attr: string, value: string, route: string, icon: JSX.Element, color: ChipColor, size: ChipSize, sx: object, endDecorator?: ReactNode}) {
   const {contentPath} = useWorkspace();
-  const path = (attr == "feedSel" ? 
+  const path = (attr == "feedSel" ?
     `${contentPath}config/${route}?elementSearchType=${attr}&elementSearch=${value}` :
     `${contentPath}config/${route}?elementSearchType=property&elementSearch=${attr}:${value}`
   )
   return(
-    <Link to={path}>
-      <Chip key={attr} sx={{mr: 1, ...sx}} color={color} startDecorator={icon} variant="outlined" onClick={(e) => e.stopPropagation()} size={size}>{value}</Chip>
-    </Link>
+    <Chip key={attr} sx={{mr: 1, ...sx}} color={color} startDecorator={icon} endDecorator={endDecorator} variant="outlined"
+          slotProps={{action: {component: Link, to: path} as any}} onClick={(e) => e.stopPropagation()} size={size}>{value}</Chip>
   )
 }
 
-export function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: ChipColor = "primary", size: ChipSize ="md", sx: object = {}) {
+export function createSearchChip(attr: string, value: string, route: string, icon: JSX.Element, color: ChipColor = "primary", size: ChipSize ="md", sx: object = {}, endDecorator?: ReactNode) {
   if (!value) return undefined;
-  return <SearchChip key={attr+':'+value} attr={attr} value={value} route={route} icon={icon} color={color} size={size} sx={sx}/>
+  return <SearchChip key={attr+':'+value} attr={attr} value={value} route={route} icon={icon} color={color} size={size} sx={sx} endDecorator={endDecorator}/>
+}
+
+function SchemaViewerLink({url, type}: {url: string, type: string}) {
+  return (
+    <Tooltip title="Open in configuration schema viewer" size="sm" arrow enterDelay={500}>
+      <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`${type} in configuration schema viewer`}
+         onClick={(e) => e.stopPropagation()} style={{display: 'flex', pointerEvents: 'auto', color: 'inherit'}}>
+        <OpenInNew sx={{fontSize: '1em'}}/>
+      </a>
+    </Tooltip>
+  )
 }
 
 function DataObjectChip({name, size, sx, title}: {name: string, size: ChipSize, sx: object, title?: ReactNode}){
@@ -286,7 +298,8 @@ export default function ConfigurationTab(props: ElementProps) {
   }
   function typeChip(){
     let type = getAttribute('type');
-    return createSearchChip("type", type, props.elementType, <StyleIcon />, "success");
+    const url = schemaViewerUrl(props.elementType, type);
+    return createSearchChip("type", type, props.elementType, <StyleIcon />, "success", "md", {}, url && <SchemaViewerLink url={url} type={type}/>);
   }
   function mainContent(){
     let propsToIgnore = topAttributes.map(x => x.key).concat(['metadata', 'type', 'inputId', 'inputIds', 'recursiveInputIds', 'outputId', 'outputIds', 'id']);

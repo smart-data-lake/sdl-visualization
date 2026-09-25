@@ -21,7 +21,7 @@ test.describe('config from exportedConfig.json', () => {
   test('shows configuration attributes and the documentation the exporter added', async ({ page }) => {
     await page.goto('/#/config/actions/compute-distances');
 
-    await expect(page.getByRole('link', { name: 'CopyAction' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'CopyAction', exact: true })).toBeVisible();
     await expect(page.getByRole('tabpanel', { name: 'Configuration' })).toContainText('ComputeDistanceTransformer');
   });
 
