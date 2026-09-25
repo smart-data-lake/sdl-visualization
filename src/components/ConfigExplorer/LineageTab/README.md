@@ -277,7 +277,7 @@ columns.
 A relation is one ReactFlow edge **per column pair**. While both of its ends are closed the pairs of
 a foreign key share the two node level handles and draw on top of each other — one line between two
 data objects — and they move apart onto their columns as a node is opened
-(`updateRelationEdgeHandles`). The two ends are decided separately, so opening one of two related
+(`updateColumnEdgeHandles`). The two ends are decided separately, so opening one of two related
 data objects gives an edge from a column to a node. Which columns a relation runs through is read
 off the rows themselves and from the tooltip of a column, not from a label on the edge.
 
@@ -297,6 +297,36 @@ it. `dfsRemoveRfElems` can leave a real one behind too: it only removes the edge
 edge that reached a removed node from another branch stays. `dropDanglingEdges` is the invariant,
 and `tests/e2e/lineage-stability.spec.ts` asserts that every rendered edge starts and ends on a
 node.
+
+## Column lineage
+
+The data view draws SDLB's exported column lineage (issue #141, `src/util/ConfigExplorer/columnLineage.ts`)
+onto the columns. Every data object node of that view reads its own lineage document
+(`useFetchDataObjectLineage`), stores it as `data.columnLineage` and merges the columns it names
+into its column model, flagged `declaredOnly` where an exported schema lacks them - so a data object
+whose schema export failed still shows what its lineage knows. The row tooltip says per action how
+the column is created.
+
+The edges are derived, not kept: `columnLineageEdges` looks at every data flow edge one of whose ends
+shows its columns and takes the column pairs from the lineage of its **target**. A pair produced by
+several actions is one edge naming all of them, and a pair neither of whose columns is shown is left
+out - it would only draw the data flow edge again. Where a pair is left, the data flow edge is hidden
+and one edge per pair takes its place; closing both nodes brings it back. `updateColumnEdges` does
+that and then points both kinds of column edge at their handles, so it replaces
+`updateRelationEdgeHandles` at every place that called it. An end whose column is not **shown** - not
+merely an end whose node is open - stays on the node's layout driven handle, because at the key
+step most lineage columns are hidden.
+
+Three things that are easy to break:
+
+- A column lineage edge runs beside a data flow edge, it is **not an edge of the graph**. The
+  expansion bookkeeping (`dfsRemoveRfElems`) and the layout (`alignWithNeighbours`) skip it through
+  `isColumnLineageEdge`; counting it would corrupt the active edge counts and move nodes.
+- Every column row carries both handles, not only a key's, because a lineage edge can end on any
+  column.
+- The hover text is an SVG `<title>`, first child of the edge's group, like the foreign key name.
+
+`tests/columnLineageEdges.test.ts` covers the derivation, `tests/e2e/column-lineage.spec.ts` the rendering.
 
 ## Touchpad and mouse wheel
 

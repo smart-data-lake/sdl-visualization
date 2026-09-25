@@ -7,7 +7,8 @@ import Typography from '@mui/joy/Typography';
 import { Handle, Position } from 'reactflow';
 
 import { useWorkspace } from '../../../hooks/useWorkspace';
-import { ColumnDisplay, ColumnInfo, lessColumns, moreColumns } from '../../../util/ConfigExplorer/ColumnModel';
+import { ColumnDisplay, ColumnInfo, ColumnLineageInfo, lessColumns, moreColumns } from '../../../util/ConfigExplorer/ColumnModel';
+import { ColumnTransformation } from '../../../util/ConfigExplorer/columnLineage';
 import { ForeignKeyIcon, PrimaryKeyIcon, UnresolvedForeignKeyIcon } from './ColumnIcons';
 import './LineageTab.css';
 
@@ -15,8 +16,8 @@ import './LineageTab.css';
     The columns of a DataObject, rendered inside its node so that the node reads like a table of an
     entity relation diagram: a title, a rule under it, then one row per column.
 
-    Every column carries a ReactFlow handle on each side, so that a relation between two columns can
-    be drawn onto the rows themselves rather than onto the nodes. The handles are absolutely
+    Every column carries a ReactFlow handle on each side, so that a relation or a column lineage
+    between two columns can be drawn onto the rows themselves rather than onto the nodes. The handles are absolutely
     positioned inside their row, so the browser does the vertical arithmetic and an anchor can never
     drift away from the row it belongs to - but the *node* must declare a height that matches what
     these constants add up to, because the layout has to know how tall a node is before it renders.
@@ -37,7 +38,7 @@ const columnTextStyle = {fontSize: `${COLUMN_FONT_SIZE}px`, lineHeight: `${COLUM
 /** the rule between the title and the first column row */
 export const COLUMNS_DIVIDER_HEIGHT = 7;
 
-/** The handle a relation edge attaches to for one column. Unique within its node. */
+/** The handle a relation or column lineage edge attaches to for one column. Unique within its node. */
 export const columnHandleId = (kind: 'source' | 'target', columnKey: string) => `col-${kind}:${columnKey}`;
 
 /*
@@ -96,10 +97,27 @@ const columnHandleStyle = (side: 'left' | 'right') => sideHandleStyle(side, COLU
     A column that is only a primary key - int-departures.icao24, say - has nothing to add to what
     the row already shows, and a tooltip that opens on an empty box is worse than none at all.
 */
+/** How one action creates the column: its inputs with the transformation, or the expression without any. */
+function lineageLine(lineage: ColumnLineageInfo): string {
+    if (lineage.unresolved) return `${lineage.actionId}: lineage could not be traced`;
+    if (lineage.inputs.length === 0) return `${lineage.actionId}: ${lineage.expression ?? 'no source column'}`;
+    return `${lineage.actionId}: ` + lineage.inputs.map(input => {
+        const description = input.transformations.map(transformationText).find(text => text !== undefined);
+        return `${input.dataObjectId}.${input.column}` + (description ? ` (${description})` : '');
+    }).join(', ');
+}
+
+/** A transformation as a user reads it; an identity has nothing to say beyond the column it comes from. */
+export function transformationText(transformation: ColumnTransformation): string | undefined {
+    if (transformation.subtype === 'IDENTITY') return undefined;
+    return transformation.description ?? transformation.subtype?.toLowerCase();
+}
+
 function referenceTitle(column: ColumnInfo): JSX.Element | undefined {
-    const hasSomethingToSay = column.description !== undefined
+    const hasSomethingToSay = column.description !== undefined || column.lineage.length > 0
         || column.references.length > 0 || column.referencedBy.length > 0 || column.declaredOnly;
     if (!hasSomethingToSay) return undefined;
+    const isKey = column.isPrimaryKey || column.references.length > 0 || column.referencedBy.length > 0;
     return (
         <Box>
             {column.description && <div>{column.description}</div>}
@@ -112,7 +130,8 @@ function referenceTitle(column: ColumnInfo): JSX.Element | undefined {
             {column.referencedBy.map((incoming, i) => (
                 <div key={`inc-${i}`}>← {incoming.dataObjectId}.{incoming.fromColumn}</div>
             ))}
-            {column.declaredOnly && <div><i>declared by a key, not in the exported schema</i></div>}
+            {column.lineage.map((lineage, i) => <div key={`lin-${i}`}>⇐ {lineageLine(lineage)}</div>)}
+            {column.declaredOnly && <div><i>{isKey ? 'declared by a key' : 'in the column lineage'}, not in the exported schema</i></div>}
         </Box>
     );
 }
@@ -145,7 +164,6 @@ function relatedDataObjectId(column: ColumnInfo): string | undefined {
 function ColumnRow({column}: {column: ColumnInfo}) {
     const hasReference = column.references.length > 0;
     const isUnresolved = hasReference && column.references.every(reference => !reference.resolved);
-    const hasAnyRelation = hasReference || column.referencedBy.length > 0;
     const { navigateContent } = useWorkspace();
 
     const title = referenceTitle(column);
@@ -175,18 +193,18 @@ function ColumnRow({column}: {column: ColumnInfo}) {
 
     return (
         <Box className="lineage-column-row" data-testid={`column-${column.key}`}>
-            {hasAnyRelation &&
-                <Handle type="target" position={Position.Left} id={columnHandleId('target', column.key)}
-                        className="lineage-column-handle" style={columnHandleStyle('left')}/>}
+            {/* on every row, not only a key's: a column lineage edge can end on any column, and
+                ReactFlow silently drops an edge whose handle does not exist */}
+            <Handle type="target" position={Position.Left} id={columnHandleId('target', column.key)}
+                    className="lineage-column-handle" style={columnHandleStyle('left')}/>
             {/* a column with nothing to add to what the row already shows gets no tooltip at all */}
             {title
                 ? <Tooltip title={title} arrow disableInteractive size="sm" placement="right" enterDelay={300}>
                     {label}
                   </Tooltip>
                 : label}
-            {hasAnyRelation &&
-                <Handle type="source" position={Position.Right} id={columnHandleId('source', column.key)}
-                        className="lineage-column-handle" style={columnHandleStyle('right')}/>}
+            <Handle type="source" position={Position.Right} id={columnHandleId('source', column.key)}
+                    className="lineage-column-handle" style={columnHandleStyle('right')}/>
         </Box>
     );
 }

@@ -13,6 +13,7 @@ import {
   moreColumns,
 } from '../src/util/ConfigExplorer/ColumnModel.ts';
 import { SchemaData } from '../src/types.ts';
+import { parseColumnLineage } from '../src/util/ConfigExplorer/columnLineage.ts';
 
 const intDepartures = {
   type: 'DeltaLakeTableDataObject',
@@ -219,5 +220,37 @@ describe('filtering', () => {
     expect(lessColumns('all')).toBe('keys');
     expect(lessColumns('keys')).toBe('none');
     expect(lessColumns('none')).toBe('none');
+  });
+});
+
+describe('column lineage', () => {
+  const lineage = parseColumnLineage({
+    actionId: 'hist', dataObjectId: 'int',
+    columnLineage: { fields: {
+      Ident: { inputFields: [{ namespace: 'sdlb', name: 'stg', field: 'ident', transformations: [] }] },
+      loaded: { inputFields: [], expression: 'current_timestamp()' },
+    } },
+    unresolvedFields: ['rating'],
+  });
+
+  test('adds the columns it names, with how each is created', () => {
+    const { columns } = buildColumnModel({ table: { primaryKey: ['ident'] } }, { lineage });
+    expect(columns.map((c) => c.key)).toEqual(['ident', 'loaded', 'rating']);
+    expect(columns[0].isPrimaryKey).toBe(true);
+    expect(columns[0].lineage).toEqual([{ actionId: 'hist', inputs: lineage[0].fields[0].inputs, expression: undefined }]);
+    expect(columns[1].lineage[0].expression).toBe('current_timestamp()');
+    expect(columns[2].lineage[0].unresolved).toBe(true);
+  });
+
+  test('a column the lineage names but the exported schema lacks is marked declaredOnly', () => {
+    const schema = { schema: [{ name: 'ident', dataType: 'string' }] };
+    const { columns } = buildColumnModel({}, { schema, lineage });
+    expect(columns.find((c) => c.key === 'ident')!.declaredOnly).toBe(false);
+    expect(columns.find((c) => c.key === 'loaded')!.declaredOnly).toBe(true);
+  });
+
+  test('does not make a column a key column', () => {
+    const { columns } = buildColumnModel({}, { lineage });
+    expect(filterColumns(columns, 'keys')).toEqual([]);
   });
 });

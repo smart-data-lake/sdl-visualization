@@ -13,10 +13,11 @@ import { findFirstKeyWithObject } from '../helpers';
 import { ColumnDisplay, ColumnInfo, buildColumnModel, filterColumns, isKnownDataObject } from './ColumnModel';
 import { ConfigData } from './ConfigData';
 import { RelationEdge, getIncomingRefs } from './RelationsGraph';
+import { ColumnLineage, ColumnTransformation, columnEdgesOf, columnKey } from './columnLineage';
 import { columnHandleId, nodeHeightFor, nodeRelationHandleId, nodeWidthFor } from '../../components/ConfigExplorer/LineageTab/DataObjectColumns';
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
-import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, ExpandSides, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, expandSidesFrom, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
+import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, ExpandSides, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, expandSidesFrom, isColumnLineageEdge, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
 import { LayoutDirection, NodePlacement, assignCoordinates, layoutModelOf } from './LineageLayout';
 
 
@@ -35,6 +36,12 @@ const EDGE_COLOR_HIGHLIGHTED = '#096bde';
 const PARENT_NODE_COLOR_DEFAULT = 'rgba(255, 0, 0, 0.2)';
 const EDGE_STROKE_WIDTH_DEFAULT = 3
 const EDGE_STROKE_WIDTH_HIGHLIGHTED = 5;
+// a column lineage edge is one of many between two nodes, so it is drawn finer
+const COLUMN_EDGE_STROKE_WIDTH_DEFAULT = 1.5;
+const COLUMN_EDGE_STROKE_WIDTH_HIGHLIGHTED = 3;
+const strokeWidthOf = (edge: ReactFlowEdge, highlighted: boolean) => isColumnLineageEdge(edge)
+    ? (highlighted ? COLUMN_EDGE_STROKE_WIDTH_HIGHLIGHTED : COLUMN_EDGE_STROKE_WIDTH_DEFAULT)
+    : (highlighted ? EDGE_STROKE_WIDTH_HIGHLIGHTED : EDGE_STROKE_WIDTH_DEFAULT);
 /*
     The z level a selected edge, the nodes it connects and its metric labels are lifted to, so that
     the highlighting is not hidden behind another edge or another edge's labels. ReactFlow renders
@@ -129,6 +136,18 @@ export interface RelationEdgeProps {
     targetColumn: string;
 }
 
+/** What a column lineage edge stands for: one input column feeding one output column, see syncColumnLineageEdges. */
+export interface ColumnLineageEdgeProps {
+    /** lowercased, see columnHandleId */
+    sourceColumn: string;
+    targetColumn: string;
+    /** as exported, for the title */
+    sourceName: string;
+    targetName: string;
+    /** every action creating the target column from the source column - usually one */
+    via: {actionId: string, transformations: ColumnTransformation[]}[];
+}
+
 /** The data a customEdge is rendered from, see CustomEdge */
 export interface CustomEdgeProps {
     output?: FlowMetric,          // what the source action wrote to the data object of this edge
@@ -137,6 +156,7 @@ export interface CustomEdgeProps {
     inputIndex: number,           // position among the edges entering the target
     highlighted: boolean,
     relation?: RelationEdgeProps, // set in the relations view, where an edge is a foreign key
+    columnLineage?: ColumnLineageEdgeProps, // set on the column edges of the data view
 }
 
 export interface ReactFlowNodeProps {
@@ -170,6 +190,11 @@ export interface ReactFlowNodeProps {
         columns to show at all, which is what decides whether the node offers to show them.
     */
     columnsFunc?: ColumnsFunc,
+    /*
+        The exported column lineage of this data object, one document per action writing it. Set by
+        the node once fetched; the edges between columns are built from the lineage of their target.
+    */
+    columnLineage?: ColumnLineage[],
     /*
         How much of its columns this node shows. Per node, and deliberately kept in the node's data
         rather than in React state: the lineage tab re-creates the whole flow whenever a setting in
@@ -207,8 +232,8 @@ export interface ReactFlowNodeProps {
     placement?: NodePlacement,
 }
 
-/** Merges an exported schema into the columns a data object's configuration declares. */
-export type ColumnsFunc = (schema?: SchemaData) => ColumnInfo[];
+/** Merges an exported schema and column lineage into the columns a data object's configuration declares. */
+export type ColumnsFunc = (schema?: SchemaData, lineage?: ColumnLineage[]) => ColumnInfo[];
 
 /** The size a node is laid out and rendered at, from what it shows. */
 export function nodeSizeFor(data: {columns?: ColumnInfo[], columnDisplay?: ColumnDisplay}): {width: number, height: number} {
@@ -280,9 +305,10 @@ function makeColumnsOf(props: flowProps): (node: GraphNode) => ColumnsFunc | und
         const configObj = configData.dataObjects?.[node.id];
         if (!configObj) return undefined;
         const referencedBy = getIncomingRefs(node.id, configData.relationsGraph);
-        return (schema?: SchemaData) => {
+        return (schema?: SchemaData, lineage?: ColumnLineage[]) => {
             return buildColumnModel(configObj, {
                 schema,
+                lineage,
                 isKnownDataObject: dataObjectId => isKnownDataObject(configData.dataObjects, dataObjectId),
                 referencedBy,
             }).columns;
@@ -404,7 +430,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     A foreign key over several columns is several edges, one per pair. While both of its ends are
     collapsed they share the two node level handles and draw on top of each other - one line between
     two data objects, which is what the collapsed view means - and they move apart onto their columns
-    as soon as a node is expanded (see updateRelationEdgeHandles). Creating them per pair up front
+    as soon as a node is expanded (see updateColumnEdgeHandles). Creating them per pair up front
     means expanding a node only re-points existing edges instead of creating and destroying them.
 */
 function createRelationReactFlowEdges(relations: RelationEdge[],
@@ -448,28 +474,125 @@ function createRelationReactFlowEdges(relations: RelationEdge[],
     return result;
 }
 
+/** Whether a node shows a column right now: open, and the column among what its display shows. */
+function showsColumn(node: ReactFlowNode | undefined, column: string): boolean {
+    const display: ColumnDisplay = node?.data?.columnDisplay ?? 'none';
+    if (display === 'none') return false;
+    return filterColumns(node!.data.columns ?? [], display).some(c => c.key === column);
+}
+
+const isOpen = (node: ReactFlowNode | undefined) => (node?.data?.columnDisplay ?? 'none') !== 'none';
+
 /**
- * Point every relation edge at the column it belongs to, on the ends whose node shows its columns,
- * and at the node itself on the ends whose node does not.
+ * Point every relation and column lineage edge at the column it belongs to, on the ends whose node
+ * shows that column, and at the node itself on the ends whose node does not.
  *
  * The two ends are decided separately: expanding one of two related data objects gives an edge from
  * a column to a node, which is the honest picture of what is known.
  */
-export function updateRelationEdgeHandles(rfi: ReactFlowInstance) {
-    const expanded = new Set(rfi.getNodes().filter(node => node.data?.columnDisplay && node.data.columnDisplay !== 'none').map(node => node.id));
+function updateColumnEdgeHandles(rfi: ReactFlowInstance) {
+    const nodes = new Map(rfi.getNodes().map(node => [node.id, node]));
     rfi.setEdges(edges => edges.map(edge => {
-        const relation = (edge.data as CustomEdgeProps)?.relation;
-        if (!relation) return edge;
-        const sourceHandle = expanded.has(edge.source) ? columnHandleId('source', relation.sourceColumn)
-                                                      : nodeRelationHandleId('source', edge.source);
-        const targetHandle = expanded.has(edge.target) ? columnHandleId('target', relation.targetColumn)
-                                                      : nodeRelationHandleId('target', edge.target);
-        const hidden = edge.source === edge.target && !expanded.has(edge.source);
+        const data = edge.data as CustomEdgeProps | undefined;
+        const ends = data?.relation ?? data?.columnLineage;
+        if (!ends) return edge;
+        const source = nodes.get(edge.source), target = nodes.get(edge.target);
+        // a relation is horizontal, so its closed end is the node's relation handle; a column
+        // lineage edge runs beside a data flow edge and ends where that one does
+        const nodeHandle = (kind: 'source' | 'target', nodeId: string) =>
+            data?.relation ? nodeRelationHandleId(kind, nodeId) : nodeId;
+        const sourceHandle = showsColumn(source, ends.sourceColumn) ? columnHandleId('source', ends.sourceColumn)
+                                                                   : nodeHandle('source', edge.source);
+        const targetHandle = showsColumn(target, ends.targetColumn) ? columnHandleId('target', ends.targetColumn)
+                                                                   : nodeHandle('target', edge.target);
+        const hidden = data?.relation !== undefined && edge.source === edge.target && !isOpen(source);
         if (sourceHandle === edge.sourceHandle && targetHandle === edge.targetHandle && hidden === (edge.hidden === true)) {
             return edge;
         }
         return {...edge, sourceHandle, targetHandle, hidden};
     }));
+}
+
+/*
+    The column edges of the data view, derived from what the flow shows.
+
+    Between two data objects of which at least one shows its columns, the data flow edge makes way
+    for one edge per column pair, taken from the column lineage of its target. Pairs produced by
+    several actions - two actions writing the same data object from the same input - are one edge
+    naming all of them, because a column has one lineage however many actions agree on it. A pair
+    neither of whose columns is shown would only draw the data flow edge again, so it is left out,
+    and where nothing is left the data flow edge stays.
+
+    Rebuilt as a whole on every change, merged by id so that ReactFlow keeps what did not change.
+*/
+export function columnLineageEdges(rfNodes: ReactFlowNode[], rfEdges: ReactFlowEdge[]): {replaced: Set<string>, wanted: ReactFlowEdge[]} {
+    const nodes = new Map(rfNodes.map(node => [node.id, node]));
+    const inDataView = rfNodes.some(node => node.data?.graphView === 'data');
+    const replaced = new Set<string>();
+    const wanted: ReactFlowEdge[] = [];
+
+    if (inDataView) rfEdges.forEach(edge => {
+        const data = edge.data as CustomEdgeProps | undefined;
+        if (isColumnLineageEdge(edge) || data?.relation) return;
+        const source = nodes.get(edge.source), target = nodes.get(edge.target);
+        if (!source || !target || !(isOpen(source) || isOpen(target))) return;
+
+        const pairs = new Map<string, ColumnLineageEdgeProps>();
+        ((target.data.columnLineage ?? []) as ColumnLineage[]).flatMap(columnEdgesOf)
+            .filter(columnEdge => columnEdge.from.dataObjectId === source.id)
+            .forEach(columnEdge => {
+                const sourceColumn = columnKey(columnEdge.from.column), targetColumn = columnKey(columnEdge.to.column);
+                const key = `${sourceColumn}->${targetColumn}`;
+                const pair = pairs.get(key) ?? {sourceColumn, targetColumn, sourceName: columnEdge.from.column,
+                                                 targetName: columnEdge.to.column, via: []};
+                pair.via.push({actionId: columnEdge.actionId, transformations: columnEdge.transformations});
+                pairs.set(key, pair);
+            });
+        const shown = [...pairs.values()]
+            .filter(pair => showsColumn(source, pair.sourceColumn) || showsColumn(target, pair.targetColumn));
+        if (shown.length === 0) return;
+
+        replaced.add(edge.id);
+        shown.forEach(pair => wanted.push({
+            type: 'customEdge',
+            id: `${source.id}.${pair.sourceColumn}->${target.id}.${pair.targetColumn}::lineage`,
+            source: source.id,
+            target: target.id,
+            sourceHandle: source.id,
+            targetHandle: target.id,
+            markerEnd: {type: MarkerType.ArrowClosed, width: 10, height: 10, color: EDGE_COLOR_DEFAULT},
+            data: {outputIndex: 0, inputIndex: 0, highlighted: false, columnLineage: pair} as CustomEdgeProps,
+            style: {stroke: EDGE_COLOR_DEFAULT, strokeWidth: COLUMN_EDGE_STROKE_WIDTH_DEFAULT},
+        } as ReactFlowEdge));
+    });
+    return {replaced, wanted};
+}
+
+function syncColumnLineageEdges(rfi: ReactFlowInstance) {
+    const {replaced, wanted} = columnLineageEdges(rfi.getNodes(), rfi.getEdges());
+    rfi.setEdges(edges => {
+        const existing = new Map(edges.filter(isColumnLineageEdge).map(edge => [edge.id, edge]));
+        if (existing.size === 0 && wanted.length === 0) return edges; // nothing to do, the common case
+        const flowEdges = edges.filter(edge => !isColumnLineageEdge(edge)).map(edge => {
+            const hidden = replaced.has(edge.id);
+            return (edge.data?.relation || hidden === (edge.hidden === true)) ? edge : {...edge, hidden};
+        });
+        // an edge that stays keeps its handles and styling; only what it stands for can change
+        const lineageEdges = wanted.map(edge => {
+            const kept = existing.get(edge.id);
+            return kept ? {...kept, data: {...kept.data, columnLineage: edge.data.columnLineage}} : edge;
+        });
+        return [...flowEdges, ...lineageEdges];
+    });
+}
+
+/**
+ * Bring the column edges in line with what the nodes show: after a node opened or closed its
+ * columns, its columns or its lineage changed, or the node set changed.
+ */
+export function updateColumnEdges(rfi: ReactFlowInstance) {
+    syncColumnLineageEdges(rfi);
+    updateColumnEdgeHandles(rfi);
 }
 
 export function createReactFlowEdges(selectedEdges: GraphEdge[],
@@ -683,7 +806,7 @@ function expandNodeFunc(rfi: ReactFlowInstance, props: flowProps,
         });
         // the new edges were built for collapsed nodes; point them at the columns of the ones that
         // are not, so that a neighbour expanded into an already expanded node connects to its rows
-        updateRelationEdgeHandles(rfi);
+        updateColumnEdges(rfi);
 
     } else {
         // collapse
@@ -761,7 +884,7 @@ export function spliceNodePath(rfi: ReactFlowInstance, props: flowProps, nodeId:
     } else {
         recomputeLayout(rfi, layoutDirection, anchorId);
     }
-    updateRelationEdgeHandles(rfi);
+    updateColumnEdges(rfi);
 }
 
 function updateLineageGraphOnExpand(rfi: ReactFlowInstance, rfEdges: ReactFlowEdge[], rfNodes: ReactFlowNode[], props: any) {
@@ -973,7 +1096,7 @@ export function resetEdgeStyles(rfi: ReactFlowInstance) {
             style: {
                 ...e.style,
                 stroke: EDGE_COLOR_DEFAULT,
-                strokeWidth: EDGE_STROKE_WIDTH_DEFAULT
+                strokeWidth: strokeWidthOf(e, false)
             },
             markerEnd: {
                 type: MarkerType.ArrowClosed,
@@ -1053,7 +1176,7 @@ export function setEdgeStylesOnEdgeClick(rfi: ReactFlowInstance, edge: Selectabl
                 style: {
                     ...elem.style,
                     stroke: EDGE_COLOR_HIGHLIGHTED,
-                    strokeWidth: EDGE_STROKE_WIDTH_HIGHLIGHTED,
+                    strokeWidth: strokeWidthOf(elem, true),
                 },
                 markerEnd: {
                     type: MarkerType.ArrowClosed,
