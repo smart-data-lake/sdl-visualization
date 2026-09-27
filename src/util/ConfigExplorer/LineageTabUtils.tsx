@@ -493,12 +493,7 @@ function createRelationReactFlowEdges(relations: RelationEdge[],
                 sourceHandle: nodeRelationHandleId('source', relation.source),
                 targetHandle: nodeRelationHandleId('target', relation.target),
                 hidden: isSelfReference,
-                markerEnd: {
-                    type: MarkerType.ArrowClosed,
-                    width: 10,
-                    height: 10,
-                    color: edgeColor,
-                },
+                // no arrow head: CustomEdge draws a crow's foot on the referencing side instead
                 data: {
                     outputIndex: 0,
                     inputIndex: 0,

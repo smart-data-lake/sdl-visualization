@@ -8,7 +8,7 @@
 */
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
-import { EdgeLabelRenderer, EdgeProps, Handle, getBezierPath, getSmoothStepPath, useReactFlow, useUpdateNodeInternals } from 'reactflow';
+import { EdgeLabelRenderer, EdgeProps, Handle, getBezierPath, getSmoothStepPath, getStraightPath, useReactFlow, useUpdateNodeInternals } from 'reactflow';
 
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
@@ -734,6 +734,26 @@ function columnLineageTitle(source: string, target: string, lineage: ColumnLinea
   }).join('\n');
 }
 
+// how far a crow's foot reaches out from the node, and how far its outer toes spread
+const CROWS_FOOT_LENGTH = 12;
+const CROWS_FOOT_SPREAD = 7;
+
+const outwardOf = (position: Position): [number, number] =>
+  position === Position.Left ? [-1, 0] : position === Position.Right ? [1, 0] : position === Position.Top ? [0, -1] : [0, 1];
+
+/*
+  The path of a relation edge: straight, apart from the crow's foot at the referencing (many) end,
+  whose toes meet the node border and whose heel is where the straight line starts. A data object
+  referencing itself cannot be joined by a straight line, so that one keeps its steps.
+*/
+function relationPaths(sourceX: number, sourceY: number, sourcePosition: Position, targetX: number, targetY: number): {edgePath: string, footPath: string} {
+  const [dx, dy] = outwardOf(sourcePosition);
+  const heelX = sourceX + dx * CROWS_FOOT_LENGTH, heelY = sourceY + dy * CROWS_FOOT_LENGTH;
+  const [line] = getStraightPath({sourceX: heelX, sourceY: heelY, targetX, targetY});
+  const toe = (side: number) => `M ${heelX},${heelY} L ${sourceX - dy * side * CROWS_FOOT_SPREAD},${sourceY + dx * side * CROWS_FOOT_SPREAD}`;
+  return {edgePath: `M ${sourceX},${sourceY} L ${heelX},${heelY} ${line.replace(/^M/, 'L')}`, footPath: `${toe(1)} ${toe(-1)}`};
+}
+
 //https://github.com/xyflow/xyflow/discussions/2347
 export const CustomEdge = ({
   id,
@@ -746,8 +766,10 @@ export const CustomEdge = ({
 }: EdgeProps<CustomEdgeProps>) => {
 
   const reactFlow = useReactFlow();
+  const relation = data?.relation ? relationPaths(sourceX, sourceY, sourcePosition, targetX, targetY) : undefined;
   // column lineage edges run many to a node, and curves keep them apart where right angles would overlap
-  const [edgePath] = data?.columnLineage
+  const [edgePath] = relation && source !== target ? [relation.edgePath]
+    : data?.columnLineage
     ? getBezierPath({sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition})
     : getSmoothStepPath({
       sourceX,
@@ -786,7 +808,9 @@ export const CustomEdge = ({
       {/* no inline style here: the edge's strokeWidth would narrow the hit area to the visible line */}
       <path className={`react-flow__edge-path-selector${data?.columnLineage ? ' lineage-column-edge-selector' : ''}`}
             d={edgePath} fillRule="evenodd"/>
-      <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={markerEnd}/>
+      {/* a relation marks its many side with a crow's foot instead of an arrow head on the other */}
+      <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={data?.relation ? undefined : markerEnd}/>
+      {relation && <path style={{...style, fill: 'none'}} className="lineage-relation-foot" d={relation.footPath}/>}
       {(output || input) &&
         <EdgeLabelRenderer>
           {output &&
