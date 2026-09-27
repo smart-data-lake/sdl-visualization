@@ -13,7 +13,7 @@ import { findFirstKeyWithObject } from '../helpers';
 import { ColumnDisplay, ColumnInfo, buildColumnModel, filterColumns, isKnownDataObject } from './ColumnModel';
 import { ConfigData } from './ConfigData';
 import { RelationEdge, getIncomingRefs } from './RelationsGraph';
-import { ActionPorts, connectionKey, portRowCount } from './ActionPorts';
+import { ActionPorts, Port, connectionKey, portRowCount } from './ActionPorts';
 import { ColumnLineage, ColumnLineageIndex, ColumnRef, ColumnTransformation, IndexEdge, buildColumnLineageIndex, columnEdgesOf, columnId, columnKey, traceColumn } from './columnLineage';
 import { ACTION_NODE_WIDTH_WITH_PORTS, columnHandleId, nodeHeightFor, nodeRelationHandleId, nodeWidthFor, portHandleId } from '../../components/ConfigExplorer/LineageTab/DataObjectColumns';
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
@@ -154,6 +154,8 @@ export interface ColumnLineageEdgeProps {
     */
     sourcePort?: string;
     targetPort?: string;
+    /** in the action view, where both ends are actions: the data object the column belongs to */
+    dataObjectId?: string;
 }
 
 /** The data a customEdge is rendered from, see CustomEdge */
@@ -165,6 +167,7 @@ export interface CustomEdgeProps {
     highlighted: boolean,
     relation?: RelationEdgeProps, // set in the relations view, where an edge is a foreign key
     columnLineage?: ColumnLineageEdgeProps, // set on the column edges of the data view
+    dataObjectId?: string,        // in the action view: the data object two actions share
 }
 
 export interface ReactFlowNodeProps {
@@ -207,6 +210,8 @@ export interface ReactFlowNodeProps {
     tracedColumns?: string[],
     /** an action's ports, from the column lineage of what it writes. Undefined for a data object. */
     ports?: ActionPorts,
+    /** the column lineage an action's ports were built from, for a trace without an index */
+    outputLineage?: ColumnLineage[],
     /** an action's connections on the column trace that is shown, see connectionKey */
     tracedConnections?: string[],
     /*
@@ -565,6 +570,7 @@ export function columnLineageEdges(rfNodes: ReactFlowNode[], rfEdges: ReactFlowE
     const nodes = new Map(rfNodes.map(node => [node.id, node]));
     const inDataView = rfNodes.some(node => node.data?.graphView === 'data');
     const inFullView = rfNodes.some(node => node.data?.graphView === 'full');
+    const inActionView = rfNodes.some(node => node.data?.graphView === 'action');
     const replaced = new Set<string>();
     const wanted: ReactFlowEdge[] = [];
     const lineageEdge = (id: string, source: string, target: string, lineage: ColumnLineageEdgeProps): ReactFlowEdge => ({
@@ -601,6 +607,32 @@ export function columnLineageEdges(rfNodes: ReactFlowNode[], rfEdges: ReactFlowE
         if (shown.length === 0) return;
         replaced.add(edge.id);
         wanted.push(...shown);
+    });
+
+    /*
+        The action view: an edge stands for a data object two actions share, and makes way for one
+        edge per column of it, from the writer's port to the reader's. Where both are open only the
+        columns both have a port for; where one is, its columns end on the other's node.
+    */
+    if (inActionView) rfEdges.forEach(edge => {
+        const dataObjectId = (edge.data as CustomEdgeProps | undefined)?.dataObjectId;
+        if (isColumnLineageEdge(edge) || !dataObjectId) return;
+        const source = nodes.get(edge.source), target = nodes.get(edge.target);
+        if (!source || !target || !(isOpen(source) || isOpen(target))) return;
+        const portsOf = (ports: Port[] | undefined) => new Map((ports ?? []).filter(port => port.dataObjectId === dataObjectId).map(port => [port.key, port]));
+        const writes = portsOf((source.data?.ports as ActionPorts | undefined)?.outputs);
+        const reads = portsOf((target.data?.ports as ActionPorts | undefined)?.inputs);
+        const keys = isOpen(source) && isOpen(target) ? [...writes.keys()].filter(key => reads.has(key))
+                   : isOpen(source) ? [...writes.keys()] : [...reads.keys()];
+        if (keys.length === 0) return;
+        replaced.add(edge.id);
+        keys.forEach(key => {
+            const port = (writes.get(key) ?? reads.get(key))!;
+            const column = columnKey(port.column);
+            wanted.push(lineageEdge(`${source.id}->${dataObjectId}.${column}->${target.id}::port`, source.id, target.id,
+                {sourceColumn: column, targetColumn: column, sourceName: port.column, targetName: port.column, via: [], dataObjectId,
+                 sourcePort: writes.has(key) ? key : undefined, targetPort: reads.has(key) ? key : undefined}));
+        });
     });
 
     if (inDataView) rfEdges.forEach(edge => {
@@ -710,8 +742,10 @@ export function traceEnds(trace: GraphTrace): {starts: ColumnRef[], ends: Column
  */
 export function traceIndex(built: ColumnLineageIndex | undefined, rfNodes: ReactFlowNode[]): {index: ColumnLineageIndex, complete: boolean} {
     if (built) return {index: built, complete: true};
-    const lineage = rfNodes.flatMap(node => (node.data?.columnLineage ?? []) as ColumnLineage[]);
-    return {index: buildColumnLineageIndex(lineage.map(doc => ({lineage: doc})), ''), complete: false};
+    // a document can be held by the data object it describes and by the action writing it
+    const lineage = new Map(rfNodes.flatMap(node => [...(node.data?.columnLineage ?? []), ...(node.data?.outputLineage ?? [])] as ColumnLineage[])
+        .map(doc => [`${doc.dataObjectId}\u0000${doc.actionId}`, doc]));
+    return {index: buildColumnLineageIndex([...lineage.values()].map(doc => ({lineage: doc})), ''), complete: false};
 }
 
 /*
@@ -736,6 +770,12 @@ export function traceHighlights(trace: GraphTrace, rfNodes: ReactFlowNode[], rfE
         if (data?.relation) return false;
         if (data?.columnLineage) {
             const lineage = data.columnLineage;
+            if (lineage.dataObjectId) {
+                const x = lineage.dataObjectId, column = lineage.sourceColumn;
+                const written = trace.edges.some(e => e[4] === edge.source && e[2] === x && columnKey(e[3]) === column);
+                const read = trace.edges.some(e => e[4] === edge.target && e[0] === x && columnKey(e[1]) === column);
+                return (!lineage.sourcePort || written) && (!lineage.targetPort || read) && (written || read);
+            }
             if (lineage.targetPort) return trace.edges.some(([fromDo, fromCol, , , actionId]) =>
                 fromDo === edge.source && columnKey(fromCol) === lineage.sourceColumn && actionId === edge.target);
             if (lineage.sourcePort) return trace.edges.some(([, , toDo, toCol, actionId]) =>
@@ -748,8 +788,8 @@ export function traceHighlights(trace: GraphTrace, rfNodes: ReactFlowNode[], rfE
         }
         if (!sourceIsAction) return trace.edges.some(([fromDo, , , , actionId]) => fromDo === edge.source && actionId === edge.target);
         if (!targetIsAction) return trace.edges.some(([, , toDo, , actionId]) => actionId === edge.source && toDo === edge.target);
-        // action graph edges are named `${from}->${dataObject}->${to}`, and an id cannot contain "->"
-        const via = edge.id.split('->')[1];
+        const via = data?.dataObjectId;
+        if (!via) return false;
         const written = new Set(trace.edges.filter(e => e[4] === edge.source && e[2] === via).map(e => columnKey(e[3])));
         return trace.edges.some(e => e[4] === edge.target && e[0] === via && written.has(columnKey(e[1])));
     };
@@ -761,7 +801,8 @@ export function traceHighlights(trace: GraphTrace, rfNodes: ReactFlowNode[], rfE
         nodeIds.add(edge.target);
     });
     // a traced column of a node no edge on the trace reaches, e.g. while its neighbours are hidden
-    rfNodes.forEach(node => { if (trace.columns.has(node.id)) nodeIds.add(node.id); });
+    const actions = new Set(trace.edges.map(e => e[4]));
+    rfNodes.forEach(node => { if (trace.columns.has(node.id) || (isAction.get(node.id) && actions.has(node.id))) nodeIds.add(node.id); });
     return {nodeIds, edgeIds};
 }
 
@@ -870,6 +911,7 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
                 outputIndex: Math.max(siblingOutEdges.findIndex(e => e.id === edge.id), 0),
                 inputIndex: Math.max(siblingInEdges.findIndex(e => e.id === edge.id), 0),
                 highlighted: selectedEdgeId === edge.id,
+                dataObjectId: edge.dataObjectId,
             } as CustomEdgeProps,
             style: { stroke: edgeColor, strokeWidth: EDGE_STROKE_WIDTH_DEFAULT },
         } as ReactFlowEdge;

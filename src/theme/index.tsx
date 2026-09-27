@@ -1,4 +1,5 @@
 import { Theme } from '@aws-amplify/ui-react';
+import { extendTheme } from '@mui/joy/styles';
 
 /**
  * SDL brand blue. The app's UI colours come from the MUI Joy theme; this constant exists only
@@ -22,3 +23,20 @@ export const amplifyTheme: Theme = {
     }
   },
 }
+
+/**
+ * The Joy theme. Tooltips get a maximum width and break long words - a transformation or an
+ * expression can be a single line of several hundred characters. A tooltip's own `sx` still wins.
+ */
+export const joyTheme = extendTheme({
+  components: {
+    JoyTooltip: {
+      styleOverrides: {
+        root: {
+          maxWidth: 'min(480px, calc(100vw - 32px))',
+          overflowWrap: 'anywhere',
+        },
+      },
+    },
+  },
+});

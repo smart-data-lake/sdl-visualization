@@ -25,8 +25,9 @@ export function ColumnTracePanel({trace, complete, props, graphView, layout, onC
   const graph = getGraph(props, graphView);
   const {starts, ends} = traceEnds(trace);
 
-  // what this view could show of the trace: its data objects, and in the full view its actions too
-  const onTrace = new Set([...trace.columns.keys(), ...(graphView === 'full' ? trace.edges.map(edge => edge[4]) : [])]);
+  // what this view could show of the trace: its data objects, and in the full and action views its actions
+  const withActions = graphView === 'full' || graphView === 'action';
+  const onTrace = new Set([...trace.columns.keys(), ...(withActions ? trace.edges.map(edge => edge[4]) : [])]);
   const missing = [...onTrace].filter(id => !shown.has(id) && graph.getNodeById(id) !== undefined);
 
   const showMissing = () => {

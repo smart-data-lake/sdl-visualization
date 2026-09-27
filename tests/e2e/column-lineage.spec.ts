@@ -223,6 +223,22 @@ test.describe('the ports of an action in the full view', () => {
     await expect(edge(page, 'join-departures-airports_from_int-airports')).toHaveCount(1);
   });
 
+  test('a node title and a data object caption have a tooltip only where they are cut off', async ({ page }) => {
+    await openAction(page);
+    const title = (id: string) => node(page, id).locator('.MuiTypography-body-lg');
+    const caption = (text: string) => node(page, 'join-departures-airports').locator('.lineage-port-caption').getByText(text, { exact: true });
+
+    await title('btl-departures-arrivals-airports').hover();
+    await expect(page.getByRole('tooltip')).toHaveText('btl-departures-arrivals-airports');
+    await title('int-airports').hover();
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+
+    await caption('btl-departures-arrivals-airports').hover();
+    await expect(page.getByRole('tooltip')).toHaveText('btl-departures-arrivals-airports');
+    await caption('int-airports').hover();
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+  });
+
   test('a column trace runs through the ports it passes', async ({ page }) => {
     await openAction(page);
     await expandColumns(page, 'int-airports').click();
@@ -236,6 +252,77 @@ test.describe('the ports of an action in the full view', () => {
     await expect(port(page, 'output', 'btl-departures-arrivals-airports.arr_name')).toHaveClass(/lineage-column-traced/);
     await expect.poll(() => edge(page, 'int-airports.name->join-departures-airports::port').locator('path.react-flow__edge-path')
       .evaluate((el) => (el as SVGPathElement).style.stroke)).toBe('rgb(9, 107, 222)');
+  });
+});
+
+test.describe('the columns of the action view', () => {
+  const writer = 'join-departures-airports', reader = 'compute-distances', via = 'btl-departures-arrivals-airports';
+  const columnEdge = (page: Page, column: string) => edge(page, `${writer}->${via}.${column}->${reader}::port`);
+  const portEdges = (page: Page) => page.locator('.react-flow__edge[data-testid$="::port"]');
+  const flowEdgeId = `${writer}->${via}->${reader}`;
+  const isHighlighted = (page: Page, locator: ReturnType<typeof edge>) =>
+    locator.locator('path.react-flow__edge-path').evaluate((el) => (el as SVGPathElement).style.stroke);
+
+  async function openActionView(page: Page) {
+    await page.goto(`/#/config/actions/${writer}`);
+    await page.getByRole('button', { name: 'Open lineage' }).click();
+    await expect(node(page, writer)).toBeVisible();
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(2).click(); // action graph
+    await expect(nodes(page).filter({ has: page.locator('text=Data Object') })).toHaveCount(0);
+    await expect(node(page, reader)).toBeVisible();
+  }
+
+  test('an edge splits into its data object\'s columns, from port to port', async ({ page }) => {
+    await openActionView(page);
+    await expect(portEdges(page)).toHaveCount(0);
+    await expect(flowEdge(page, flowEdgeId)).toHaveCount(1);
+
+    // only the writer is open: its columns end on the reader's node
+    await expandColumns(page, writer).click();
+    await expect(node(page, writer).getByTestId(`port-output-${via}.dep_name`)).toBeVisible();
+    await expect(columnEdge(page, 'dep_name')).toHaveCount(1);
+    await expect(flowEdge(page, flowEdgeId)).toHaveCount(0);
+    await expect(await edgeTooltip(page, `${writer}->${via}.dep_name->${reader}::port`))
+      .toHaveText(`${via}.dep_name\n${writer} → ${reader}`);
+
+    // both open: port to port
+    await expandColumns(page, reader).click();
+    await expect(node(page, reader).getByTestId(`port-input-${via}.dep_name`)).toBeVisible();
+    await expect(columnEdge(page, 'dep_name')).toHaveCount(1);
+
+    await collapseColumns(page, writer).click();
+    await expect(columnEdge(page, 'dep_name')).toHaveCount(1);
+    await collapseColumns(page, reader).click();
+    await expect(portEdges(page)).toHaveCount(0);
+    await expect(flowEdge(page, flowEdgeId)).toHaveCount(1);
+  });
+
+  test('a port\'s name traces its column', async ({ page }) => {
+    await openActionView(page);
+    await expandColumns(page, writer).click();
+    await expandColumns(page, reader).click();
+    await node(page, writer).getByTestId(`trace-port-output-${via}.dep_name`).click();
+
+    await expect(page.getByTestId('column-trace-panel')).toBeVisible();
+    await expect(page.getByTestId('column-trace-starts')).toContainText('stg-airports.name');
+    await expect.poll(() => isHighlighted(page, columnEdge(page, 'dep_name'))).toBe('rgb(9, 107, 222)');
+    expect(await isHighlighted(page, columnEdge(page, 'arr_name'))).not.toBe('rgb(9, 107, 222)');
+    await expect(node(page, writer).getByTestId(`connection-int-airports.name>${via}.dep_name`))
+      .toHaveClass(/lineage-port-connection-traced/);
+
+    // tracing it again stops it
+    await node(page, writer).getByTestId(`trace-port-output-${via}.dep_name`).click();
+    await expect(page.getByTestId('column-trace-panel')).toHaveCount(0);
+  });
+
+  test('in the full view too', async ({ page }) => {
+    await page.goto(`/#/config/actions/${writer}`);
+    await page.getByRole('button', { name: 'Open lineage' }).click();
+    await expandColumns(page, writer).click();
+    await node(page, writer).getByTestId('trace-port-input-int-airports.name').click();
+    await expect(page.getByTestId('column-trace-starts')).toContainText('stg-airports.name');
+    await expect.poll(() => isHighlighted(page, edge(page, `${writer}->${via}.dep_name::port`))).toBe('rgb(9, 107, 222)');
   });
 });
 
