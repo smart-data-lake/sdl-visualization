@@ -7,10 +7,13 @@
     expanded, selected or opened on its columns - only the spacing changes.
 */
 import dagre from 'dagre';
+import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, SimulationNodeDatum } from 'd3-force';
 import { Edge as ReactFlowEdge, Node as ReactFlowNode } from 'reactflow';
 import { DAGraph, isColumnLineageEdge, rfNodeSize } from './Graphs';
 
 export type LayoutDirection = 'TB' | 'LR';
+/* layered: ranks and order, see above. force: a force directed placement, offered for the relations view */
+export type LayoutMode = 'layered' | 'force';
 
 export const LAYOUT_NODESEP = 150;
 export const LAYOUT_RANKSEP = 150;
@@ -96,6 +99,56 @@ export function layoutModelOf(graph: DAGraph, direction: LayoutDirection): Layou
     return model;
 }
 
+const FORCE_LINK_DISTANCE = 2 * REFERENCE_NODE_WIDTH;
+const FORCE_COLLIDE_RADIUS = REFERENCE_NODE_WIDTH / 2 + 40;
+const FORCE_TICKS = 300;
+// the gap assignCoordinates keeps between two nodes of a force layout once they have their real size
+export const FORCE_NODE_GAP = 40;
+
+/*
+    Where each node of the graph belongs in a force directed layout: its centre, once per graph.
+    Deterministic - sorted input and a seeded random source - so it is a function of the graph alone.
+*/
+function buildForceModel(graph: DAGraph): Map<string, {x: number, y: number}> {
+    type ForceNode = SimulationNodeDatum & {id: string};
+    const nodes: ForceNode[] = graph.nodes.map(node => node.id).sort().map(id => ({id}));
+    const known = new Set(nodes.map(node => node.id));
+    const links = graph.edges
+        .map(edge => ({source: edge.fromNode.id, target: edge.toNode.id}))
+        .filter(link => link.source !== link.target && known.has(link.source) && known.has(link.target))
+        .sort((a, b) => a.source.localeCompare(b.source) || a.target.localeCompare(b.target));
+
+    let seed = 1;
+    const random = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+    forceSimulation(nodes)
+        .randomSource(random)
+        .force('link', forceLink<ForceNode, {source: string, target: string}>(links).id(node => node.id).distance(FORCE_LINK_DISTANCE))
+        .force('charge', forceManyBody().strength(-1500))
+        .force('collide', forceCollide(FORCE_COLLIDE_RADIUS))
+        // keeps the connected components, which repel each other, from drifting apart
+        .force('x', forceX(0).strength(0.05))
+        .force('y', forceY(0).strength(0.05))
+        .stop()
+        .tick(FORCE_TICKS);
+
+    return new Map(nodes.map(node => [node.id, {x: node.x ?? 0, y: node.y ?? 0}]));
+}
+
+const forceModels = new WeakMap<DAGraph, Map<string, {x: number, y: number}>>();
+
+export function forceModelOf(graph: DAGraph): ReadonlyMap<string, {x: number, y: number}> {
+    let model = forceModels.get(graph);
+    if (!model) {
+        model = buildForceModel(graph);
+        forceModels.set(graph, model);
+    }
+    return model;
+}
+
+export function forceCentreOf(node: ReactFlowNode): {x: number, y: number} | undefined {
+    return node.data?.forceCentre;
+}
+
 export function placementOf(node: ReactFlowNode): NodePlacement | undefined {
     return node.data?.placement;
 }
@@ -121,6 +174,7 @@ export interface CoordinateOptions {
     Nodes without a placement - the grouping boxes - are passed through untouched.
 */
 export function assignCoordinates(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: LayoutDirection, options: CoordinateOptions = {}): ReactFlowNode[] {
+    if (nodes.some(node => forceCentreOf(node))) return assignForceCoordinates(nodes, options);
     const {main, cross, mainSize, crossSize} = axes(direction);
     const nodesep = options.nodesep ?? LAYOUT_NODESEP;
     const ranksep = options.ranksep ?? LAYOUT_RANKSEP;
@@ -196,6 +250,66 @@ export function assignCoordinates(nodes: ReactFlowNode[], edges: ReactFlowEdge[]
         if (!position) return node;
         return {...node, position: {x: position.x + delta.x, y: position.y + delta.y}};
     });
+}
+
+/*
+    Coordinates for nodes carrying a force layout centre: that centre, the user's displacement, and
+    then as little movement as removes the overlaps of nodes that have grown, e.g. opened their columns.
+*/
+function assignForceCoordinates(nodes: ReactFlowNode[], options: CoordinateOptions): ReactFlowNode[] {
+    const sizeOf = (node: ReactFlowNode) =>
+        rfNodeSize(node, options.defaultWidth ?? REFERENCE_NODE_WIDTH, options.defaultHeight ?? REFERENCE_NODE_HEIGHT);
+
+    const boxes: {id: string, x: number, y: number, width: number, height: number}[] = [];
+    const seen = new Set<string>();
+    nodes.forEach(node => {
+        const centre = forceCentreOf(node);
+        if (!centre || seen.has(node.id)) return;
+        seen.add(node.id);
+        const {width, height} = sizeOf(node);
+        const offset = manualOffsetOf(node) ?? {x: 0, y: 0};
+        boxes.push({id: node.id, x: centre.x - width / 2 + offset.x, y: centre.y - height / 2 + offset.y, width, height});
+    });
+    boxes.sort((a, b) => a.id.localeCompare(b.id));
+    separateBoxes(boxes, options.anchorId, options.nodesep ?? FORCE_NODE_GAP);
+
+    const positioned = new Map(boxes.map(box => [box.id, {x: box.x, y: box.y}]));
+    const delta = translation(nodes, positioned, options.anchorId);
+    return nodes.map(node => {
+        const position = positioned.get(node.id);
+        if (!position) return node;
+        return {...node, position: {x: position.x + delta.x, y: position.y + delta.y}};
+    });
+}
+
+/*
+    Push overlapping boxes apart along the axis they overlap less on, until a gap of `gap` is kept
+    between any two. The anchor does not move; the other box of a pair with it takes the whole push.
+*/
+function separateBoxes(boxes: {id: string, x: number, y: number, width: number, height: number}[], anchorId: string | undefined, gap: number): void {
+    for (var pass = 0; pass < 100; pass++) {
+        var moved = false;
+        for (var i = 0; i < boxes.length; i++) {
+            for (var j = i + 1; j < boxes.length; j++) {
+                const a = boxes[i], b = boxes[j];
+                const overlapX = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x) + gap;
+                const overlapY = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y) + gap;
+                if (overlapX <= 0.5 || overlapY <= 0.5) continue;
+                moved = true;
+                const alongX = overlapX < overlapY;
+                const aCentre = alongX ? a.x + a.width / 2 : a.y + a.height / 2;
+                const bCentre = alongX ? b.x + b.width / 2 : b.y + b.height / 2;
+                // ties go by id order, so the result does not depend on floating point noise
+                const sign = bCentre > aCentre || (bCentre === aCentre && a.id < b.id) ? 1 : -1;
+                const push = alongX ? overlapX : overlapY;
+                const aShare = a.id === anchorId ? 0 : b.id === anchorId ? 1 : 0.5;
+                const axis = alongX ? 'x' : 'y';
+                a[axis] -= sign * push * aShare;
+                b[axis] += sign * push * (1 - aShare);
+            }
+        }
+        if (!moved) return;
+    }
 }
 
 /*

@@ -1,5 +1,6 @@
 import { Abc, AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull, Search, Send, FilterList } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
+import BubbleChartOutlined from '@mui/icons-material/BubbleChartOutlined';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import {CloudDownload, Close} from '@mui/icons-material';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
@@ -20,7 +21,7 @@ import { toPng } from 'html-to-image';
 import { useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
-import { nodeAttributes, useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
+import { LayoutChoice, nodeAttributes, useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
 import { flowProps, getGraphFromConfig, groupByFeed, groupBySubstring, recomputeLayout, resetLayout, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
 
 /*
@@ -40,7 +41,7 @@ function downloadImage(dataUrl: string) {
 }
 
 function GraphViewSelector({props}: {props: flowProps}) {
-    const { graphView, setGraphView, setLayout } = useLineageGraph();
+    const { graphView, setGraphView, layoutChoice, setLayout } = useLineageGraph();
 
     const options = {
         full: {title: 'show full graph', icon: SchemaIcon},
@@ -61,6 +62,8 @@ function GraphViewSelector({props}: {props: flowProps}) {
             The layout button still switches it back for anyone who wants that.
         */
         if (value === 'relations') setLayout('LR');
+        // the other views are a flow, which only a layered layout draws
+        else if (layoutChoice === 'force') setLayout('LR');
     };
 
     /*
@@ -107,20 +110,46 @@ function GraphViewSelector({props}: {props: flowProps}) {
 }
 
 
-function LayoutButton() {
-    const { layout, setLayout } = useLineageGraph();
+/* The layout: layered in either direction, or force directed, which only the relations view offers. */
+function LayoutSelector({forceAvailable}: {forceAvailable: boolean}) {
+    const { layoutChoice, setLayout } = useLineageGraph();
 
-    /*
-    return <div
-        title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'}
-        className="controls"
-        style={styles}
-    >*/
-    return <Tooltip arrow title={layout === 'TB' ? 'switch to horizontal layout' : 'switch to vertical layout'} enterDelay={500} enterNextDelay={500} placement='top'>
-        <IconButton color={'neutral'} onClick={() => setLayout(layout === 'TB' ? 'LR' : 'TB')}>
-            {layout === 'TB' ? <AlignVerticalTop /> : <AlignHorizontalLeft />}
-        </IconButton>
-    </Tooltip>
+    const options: Record<LayoutChoice, {title: string, icon: typeof AlignVerticalTop}> = {
+        TB: {title: 'vertical layout', icon: AlignVerticalTop},
+        LR: {title: 'horizontal layout', icon: AlignHorizontalLeft},
+        force: {title: 'force directed layout', icon: BubbleChartOutlined},
+    };
+
+    const item = (choice: LayoutChoice, disabled = false) => {
+        const Icon = options[choice].icon;
+        return (
+            <MenuItem key={choice} selected={layoutChoice === choice} disabled={disabled} data-testid={`layout-${choice}`}
+                      onClick={() => { if (!disabled) setLayout(choice); }} sx={{ justifyContent: 'center' }}>
+                <Tooltip arrow title={disabled ? options[choice].title + ' (only in the relations view)' : options[choice].title}
+                         enterDelay={500} enterNextDelay={500} placement='right'>
+                    <Icon />
+                </Tooltip>
+            </MenuItem>
+        );
+    };
+
+    const ToolbarIcon = options[layoutChoice].icon;
+
+    return (
+        <Dropdown>
+            <MenuButton endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1 }}
+                        data-testid='layout-selector'>
+                <Tooltip arrow title='Show layout options' enterDelay={500} enterNextDelay={500} placement='top'>
+                    <ToolbarIcon />
+                </Tooltip>
+            </MenuButton>
+            <Menu>
+                {item('TB')}
+                {item('LR')}
+                {item('force', !forceAvailable)}
+            </Menu>
+        </Dropdown>
+    );
 }
 
 function GraphExpansionButton() {
@@ -228,7 +257,7 @@ function ResetLayoutButton() {
 
 function GroupingButton({props: lineageTabProps}: {props: flowProps}) {
     const rfi = useReactFlow();
-    const { graphView, layout, isExpanded } = useLineageGraph();
+    const { graphView, layout, layoutMode, isExpanded } = useLineageGraph();
     const configData = lineageTabProps.configData;
 
     const [showByNameSelector, setShowByNameSelector] = useState(false);
@@ -238,7 +267,7 @@ function GroupingButton({props: lineageTabProps}: {props: flowProps}) {
     // TODO: consider interaction with other buttons
     const handleReset = () => {
         groupingRoutine === 'components' ? restoreGroupSettings(rfi)
-                                         : restoreGroupSettingsBySubgroup(rfi, {graphView, props: lineageTabProps, layout, isExpanded});
+                                         : restoreGroupSettingsBySubgroup(rfi, {graphView, props: lineageTabProps, layout, layoutMode, isExpanded});
         setGroupingOption(undefined);
         setGroupingRoutine(undefined);
         recomputeLayout(rfi, layout);
@@ -482,6 +511,7 @@ export default function LineageGraphToolbar({props}: {props: flowProps}) {
     const showCloseButton = !props.runContext;
     // avoid DOM warning for Draggable, see https://github.com/react-grid-layout/react-draggable/blob/v4.4.2/lib/DraggableCore.js#L159-L171
     const nodeRef = useRef(null);
+    const { graphView } = useLineageGraph();
 
     return (
         <Draggable bounds="parent" nodeRef={nodeRef}>
@@ -506,7 +536,7 @@ export default function LineageGraphToolbar({props}: {props: flowProps}) {
                     <ShowAllButton />
                     {showCenterNodeOptions && <CenterFocusButton />}
                     <ResetLayoutButton />
-                    <LayoutButton />
+                    <LayoutSelector forceAvailable={showCenterNodeOptions && graphView === 'relations'} />
                 </ToggleButtonGroup>
                 <Divider orientation="vertical" />
                 <ToggleButtonGroup variant="plain" spacing={0.1}>

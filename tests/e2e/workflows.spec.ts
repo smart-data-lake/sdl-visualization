@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { ACTIONS, WORKFLOW } from './fixture';
+import { chooseLayout, layoutSelector } from './layoutSelector';
 
 test.describe('workflows explorer', () => {
   test('lists the workflows of the state index', async ({ page }) => {
@@ -114,12 +115,12 @@ test.describe('workflows explorer', () => {
     await expect(page.getByRole('button', { name: 'Expand graph' })).toBeHidden();
     await expect(page.getByRole('button', { name: 'Close lineage' })).toBeHidden();
     await expect(page.getByRole('button', { name: 'Focus on central node' })).toBeHidden();
-    // the graph view selector and the grouping dropdown are the MenuButtons after the node search
-    await expect(page.locator('.react-flow .MuiMenuButton-root')).toHaveCount(1);
+    // the graph view selector and the grouping dropdown are gone: the node search and the layout menu are left
+    await expect(page.locator('.react-flow .MuiMenuButton-root')).toHaveCount(2);
     // what is left acts on the viewport only
     await expect(page.getByRole('button', { name: 'Show all' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Reset layout' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /switch to (horizontal|vertical) layout/ })).toBeVisible();
+    await expect(layoutSelector(page)).toBeVisible();
   });
 
   test('the run graph shows the state of each action on its node', async ({ page }) => {
@@ -262,7 +263,7 @@ test.describe('workflows explorer', () => {
     let stub = await box(page.getByTestId('node-metric-output-btl-distances'));
     expect(Math.round(stub.x + stub.width / 2)).toBe(Math.round(compute.x + compute.width / 2));
 
-    await page.getByRole('button', { name: /switch to horizontal layout/ }).click();
+    await chooseLayout(page, 'LR');
     await expect(page.getByTestId(`edge-metric-output-${join}`)).toBeVisible();
 
     // horizontal layout: the labels sit right resp. left of their node and above the line, and the

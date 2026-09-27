@@ -1,5 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { ACTIONS, DATA_OBJECTS } from './fixture';
+import { chooseLayout, layoutInUse } from './layoutSelector';
 
 /**
  * The lineage panel of the config explorer (LineageTabWithSeparateView).
@@ -62,9 +63,9 @@ test.describe('lineage graph', () => {
     const central = nodes(page).filter({ has: page.getByText('int-airports', { exact: true }) }).first();
     const before = await central.getAttribute('style');
 
-    await page.getByRole('button', { name: 'switch to horizontal layout' }).click();
+    await chooseLayout(page, 'LR');
 
-    await expect(page.getByRole('button', { name: 'switch to vertical layout' })).toBeVisible();
+    await expect(layoutInUse(page, 'LR')).toBeVisible();
     await expect.poll(() => central.getAttribute('style')).not.toBe(before);
   });
 
@@ -175,7 +176,7 @@ test.describe('lineage graph', () => {
     };
 
     await check('TB');
-    await page.getByRole('button', { name: 'switch to horizontal layout' }).click();
+    await chooseLayout(page, 'LR');
     await expect.poll(async () => (await borders()).length).toBeGreaterThan(0);
     await check('LR');
   });
@@ -240,7 +241,7 @@ test.describe('lineage graph', () => {
         against the button. In a left to right layout the two are at the same height.
     */
     await openLineage(page, '/#/config/dataObjects/int-departures');
-    await page.getByRole('button', { name: 'switch to horizontal layout' }).click();
+    await chooseLayout(page, 'LR');
 
     const gap = async () => page.evaluate(() => {
       const node = document.querySelector('.react-flow__node[data-id="int-departures"]')!;
@@ -330,7 +331,7 @@ test.describe('lineage graph', () => {
   test('the toolbar settings survive closing and reopening the panel', async ({ page }) => {
     await openLineage(page, '/#/config/dataObjects/int-airports');
 
-    await page.getByRole('button', { name: 'switch to horizontal layout' }).click();
+    await chooseLayout(page, 'LR');
     await page.getByRole('button', { name: 'Expand graph' }).click();
     const expanded = await nodeIds(page);
 
@@ -339,7 +340,7 @@ test.describe('lineage graph', () => {
     await page.getByRole('button', { name: 'Open lineage' }).click();
     await expect(nodes(page).first()).toBeVisible();
 
-    await expect(page.getByRole('button', { name: 'switch to vertical layout' })).toBeVisible();
+    await expect(layoutInUse(page, 'LR')).toBeVisible();
     expect(await nodeIds(page)).toEqual(expanded);
   });
 

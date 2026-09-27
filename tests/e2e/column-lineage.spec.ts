@@ -1,5 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { hoverLine } from './hoverLine';
+import { chooseLayout, layoutInUse } from './layoutSelector';
 
 /**
  * Column lineage in the data view (issue #141, see src/components/ConfigExplorer/LineageTab/README.md).
@@ -364,8 +365,8 @@ test.describe('rebuilding the graph', () => {
     await expect(expandColumns(page, 'btl-distances')).toBeVisible();
 
     // the layout builds the node set anew, the nodes themselves stay mounted
-    await page.locator('.react-flow [data-testid="AlignVerticalTopIcon"]').click();
-    await expect(page.locator('.react-flow [data-testid="AlignHorizontalLeftIcon"]')).toBeVisible();
+    await chooseLayout(page, 'LR');
+    await expect(layoutInUse(page, 'LR')).toBeVisible();
     await expect(expandColumns(page, 'compute-distances')).toBeVisible();
     await expect(expandColumns(page, 'btl-distances')).toBeVisible();
 

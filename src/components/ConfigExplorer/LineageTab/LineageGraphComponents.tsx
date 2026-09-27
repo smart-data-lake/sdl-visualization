@@ -8,7 +8,7 @@
 */
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
-import { EdgeLabelRenderer, EdgeProps, Handle, getBezierPath, getSmoothStepPath, getStraightPath, useReactFlow, useUpdateNodeInternals } from 'reactflow';
+import { EdgeLabelRenderer, EdgeProps, Handle, getBezierPath, getSmoothStepPath, getStraightPath, internalsSymbol, useReactFlow, useStore, useUpdateNodeInternals } from 'reactflow';
 
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
@@ -776,18 +776,49 @@ function relationPaths(sourceX: number, sourceY: number, sourcePosition: Positio
   return {edgePath: `M ${sourceX},${sourceY} L ${heelX},${heelY} ${line.replace(/^M/, 'L')}`, footPath: `${toe(1)} ${toe(-1)}`};
 }
 
+/*
+  A relation's ends sit on the right (source) and left (target) border, and an end facing away from
+  the other node would cross back through its own. Every such handle has a twin of the other kind on
+  the opposite border, same row: this is the node's centre x and the x of that twin, so an end can
+  move onto it - its real position, which is only moved out where an expand button is in the way.
+*/
+function useOppositeHandle(nodeId: string, handleId: string | null | undefined): {centreX: number, x: number} | undefined {
+  return useStore(s => {
+    const node = s.nodeInternals.get(nodeId);
+    if (!node?.positionAbsolute || !node.width || !handleId) return undefined;
+    const [kind, twinKind] = handleId.includes('-source:') ? ['source', 'target'] as const : ['target', 'source'] as const;
+    const twinId = handleId.replace(`-${kind}:`, `-${twinKind}:`);
+    const twin = node[internalsSymbol]?.handleBounds?.[twinKind]?.find(handle => handle.id === twinId);
+    if (!twin) return undefined;
+    // ReactFlow's own anchoring: a left handle's left edge, a right handle's right edge
+    const x = node.positionAbsolute.x + twin.x + (twinKind === 'source' ? twin.width : 0);
+    return {centreX: node.positionAbsolute.x + node.width / 2, x};
+  }, (a, b) => a?.x === b?.x && a?.centreX === b?.centreX);
+}
+
 //https://github.com/xyflow/xyflow/discussions/2347
 export const CustomEdge = ({
   id,
   source, target,
   sourceX, sourceY, targetX, targetY,
   sourcePosition,targetPosition,
+  sourceHandleId, targetHandleId,
   style,
   markerEnd,
   data,
 }: EdgeProps<CustomEdgeProps>) => {
 
   const reactFlow = useReactFlow();
+  const isRelation = !!data?.relation && source !== target;
+  const sourceTwin = useOppositeHandle(source, isRelation ? sourceHandleId : undefined);
+  const targetTwin = useOppositeHandle(target, isRelation ? targetHandleId : undefined);
+  // a relation leaves and enters on the borders facing each other, see useOppositeHandle
+  if (sourceTwin && targetTwin && targetTwin.centreX < sourceTwin.centreX) {
+    sourceX = sourceTwin.x;
+    sourcePosition = Position.Left;
+    targetX = targetTwin.x;
+    targetPosition = Position.Right;
+  }
   const relation = data?.relation ? relationPaths(sourceX, sourceY, sourcePosition, targetX, targetY) : undefined;
   // column lineage edges run many to a node, and curves keep them apart where right angles would overlap
   const [edgePath] = relation && source !== target ? [relation.edgePath]

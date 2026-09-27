@@ -19,7 +19,7 @@ import { ACTION_NODE_WIDTH_WITH_PORTS, columnHandleId, nodeHeightFor, nodeRelati
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
 import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, ExpandSides, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, expandSidesFrom, isColumnLineageEdge, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
-import { LayoutDirection, NodePlacement, assignCoordinates, layoutModelOf } from './LineageLayout';
+import { LayoutDirection, LayoutMode, NodePlacement, assignCoordinates, forceCentreOf, forceModelOf, layoutModelOf } from './LineageLayout';
 
 
 /*
@@ -119,6 +119,7 @@ export interface lineageGraphState {
     graphView: GraphView;
     props: flowProps;
     layout: LayoutDirection;
+    layoutMode?: LayoutMode;
     isExpanded: boolean;
 }
 
@@ -249,6 +250,8 @@ export interface ReactFlowNodeProps {
         the current content of the ReactFlow instance. See LineageLayout.ts.
     */
     placement?: NodePlacement,
+    /* the node's centre in a force layout of the relations view; when set, it replaces placement */
+    forceCentre?: {x: number, y: number},
     /* in the action view: how an action's port groups are ordered, see portGroupRanks */
     portGroupRanks?: PortGroupRanks,
 }
@@ -389,7 +392,8 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     expandDirection: ExpandDirection | undefined,
     graphView: GraphView,
     expandNodeFunc: (id: string, isExpanded: boolean, direction: ExpandDirection, graphView: GraphView, layout: LayoutDirection) => void,
-    props: flowProps
+    props: flowProps,
+    layoutMode: LayoutMode = 'layered'
 ): ReactFlowNode[] {
     const dataObjectsAndActions = getGraph(props, graphView);
     const columnsOf = makeColumnsOf(props);
@@ -417,6 +421,8 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     // just add more fields to the flowProps interface and access it in the custom node component.
     // The additional props can be passed in ElementDetails where the LineageTab is opened.
     const layoutModel = layoutModelOf(dataObjectsAndActions, layoutDirection);
+    // only the relations view offers a force layout, see LineageLayout.ts
+    const forceModel = graphView === 'relations' && layoutMode === 'force' ? forceModelOf(dataObjectsAndActions) : undefined;
 
     var result: ReactFlowNode[] = [];
     selectedNodes.forEach((node) => {
@@ -469,6 +475,7 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             columnDisplay: columnsFunc && nodeType === NodeType.DataNode ? rememberedColumnDisplay(nodeType, node.id) : 'none',
             isSelectedElement: node.id === props.elementName,
             placement: layoutModel.placement.get(node.id),
+            forceCentre: forceModel?.get(node.id),
             portGroupRanks: graphView === 'action' && nodeType === NodeType.ActionNode
                 ? portGroupRanks(dataObjectsAndActions, node.id, layoutModel.placement) : undefined,
         }
@@ -947,7 +954,7 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
     return result;
 }
 
-function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection, isExpanded: boolean): [ReactFlowNode[], ReactFlowEdge[]] {
+function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection, isExpanded: boolean, layoutMode?: LayoutMode): [ReactFlowNode[], ReactFlowEdge[]] {
     var partialGraphPair: [GraphNode[], GraphEdge[]] = [[], []];
     var centralNodeId: string = props.elementName;
     const centralNode = doa.getNodeById(centralNodeId);
@@ -961,7 +968,7 @@ function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: Gra
         const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0], partialGraphPair[1], layout, props.configData, true);
         if (centralNode) partialGraph.setCenterNode(centralNode);
 
-        let newNodes = createReactFlowNodes(partialGraphPair[0], layout, isExpanded, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props);
+        let newNodes = createReactFlowNodes(partialGraphPair[0], layout, isExpanded, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props, layoutMode);
         let newEdges = createReactFlowEdges(partialGraphPair[1], props, graphView, undefined);
 
         return [newNodes, newEdges];
@@ -984,7 +991,7 @@ function prepareGraphComplete(rfi: ReactFlowInstance, doa: DAGraph, graphView: G
 }
 
 export function prepareAndRenderGraph(rfi: ReactFlowInstance, lineageState: lineageGraphState): preparedGraph {
-    const { graphView, props, layout, isExpanded } = lineageState;
+    const { graphView, props, layout, isExpanded, layoutMode } = lineageState;
 
     var doa: DAGraph; // data objects and actions
     var navigateTo: string | undefined;
@@ -1028,7 +1035,7 @@ export function prepareAndRenderGraph(rfi: ReactFlowInstance, lineageState: line
     if (navigateTo) return { nodes: [], edges: [], navigateTo };
 
     // reset isCenterNode flags otherwise all previous ones will be colored
-    const [nodes, edges] = prepareGraphDirect(rfi, doa, graphView, props, layout, isExpanded);
+    const [nodes, edges] = prepareGraphDirect(rfi, doa, graphView, props, layout, isExpanded, layoutMode);
     return { nodes: applyExpandSides(nodes, edges, props.elementName), edges };
 }
 
@@ -1053,6 +1060,11 @@ export function updateExpandSides(rfi: ReactFlowInstance, selectedId?: string): 
 */
 // binds the current ReactFlow instance and lineage tab props to the expand/collapse handler that is
 // stored on each node, so that the handler keeps the signature expected by the custom node component
+// nodes added to a shown graph follow the layout its nodes were created with
+function flowLayoutMode(rfi: ReactFlowInstance): LayoutMode {
+    return rfi.getNodes().some(node => forceCentreOf(node)) ? 'force' : 'layered';
+}
+
 function makeExpandNodeFunc(rfi: ReactFlowInstance, props: flowProps) {
     return (id: string, isExpanded: boolean, expandDirection: ExpandDirection, graphView: GraphView, layoutDirection: LayoutDirection) =>
         expandNodeFunc(rfi, props, id, isExpanded, expandDirection, graphView, layoutDirection);
@@ -1085,7 +1097,8 @@ function expandNodeFunc(rfi: ReactFlowInstance, props: flowProps,
             expandDirection,
             graphView,
             makeExpandNodeFunc(rfi, props),
-            props);
+            props,
+            flowLayoutMode(rfi));
 
         let rfEdges = createReactFlowEdges(neighbourEdges,
             props,
@@ -1162,7 +1175,7 @@ export function spliceNodePath(rfi: ReactFlowInstance, props: flowProps, nodeId:
     const anchorId = pathNodes.length > 0 ? pathNodes[pathNodes.length - 1].id : undefined;
 
     const newRfNodes = createReactFlowNodes(nodes.filter(node => !shownIds.includes(node.id)),
-        layoutDirection, false, true, undefined, graphView, makeExpandNodeFunc(rfi, props), props);
+        layoutDirection, false, true, undefined, graphView, makeExpandNodeFunc(rfi, props), props, flowLayoutMode(rfi));
     const newRfEdges = createReactFlowEdges(pathEdges, props, graphView, undefined);
 
     rfi.setEdges(eds => [...eds, ...newRfEdges.filter(edge => !eds.some(e => e.id === edge.id))]);
@@ -1968,14 +1981,14 @@ export function restoreGroupSettings(rfi: ReactFlowInstance) {
 
 export function restoreGroupSettingsBySubgroup(rfi: ReactFlowInstance, lineageState: lineageGraphState) {
     // restore the flow state to the state in configData
-    const { graphView, props, layout, isExpanded } = lineageState;
+    const { graphView, props, layout, isExpanded, layoutMode } = lineageState;
 
     groupingState.subgroups = undefined;
     groupingState.subgroupsRf = undefined;
 
     const graph: DAGraph = getGraph(props, graphView);
     const [nodes, edges] = props.graph ? prepareGraphComplete(rfi, graph, graphView, props, layout)
-                                       : prepareGraphDirect(rfi, graph, graphView, props, layout, isExpanded);
+                                       : prepareGraphDirect(rfi, graph, graphView, props, layout, isExpanded, layoutMode);
     rfi.setNodes(nodes);
     rfi.setEdges(edges);
 }

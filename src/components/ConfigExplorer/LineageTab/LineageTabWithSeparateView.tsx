@@ -88,7 +88,7 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
   // workaround to wait for reactflow div mounted, in order to get container width/height
   const [rfContainerMounted, setRfContainerMounted] = useState(false);
 
-  const { graphView: selectedGraphView, isExpanded, layout } = useLineageGraph();
+  const { graphView: selectedGraphView, isExpanded, layout, layoutMode } = useLineageGraph();
   // a graph passed in through the props brings its own view, the selector cannot switch it
   const graphView = props.graph ? (props.graphView ?? 'action') : selectedGraphView;
 
@@ -110,9 +110,9 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
     that is selected now, which is why the memo reads props but does not watch it.
   */
   const {nodes, edges, navigateTo} = useMemo(() => {
-    const prepared = prepareAndRenderGraph(reactFlow, {graphView, props, layout, isExpanded});
+    const prepared = prepareAndRenderGraph(reactFlow, {graphView, props, layout, layoutMode, isExpanded});
     return {...prepared, nodes: assignCoordinates(prepared.nodes, prepared.edges, layout, {defaultWidth: nodeWidth, defaultHeight: nodeHeight})};
-  }, [isExpanded, graphView, layout, builtAround.elementName, builtAround.elementType,
+  }, [isExpanded, graphView, layout, layoutMode, builtAround.elementName, builtAround.elementType,
       props.configData, props.graph, props.graphView, props.runContext,
       props.nodeStatuses, props.edgeMetrics, props.nodeMetrics]);
 

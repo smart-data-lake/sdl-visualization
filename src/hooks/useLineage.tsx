@@ -1,5 +1,6 @@
 import React from "react";
 import { flowProps, GraphView, LayoutDirection } from "../util/ConfigExplorer/LineageTabUtils";
+import type { LayoutMode } from "../util/ConfigExplorer/LineageLayout";
 import type { ColumnRef } from "../util/ConfigExplorer/columnLineage";
 import { useManifest } from "./useManifest";
 
@@ -25,11 +26,17 @@ type LineagePanelContextType = {
   setLineageTabProps: (props: flowProps) => void;
 };
 
+/** what the layout menu offers: a layered layout in either direction, or a force directed one */
+export type LayoutChoice = LayoutDirection | 'force';
+
 type LineageGraphContextType = {
   graphView: GraphView;
   setGraphView: (view: GraphView) => void;
+  /** the direction handles and ranks follow; a force layout keeps the relation handles' left to right */
   layout: LayoutDirection;
-  setLayout: (layout: LayoutDirection) => void;
+  setLayout: (layout: LayoutChoice) => void;
+  layoutChoice: LayoutChoice;
+  layoutMode: LayoutMode;
   isExpanded: boolean;
   setIsExpanded: (isExpanded: boolean) => void;
   selectedNodeAttributes: string[];
@@ -63,8 +70,10 @@ const LineageProvider = (props: React.PropsWithChildren) => {
   const [graphView, setGraphView] = React.useState<GraphView>('full');
   // the manifest's layout applies until the user picks one
   const { data: manifest } = useManifest();
-  const [chosenLayout, setLayout] = React.useState<LayoutDirection>();
-  const layout: LayoutDirection = chosenLayout ?? (manifest?.lineageLayout === 'TB' ? 'TB' : 'LR');
+  const [chosenLayout, setLayout] = React.useState<LayoutChoice>();
+  const layoutChoice: LayoutChoice = chosenLayout ?? (manifest?.lineageLayout === 'TB' ? 'TB' : 'LR');
+  const layout: LayoutDirection = layoutChoice === 'force' ? 'LR' : layoutChoice;
+  const layoutMode: LayoutMode = layoutChoice === 'force' ? 'force' : 'layered';
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [selectedNodeAttributes, setSelectedNodeAttributes] = React.useState<string[]>(nodeAttributes.map(attr => attr.value));
   const [tracedColumn, setTracedColumn] = React.useState<ColumnRef | undefined>(undefined);
@@ -74,9 +83,9 @@ const LineageProvider = (props: React.PropsWithChildren) => {
   }), [lineageTabOpen, lineageTabProps]);
 
   const graphContext = React.useMemo(() => ({
-    graphView, setGraphView, layout, setLayout, isExpanded, setIsExpanded, selectedNodeAttributes, setSelectedNodeAttributes,
+    graphView, setGraphView, layout, setLayout, layoutChoice, layoutMode, isExpanded, setIsExpanded, selectedNodeAttributes, setSelectedNodeAttributes,
     tracedColumn, setTracedColumn,
-  }), [graphView, layout, isExpanded, selectedNodeAttributes, tracedColumn]);
+  }), [graphView, layout, layoutChoice, layoutMode, isExpanded, selectedNodeAttributes, tracedColumn]);
 
   return (
     <LineagePanelContext.Provider value={panelContext}>
