@@ -1,5 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { RELATED_DATA_OBJECTS } from './fixture';
+import { hoverLine } from './hoverLine';
 
 /**
  * Columns on a DataObject node, and the relations view built from the declared foreign keys
@@ -184,14 +185,19 @@ test.describe('columns of a data object', () => {
     await expandColumns(page, 'int-departures').click();
     await expect(columnsOf(page, 'int-departures')).not.toHaveCount(0);
 
-    // icao24 is a primary key and nothing else - the row already shows that, a tooltip would be empty
+    // a key column says which key it is, as the icon does not
     await columnName(page, 'int-departures', 'icao24').hover();
-    await page.waitForTimeout(600);
-    await expect(page.locator('[role="tooltip"]')).toHaveCount(0);
+    await expect(page.locator('[role="tooltip"]')).toHaveText('primary key');
 
     // a foreign key names the data object it references, which is what it names since SDLB 3.x
     await columnName(page, 'int-departures', 'estarrivalairport').hover();
-    await expect(page.locator('[role="tooltip"]')).toHaveText('→ int-airports');
+    await expect(page.locator('[role="tooltip"] > div > div')).toHaveText(['foreign key', '→ int-airports']);
+
+    // lastseen is neither a key nor missing from the export - the row shows everything, a tooltip would be empty
+    await expandColumns(page, 'int-departures').click();
+    await columnName(page, 'int-departures', 'lastseen').hover();
+    await page.waitForTimeout(600);
+    await expect(page.locator('[role="tooltip"]')).toHaveCount(0);
   });
 
   test('the name of a related column leads to the data object at the other end', async ({ page }) => {
@@ -403,24 +409,21 @@ test.describe('relations graph', () => {
 
   test('an edge carries the name of the foreign key it stands for', async ({ page }) => {
     await openRelations(page, '/#/config/dataObjects/int-departures');
+    // opened, the two edges start at their own columns instead of lying on top of each other
+    await expandColumns(page, 'int-departures').click();
 
-    /*
-        The title has to be a child of the edge's own group, not of one of its paths: an edge is a
-        wide invisible path that makes it easier to hit plus the visible line drawn on top of it,
-        and a title on either of them would only show while the pointer is over that one - so
-        hovering the line itself would say nothing.
-    */
-    const titles = await page.locator('.react-flow__edge').evaluateAll((els) =>
-      els.map((el) => (el.firstElementChild?.tagName === 'title' ? el.firstElementChild.textContent : null)));
-    expect(titles).toEqual(['fk_departure_airport', 'fk_arrival_airport']);
+    await hoverLine(edgePath(page, 'int-departures-fk:fk_departure_airport->int-airports::estdepartureairport->ident'));
+    await expect(page.getByRole('tooltip')).toHaveText('fk_departure_airport');
+    await hoverLine(edgePath(page, 'int-departures-fk:fk_arrival_airport->int-airports::estarrivalairport->ident'));
+    await expect(page.getByRole('tooltip')).toHaveText('fk_arrival_airport');
   });
 
   test('a data object on the referencing side names its foreign key on the edge too', async ({ page }) => {
     await openRelations(page, '/#/config/dataObjects/btl-departures-arrivals-airports');
 
-    const titles = await page.locator('.react-flow__edge').evaluateAll((els) =>
-      els.map((el) => (el.firstElementChild?.tagName === 'title' ? el.firstElementChild.textContent : null)));
-    expect(titles).toEqual(['fk_arrival_airport']);
+    await expect(page.locator('.react-flow__edge')).toHaveCount(1);
+    await hoverLine(page.locator('.react-flow__edge path.react-flow__edge-path'));
+    await expect(page.getByRole('tooltip')).toHaveText('fk_arrival_airport');
   });
 
   test('two foreign keys between the same pair are two edges', async ({ page }) => {

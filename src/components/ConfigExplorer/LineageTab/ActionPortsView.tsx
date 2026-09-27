@@ -106,13 +106,15 @@ export function ActionPortsView({ports, tracedConnections}: {ports: ActionPorts,
                         const key = connectionKey(connection.from, connection.to);
                         const texts = connection.transformations.map(transformationText).filter((t): t is string => t !== undefined);
                         return (
-                            <g key={key} className={`lineage-port-connection${traced.has(key) ? ' lineage-port-connection-traced' : ''}`}
-                               data-testid={`connection-${key}`}>
-                                <title>{connectionTitle(texts)}</title>
-                                <path d={d} className="lineage-port-connection-hit" vectorEffect="non-scaling-stroke"/>
-                                <path d={d} className="lineage-port-connection-line" vectorEffect="non-scaling-stroke"
-                                      strokeDasharray={texts.length > 0 ? '4 2' : undefined}/>
-                            </g>
+                            <Tooltip key={key} title={<span style={{whiteSpace: 'pre-line'}}>{connectionTitle(texts)}</span>}
+                                     arrow disableInteractive followCursor size="sm" enterDelay={300}>
+                                <g className={`lineage-port-connection${traced.has(key) ? ' lineage-port-connection-traced' : ''}`}
+                                   data-testid={`connection-${key}`}>
+                                    <path d={d} className="lineage-port-connection-hit" vectorEffect="non-scaling-stroke"/>
+                                    <path d={d} className="lineage-port-connection-line" vectorEffect="non-scaling-stroke"
+                                          strokeDasharray={texts.length > 0 ? '4 2' : undefined}/>
+                                </g>
+                            </Tooltip>
                         );
                     })}
                 </svg>

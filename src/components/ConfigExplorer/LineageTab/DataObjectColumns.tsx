@@ -137,6 +137,9 @@ interface RowTrace {
     onTrace: () => void;
 }
 
+// always on the left of a row: Popper would otherwise flip it to wherever the node has room
+const NO_FLIP = [{name: 'flip', enabled: false}];
+
 /*
     One column. The key icons are siblings of the handles, never their children - a handle with
     content in it would be draggable and would show up as an interactive part of the graph.
@@ -159,8 +162,14 @@ function ColumnRow({column, trace, relationsView}: {column: ColumnInfo, trace: R
         : trace.traceable ? trace.onTrace : undefined;
     const referenced = relationsView ? [...new Set(column.references.map(reference =>
         reference.dataObjectId + (reference.resolved ? '' : ' (not in this configuration)')))] : [];
+    // what the key icons mean, first: the icons sit inside the row, so the row's tooltip says it
+    const keyLines = [
+        ...(column.isPrimaryKey ? ['primary key'] : []),
+        ...(hasReference ? [isUnresolved ? 'foreign key pointing outside this configuration' : 'foreign key'] : []),
+    ];
     const titleLines = [
         ...(truncated ? [column.name] : []),
+        ...keyLines,
         ...referenced.map(dataObjectId => `→ ${dataObjectId}`),
         ...(column.declaredOnly ? [<i>{isKey ? 'declared by a key' : 'in the column lineage'}, not in the exported schema</i>] : []),
         ...column.lineage.filter(lineage => lineage.unresolved)
@@ -200,7 +209,7 @@ function ColumnRow({column, trace, relationsView}: {column: ColumnInfo, trace: R
                     className="lineage-column-handle" style={columnHandleStyle('left')}/>
             {/* an empty title opens no tooltip */}
             <Tooltip title={titleLines.length > 0 ? <Box>{titleLines.map((line, i) => <div key={i}>{line}</div>)}</Box> : ''}
-                     arrow disableInteractive size="sm" placement="right" enterDelay={300}>
+                     arrow disableInteractive size="sm" placement="left" modifiers={NO_FLIP} enterDelay={300}>
                 {label}
             </Tooltip>
             <Handle type="source" position={Position.Right} id={columnHandleId('source', column.key)}
