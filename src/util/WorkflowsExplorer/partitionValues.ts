@@ -1,4 +1,4 @@
-import { Action } from '../../types';
+import type { Action } from '../../types';
 
 /**
  * The partition values an action processed, as one line of text.
@@ -7,7 +7,7 @@ import { Action } from '../../types';
  * selects partitions puts the selection it made. The same value appears on every output the
  * action wrote, hence the de-duplication.
  *
- * Copied into backend/src/domain/partitionValues.ts and build_index.py - change all three.
+ * Copied into backend/src/domain/partitionValues.ts - change both. scripts/buildConfigIndex.ts imports it.
  */
 
 /** Beyond this many values the cell says how many more there are; a backfill can have hundreds. */

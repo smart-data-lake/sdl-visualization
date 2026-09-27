@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-
-# PYTHON INDEX BUILDER
+# Indexes a statically served (`local;`) project: ./build_index.sh [<state-dir>] [<config-dir>]
 set -e
-python3 -m venv .venv
-source "./.venv/bin/activate"
-pip3 install -r ./requirements.txt
-python3 ./build_index.py $1 $2
-deactivate
+DIR="$(dirname "$0")"
 
-# SEARCH INDEX (global search). Optional: without it the search falls back to configuration only.
-node scripts/buildSearchIndex.ts --public public --env "${SDLB_ENV:-dev}" \
+# the repository runs the scripts from source against public/, a release runs them bundled
+# (`yarn build:scripts`) against the folder it is served from
+if [ -f "$DIR/scripts/buildConfigIndex.ts" ]; then EXT=ts; ROOT="$DIR/public"; else EXT=mjs; ROOT="$DIR"; fi
+
+node "$DIR/scripts/buildConfigIndex.$EXT" --state "${1:-$ROOT/state}" --config "${2:-$ROOT/config}"
+
+# Optional: without it the search falls back to configuration only.
+node "$DIR/scripts/buildSearchIndex.$EXT" --public "$ROOT" --env "${SDLB_ENV:-dev}" \
   || echo "search index not built - global search will cover the configuration only"
 
-# COLUMN LINEAGE INDEX. Optional: without it tracing a column covers the nodes shown only.
-node scripts/buildLineageIndex.ts --schema public/schema \
+# Optional: without it tracing a column covers the nodes shown only.
+node "$DIR/scripts/buildLineageIndex.$EXT" --schema "$ROOT/schema" \
   || echo "column lineage index not built - tracing a column will cover the nodes shown only"

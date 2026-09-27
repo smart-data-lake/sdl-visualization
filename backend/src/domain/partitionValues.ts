@@ -5,7 +5,7 @@ import type { Action } from './types.js';
  *
  * Copied from src/util/WorkflowsExplorer/partitionValues.ts of the frontend - see test/unit/
  * parity.test.ts. Which action of an attempt a run's value is taken from is stateFile.ts's
- * business, because that is what build_index.py's getRuns() pairs with.
+ * business, because that is what scripts/buildConfigIndex.ts's indexRecord() pairs with.
  */
 
 /** Beyond this many values the cell says how many more there are; a backfill can have hundreds. */

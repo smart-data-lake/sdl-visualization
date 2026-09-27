@@ -18,7 +18,7 @@ import { FIXTURES } from '../../scripts/seed-fixtures.js';
 /**
  * Turning a state file into the index record the SPA expects.
  *
- * The behaviour here is a port of build_index.py's getRuns(), which is the existing
+ * The behaviour here is a port of scripts/buildConfigIndex.ts's indexRecord(), which is the existing
  * working specification of that record, plus the normalisation Attempt.ts applies in
  * the browser - moved to ingest, so no old state-file shape ever reaches the wire.
  */
@@ -52,7 +52,7 @@ describe('status aggregation', () => {
     expect(of('SUCCEEDED', 'FAILED', 'SUCCEEDED')).toBe('FAILED');
   });
 
-  test('the fixture attempt aggregates the way build_index.py recorded it', () => {
+  test('the fixture attempt aggregates the way the state index recorded it', () => {
     expect(aggregateRunStatus(Object.values(failedAttempt.actionsState))).toBe('FAILED');
   });
 
@@ -112,7 +112,7 @@ describe('what an action wrote', () => {
   });
 
   test('older state files without outputIds fall back to the results', () => {
-    // The same fallback build_index.py applies.
+    // The same fallback scripts/buildConfigIndex.ts applies.
     expect(writtenDataObjects({ results: [{ dataObjectId: 'b' }] } as never)).toEqual(['b']);
   });
 });
