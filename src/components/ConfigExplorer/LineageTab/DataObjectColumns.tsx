@@ -143,7 +143,7 @@ interface RowTrace {
 
     A click on the name depends on the view: the relations view navigates along the relation, the
     others trace the column. The tooltip says only that, plus the full name where it is truncated and whether the column is
-    missing from the exported schema.
+    missing from the exported schema or unresolved in the column lineage.
 */
 function ColumnRow({column, trace, relationsView}: {column: ColumnInfo, trace: RowTrace, relationsView: boolean}) {
     const hasReference = column.references.length > 0;
@@ -163,6 +163,8 @@ function ColumnRow({column, trace, relationsView}: {column: ColumnInfo, trace: R
         ...(truncated ? [column.name] : []),
         ...referenced.map(dataObjectId => `→ ${dataObjectId}`),
         ...(column.declaredOnly ? [<i>{isKey ? 'declared by a key' : 'in the column lineage'}, not in the exported schema</i>] : []),
+        ...column.lineage.filter(lineage => lineage.unresolved)
+            .map(lineage => <i>unresolved in the column lineage of {lineage.actionId}</i>),
         ...(trace.traceable ? [trace.isStart ? 'stop tracing column' : 'trace column'] : []),
     ];
 

@@ -4,7 +4,7 @@ import { buildColumnModel, ColumnDisplay } from '../src/util/ConfigExplorer/Colu
 import { buildColumnLineageIndex, parseColumnLineage } from '../src/util/ConfigExplorer/columnLineage';
 import { NodeType } from '../src/util/ConfigExplorer/Graphs';
 import { buildActionPorts, portRowCount } from '../src/util/ConfigExplorer/ActionPorts';
-import { buildGraphTrace, columnLineageEdges, CustomEdgeProps, traceHighlights, traceIndex } from '../src/util/ConfigExplorer/LineageTabUtils';
+import { buildGraphTrace, columnLineageEdges, CustomEdgeProps, traceEnds, traceHighlights, traceIndex } from '../src/util/ConfigExplorer/LineageTabUtils';
 
 const identity = (name: string, field: string) =>
   ({ namespace: 'sdlb', name, field, transformations: [{ type: 'DIRECT', subtype: 'IDENTITY' }] });
@@ -86,6 +86,15 @@ describe('what a column trace highlights', () => {
   test('traces both ways from the column, case insensitively', () => {
     const trace = buildGraphTrace(index, { dataObjectId: 'm', column: 'X' });
     expect([...trace.columns].map(([id, columns]) => [id, [...columns]])).toEqual([['m', ['x']], ['s', ['x']], ['t', ['x']]]);
+  });
+
+  test('names the columns a trace begins and ends with', () => {
+    const ref = (dataObjectId: string, column: string) => ({ dataObjectId, column });
+    expect(traceEnds(buildGraphTrace(index, { dataObjectId: 'm', column: 'X' })))
+      .toEqual({ starts: [ref('s', 'X')], ends: [ref('t', 'x')] });
+    // a column without lineage is both
+    expect(traceEnds(buildGraphTrace(index, { dataObjectId: 'u', column: 'q' })))
+      .toEqual({ starts: [ref('u', 'q')], ends: [ref('u', 'q')] });
   });
 
   test('in the data view, only the edges the traced columns run along', () => {

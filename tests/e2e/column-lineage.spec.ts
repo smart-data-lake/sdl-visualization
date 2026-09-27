@@ -104,6 +104,14 @@ test.describe('column lineage in the data view', () => {
     expect(screenX).toBeLessThan(identBox.x);
   });
 
+  test('a row tooltip says when a column is unresolved in the column lineage', async ({ page }) => {
+    await openDataView(page, 'int-departures');
+    await expandColumns(page, 'int-departures').click();
+    await expandColumns(page, 'int-departures').click();
+    await node(page, 'int-departures').getByTestId('column-created_at').locator('.lineage-column-name').hover();
+    await expect(page.getByRole('tooltip')).toContainText('unresolved in the column lineage of download-deduplicate-departures');
+  });
+
   test('a row tooltip offers the trace', async ({ page }) => {
     await openDataView(page, 'int-airports');
     await expandColumns(page, 'int-airports').click();
@@ -129,7 +137,9 @@ test.describe('tracing a column', () => {
     await traceButton(page, 'int-airports', 'name').click();
 
     // stg-airports.name upstream; arr_name and dep_name downstream, each once more in btl-distances
-    await expect(panel(page)).toContainText('int-airports.name: 5 columns in 4 data objects');
+    await expect(page.getByTestId('column-trace-starts')).toHaveText(/^Start columns\s*stg-airports\.name$/);
+    await expect(page.getByTestId('column-trace-ends')).toContainText('btl-distances.');
+    await expect(page.getByTestId('column-trace-show')).toHaveText('Show all');
     await expect(row(page, 'int-airports', 'name')).toHaveClass(/lineage-column-trace-start/);
     await expect(row(page, 'int-airports', 'ident')).not.toHaveClass(/lineage-column-traced/);
 
@@ -159,7 +169,8 @@ test.describe('tracing a column', () => {
     await expandColumns(page, 'int-departures').click();
 
     await traceButton(page, 'int-departures', 'dt').click();
-    await expect(panel(page)).toContainText('int-departures.dt: 1 column in 2 data objects');
+    await expect(page.getByTestId('column-trace-starts')).toHaveText(/^Start columns\s*ext-departures\.firstSeen$/);
+    await expect(page.getByTestId('column-trace-ends')).toContainText('int-departures.dt');
     // dt comes from ext-departures through download-deduplicate-departures, and nothing reads it. The
     // open data object shows its columns, so the actions' edges run per column to their ports
     await expect.poll(() => isHighlighted(page, 'download-deduplicate-departures->int-departures.dt::port')).toBe('rgb(9, 107, 222)');

@@ -688,6 +688,28 @@ export function buildGraphTrace(index: ColumnLineageIndex, start: ColumnRef): Gr
 }
 
 /**
+ * Where a trace begins and ends: the columns on it that depend on nothing on it resp. that nothing
+ * on it depends on. A column reading itself (historization) does not count as a dependency.
+ */
+export function traceEnds(trace: GraphTrace): {starts: ColumnRef[], ends: ColumnRef[]} {
+    const refs = new Map<string, ColumnRef>([[columnId(trace.start), trace.start]]);
+    const hasInput = new Set<string>(), hasOutput = new Set<string>();
+    trace.edges.forEach(([fromDo, fromCol, toDo, toCol]) => {
+        const from = {dataObjectId: fromDo, column: fromCol}, to = {dataObjectId: toDo, column: toCol};
+        if (!refs.has(columnId(from))) refs.set(columnId(from), from);
+        if (!refs.has(columnId(to))) refs.set(columnId(to), to);
+        if (columnId(from) === columnId(to)) return;
+        hasOutput.add(columnId(from));
+        hasInput.add(columnId(to));
+    });
+    const sorted = (ids: string[]) => ids.sort().map(id => refs.get(id)!);
+    return {
+        starts: sorted([...refs.keys()].filter(id => !hasInput.has(id))),
+        ends: sorted([...refs.keys()].filter(id => !hasOutput.has(id))),
+    };
+}
+
+/**
  * The index to trace with: the one that was built, or else one assembled from the lineage the shown
  * nodes have read - which covers those nodes only, and says so through `complete`.
  */

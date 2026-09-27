@@ -358,7 +358,8 @@ The trace lights up the port edges and the curves inside the action it runs thro
 
 In the full and data views, a click on the name of a row with lineage traces it; in the relations view
 the name leads along the relation instead. The tooltip only adds the full name where it is truncated,
-whether the column is missing from the exported schema, and "trace column" resp. the referenced data object. The click sets `tracedColumn` in `useLineageGraph()`,
+whether the column is missing from the exported schema or unresolved in the column
+lineage, and "trace column" resp. the referenced data object. The click sets `tracedColumn` in `useLineageGraph()`,
 and `LineageTabCore` traces that column both ways through the **index**
 (`useFetchColumnLineageIndex`, `buildGraphTrace`) - the documents of the nodes shown would only
 reach as far as the graph does. Without a built index it falls back to exactly those documents
@@ -368,8 +369,9 @@ reach as far as the graph does. Without a built index it falls back to exactly t
 edge by its column pair; in the data view a flow edge carrying a traced pair; in the full view the
 edges of the actions reading or writing a traced column; in the action view an edge whose data
 object has a traced column written by the one action and read by the other. A relation never.
-The rows on the trace are the node's `data.tracedColumns`. The panel (`ColumnTracePanel`) counts
-the whole trace and splices in (`spliceNodePath`) what the graph does not show.
+The rows on the trace are the node's `data.tracedColumns`. The panel (`ColumnTracePanel`) lists
+the columns the whole trace begins and ends with (`traceEnds`), and its "Show all" splices in
+(`spliceNodePath`) what the graph does not show.
 
 The trace that is shown is module state in `LineageTabUtils.tsx`, like the grouping state, because
 `updateColumnEdges` has to re-apply it whenever it rebuilds the column edges. Clicking the pane or an
