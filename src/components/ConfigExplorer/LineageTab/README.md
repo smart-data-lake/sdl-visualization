@@ -45,7 +45,8 @@ The control walks three displays — `none`, `keys`, `all` (`ColumnDisplay` in `
 Closed it is one chevron that opens the node on its key columns; open on the keys it is two, one
 per direction; open on all columns only the way back is left. A step that would add nothing — a
 table whose every column is a key column — is not offered, which is only decidable once the
-exported schema has resolved. Key columns first because a table can have dozens of columns, and the
+exported schema has resolved. A table without any key column skips the `keys` step in both
+directions (`moreColumns`/`lessColumns` take `hasKeys`), as it would open on nothing. Key columns first because a table can have dozens of columns, and the
 ones a relation runs through are what the graph is about.
 
 The strip spans the node, but **only its two ends are clickable**. The node's own graph expand
@@ -325,6 +326,8 @@ Three things that are easy to break:
 - Every column row carries both handles, not only a key's, because a lineage edge can end on any
   column.
 - The hover text is an SVG `<title>`, first child of the edge's group, like the foreign key name.
+  It names what the columns it connects do not show (`columnLineageTitle`): in the data view the
+  action and its transformation per line, on a port edge of the full view only the two nodes.
 
 ### The ports of an action (full view)
 
@@ -334,7 +337,7 @@ feeding an output column in between - dashed where the column is transformed, so
 taken over. The ports come from the lineage of the data objects the action *writes*
 (`useFetchNewestLineageOf`, `buildActionPorts` in `src/util/ConfigExplorer/ActionPorts.ts`), since
 SDLB exports lineage per output; an action without any offers nothing to open. Hovering a curve
-tells the transformation, hovering a port the column and, for an output, the expression creating it.
+tells only the transformation (or `unchanged`), hovering a port the column and, for an output, the expression creating it.
 
 `columnLineageEdges` gives the full view one edge per column the action reads resp. writes, as soon
 as the port or the column at the other end is shown, from the column of the data object to the

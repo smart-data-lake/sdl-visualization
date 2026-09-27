@@ -100,6 +100,20 @@ test.describe('columns of a data object', () => {
     await expect(columnsOf(page, 'int-departures')).toHaveCount(0);
   });
 
+  test('a table without key columns opens on all of its columns in one step', async ({ page }) => {
+    // btl-distances declares no keys; its columns come from the column lineage export
+    await openLineage(page, '/#/config/dataObjects/btl-distances');
+    await expect(expandColumns(page, 'btl-distances')).toHaveAttribute('aria-label', 'Show all columns');
+    await expandColumns(page, 'btl-distances').click();
+
+    await expect.poll(() => columnsOf(page, 'btl-distances').count()).toBeGreaterThan(0);
+    await expect(expandColumns(page, 'btl-distances')).toHaveCount(0);
+    await expect(collapseColumns(page, 'btl-distances')).toHaveAttribute('aria-label', 'Hide columns');
+
+    await collapseColumns(page, 'btl-distances').click();
+    await expect(columnsOf(page, 'btl-distances')).toHaveCount(0);
+  });
+
   test('a table whose columns are all key columns is not offered a further step', async ({ page }) => {
     // the relations view, which reads no column lineage - the lineage fixtures name more columns
     await openRelations(page, '/#/config/dataObjects/int-airports');

@@ -55,18 +55,29 @@ test.describe('column lineage in the data view', () => {
     await expect(flowEdge(page, 'stg-airports->historize-airports->int-airports')).toHaveCount(1);
   });
 
-  test('a column edge names the columns and how the one is made from the other', async ({ page }) => {
+  test('a column edge names how the one column is made from the other', async ({ page }) => {
     await openDataView(page, 'int-departures');
     await expandColumns(page, 'int-departures').click();
     await expandColumns(page, 'int-departures').click();
 
     const title = edge(page, 'ext-departures.firstseen->int-departures.dt::lineage').locator('title');
     await expect(title).toHaveText(
-      "ext-departures.firstSeen → int-departures.dt\ndownload-deduplicate-departures: date_format(from_unixtime(firstseen), 'yyyyMMdd')",
+      "download-deduplicate-departures: date_format(from_unixtime(firstseen), 'yyyyMMdd')",
       { useInnerText: false },
     );
     await expect(edge(page, 'ext-departures.icao24->int-departures.icao24::lineage').locator('title'))
       .toContainText('download-deduplicate-departures: unchanged');
+  });
+
+  test('an edge can be hit beside its visible line', async ({ page }) => {
+    await openDataView(page, 'int-departures');
+    const hitWidth = (id: string) => edge(page, id).locator('path.react-flow__edge-path-selector')
+      .evaluate((el) => getComputedStyle(el).strokeWidth);
+    await expect.poll(() => hitWidth('ext-departures->download-deduplicate-departures->int-departures')).toBe('12px');
+
+    await expandColumns(page, 'int-departures').click();
+    await expandColumns(page, 'int-departures').click();
+    await expect.poll(() => hitWidth('ext-departures.icao24->int-departures.icao24::lineage')).toBe('8px');
   });
 
   test('every column edge ends on a column row or on its node', async ({ page }) => {
@@ -185,7 +196,10 @@ test.describe('the ports of an action in the full view', () => {
     await expect(connection(page, 'int-airports.name', 'btl-departures-arrivals-airports.dep_name')).toHaveCount(1);
     await expect(connection(page, 'int-departures.estdepartureairport', 'btl-departures-arrivals-airports.estdepartureairport')
       .locator('title')).toHaveText(
-      'int-departures.estDepartureAirport → btl-departures-arrivals-airports.estdepartureairport\nunchanged', { useInnerText: false });
+      'unchanged', { useInnerText: false });
+    // a port edge names the two nodes it runs between, the port names the column
+    await expect(edge(page, 'int-airports.name->join-departures-airports::port').locator('title'))
+      .toHaveText('int-airports → join-departures-airports', { useInnerText: false });
 
     // every port is connected to its data object, which is closed, so the edge ends on the node
     await expect(edge(page, 'int-airports.name->join-departures-airports::port')).toHaveCount(1);

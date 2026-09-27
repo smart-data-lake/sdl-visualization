@@ -17,7 +17,11 @@
 .react-flow__edge-path-selector {
     fill: none;
     stroke: transparent;
-    stroke-width: 40;
+    stroke-width: 12;
+}
+/* column edges run a row (20px) apart, so they get the hit width of the curves inside an action */
+.react-flow__edge-path-selector.lineage-column-edge-selector {
+    stroke-width: 8;
 }
 
 /*

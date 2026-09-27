@@ -340,8 +340,8 @@ export const CustomDataNode = ( {data} ) => {
     has resolved: until then all this node has are its key columns, which would make every table
     look as if it had nothing more.
   */
-  const hasMoreColumns = columnDisplay === 'none' || isSchemaLoading
-    || (columns ?? []).length > filterColumns(columns ?? [], 'keys').length;
+  const keyColumnCount = filterColumns(columns ?? [], 'keys').length;
+  const hasMoreColumns = columnDisplay === 'none' || isSchemaLoading || (columns ?? []).length > keyColumnCount;
 
   /*
     The exported column lineage of this data object. The data view draws column edges from the
@@ -633,7 +633,7 @@ export const CustomDataNode = ( {data} ) => {
       {/* the columns of a data object, only known where there is a configuration behind the node */}
       {canShowColumns &&
         <ColumnsToggle nodeId={label} display={columnDisplay ?? 'none'} onChange={handleColumnDisplay}
-                       hasMore={hasMoreColumns}/>}
+                       hasMore={hasMoreColumns} hasKeys={keyColumnCount > 0}/>}
       {/* an action opens in one step, on everything it reads and writes */}
       {ports && showColumns && <ActionPortsView ports={ports} tracedConnections={data.tracedConnections}/>}
       {ports &&
@@ -717,15 +717,16 @@ function metricLabelTransform(x: number, y: number, position: Position, index: n
 }
 
 /*
-  What a column lineage edge says when hovered: the two columns, then per action how the one is made
-  from the other. Several lines where several actions create the same column pair.
+  What a column lineage edge says when hovered. The columns are what it connects, so it names what
+  they do not show: the two nodes of a port edge in the full view, else per action how the target
+  column is made - several lines where several actions create the same column pair.
 */
 function columnLineageTitle(source: string, target: string, lineage: ColumnLineageEdgeProps): string {
-  const how = lineage.via.map(({actionId, transformations}) => {
+  if (lineage.sourcePort || lineage.targetPort) return `${source} → ${target}`;
+  return lineage.via.map(({actionId, transformations}) => {
     const texts = transformations.map(transformationText).filter((text): text is string => text !== undefined);
     return `${actionId}: ${texts.length > 0 ? texts.join('; ') : 'unchanged'}`;
-  });
-  return [`${source}.${lineage.sourceName} → ${target}.${lineage.targetName}`, ...how].join('\n');
+  }).join('\n');
 }
 
 //https://github.com/xyflow/xyflow/discussions/2347
@@ -777,7 +778,9 @@ export const CustomEdge = ({
       */}
       {data?.relation?.fkName && <title>{data.relation.fkName}</title>}
       {data?.columnLineage && <title>{columnLineageTitle(source, target, data.columnLineage)}</title>}
-      <path style={style} className="react-flow__edge-path-selector" d={edgePath} markerEnd={markerEnd} fillRule="evenodd"/>
+      {/* no inline style here: the edge's strokeWidth would narrow the hit area to the visible line */}
+      <path className={`react-flow__edge-path-selector${data?.columnLineage ? ' lineage-column-edge-selector' : ''}`}
+            d={edgePath} fillRule="evenodd"/>
       <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={markerEnd}/>
       {(output || input) &&
         <EdgeLabelRenderer>

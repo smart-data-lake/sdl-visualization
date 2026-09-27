@@ -109,9 +109,9 @@ export interface DataObjectColumns {
  */
 export type ColumnDisplay = 'none' | 'keys' | 'all';
 
-/** the display one step further open, and one step further closed */
-export const moreColumns = (display: ColumnDisplay): ColumnDisplay => display === 'none' ? 'keys' : 'all';
-export const lessColumns = (display: ColumnDisplay): ColumnDisplay => display === 'all' ? 'keys' : 'none';
+/** the display one step further open, and one step further closed; without key columns there is no 'keys' step */
+export const moreColumns = (display: ColumnDisplay, hasKeys = true): ColumnDisplay => display === 'none' && hasKeys ? 'keys' : 'all';
+export const lessColumns = (display: ColumnDisplay, hasKeys = true): ColumnDisplay => display === 'all' && hasKeys ? 'keys' : 'none';
 
 export const emptyColumns: DataObjectColumns = { columns: [], source: 'none' };
 
