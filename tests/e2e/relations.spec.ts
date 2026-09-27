@@ -189,14 +189,13 @@ test.describe('columns of a data object', () => {
     await page.waitForTimeout(600);
     await expect(page.locator('[role="tooltip"]')).toHaveCount(0);
 
-    // a column that takes part in a relation names the other end of it - the data object it
-    // references, which is what a foreign key names since SDLB 3.x
+    // a foreign key names the data object it references, which is what it names since SDLB 3.x
     await columnName(page, 'int-departures', 'estarrivalairport').hover();
-    await expect(page.locator('[role="tooltip"]')).toContainText('int-airports.ident');
+    await expect(page.locator('[role="tooltip"]')).toHaveText('→ int-airports');
   });
 
   test('the name of a related column leads to the data object at the other end', async ({ page }) => {
-    await openLineage(page, '/#/config/dataObjects/int-departures');
+    await openRelations(page, '/#/config/dataObjects/int-departures');
     await expandColumns(page, 'int-departures').click();
     await expect(columnsOf(page, 'int-departures')).not.toHaveCount(0);
 
@@ -210,19 +209,16 @@ test.describe('columns of a data object', () => {
   });
 
   test('a column that several data objects relate to leads nowhere in particular', async ({ page }) => {
-    await openLineage(page, '/#/config/dataObjects/int-airports');
+    await openRelations(page, '/#/config/dataObjects/int-airports');
     await expandColumns(page, 'int-airports').click();
     await expect(columnsOf(page, 'int-airports')).toHaveCount(1);
 
     /*
         int-airports.ident is referenced by int-departures and by btl-departures-arrivals-airports.
         There is no single other end to navigate to, and picking one of them would be a guess, so
-        the name is not a link - the tooltip still names them all.
+        the name is not a link.
     */
     await expect(node(page, 'int-airports').locator('.lineage-column-link')).toHaveCount(0);
-    await columnName(page, 'int-airports', 'ident').hover();
-    await expect(page.locator('[role="tooltip"]')).toContainText('int-departures');
-    await expect(page.locator('[role="tooltip"]')).toContainText('btl-departures-arrivals-airports');
   });
 
   test('the nodes of a run graph have no columns, there is no configuration behind them', async ({ page }) => {

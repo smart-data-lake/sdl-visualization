@@ -1,17 +1,17 @@
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import Box from '@mui/joy/Box';
 import LinearProgress from '@mui/joy/LinearProgress';
 import Tooltip from '@mui/joy/Tooltip';
 import Typography from '@mui/joy/Typography';
+import { useRef, useState } from 'react';
 import { Handle, Position } from 'reactflow';
 
 import { useWorkspace } from '../../../hooks/useWorkspace';
 import { useFetchColumnLineageIndex } from '../../../hooks/useFetchData';
 import { useLineageGraph } from '../../../hooks/useLineage';
-import { indexedColumnIds } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { ColumnDisplay, ColumnInfo, ColumnLineageInfo, lessColumns, moreColumns } from '../../../util/ConfigExplorer/ColumnModel';
+import { GraphView, indexedColumnIds } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { ColumnDisplay, ColumnInfo, lessColumns, moreColumns } from '../../../util/ConfigExplorer/ColumnModel';
 import { ColumnTransformation, columnId } from '../../../util/ConfigExplorer/columnLineage';
 import { ForeignKeyIcon, PrimaryKeyIcon, UnresolvedForeignKeyIcon } from './ColumnIcons';
 import './LineageTab.css';
@@ -101,49 +101,10 @@ const sideHandleStyle = (side: 'left' | 'right', inset: string, outset: number =
 export const columnHandleStyle = (side: 'left' | 'right') => sideHandleStyle(side, COLUMN_INSET_VAR);
 export const COLUMN_TEXT_STYLE = columnTextStyle;
 
-/*
-    What a column has to say for itself, or nothing.
-
-    A column that is only a primary key - int-departures.icao24, say - has nothing to add to what
-    the row already shows, and a tooltip that opens on an empty box is worse than none at all.
-*/
-/** How one action creates the column: its inputs with the transformation, or the expression without any. */
-function lineageLine(lineage: ColumnLineageInfo): string {
-    if (lineage.unresolved) return `${lineage.actionId}: lineage could not be traced`;
-    if (lineage.inputs.length === 0) return `${lineage.actionId}: ${lineage.expression ?? 'no source column'}`;
-    return `${lineage.actionId}: ` + lineage.inputs.map(input => {
-        const description = input.transformations.map(transformationText).find(text => text !== undefined);
-        return `${input.dataObjectId}.${input.column}` + (description ? ` (${description})` : '');
-    }).join(', ');
-}
-
 /** A transformation as a user reads it; an identity has nothing to say beyond the column it comes from. */
 export function transformationText(transformation: ColumnTransformation): string | undefined {
     if (transformation.subtype === 'IDENTITY') return undefined;
     return transformation.description ?? transformation.subtype?.toLowerCase();
-}
-
-function referenceTitle(column: ColumnInfo): JSX.Element | undefined {
-    const hasSomethingToSay = column.description !== undefined || column.lineage.length > 0
-        || column.references.length > 0 || column.referencedBy.length > 0 || column.declaredOnly;
-    if (!hasSomethingToSay) return undefined;
-    const isKey = column.isPrimaryKey || column.references.length > 0 || column.referencedBy.length > 0;
-    return (
-        <Box>
-            {column.description && <div>{column.description}</div>}
-            {column.references.map((reference, i) => (
-                <div key={`ref-${i}`}>
-                    → {reference.dataObjectId}.{reference.column}
-                    {reference.resolved ? '' : ' (not in this configuration)'}
-                </div>
-            ))}
-            {column.referencedBy.map((incoming, i) => (
-                <div key={`inc-${i}`}>← {incoming.dataObjectId}.{incoming.fromColumn}</div>
-            ))}
-            {column.lineage.map((lineage, i) => <div key={`lin-${i}`}>⇐ {lineageLine(lineage)}</div>)}
-            {column.declaredOnly && <div><i>{isKey ? 'declared by a key' : 'in the column lineage'}, not in the exported schema</i></div>}
-        </Box>
-    );
 }
 
 /*
@@ -155,8 +116,6 @@ function referenceTitle(column: ColumnInfo): JSX.Element | undefined {
     them would be a guess, so the name is not a link. Several relations to the *same* data object
     are not ambiguous - two foreign keys between the same pair of tables still lead to one place -
     so what is counted is the distinct data objects, not the relations.
-
-    The tooltip lists them all either way.
 */
 function relatedDataObjectId(column: ColumnInfo): string | undefined {
     const related = new Set([
@@ -167,13 +126,9 @@ function relatedDataObjectId(column: ColumnInfo): string | undefined {
     return related.size === 1 ? related.values().next().value : undefined;
 }
 
-/*
-    One column. The key icons are siblings of the handles, never their children - a handle with
-    content in it would be draggable and would show up as an interactive part of the graph.
-*/
 /** How a row takes part in the column trace that is shown, see traceHighlights. */
 interface RowTrace {
-    /** whether the column has any lineage to trace */
+    /** whether a click on the name traces the column: it has lineage, and the view is not the relations view */
     traceable: boolean;
     /** on the trace that is shown */
     traced: boolean;
@@ -182,26 +137,48 @@ interface RowTrace {
     onTrace: () => void;
 }
 
-function ColumnRow({column, trace}: {column: ColumnInfo, trace: RowTrace}) {
+/*
+    One column. The key icons are siblings of the handles, never their children - a handle with
+    content in it would be draggable and would show up as an interactive part of the graph.
+
+    A click on the name depends on the view: the relations view navigates along the relation, the
+    others trace the column. The tooltip says only that, plus the full name where it is truncated and whether the column is
+    missing from the exported schema.
+*/
+function ColumnRow({column, trace, relationsView}: {column: ColumnInfo, trace: RowTrace, relationsView: boolean}) {
     const hasReference = column.references.length > 0;
     const isUnresolved = hasReference && column.references.every(reference => !reference.resolved);
+    const isKey = column.isPrimaryKey || hasReference || column.referencedBy.length > 0;
     const { navigateContent } = useWorkspace();
+    const nameRef = useRef<HTMLElement>(null);
+    const [truncated, setTruncated] = useState(false);
 
-    const title = referenceTitle(column);
     // the name of a column that takes part in a relation leads to the data object at its other end
-    const relatedId = relatedDataObjectId(column);
+    const relatedId = relationsView ? relatedDataObjectId(column) : undefined;
+    const onClick = relatedId ? () => navigateContent(`config/dataObjects/${relatedId}`)
+        : trace.traceable ? trace.onTrace : undefined;
+    const referenced = relationsView ? [...new Set(column.references.map(reference =>
+        reference.dataObjectId + (reference.resolved ? '' : ' (not in this configuration)')))] : [];
+    const titleLines = [
+        ...(truncated ? [column.name] : []),
+        ...referenced.map(dataObjectId => `→ ${dataObjectId}`),
+        ...(column.declaredOnly ? [<i>{isKey ? 'declared by a key' : 'in the column lineage'}, not in the exported schema</i>] : []),
+        ...(trace.traceable ? [trace.isStart ? 'stop tracing column' : 'trace column'] : []),
+    ];
 
     const label = (
-        <Box className="lineage-column-label">
+        <Box className="lineage-column-label"
+             onMouseEnter={() => setTruncated(!!nameRef.current && nameRef.current.scrollWidth > nameRef.current.clientWidth)}>
             {/* a key and a link, not two weights of the same key: at this size only the
                 shape is legible, and the colour is never the only difference */}
             {column.isPrimaryKey && <PrimaryKeyIcon/>}
             {hasReference && !isUnresolved && <ForeignKeyIcon/>}
             {isUnresolved && <UnresolvedForeignKeyIcon/>}
-            <Typography level="body-xs"
-                        className={`lineage-column-name${relatedId ? ' lineage-column-link' : ''}`}
+            <Typography level="body-xs" ref={nameRef}
+                        className={`lineage-column-name${onClick ? ' lineage-column-link nodrag' : ''}`}
                         sx={{...columnTextStyle, fontStyle: column.declaredOnly ? 'italic' : undefined}}
-                        onClick={relatedId ? () => navigateContent(`config/dataObjects/${relatedId}`) : undefined}>
+                        data-testid={trace.traceable ? `trace-${column.key}` : undefined}
+                        onClick={onClick}>
                 {column.name}
             </Typography>
             <Box sx={{flex: 1}}/>
@@ -211,7 +188,6 @@ function ColumnRow({column, trace}: {column: ColumnInfo, trace: RowTrace}) {
                 </Typography>}
         </Box>
     );
-    const traceTitle = trace.isStart ? 'Stop tracing this column' : 'Trace this column: what it depends on, and what depends on it';
 
     return (
         <Box className={`lineage-column-row${trace.traced ? ' lineage-column-traced' : ''}${trace.isStart ? ' lineage-column-trace-start' : ''}`}
@@ -220,19 +196,11 @@ function ColumnRow({column, trace}: {column: ColumnInfo, trace: RowTrace}) {
                 ReactFlow silently drops an edge whose handle does not exist */}
             <Handle type="target" position={Position.Left} id={columnHandleId('target', column.key)}
                     className="lineage-column-handle" style={columnHandleStyle('left')}/>
-            {/* a column with nothing to add to what the row already shows gets no tooltip at all */}
-            {title
-                ? <Tooltip title={title} arrow disableInteractive size="sm" placement="right" enterDelay={300}>
-                    {label}
-                  </Tooltip>
-                : label}
-            {trace.traceable &&
-                <Tooltip title={traceTitle} arrow disableInteractive size="sm" enterDelay={300}>
-                    <button type="button" className="lineage-column-trace nodrag" aria-label={traceTitle}
-                            data-testid={`trace-${column.key}`} onClick={trace.onTrace}>
-                        <AccountTreeOutlinedIcon className="lineage-column-trace-icon"/>
-                    </button>
-                </Tooltip>}
+            {/* an empty title opens no tooltip */}
+            <Tooltip title={titleLines.length > 0 ? <Box>{titleLines.map((line, i) => <div key={i}>{line}</div>)}</Box> : ''}
+                     arrow disableInteractive size="sm" placement="right" enterDelay={300}>
+                {label}
+            </Tooltip>
             <Handle type="source" position={Position.Right} id={columnHandleId('source', column.key)}
                     className="lineage-column-handle" style={columnHandleStyle('right')}/>
         </Box>
@@ -276,21 +244,25 @@ export function NodeRelationHandles({nodeId, outsetLeft = 0, outsetRight = 0}: {
  * row's height, so that the node does not change size between the placeholder and the columns that
  * replace it.
  */
-export function ColumnList({nodeId, columns, isLoading, tracedColumns}: {
+export function ColumnList({nodeId, columns, isLoading, tracedColumns, graphView, runContext}: {
     nodeId: string,
     columns: ColumnInfo[],
     isLoading?: boolean,
     /** the keys of the columns on the trace that is shown */
     tracedColumns?: string[],
+    graphView: GraphView,
+    /** a run graph shows no trace */
+    runContext?: boolean,
 }) {
     const { tracedColumn, setTracedColumn } = useLineageGraph();
     const { data: index } = useFetchColumnLineageIndex();
     const inIndex = index ? indexedColumnIds(index) : undefined;
+    const relationsView = graphView === 'relations';
     const rowTrace = (column: ColumnInfo): RowTrace => {
         const isStart = tracedColumn?.dataObjectId === nodeId && columnId(tracedColumn) === columnId({dataObjectId: nodeId, column: column.key});
         return {
             // without an index, what this node's own lineage knows
-            traceable: inIndex ? inIndex.has(columnId({dataObjectId: nodeId, column: column.key})) : column.lineage.length > 0,
+            traceable: !relationsView && !runContext && (inIndex ? inIndex.has(columnId({dataObjectId: nodeId, column: column.key})) : column.lineage.length > 0),
             traced: tracedColumns?.includes(column.key) ?? false,
             isStart,
             onTrace: () => setTracedColumn(isStart ? undefined : {dataObjectId: nodeId, column: column.name}),
@@ -298,7 +270,7 @@ export function ColumnList({nodeId, columns, isLoading, tracedColumns}: {
     };
     return (
         <Box className="lineage-column-list">
-            {columns.map(column => <ColumnRow key={column.key} column={column} trace={rowTrace(column)}/>)}
+            {columns.map(column => <ColumnRow key={column.key} column={column} trace={rowTrace(column)} relationsView={relationsView}/>)}
             {isLoading && columns.length === 0 &&
                 <Box className="lineage-column-row">
                     <LinearProgress size="sm" sx={{width: '100%'}}/>

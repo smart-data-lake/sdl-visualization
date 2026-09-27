@@ -104,12 +104,12 @@ test.describe('column lineage in the data view', () => {
     expect(screenX).toBeLessThan(identBox.x);
   });
 
-  test('a row tooltip tells how the column is created', async ({ page }) => {
+  test('a row tooltip offers the trace', async ({ page }) => {
     await openDataView(page, 'int-airports');
     await expandColumns(page, 'int-airports').click();
     await expandColumns(page, 'int-airports').click();
-    await node(page, 'int-airports').getByTestId('column-dl_ts_captured').locator('.lineage-column-name').hover();
-    await expect(page.getByRole('tooltip')).toContainText('historize-airports: current_timestamp()');
+    await node(page, 'int-airports').getByTestId('column-name').locator('.lineage-column-name').hover();
+    await expect(page.getByRole('tooltip')).toHaveText('trace column');
   });
 });
 
@@ -126,7 +126,6 @@ test.describe('tracing a column', () => {
     await expandColumns(page, 'int-airports').click();
     await expandColumns(page, 'int-airports').click();
 
-    await row(page, 'int-airports', 'name').hover();
     await traceButton(page, 'int-airports', 'name').click();
 
     // stg-airports.name upstream; arr_name and dep_name downstream, each once more in btl-distances
@@ -159,7 +158,6 @@ test.describe('tracing a column', () => {
     await expandColumns(page, 'int-departures').click();
     await expandColumns(page, 'int-departures').click();
 
-    await row(page, 'int-departures', 'dt').hover();
     await traceButton(page, 'int-departures', 'dt').click();
     await expect(panel(page)).toContainText('int-departures.dt: 1 column in 2 data objects');
     // dt comes from ext-departures through download-deduplicate-departures, and nothing reads it. The
@@ -215,7 +213,6 @@ test.describe('the ports of an action in the full view', () => {
     await openAction(page);
     await expandColumns(page, 'int-airports').click();
     await expandColumns(page, 'int-airports').click();
-    await node(page, 'int-airports').getByTestId('column-name').hover();
     await node(page, 'int-airports').getByTestId('trace-name').click();
 
     await expect(connection(page, 'int-airports.name', 'btl-departures-arrivals-airports.dep_name'))

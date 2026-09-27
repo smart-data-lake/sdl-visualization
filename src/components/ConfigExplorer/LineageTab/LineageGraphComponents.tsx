@@ -633,7 +633,8 @@ export const CustomDataNode = ( {data} ) => {
         {showObjectName(layoutDirection)}
       </div>
       {showColumns && !ports && <ColumnList nodeId={label} columns={visibleColumns} isLoading={isSchemaLoading}
-                                  tracedColumns={data.tracedColumns}/>}
+                                  tracedColumns={data.tracedColumns}
+                                  graphView={graphView} runContext={runContext}/>}
       {/* the columns of a data object, only known where there is a configuration behind the node */}
       {canShowColumns &&
         <ColumnsToggle nodeId={label} display={columnDisplay ?? 'none'} onChange={handleColumnDisplay}

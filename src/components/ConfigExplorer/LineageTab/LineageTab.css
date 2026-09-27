@@ -139,7 +139,7 @@ svg.data-node-partition-state-icon {
   white-space: nowrap;
 }
 
-/* the name of a column that takes part in a relation leads to the data object at its other end */
+/* a clickable column name: in the relations view it leads along the relation, elsewhere it traces the column */
 .lineage-column-link {
   cursor: pointer;
 }
@@ -159,39 +159,7 @@ svg.data-node-partition-state-icon {
 
 /* the column icons and their colours are in ColumnIcons.css, see the note there */
 
-/*
-  The column trace (see traceHighlights): a button that shows on hover of a row that has lineage,
-  and stays on the row the trace starts from, and the names of the rows on the trace in the
-  highlight colour.
-  The row keeps its box - the column handles are positioned against it.
-*/
-.lineage-column-trace {
-  visibility: hidden;
-  display: inline-flex;
-  flex: none;
-  margin-left: 2px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #555;
-  cursor: pointer;
-}
-
-.lineage-column-row:hover .lineage-column-trace,
-.lineage-column-trace-start .lineage-column-trace,
-.lineage-column-trace:focus-visible {
-  visibility: visible;
-}
-
-.lineage-column-trace:hover,
-.lineage-column-trace-start .lineage-column-trace {
-  color: #096bde;
-}
-
-.lineage-column-trace-icon {
-  font-size: 14px !important;
-}
-
+/* the names of the rows on the column trace (see traceHighlights), in the highlight colour */
 .lineage-column-traced .lineage-column-name {
   color: #096bde;
 }
