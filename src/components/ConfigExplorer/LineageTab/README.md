@@ -276,7 +276,32 @@ Handles:
 
 Selecting the relations view switches the layout to `LR`, the arrangement an entity relation diagram
 is normally drawn in: the node level relation handles are then on the same two borders the layout
-itself runs along. The layout button still switches it back.
+itself runs along. The layout menu still switches it back.
+
+### Force layout of the relations view
+
+The layout menu offers a third choice, `force`, in the relations view only (`LayoutChoice` in
+`useLineage.tsx`; leaving the view falls back to `LR`, as the other views are a flow). Foreign keys
+are not a flow and point in circles, so ranks put related tables far apart; a force directed
+placement keeps them together. It is **static**, not a running simulation, so everything under
+*Layout stability* still holds:
+
+- `forceModelOf` (`LineageLayout.ts`) runs d3-force once per graph, synchronously and from sorted
+  input with a seeded random source, so a node's place is a function of the graph alone. Like
+  `layoutModelOf` it is cached per `DAGraph`.
+- `createReactFlowNodes` stamps the node's centre onto `rfNode.data.forceCentre`, next to
+  `placement`. `assignCoordinates` takes the force path whenever a node carries one, so none of its
+  call sites needs to know the mode, and nodes added by expanding or splicing follow the mode of the
+  flow they join (`flowLayoutMode`).
+- The model is built at the reference size, so `assignCoordinates` then pushes apart what overlaps
+  at the nodes' declared sizes, leaving the anchor where it is. Drag offsets apply as before.
+
+In a force layout a node may lie left of the node it references. The relation handles stay on the
+left and right borders, so when the target lies to the left `CustomEdge` moves both ends of a
+relation edge onto the borders that face each other: every relation handle has a twin of the other
+kind on the opposite border, in the same row (`col-source:x` / `col-target:x`), and the end takes
+that twin's real position (`useOppositeHandle`). Mirroring about the centre instead would carry the
+expand button's outset over to a border that has no button, leaving a gap there.
 
 In `LR` the *layout driven* handles are on those borders too, and would otherwise sit at the
 vertical middle of the node — which for a node showing its columns is somewhere among the rows. They

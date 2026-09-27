@@ -7,8 +7,8 @@ import { Node as ReactFlowNode } from 'reactflow';
 import { describe, expect, it } from 'vitest';
 import { DAGraph, DataObject, Edge } from '../src/util/ConfigExplorer/Graphs.ts';
 import {
-    LAYOUT_NODESEP, LAYOUT_RANKSEP, LayoutDirection, LayoutModel,
-    assignCoordinates, layoutModelOf, placementOf
+    FORCE_NODE_GAP, LAYOUT_NODESEP, LAYOUT_RANKSEP, LayoutDirection, LayoutModel,
+    assignCoordinates, forceModelOf, layoutModelOf, placementOf
 } from '../src/util/ConfigExplorer/LineageLayout.ts';
 
 function graphOf(ids: string[], edges: [string, string][]): DAGraph {
@@ -219,5 +219,71 @@ describe('assignCoordinates', () => {
 
         expect(at('b').x).toBe(at('c').x);
         expect(at('b').x - at('a').x).toBe(200 + LAYOUT_RANKSEP);
+    });
+});
+
+describe('force layout', () => {
+    // a cycle and a separate pair, as foreign keys tend to be
+    const RELATIONS: [string[], [string, string][]] = [
+        ['a', 'b', 'c', 'd', 'e'],
+        [['a', 'b'], ['b', 'c'], ['c', 'a'], ['d', 'e']],
+    ];
+
+    const forceNode = (id: string, model: ReadonlyMap<string, {x: number, y: number}>, style?: {width: number, height: number}) =>
+        ({id, position: {x: 0, y: 0}, data: {forceCentre: model.get(id)}, style}) as ReactFlowNode;
+
+    const overlaps = (nodes: ReactFlowNode[], gap: number) => {
+        const box = (node: ReactFlowNode) => ({x: node.position.x, y: node.position.y,
+            w: Number(node.style?.width) || 172, h: Number(node.style?.height) || 36});
+        let count = 0;
+        nodes.forEach((u, i) => nodes.slice(i + 1).forEach(v => {
+            const a = box(u), b = box(v);
+            if (Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + gap > 1
+                && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + gap > 1) count++;
+        }));
+        return count;
+    };
+
+    it('places every node, the same way whatever order the graph lists them in', () => {
+        const [ids, edges] = RELATIONS;
+        const model = forceModelOf(graphOf(ids, edges));
+        const permuted = forceModelOf(graphOf(shuffled(ids, 3), shuffled(edges, 5)));
+
+        expect([...model.keys()].sort()).toEqual(ids);
+        ids.forEach(id => expect(permuted.get(id)).toEqual(model.get(id)));
+    });
+
+    it('keeps related nodes closer together than unrelated ones', () => {
+        const model = forceModelOf(graphOf(...RELATIONS));
+        const distance = (u: string, v: string) => Math.hypot(model.get(u)!.x - model.get(v)!.x, model.get(u)!.y - model.get(v)!.y);
+
+        expect(distance('a', 'b')).toBeLessThan(distance('a', 'e'));
+    });
+
+    it('makes room for a node that has grown, without moving the anchor', () => {
+        const model = forceModelOf(graphOf(...RELATIONS));
+        const nodes = RELATIONS[0].map(id => forceNode(id, model));
+        const laidOut = assignCoordinates(nodes, [], 'LR');
+        expect(overlaps(laidOut, FORCE_NODE_GAP)).toBe(0);
+
+        const grown = laidOut.map(node => node.id === 'a' ? {...node, style: {width: 400, height: 600}} : node);
+        const after = assignCoordinates(grown, [], 'LR', {anchorId: 'a'});
+
+        expect(overlaps(after, FORCE_NODE_GAP)).toBe(0);
+        const [was, is] = [laidOut, after].map(list => list.find(node => node.id === 'a')!.position);
+        expect(is.x).toBeCloseTo(was.x);
+        expect(is.y).toBeCloseTo(was.y);
+    });
+
+    it('keeps the displacement of a dragged node', () => {
+        const model = forceModelOf(graphOf(...RELATIONS));
+        const nodes = RELATIONS[0].map(id => forceNode(id, model));
+        const before = assignCoordinates(nodes, [], 'LR');
+        const dragged = nodes.map(node => node.id === 'e' ? {...node, data: {...node.data, manualOffset: {x: 30, y: -20}}} : node);
+
+        const after = assignCoordinates(dragged, [], 'LR');
+        const at = (list: ReactFlowNode[], id: string) => list.find(node => node.id === id)!.position;
+
+        expect(at(after, 'e')).toEqual({x: at(before, 'e').x + 30, y: at(before, 'e').y - 20});
     });
 });

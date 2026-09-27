@@ -1,6 +1,7 @@
 import { expect, Page, test } from '@playwright/test';
 import { RELATED_DATA_OBJECTS } from './fixture';
 import { hoverLine } from './hoverLine';
+import { chooseLayout, layoutInUse, layoutSelector } from './layoutSelector';
 
 /**
  * Columns on a DataObject node, and the relations view built from the declared foreign keys
@@ -397,14 +398,13 @@ test.describe('relations graph', () => {
 
   test('switching to the relations view lays it out left to right', async ({ page }) => {
     await openLineage(page, '/#/config/dataObjects/int-departures');
-    // the button names the layout it would switch to, so this one says we are top to bottom
-    await expect(page.getByRole('button', { name: 'switch to horizontal layout' })).toBeVisible();
+    await expect(layoutInUse(page, 'TB')).toBeVisible();
 
     await graphViewMenu(page).click();
     await page.getByRole('menuitem').nth(3).click();
 
     // an entity relation diagram is drawn left to right
-    await expect(page.getByRole('button', { name: 'switch to vertical layout' })).toBeVisible();
+    await expect(layoutInUse(page, 'LR')).toBeVisible();
   });
 
   test('an edge carries the name of the foreign key it stands for', async ({ page }) => {
@@ -481,5 +481,40 @@ test.describe('relations graph', () => {
     // the action that reads it
     await expect.poll(() => nodeIds(page))
       .toEqual(['download-deduplicate-departures', 'int-departures', 'join-departures-airports']);
+  });
+
+  test('the force layout is offered in the relations view only, and keeps nodes apart', async ({ page }) => {
+    await openLineage(page, '/#/config/dataObjects/int-airports');
+    await layoutSelector(page).click();
+    await expect(page.getByTestId('layout-force')).toHaveAttribute('aria-disabled', 'true');
+    await page.keyboard.press('Escape');
+
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(3).click(); // relations
+    await page.getByRole('button', { name: 'Expand graph' }).click();
+    await expect.poll(() => nodeIds(page)).toEqual(RELATED_DATA_OBJECTS);
+    const positions = () => nodes(page).evaluateAll((els) => els.map((e) => (e as HTMLElement).style.transform).join('|'));
+    const layered = await positions();
+
+    await chooseLayout(page, 'force');
+    await expect(layoutInUse(page, 'force')).toBeVisible();
+    await expect.poll(positions).not.toBe(layered);
+    expect(await nodeIds(page)).toEqual(RELATED_DATA_OBJECTS);
+
+    const boxes = await Promise.all(RELATED_DATA_OBJECTS.map(async (id) => (await node(page, id).boundingBox())!));
+    boxes.forEach((a, i) => boxes.slice(i + 1).forEach((b) => {
+      const apart = a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+      expect(apart).toBe(true);
+    }));
+
+    // selecting a node shown moves nothing
+    const before = await positions();
+    await node(page, RELATED_DATA_OBJECTS[0]).click();
+    expect(await positions()).toBe(before);
+
+    // the lineage views are a flow, which only a layered layout draws
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(1).click();
+    await expect(layoutInUse(page, 'LR')).toBeVisible();
   });
 });
