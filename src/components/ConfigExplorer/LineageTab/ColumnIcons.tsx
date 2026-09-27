@@ -14,20 +14,24 @@ import './ColumnIcons.css';
     overrides of ReactFlow's stylesheet that only win because they are injected after it - so
     importing it from outside the lineage tab moves it up the module graph and silently breaks
     those. Nothing here overrides anything, so this file can be imported from anywhere.
+
+    They carry an aria-label rather than a title: an SVG title opens the browser's own tooltip, while
+    whoever shows an icon says what it means in its own Joy tooltip.
 */
+const label = (text: string) => ({'aria-label': text, 'aria-hidden': false, role: 'img'});
 
 /** A primary key column. */
 export function PrimaryKeyIcon() {
-    return <KeyIcon className="lineage-column-icon lineage-column-icon-pk" titleAccess="primary key"/>;
+    return <KeyIcon className="lineage-column-icon lineage-column-icon-pk" {...label('primary key')}/>;
 }
 
 /** A column referencing another DataObject of this configuration. */
 export function ForeignKeyIcon() {
-    return <LinkIcon className="lineage-column-icon lineage-column-icon-fk" titleAccess="foreign key"/>;
+    return <LinkIcon className="lineage-column-icon lineage-column-icon-fk" {...label('foreign key')}/>;
 }
 
 /** A column whose every foreign key points at a DataObject this configuration does not describe. */
 export function UnresolvedForeignKeyIcon() {
     return <LinkOffIcon className="lineage-column-icon lineage-column-icon-unresolved"
-                        titleAccess="foreign key pointing outside this configuration"/>;
+                        {...label('foreign key pointing outside this configuration')}/>;
 }

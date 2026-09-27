@@ -794,23 +794,28 @@ export const CustomEdge = ({
   // edge itself - without that, clicking a label would do nothing
   const onLabelClick = () => selectEdge(reactFlow, {id, source, target});
 
+  // a relation names its foreign key, a column lineage edge how its target column is made
+  const edgeTitle = data?.relation?.fkName
+    ?? (data?.columnLineage ? columnLineageTitle(source, target, data.columnLineage) : undefined);
+
   // maybe use BaseEdge...
   return (
     <>
       {/*
-        The name of the foreign key this edge stands for, as an SVG title, which needs no layout of
-        its own. It is the first child of the edge's own group rather than of one of the paths,
-        because there are two of them - a wide invisible one that makes the edge easier to hit and
-        the visible line drawn on top of it - and a title on either would only show over that one.
+        One tooltip over both paths - the wide invisible one that makes the edge easier to hit and
+        the visible line on top - anchored at the pointer, as an edge's bounding box is not where the line is.
       */}
-      {data?.relation?.fkName && <title>{data.relation.fkName}</title>}
-      {data?.columnLineage && <title>{columnLineageTitle(source, target, data.columnLineage)}</title>}
-      {/* no inline style here: the edge's strokeWidth would narrow the hit area to the visible line */}
-      <path className={`react-flow__edge-path-selector${data?.columnLineage ? ' lineage-column-edge-selector' : ''}`}
-            d={edgePath} fillRule="evenodd"/>
-      {/* a relation marks its many side with a crow's foot instead of an arrow head on the other */}
-      <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={data?.relation ? undefined : markerEnd}/>
-      {relation && <path style={{...style, fill: 'none'}} className="lineage-relation-foot" d={relation.footPath}/>}
+      <Tooltip title={edgeTitle ? <Box sx={{whiteSpace: 'pre-line'}}>{edgeTitle}</Box> : ''}
+               arrow disableInteractive followCursor size="sm" enterDelay={300}>
+        <g>
+          {/* no inline style here: the edge's strokeWidth would narrow the hit area to the visible line */}
+          <path className={`react-flow__edge-path-selector${data?.columnLineage ? ' lineage-column-edge-selector' : ''}`}
+                d={edgePath} fillRule="evenodd"/>
+          {/* a relation marks its many side with a crow's foot instead of an arrow head on the other */}
+          <path id={id} style={style} className="react-flow__edge-path" d={edgePath} markerEnd={data?.relation ? undefined : markerEnd}/>
+          {relation && <path style={{...style, fill: 'none'}} className="lineage-relation-foot" d={relation.footPath}/>}
+        </g>
+      </Tooltip>
       {(output || input) &&
         <EdgeLabelRenderer>
           {output &&

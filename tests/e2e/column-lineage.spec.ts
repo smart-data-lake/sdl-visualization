@@ -1,4 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
+import { hoverLine } from './hoverLine';
 
 /**
  * Column lineage in the data view (issue #141, see src/components/ConfigExplorer/LineageTab/README.md).
@@ -13,6 +14,11 @@ const graphViewMenu = (page: Page) => page.locator('.react-flow .MuiMenuButton-r
 const expandColumns = (page: Page, id: string) => page.getByTestId(`columns-expand-${id}`);
 const collapseColumns = (page: Page, id: string) => page.getByTestId(`columns-collapse-${id}`);
 const edge = (page: Page, id: string) => page.locator(`.react-flow__edge[data-testid="rf__edge-${id}"]`);
+// an edge's tooltip opens where the pointer is, so it is read by hovering the line
+async function edgeTooltip(page: Page, id: string) {
+  await hoverLine(edge(page, id).locator('path.react-flow__edge-path'));
+  return page.getByRole('tooltip');
+}
 const lineageEdges = (page: Page) => page.locator('.react-flow__edge[data-testid$="::lineage"]');
 // ReactFlow does not render a hidden edge at all - and a straight vertical path has no width, which
 // Playwright would call invisible anyway - so an edge is counted rather than checked for visibility
@@ -60,12 +66,9 @@ test.describe('column lineage in the data view', () => {
     await expandColumns(page, 'int-departures').click();
     await expandColumns(page, 'int-departures').click();
 
-    const title = edge(page, 'ext-departures.firstseen->int-departures.dt::lineage').locator('title');
-    await expect(title).toHaveText(
-      "download-deduplicate-departures: date_format(from_unixtime(firstseen), 'yyyyMMdd')",
-      { useInnerText: false },
-    );
-    await expect(edge(page, 'ext-departures.icao24->int-departures.icao24::lineage').locator('title'))
+    await expect(await edgeTooltip(page, 'ext-departures.firstseen->int-departures.dt::lineage')).toHaveText(
+      "download-deduplicate-departures: date_format(from_unixtime(firstseen), 'yyyyMMdd')");
+    await expect(await edgeTooltip(page, 'ext-departures.icao24->int-departures.icao24::lineage'))
       .toContainText('download-deduplicate-departures: unchanged');
   });
 
@@ -137,7 +140,7 @@ test.describe('tracing a column', () => {
     await traceButton(page, 'int-airports', 'name').click();
 
     // stg-airports.name upstream; arr_name and dep_name downstream, each once more in btl-distances
-    await expect(page.getByTestId('column-trace-starts')).toHaveText(/^Start columns\s*stg-airports\.name$/);
+    await expect(page.getByTestId('column-trace-starts')).toHaveText(/^Source columns\s*stg-airports\.name$/);
     await expect(page.getByTestId('column-trace-ends')).toContainText('btl-distances.');
     await expect(page.getByTestId('column-trace-show')).toHaveText('Show all');
     await expect(row(page, 'int-airports', 'name')).toHaveClass(/lineage-column-trace-start/);
@@ -169,7 +172,7 @@ test.describe('tracing a column', () => {
     await expandColumns(page, 'int-departures').click();
 
     await traceButton(page, 'int-departures', 'dt').click();
-    await expect(page.getByTestId('column-trace-starts')).toHaveText(/^Start columns\s*ext-departures\.firstSeen$/);
+    await expect(page.getByTestId('column-trace-starts')).toHaveText(/^Source columns\s*ext-departures\.firstSeen$/);
     await expect(page.getByTestId('column-trace-ends')).toContainText('int-departures.dt');
     // dt comes from ext-departures through download-deduplicate-departures, and nothing reads it. The
     // open data object shows its columns, so the actions' edges run per column to their ports
@@ -203,12 +206,12 @@ test.describe('the ports of an action in the full view', () => {
     // one input feeds two outputs
     await expect(connection(page, 'int-airports.name', 'btl-departures-arrivals-airports.arr_name')).toHaveCount(1);
     await expect(connection(page, 'int-airports.name', 'btl-departures-arrivals-airports.dep_name')).toHaveCount(1);
-    await expect(connection(page, 'int-departures.estdepartureairport', 'btl-departures-arrivals-airports.estdepartureairport')
-      .locator('title')).toHaveText(
-      'unchanged', { useInnerText: false });
+    await hoverLine(connection(page, 'int-departures.estdepartureairport', 'btl-departures-arrivals-airports.estdepartureairport')
+      .locator('.lineage-port-connection-line'));
+    await expect(page.getByRole('tooltip')).toHaveText('unchanged');
     // a port edge names the two nodes it runs between, the port names the column
-    await expect(edge(page, 'int-airports.name->join-departures-airports::port').locator('title'))
-      .toHaveText('int-airports → join-departures-airports', { useInnerText: false });
+    await expect(await edgeTooltip(page, 'int-airports.name->join-departures-airports::port'))
+      .toHaveText('int-airports → join-departures-airports');
 
     // every port is connected to its data object, which is closed, so the edge ends on the node
     await expect(edge(page, 'int-airports.name->join-departures-airports::port')).toHaveCount(1);

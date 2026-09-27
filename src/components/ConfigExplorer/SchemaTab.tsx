@@ -89,7 +89,9 @@ export function tooltipHeadRenderer(msg: string) {
 export function primaryKeyRenderer() {
   // the flex box centres the symbol on the row, which a bare svg in a text cell is not
   return (prop: any) => (prop.rowData.isPrimaryKey
-    ? <div style={{display: 'flex', alignItems: 'center', height: '100%'}}><PrimaryKeyIcon/></div>
+    ? <div style={{display: 'flex', alignItems: 'center', height: '100%'}}>
+        <Tooltip title="primary key" arrow disableInteractive size="sm" enterDelay={300}><span style={{display: 'flex'}}><PrimaryKeyIcon/></span></Tooltip>
+      </div>
     : <></>);
 }
 
