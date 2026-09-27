@@ -208,18 +208,17 @@ function CenterFocusButton() {
     )
 }
 
-function RecomputeLayoutButton() {
+function ResetLayoutButton() {
     const rfi = useReactFlow();
     const { layout: layoutDirection } = useLineageGraph();
 
-    // lays the current nodes out again, and gives up the ones the user has moved by hand - this is
-    // the way back to the computed layout
+    // the nodes shown stay; their columns close and the manual moves are given up
     const handleOnClick = () => {
         resetLayout(rfi, layoutDirection);
     }
 
     return (
-        <Tooltip arrow title='Recompute layout' enterDelay={500} enterNextDelay={500} placement='top'>
+        <Tooltip arrow title='Reset layout' enterDelay={500} enterNextDelay={500} placement='top'>
             <IconButton onClick={handleOnClick}>
                 <Apps />
             </IconButton>
@@ -506,7 +505,7 @@ export default function LineageGraphToolbar({props}: {props: flowProps}) {
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <ShowAllButton />
                     {showCenterNodeOptions && <CenterFocusButton />}
-                    <RecomputeLayoutButton />
+                    <ResetLayoutButton />
                     <LayoutButton />
                 </ToggleButtonGroup>
                 <Divider orientation="vertical" />

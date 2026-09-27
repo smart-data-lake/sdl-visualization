@@ -287,7 +287,7 @@ test.describe('lineage graph', () => {
     await openLineage(page, '/#/config/dataObjects/int-airports');
     const before = await nodeIds(page);
 
-    await page.getByRole('button', { name: 'Recompute layout' }).click();
+    await page.getByRole('button', { name: 'Reset layout' }).click();
     await page.getByRole('button', { name: 'Show all' }).click();
     await page.getByRole('button', { name: 'Focus on central node' }).click();
     expect(await nodeIds(page)).toEqual(before);

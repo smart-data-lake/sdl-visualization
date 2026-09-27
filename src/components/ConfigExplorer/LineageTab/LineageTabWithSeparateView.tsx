@@ -45,7 +45,7 @@ import {
   setSelectedNode,
   spliceNodePath,
   updateExpandSides,
-  buildGraphTrace, showColumnTrace, traceIndex,
+  buildGraphTrace, showColumnTrace, traceIndex, updateColumnEdges,
 } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { useFetchColumnLineageIndex } from '../../../hooks/useFetchData';
 import { ColumnTracePanel } from './ColumnTracePanel';
@@ -137,6 +137,8 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
   useEffect(() => {
     if (!rfContainerMounted) return;
     if (applied.current === null || applied.current === nodes) {
+      // nodes remembered open have to take their edges onto their columns
+      if (applied.current === null) updateColumnEdges(reactFlow);
       applied.current = nodes;
       return;
     }
@@ -144,6 +146,7 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
     const zoom = reactFlow.getZoom();
     reactFlow.setNodes(nodes);
     reactFlow.setEdges(edges);
+    updateColumnEdges(reactFlow);
     const centers = nodes.filter((node) => node.data.graphNodeProps.isCenterNode);
     // after the nodes have been measured, or the fit is computed from sizes ReactFlow does not have yet
     setTimeout(() => reactFlow.fitView(centers.length > 0 ? {maxZoom: zoom, nodes: centers} : {nodes}), 0);

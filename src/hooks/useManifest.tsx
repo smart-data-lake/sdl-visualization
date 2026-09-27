@@ -10,6 +10,8 @@ export interface Manifest {
     env?: string;
     // config source file url template: {filename} and {lineNumber} will be replaced by corresponding config element origin in 'raw config' section of Configuration viewer.
     configSourceUrl?: string;
+    // the lineage graph's layout until the user switches it: 'LR' (horizontal, the default) or 'TB'
+    lineageLayout?: 'LR' | 'TB';
     
     /**
      * Identity provider configuration. Its presence switches the app to multi-tenant

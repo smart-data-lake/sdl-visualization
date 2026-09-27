@@ -303,16 +303,46 @@ test.describe('layout stability', () => {
     expect(moved('join-departures-airports').x).toBe(moved('historize-airports').x);
   });
 
-  test('recompute layout gives up the manual moves', async ({ page }) => {
+  test('reset layout gives up the manual moves', async ({ page }) => {
     await openLineage(page, '/#/config/dataObjects/int-airports');
     const computed = await positions(page);
     await drag(page, 'join-departures-airports', 200, 100);
     await expect.poll(async () => (await positions(page))['join-departures-airports'])
       .not.toBe(computed['join-departures-airports']);
 
-    await page.getByRole('button', { name: 'Recompute layout' }).click();
+    await page.getByRole('button', { name: 'Reset layout' }).click();
 
     await expect.poll(() => positions(page)).toEqual(computed);
+  });
+
+  test('reset layout closes every node and keeps the nodes shown', async ({ page }) => {
+    await openLineage(page, '/#/config/dataObjects/int-airports');
+    await expandForward(page, 'join-departures-airports').click();
+    await expect.poll(() => nodeIds(page)).toContain('btl-departures-arrivals-airports');
+    // relative to the center node, which the layout keeps where it is, so the view does not jump
+    const relative = async () => {
+      const all = await placed(page);
+      const center = all.find((n) => n.id === 'int-airports')!;
+      return Object.fromEntries(all.map((n) => [n.id, `${n.x - center.x},${n.y - center.y}`]));
+    };
+    const computed = await relative();
+    const shown = await nodeIds(page);
+
+    await expandColumns(page, 'int-airports').click();
+    await expandColumns(page, 'join-departures-airports').click();
+    await expect(node(page, 'int-airports').locator('.lineage-column-row').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Reset layout' }).click();
+
+    await expect(page.locator('.react-flow__node .lineage-column-row')).toHaveCount(0);
+    expect(await nodeIds(page)).toEqual(shown);
+    await expect.poll(relative).toEqual(computed);
+
+    // closed for good: a change of graph view does not open them again
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(1).click();
+    await expect(node(page, 'int-airports')).toBeVisible();
+    await expect(page.locator('.react-flow__node .lineage-column-row')).toHaveCount(0);
   });
 
   test('every edge starts and ends on a node, through expanding, selecting and collapsing', async ({ page }) => {
