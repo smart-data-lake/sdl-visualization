@@ -254,6 +254,21 @@ export const useFetchNewestLineageOf = (dataObjectIds: string[], enabled = true)
   })));
 };
 
+/** The newest exported schema of each data object, quiet like the lineage above: most have none. */
+export const useFetchNewestSchemaOf = (dataObjectIds: string[], enabled = true) => {
+  const { tenant, repo, env } = useWorkspace();
+  return useQueries(dataObjectIds.map(dataObjectId => ({
+    queryKey: ["schemaNewest", dataObjectId, tenant, repo, env],
+    queryFn: async () => {
+      const entries = await fetcher().getTstampEntries("schema", "schema", dataObjectId, tenant!, repo!, env!);
+      return entries?.[0] ? fetcher().getSchema(entries[0], tenant!, repo!, env!) : undefined;
+    },
+    enabled: enabled,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  })));
+};
+
 /** Quiet too: an index exists only once it was built. */
 export const useFetchColumnLineageIndex = (enabled = true) => {
   const { tenant, repo, env } = useWorkspace();

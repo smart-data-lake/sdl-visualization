@@ -249,6 +249,30 @@ export interface ReactFlowNodeProps {
         the current content of the ReactFlow instance. See LineageLayout.ts.
     */
     placement?: NodePlacement,
+    /* in the action view: how an action's port groups are ordered, see portGroupRanks */
+    portGroupRanks?: PortGroupRanks,
+}
+
+/** Where each data object's port group of an action goes, per side - the key PortOrder.groupRankOf reads. */
+export type PortGroupRanks = {input: Record<string, number>, output: Record<string, number>};
+
+/*
+    In the action view a data object is an edge, so its group is ranked by the actions at the other end
+    of it: the writer for an input, the first reader for an output. From the whole graph's layout model,
+    so that the order does not depend on which neighbours are shown.
+*/
+export function portGroupRanks(graph: DAGraph, actionId: string, placement: ReadonlyMap<string, NodePlacement>): PortGroupRanks {
+    const ranks: PortGroupRanks = {input: {}, output: {}};
+    const rank = (side: Record<string, number>, dataObjectId: string, otherId: string) => {
+        const order = placement.get(otherId)?.order;
+        if (order !== undefined) side[dataObjectId] = Math.min(side[dataObjectId] ?? order, order);
+    };
+    graph.edges.forEach(edge => {
+        if (!edge.dataObjectId) return;
+        if (edge.toNode.id === actionId) rank(ranks.input, edge.dataObjectId, edge.fromNode.id);
+        if (edge.fromNode.id === actionId) rank(ranks.output, edge.dataObjectId, edge.toNode.id);
+    });
+    return ranks;
 }
 
 /** Merges an exported schema and column lineage into the columns a data object's configuration declares. */
@@ -445,6 +469,8 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             columnDisplay: columnsFunc && nodeType === NodeType.DataNode ? rememberedColumnDisplay(nodeType, node.id) : 'none',
             isSelectedElement: node.id === props.elementName,
             placement: layoutModel.placement.get(node.id),
+            portGroupRanks: graphView === 'action' && nodeType === NodeType.ActionNode
+                ? portGroupRanks(dataObjectsAndActions, node.id, layoutModel.placement) : undefined,
         }
 
         const newNode = {

@@ -2,9 +2,9 @@ import { describe, expect, test } from 'vitest';
 import type { Edge, Node } from 'reactflow';
 import { buildColumnModel, ColumnDisplay } from '../src/util/ConfigExplorer/ColumnModel';
 import { buildColumnLineageIndex, parseColumnLineage } from '../src/util/ConfigExplorer/columnLineage';
-import { NodeType } from '../src/util/ConfigExplorer/Graphs';
+import { DAGraph, DataObject, Edge as GraphEdge, NodeType } from '../src/util/ConfigExplorer/Graphs';
 import { buildActionPorts, portRowCount } from '../src/util/ConfigExplorer/ActionPorts';
-import { buildGraphTrace, columnLineageEdges, CustomEdgeProps, traceEnds, traceHighlights, traceIndex } from '../src/util/ConfigExplorer/LineageTabUtils';
+import { buildGraphTrace, columnLineageEdges, portGroupRanks, CustomEdgeProps, traceEnds, traceHighlights, traceIndex } from '../src/util/ConfigExplorer/LineageTabUtils';
 
 const identity = (name: string, field: string) =>
   ({ namespace: 'sdlb', name, field, transformations: [{ type: 'DIRECT', subtype: 'IDENTITY' }] });
@@ -189,6 +189,31 @@ describe('the ports of an action', () => {
     expect(ports.inputRows).toEqual([{ caption: 'left' }, { port: ports.inputs[0] }, { caption: 'right' }, { port: ports.inputs[1] }]);
     expect(ports.connections.map((c) => `${c.from}>${c.to}`)).toEqual(['left.a>out.a', 'left.a>out.b', 'right.b>out.b']);
     expect(portRowCount(ports)).toBe(5);
+  });
+
+  test('ports follow the column order of their data object, columns it does not list last', () => {
+    const columnsOf = (id: string) => ({ out: ['D', 'c', 'x', 'a'], right: ['b'] })[id];
+    const ports = buildActionPorts('join', docs, { columnsOf });
+    expect(ports.outputs.map((p) => p.key)).toEqual(['out.d', 'out.c', 'out.a', 'out.b']);
+    expect(ports.inputs.map((p) => p.key)).toEqual(['left.a', 'right.b']);
+  });
+
+  test('groups follow the rank of their data object, unranked ones last in first appearance', () => {
+    const wide = parseColumnLineage([{ actionId: 'j', dataObjectId: 'out', columnLineage: { fields: {
+      a: { inputFields: [identity('p', 'a'), identity('q', 'a'), identity('r', 'a')] } } } }]);
+    const groupRankOf = (id: string, side: 'input' | 'output') => side === 'input' ? ({ r: 0, q: 1 } as Record<string, number>)[id] : undefined;
+    expect(buildActionPorts('j', wide, { groupRankOf }).inputRows.filter((row) => 'caption' in row))
+      .toEqual([{ caption: 'r' }, { caption: 'q' }, { caption: 'p' }]);
+    expect(buildActionPorts('j', wide).inputs.map((p) => p.dataObjectId)).toEqual(['p', 'q', 'r']);
+  });
+
+  test('in the action view, groups are ranked by the actions at the other end of their data object', () => {
+    // w1 and w2 write what j reads, j writes o, which r1 and r2 read
+    const nodes = new Map(['w1', 'w2', 'j', 'r1', 'r2'].map((id) => [id, new DataObject(id)]));
+    const edge = (from: string, to: string, dataObjectId: string) => new GraphEdge(nodes.get(from)!, nodes.get(to)!, `${from}-${dataObjectId}-${to}`, undefined, dataObjectId);
+    const graph = new DAGraph([...nodes.values()], [edge('w1', 'j', 'p'), edge('w2', 'j', 'q'), edge('j', 'r1', 'o'), edge('j', 'r2', 'o')]);
+    const placement = new Map([['w1', { rank: 0, order: 1 }], ['w2', { rank: 0, order: 0 }], ['r1', { rank: 2, order: 3 }], ['r2', { rank: 2, order: 2 }]]);
+    expect(portGroupRanks(graph, 'j', placement)).toEqual({ input: { p: 1, q: 0 }, output: { o: 2 } });
   });
 
   test('in the full view, the edges of an open action run per column to its ports', () => {

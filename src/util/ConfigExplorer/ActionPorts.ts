@@ -40,6 +40,34 @@ export interface ActionPorts {
 
 export const portKey = (dataObjectId: string, column: string) => `${dataObjectId}.${columnKey(column)}`;
 
+/** How the ports of one side are ordered, so that they line up with the data objects they connect to. */
+export interface PortOrder {
+    /** a data object's columns in the order its node lists them, i.e. its exported schema */
+    columnsOf?: (dataObjectId: string) => string[] | undefined;
+    /** where a data object's group goes on one side, from the placement in the layout, see portGroupRanks */
+    groupRankOf?: (dataObjectId: string, side: 'input' | 'output') => number | undefined;
+}
+
+/** Groups by rank, columns by schema position; whatever is unknown keeps first appearance, last - as buildColumnModel appends it. */
+function sortPorts<P extends Port>(ports: P[], side: 'input' | 'output', order: PortOrder): P[] {
+    const firstAppearance = new Map<string, number>();
+    ports.forEach(port => { if (!firstAppearance.has(port.dataObjectId)) firstAppearance.set(port.dataObjectId, firstAppearance.size); });
+    const positions = new Map<string, Map<string, number>>();
+    const positionOf = (port: Port) => {
+        let byColumn = positions.get(port.dataObjectId);
+        if (!byColumn) {
+            byColumn = new Map((order.columnsOf?.(port.dataObjectId) ?? []).map((column, i) => [columnKey(column), i]));
+            positions.set(port.dataObjectId, byColumn);
+        }
+        return byColumn.get(columnKey(port.column)) ?? Number.MAX_SAFE_INTEGER;
+    };
+    const rankOf = (dataObjectId: string) => order.groupRankOf?.(dataObjectId, side) ?? Number.MAX_SAFE_INTEGER;
+    return [...ports].sort((a, b) =>
+        rankOf(a.dataObjectId) - rankOf(b.dataObjectId)
+        || firstAppearance.get(a.dataObjectId)! - firstAppearance.get(b.dataObjectId)!
+        || positionOf(a) - positionOf(b));
+}
+
 /** The rows of one side: its ports grouped under the data object they belong to, in first appearance. */
 function rowsOf(ports: Port[]): PortRow[] {
     const byDataObject = new Map<string, Port[]>();
@@ -47,7 +75,7 @@ function rowsOf(ports: Port[]): PortRow[] {
     return [...byDataObject].flatMap(([dataObjectId, group]) => [{caption: dataObjectId}, ...group.map(port => ({port}))]);
 }
 
-export function buildActionPorts(actionId: string, lineage: ColumnLineage[]): ActionPorts {
+export function buildActionPorts(actionId: string, lineage: ColumnLineage[], order: PortOrder = {}): ActionPorts {
     const inputs = new Map<string, Port>();
     const outputs = new Map<string, OutputPort>();
     const connections: PortConnection[] = [];
@@ -66,7 +94,7 @@ export function buildActionPorts(actionId: string, lineage: ColumnLineage[]): Ac
             if (!outputs.has(key)) outputs.set(key, {dataObjectId: doc.dataObjectId, column, key, unresolved: true});
         });
     });
-    const inputList = [...inputs.values()], outputList = [...outputs.values()];
+    const inputList = sortPorts([...inputs.values()], 'input', order), outputList = sortPorts([...outputs.values()], 'output', order);
     return {inputs: inputList, outputs: outputList, connections, inputRows: rowsOf(inputList), outputRows: rowsOf(outputList)};
 }
 
