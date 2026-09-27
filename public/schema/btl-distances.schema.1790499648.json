@@ -1,0 +1,46 @@
+{
+  "schema" : [ {
+    "name" : "estdepartureairport",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "estarrivalairport",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "arr_name",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "arr_latitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "arr_longitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "dep_name",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "dep_latitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "dep_longitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "distance",
+    "dataType" : "double",
+    "nullable" : true,
+    "comment" : "The computed distance between the departure and arrival airports. The distance is computed as length of on an sphere with radius 6371km using the geographic latitutes and longitudes of both airports."
+  }, {
+    "name" : "could_be_done_by_rail",
+    "dataType" : "boolean",
+    "nullable" : true,
+    "comment" : "Boolean describing if the distance is less than 500km (than true)"
+  } ],
+  "subFeedType" : "SparkSubFeed"
+}
