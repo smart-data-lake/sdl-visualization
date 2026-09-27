@@ -290,6 +290,12 @@ data objects — and they move apart onto their columns as a node is opened
 data objects gives an edge from a column to a node. Which columns a relation runs through is read
 off the rows themselves and from the tooltip of a column, not from a label on the edge.
 
+A relation edge is drawn **straight**, in entity relation notation: no arrow head, and a crow's foot
+on the referencing (many) side, i.e. at the edge's source. The foot's toes meet the node border and
+its heel is where the straight line starts (`relationPaths` in `LineageGraphComponents.tsx`). The
+foot is a path of its own class, not `react-flow__edge-path`, so an edge still has exactly one of
+those. A data object referencing itself cannot be joined by a straight line and keeps its steps.
+
 Two rules that are easy to break:
 
 1. **Toggling columns and re-pointing the edges must happen in the same synchronous block**, or the
