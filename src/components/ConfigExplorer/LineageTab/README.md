@@ -353,6 +353,14 @@ taken over. The ports come from the lineage of the data objects the action *writ
 SDLB exports lineage per output; an action without any offers nothing to open. Hovering a curve
 tells only the transformation (or `unchanged`), hovering a port the column and, for an output, the expression creating it.
 
+The ports are ordered so that the edges to the data objects cross as little as possible: the groups
+follow the cross axis order of their data object nodes in the layout (`data.placement`; in the action
+view, where the data objects are edges, the order of the actions at their other end - the writer of an
+input, the first reader of an output - taken from the whole graph's layout model, `portGroupRanks`), and the ports within a group follow the
+data object's exported schema - the order its node lists its columns in (`useFetchNewestSchemaOf`,
+`PortOrder`). Columns the schema does not list go last, as they do on the data object node. The
+schemas are fetched by the action itself, so the order does not change when a neighbour is opened.
+
 `columnLineageEdges` gives the full view one edge per column the action reads resp. writes, as soon
 as the port or the column at the other end is shown, from the column of the data object to the
 port - `sourcePort`/`targetPort` on the edge name the port, `portHandleId` its handle. Data objects

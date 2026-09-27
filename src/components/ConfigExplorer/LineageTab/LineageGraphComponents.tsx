@@ -22,7 +22,7 @@ import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
 
 import { Position } from 'reactflow';
-import { useFetchNewestLineageOf, useFetchDataObjectLineage, useFetchDataObjectLineageEntries, useFetchDataObjectSchema, useFetchDataObjectSchemaEntries, useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
+import { useFetchNewestLineageOf, useFetchNewestSchemaOf, useFetchDataObjectLineage, useFetchDataObjectLineageEntries, useFetchDataObjectSchema, useFetchDataObjectSchemaEntries, useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { SchemaData } from '../../../types';
 import { ActionPorts, buildActionPorts } from '../../../util/ConfigExplorer/ActionPorts';
 import { ActionPortsView } from './ActionPortsView';
@@ -31,7 +31,8 @@ import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { ColumnLineageEdgeProps, CustomEdgeProps, flowProps, graphNodeProps, nodeSizeFor, ReactFlowNodeProps, recomputeLayout, rememberColumnDisplay, rememberedColumnDisplay, SELECTED_ELEMENT_Z_INDEX, scheduleRelayout, selectEdge, updateColumnEdges } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { setRfNodeData, setRfNodeSize } from '../../../util/ConfigExplorer/Graphs';
 import { ColumnList, ColumnsToggle, NODE_BORDER_VAR, NODE_HEADER_HEIGHT, NodeRelationHandles, transformationText } from './DataObjectColumns';
-import { ColumnDisplay, filterColumns } from '../../../util/ConfigExplorer/ColumnModel';
+import { ColumnDisplay, filterColumns, getExportedColumns } from '../../../util/ConfigExplorer/ColumnModel';
+import { placementOf } from '../../../util/ConfigExplorer/LineageLayout';
 import { FlowMetric } from '../../../util/WorkflowsExplorer/metrics';
 import { getIcon, getPartitionStatus, getExecutionMode } from '../../../util/WorkflowsExplorer/StatusInfo';
 import { getStatusColor } from '../../../util/WorkflowsExplorer/statusColors';
@@ -396,11 +397,25 @@ export const CustomDataNode = ( {data} ) => {
     : [];
   const outputLineage = useFetchNewestLineageOf(outputIds, isPortAction);
   const outputLineageVersion = outputLineage.map(result => result.dataUpdatedAt).join();
+  // the schemas of the data objects the ports belong to, so that the ports list their columns in the same order
+  const lineageInputIds = outputLineage.flatMap(result => result.data ?? []).filter(doc => doc.actionId === label)
+    .flatMap(doc => doc.fields.flatMap(field => field.inputs.map(input => input.dataObjectId)));
+  const portDataObjectIds = [...new Set([...outputIds, ...lineageInputIds])].sort();
+  const portSchemas = useFetchNewestSchemaOf(portDataObjectIds, isPortAction);
+  const portSchemasVersion = portSchemas.map(result => result.dataUpdatedAt).join();
   const ports: ActionPorts | undefined = data.ports;
   useEffect(() => {
     if (!isPortAction) return;
     const documents = outputLineage.flatMap(result => result.data ?? []);
-    const found = buildActionPorts(label, documents);
+    const schemaOf = new Map(portDataObjectIds.map((id, i) => [id, portSchemas[i]?.data]));
+    const found = buildActionPorts(label, documents, {
+      columnsOf: id => getExportedColumns(schemaOf.get(id)).map(column => column.name),
+      // in the full view the data objects are nodes; in the action view edges, ranked by the actions they connect
+      groupRankOf: (id, side) => {
+        const node = rfi.getNode(id);
+        return node ? placementOf(node)?.order : data.portGroupRanks?.[side][id];
+      },
+    });
     if (found.inputs.length === 0 && found.outputs.length === 0) return;
     setRfNodeData(rfi, {nodeId: label, path: 'ports', value: found});
     setRfNodeData(rfi, {nodeId: label, path: 'outputLineage', value: documents.filter(doc => doc.actionId === label)});
@@ -414,7 +429,7 @@ export const CustomDataNode = ( {data} ) => {
     // outputLineage is a new array on every render; its version says when what it holds changed.
     // A rebuild of the node set hands the node fresh data without ports, see the merge above
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [outputLineageVersion, isPortAction, ports === undefined]);
+  }, [outputLineageVersion, portSchemasVersion, isPortAction, ports === undefined]);
 
   const handleColumnDisplay = (display: ColumnDisplay) => {
     rememberColumnDisplay(nodeType, label, display);
