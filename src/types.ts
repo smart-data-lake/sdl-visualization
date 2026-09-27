@@ -294,8 +294,9 @@ export class Row implements MetaDataBaseObject {
   export interface TstampEntry {
     key: string;
     elementName: string;
-    ts: number;
-    tstamp: Date;
+    /** Both unset for an unversioned export (`<id>.schema.json`), which is shown as "latest". */
+    ts?: number;
+    tstamp?: Date;
   }
 
   export type SchemaDataType = string|SchemaArrayType|SchemaMapType|SchemaStructType;

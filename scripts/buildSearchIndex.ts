@@ -3,6 +3,7 @@ import path from 'node:path';
 import MiniSearch from 'minisearch';
 import { Context } from '@pushcorn/hocon-parser/lib/core/Context.js';
 import { standardizeKeys } from '../src/util/ConfigExplorer/HoconParser.ts';
+import { newestExport } from './exportFiles.ts';
 import {
   columnDocuments, descriptionDocument, elementDocuments,
   LIMITS, SEARCH_INDEX_OPTIONS, SEARCH_SCHEMA_VERSION, type SearchDocument,
@@ -21,6 +22,13 @@ interface Options {
   out: string; env?: string; version?: string;
 }
 
+/** The env the app itself resolves `envConfig/{env}.conf` with, so both parse the same HOCON. */
+function manifestEnv(publicDir: string): string | undefined {
+  const manifest = path.join(publicDir, 'manifest.json');
+  if (!existsSync(manifest)) return undefined;
+  try { return JSON.parse(readFileSync(manifest, 'utf8')).env || undefined; } catch { return undefined; }
+}
+
 function parseArgs(argv: string[]): Options {
   const flags = new Map<string, string>();
   for (let i = 0; i < argv.length; i += 2) flags.set(argv[i].replace(/^--/, ''), argv[i + 1]);
@@ -31,7 +39,7 @@ function parseArgs(argv: string[]): Options {
     descriptionDir: flags.get('description') ?? path.join(publicDir, 'description'),
     schemaDir: flags.get('schema') ?? path.join(publicDir, 'schema'),
     out: flags.get('out') ?? path.join(publicDir, 'search', 'index.json'),
-    env: flags.get('env'),
+    env: flags.get('env') ?? manifestEnv(publicDir),
     version: flags.get('version'),
   };
 }
@@ -85,14 +93,9 @@ function markdownFiles(dir: string, base = dir): string[] {
  * The newest schema export, whatever it says. One that failed carries an error message and no
  * columns; that is a fact about the export, not something for the indexer to work around.
  */
-function newestSchema(schemaDir: string, dataObjectId: string): { schema: any; tstamp: number } | undefined {
-  const indexFile = path.join(schemaDir, `${dataObjectId}.schema.index`);
-  if (!existsSync(indexFile)) return undefined;
-  const names = readFileSync(indexFile, 'utf8').split('\n').map((l) => l.trim()).filter(Boolean);
-  const name = names[names.length - 1];
-  const file = name ? path.join(schemaDir, name) : undefined;
-  if (!file || !existsSync(file)) return undefined;
-  return { schema: JSON.parse(readFileSync(file, 'utf8')), tstamp: Number(/\.(\d+)\./.exec(name!)?.[1] ?? 0) };
+function newestSchema(schemaDir: string, dataObjectId: string): { schema: any; tstamp?: number } | undefined {
+  const found = newestExport(schemaDir, dataObjectId, 'schema');
+  return found && { schema: JSON.parse(readFileSync(found.file, 'utf8')), tstamp: found.tstamp };
 }
 
 /* -------------------------------------------------------------------- build */

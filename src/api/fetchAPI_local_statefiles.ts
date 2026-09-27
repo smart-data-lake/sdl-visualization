@@ -227,20 +227,27 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         return new Date(parseInt(matches[1]) * 1000);
     }
 
+    /**
+     * SDLB's `localfile:` writer keeps versions and lists them in `<id>.<subtype>.index`; any other
+     * target is written unversioned as `<id>.<subtype>.json`, offered as the single "latest" entry.
+     */
     getTstampEntries(type: string, subtype: string, elementName: string, tenant: string, repo: string, env: string): Promise<TstampEntry[] | undefined> {
-        const filename = `/${type}/${elementName}.${subtype}.index`;
-        console.log("fetching file " + filename);
-        return getUrlContent(filename)
-            .then((content: string) =>
-                content
-                .split(/\r?\n/)
-                .filter((e) => e.length > 0)
-                .map((e) => {
-                    return { key: e, elementName: elementName, tstamp: this.getTstampFromFilename(e) } as TstampEntry;
-                })
-                .reverse()
-            )
-            .catch((error) => { console.log(error, filename); return undefined; });
+        const indexFile = `/${type}/${elementName}.${subtype}.index`;
+        const unversioned = `${elementName}.${subtype}.json`;
+        return getUrlContent(indexFile)
+            .then((content: string) => {
+                const entries = content
+                    .split(/\r?\n/)
+                    .map((e) => e.trim())
+                    .filter((e) => e.length > 0)
+                    .map((e) => ({ key: e, elementName: elementName, tstamp: this.getTstampFromFilename(e) } as TstampEntry))
+                    .reverse();
+                if (entries.length === 0) throw new Error(`index ${indexFile} is empty`);
+                return entries;
+            })
+            .catch(() => getUrlContent(`/${type}/${unversioned}`)
+                .then(() => [{ key: unversioned, elementName: elementName } as TstampEntry])
+                .catch(() => undefined));
     }
 
     getSchema(schemaTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string): Promise<SchemaData | undefined> {

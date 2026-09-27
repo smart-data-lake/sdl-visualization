@@ -9,7 +9,7 @@ import 'github-markdown-css/github-markdown.css';
 import { ReactNode, useEffect, useState } from 'react';
 import { Link } from "react-router-dom";
 import { useFetchDataObjectStats, useFetchRunsQuiet, useFetchWorkflowRunsByElement } from '../../hooks/useFetchData';
-import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
+import { formatTimestamp, formatTstampEntryLabel } from '../../util/WorkflowsExplorer/date';
 import { getPropertyByPath } from '../../util/helpers';
 import './ComponentsStyles.css';
 import ConfigurationAccordions from './ConfigurationAccordions';
@@ -314,7 +314,7 @@ export default function ConfigurationTab(props: ElementProps) {
     if (Object.keys(statsPrep).length > 0) {    
       statsPrep['Exported at'] = (
         <Select variant="plain" size='sm' value={statsEntry?.key} onChange={(ev, value) => setStatsEntry(props.statsEntries?.find((e) => e.key === value))}>
-          {props.statsEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTimestamp(e.tstamp)}</Option>)}
+          {props.statsEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTstampEntryLabel(e)}</Option>)}
         </Select>      
       )
     }
