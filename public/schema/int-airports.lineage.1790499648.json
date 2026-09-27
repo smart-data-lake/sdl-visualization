@@ -1,0 +1,88 @@
+{
+  "actionId" : "historize-airports",
+  "dataObjectId" : "int-airports",
+  "columnLineage" : {
+    "fields" : {
+      "dl_hash" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "stg-airports",
+          "field" : "ident",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "TRANSFORMATION",
+            "description" : "null_aware_hash(struct(stg_airports_sdltemp.ident, stg_airports_sdltemp.latitude_deg, stg_airports_sdltemp.longitude_deg, stg_airports_sdltemp.name))",
+            "masking" : false
+          } ]
+        }, {
+          "namespace" : "sdlb",
+          "name" : "stg-airports",
+          "field" : "latitude_deg",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "TRANSFORMATION",
+            "description" : "null_aware_hash(struct(stg_airports_sdltemp.ident, stg_airports_sdltemp.latitude_deg, stg_airports_sdltemp.longitude_deg, stg_airports_sdltemp.name))",
+            "masking" : false
+          } ]
+        }, {
+          "namespace" : "sdlb",
+          "name" : "stg-airports",
+          "field" : "longitude_deg",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "TRANSFORMATION",
+            "description" : "null_aware_hash(struct(stg_airports_sdltemp.ident, stg_airports_sdltemp.latitude_deg, stg_airports_sdltemp.longitude_deg, stg_airports_sdltemp.name))",
+            "masking" : false
+          } ]
+        }, {
+          "namespace" : "sdlb",
+          "name" : "stg-airports",
+          "field" : "name",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "TRANSFORMATION",
+            "description" : "null_aware_hash(struct(stg_airports_sdltemp.ident, stg_airports_sdltemp.latitude_deg, stg_airports_sdltemp.longitude_deg, stg_airports_sdltemp.name))",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "latitude_deg" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "stg-airports",
+          "field" : "latitude_deg",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "longitude_deg" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "stg-airports",
+          "field" : "longitude_deg",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "name" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "stg-airports",
+          "field" : "name",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      }
+    }
+  },
+  "unresolvedFields" : [ "dl_operation", "dl_ts_captured", "dl_ts_delimited", "ident" ]
+}

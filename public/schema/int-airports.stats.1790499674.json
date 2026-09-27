@@ -1,0 +1,48 @@
+{
+  "numDataFilesCurrent" : 2,
+  "oldestSnapshotTs" : 1790499610,
+  "columns" : {
+    "name" : {
+      "nullCount" : 0,
+      "min" : "\"Aeródromo \"\"Puente de Genave\"\"\"",
+      "max" : "金鸭子国际机场"
+    },
+    "dl_ts_captured" : {
+      "nullCount" : 0,
+      "min" : "2026-09-27T08:59:54.005Z",
+      "max" : "2026-09-27T08:59:54.005Z"
+    },
+    "latitude_deg" : {
+      "nullCount" : 0,
+      "min" : "-0.00327",
+      "max" : "9.994933"
+    },
+    "longitude_deg" : {
+      "nullCount" : 0,
+      "min" : "-0.00056",
+      "max" : "99.95801"
+    },
+    "dl_ts_delimited" : {
+      "nullCount" : 0,
+      "min" : "9999-12-31T00:00:00.000Z",
+      "max" : "9999-12-31T00:00:00.000Z"
+    },
+    "dl_hash" : {
+      "nullCount" : 0,
+      "min" : -2147445524,
+      "max" : 2147419619
+    },
+    "ident" : {
+      "nullCount" : 0,
+      "min" : "00A",
+      "max" : "ZZ-0004"
+    }
+  },
+  "sizeInBytesCurrent" : 3540544,
+  "lastModifiedAt" : 1790499610,
+  "numRows" : 86134,
+  "lastCommitMsg" : "getting-started runId=81 attemptId=1",
+  "numFiles" : 4,
+  "sizeInBytes" : 3547788,
+  "createdAt" : 1790499605
+}

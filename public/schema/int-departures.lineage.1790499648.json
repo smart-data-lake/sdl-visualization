@@ -1,0 +1,181 @@
+{
+  "actionId" : "download-deduplicate-departures",
+  "dataObjectId" : "int-departures",
+  "columnLineage" : {
+    "fields" : {
+      "arrivalAirportCandidatesCount" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "arrivalAirportCandidatesCount",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "callsign" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "callsign",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "created_at" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "created_at",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "departureAirportCandidatesCount" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "departureAirportCandidatesCount",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "dl_ts_captured" : {
+        "inputFields" : [ ],
+        "expression" : "TIMESTAMP '2026-09-27 09:00:28.188504'"
+      },
+      "dt" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "firstSeen",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "TRANSFORMATION",
+            "description" : "date_format(CAST(from_unixtime(ext_departures_sdltemp.firstseen, 'yyyy-MM-dd HH:mm:ss') AS TIMESTAMP), 'yyyyMMdd')",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "estArrivalAirport" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "estArrivalAirport",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "estArrivalAirportHorizDistance" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "estArrivalAirportHorizDistance",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "estArrivalAirportVertDistance" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "estArrivalAirportVertDistance",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "estDepartureAirport" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "estDepartureAirport",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "estDepartureAirportHorizDistance" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "estDepartureAirportHorizDistance",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "estDepartureAirportVertDistance" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "estDepartureAirportVertDistance",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "firstSeen" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "firstSeen",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "icao24" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "icao24",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "lastSeen" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "ext-departures",
+          "field" : "lastSeen",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      }
+    }
+  }
+}

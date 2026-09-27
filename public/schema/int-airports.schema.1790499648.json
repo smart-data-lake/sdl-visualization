@@ -1,0 +1,36 @@
+{
+  "schema" : [ {
+    "name" : "ident",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "name",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "latitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "longitude_deg",
+    "dataType" : "string",
+    "nullable" : true
+  }, {
+    "name" : "dl_operation",
+    "dataType" : "string",
+    "nullable" : false
+  }, {
+    "name" : "dl_ts_captured",
+    "dataType" : "timestamp",
+    "nullable" : true
+  }, {
+    "name" : "dl_ts_delimited",
+    "dataType" : "timestamp",
+    "nullable" : true
+  }, {
+    "name" : "dl_hash",
+    "dataType" : "integer",
+    "nullable" : true
+  } ],
+  "subFeedType" : "SparkSubFeed"
+}

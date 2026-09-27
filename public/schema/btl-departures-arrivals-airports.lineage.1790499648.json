@@ -1,0 +1,104 @@
+{
+  "actionId" : "join-departures-airports",
+  "dataObjectId" : "btl-departures-arrivals-airports",
+  "columnLineage" : {
+    "fields" : {
+      "arr_latitude_deg" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "int-airports",
+          "field" : "latitude_deg",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "arr_longitude_deg" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "int-airports",
+          "field" : "longitude_deg",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "arr_name" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "int-airports",
+          "field" : "name",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "dep_latitude_deg" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "int-airports",
+          "field" : "latitude_deg",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "dep_longitude_deg" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "int-airports",
+          "field" : "longitude_deg",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "dep_name" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "int-airports",
+          "field" : "name",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "estarrivalairport" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "int-departures",
+          "field" : "estArrivalAirport",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
+      "estdepartureairport" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "int-departures",
+          "field" : "estDepartureAirport",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      }
+    }
+  }
+}
