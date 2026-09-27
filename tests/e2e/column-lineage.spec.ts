@@ -4,8 +4,8 @@ import { hoverLine } from './hoverLine';
 /**
  * Column lineage in the data view (issue #141, see src/components/ConfigExplorer/LineageTab/README.md).
  *
- * getting-started exports no column lineage, so the documents these specs read are hand-written
- * fixtures after its actions: fixtures/shared/schema/*.lineage.*.
+ * The documents these specs read are hand-written fixtures after its actions: fixtures/shared/schema/*.lineage.*.
+ * This allows to test specific error constellations.
  */
 
 const nodes = (page: Page) => page.locator('.react-flow__node');

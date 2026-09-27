@@ -52,8 +52,8 @@ export function ColumnTracePanel({trace, complete, props, graphView, layout, onC
           </Tooltip>
         </Box>
         <Box sx={{display: 'flex', gap: 3, maxHeight: 160, overflowY: 'auto', pb: 0.5}}>
-          <ColumnRefList title="Start columns" columns={starts} testId="column-trace-starts"/>
-          <ColumnRefList title="End columns" columns={ends} testId="column-trace-ends"/>
+          <ColumnRefList title="Source columns" columns={starts} testId="column-trace-starts"/>
+          <ColumnRefList title="Target columns" columns={ends} testId="column-trace-ends"/>
         </Box>
       </Sheet>
     </Panel>
