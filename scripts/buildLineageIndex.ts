@@ -1,12 +1,14 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   buildColumnLineageIndex, parseColumnLineage, type ColumnLineage,
 } from '../src/util/ConfigExplorer/columnLineage.ts';
+import { exportedDataObjects, newestExport } from './exportFiles.ts';
 
 /**
  * Builds the column lineage index for a statically served project, from the newest
- * `<id>.lineage.<tstamp>.json` of every DataObject in the schema folder. The backend builds the
+ * lineage export of every DataObject in the schema folder (`<id>.lineage.<tstamp>.json` via its
+ * index, else the unversioned `<id>.lineage.json`). The backend builds the
  * same file from the same module (backend/src/services/columnLineageIndex.ts).
  */
 
@@ -21,15 +23,12 @@ function main(): void {
   const { schemaDir, out } = parseArgs(process.argv.slice(2));
   if (!existsSync(schemaDir)) throw new Error(`no schema folder at ${schemaDir}`);
 
-  const sources: { lineage: ColumnLineage; tstamp: number }[] = [];
-  for (const indexFile of readdirSync(schemaDir).filter((f) => f.endsWith('.lineage.index'))) {
-    // the index lists oldest first, as for schemas
-    const names = readFileSync(path.join(schemaDir, indexFile), 'utf8').split('\n').map((l) => l.trim()).filter(Boolean);
-    const name = names[names.length - 1];
-    if (!name || !existsSync(path.join(schemaDir, name))) continue;
-    const tstamp = Number(/\.(\d+)\./.exec(name)?.[1] ?? 0);
-    for (const lineage of parseColumnLineage(JSON.parse(readFileSync(path.join(schemaDir, name), 'utf8')))) {
-      sources.push({ lineage, tstamp });
+  const sources: { lineage: ColumnLineage; tstamp?: number }[] = [];
+  for (const dataObjectId of exportedDataObjects(schemaDir, 'lineage')) {
+    const found = newestExport(schemaDir, dataObjectId, 'lineage');
+    if (!found) continue;
+    for (const lineage of parseColumnLineage(JSON.parse(readFileSync(found.file, 'utf8')))) {
+      sources.push({ lineage, tstamp: found.tstamp });
     }
   }
 

@@ -20,7 +20,7 @@ node scripts/buildSearchIndex.ts --public tests/e2e/fixtures/exported \
 
 `--public` (default `public`) is the served root; `--config`, `--description`, `--schema` and
 `--out` override the paths derived from it; `--env` names the `envConfig/{env}.conf` to include
-when parsing HOCON; `--version` is written into the index metadata.
+when parsing HOCON (default: `env` of `<public>/manifest.json`, as the app does); `--version` is written into the index metadata.
 
 It reads `exportedConfig.json` where SDLB wrote one, and otherwise parses the HOCON files —
 the parser runs under plain Node with its own `file` source, whereas the browser remaps that
@@ -29,7 +29,8 @@ and `_origin` are written by SDLB's config exporter and simply do not
 exist in HOCON, so an index built from HOCON covers less. The script says so on stdout.
 
 For schemas it takes the **newest export of each data object the configuration contains**,
-as it is. A failed export carries only an error message and no columns, and that data object
+as it is: the last entry of `<id>.schema.index`, or the unversioned `<id>.schema.json` where
+SDLB wrote to a non-`localfile:` path (`exportFiles.ts`, shared with `buildLineageIndex.ts`). A failed export carries only an error message and no columns, and that data object
 then has none in the index - reaching back to an older export would describe columns that may
 no longer exist.
 

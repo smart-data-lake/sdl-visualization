@@ -14,6 +14,10 @@ export const formatTimestamp = (date: Date, timezone?: string): string => {
   return spacetime(date).unixFmt('dd.MM.yyyy HH:mm:ss');
 };
 
+/** The label of an export version; one written without a timestamp is simply the latest. */
+export const formatTstampEntryLabel = (entry: { tstamp?: Date }): string =>
+  entry.tstamp ? formatTimestamp(entry.tstamp) : 'latest';
+
 export const durationMillis = (duration: string) => {
   const d = moment.duration(duration);
   

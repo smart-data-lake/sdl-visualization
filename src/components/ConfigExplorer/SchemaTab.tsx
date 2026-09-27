@@ -6,7 +6,7 @@ import { useFetchDataObjectSchema, useFetchDataObjectStats } from '../../hooks/u
 import { SchemaColumn, TstampEntry } from '../../types';
 import { ColumnRef, getForeignKeys, getPrimaryKey, isKnownDataObject } from '../../util/ConfigExplorer/ColumnModel';
 import { compareFunc, getPropertyByPath, onlyUnique } from '../../util/helpers';
-import { formatTimestamp } from '../../util/WorkflowsExplorer/date';
+import { formatTimestamp, formatTstampEntryLabel } from '../../util/WorkflowsExplorer/date';
 import CenteredCircularProgress from '../Common/CenteredCircularProgress';
 import { createDataObjectChip, createUnknownDataObjectChip } from './ConfigurationTab';
 import DataTable, { nestedPropertyRenderer, tooltipCellRenderer } from './DataTable';
@@ -363,13 +363,13 @@ export default function SchemaTab(props: {elementType: string, elementName: stri
         {props.schemaEntries && <FormControl>
           <FormLabel>Schema exported at</FormLabel>
           <Select size='sm' value={schemaEntry?.key} onChange={(ev, value) => setSchemaEntry(props.schemaEntries?.find((e) => e.key === value))}>
-            {props.schemaEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTimestamp(e.tstamp)}</Option>)}
+            {props.schemaEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTstampEntryLabel(e)}</Option>)}
           </Select>      
         </FormControl>}
         {props.statsEntries && <FormControl>
           <FormLabel>Statistics exported at</FormLabel>
           <Select size='sm' value={statsEntry?.key} onChange={(ev, value) => setStatsEntry(props.statsEntries?.find((e) => e.key === value))}>
-            {props.statsEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTimestamp(e.tstamp)}</Option>)}
+            {props.statsEntries?.map((e) => <Option key={e.key} value={e.key}>{formatTstampEntryLabel(e)}</Option>)}
           </Select>      
         </FormControl>}      
         <Box sx={{flex: 1}}/>
