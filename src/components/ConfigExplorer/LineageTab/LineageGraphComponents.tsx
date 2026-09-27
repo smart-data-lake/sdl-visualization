@@ -27,7 +27,7 @@ import { SchemaData } from '../../../types';
 import { ActionPorts, buildActionPorts } from '../../../util/ConfigExplorer/ActionPorts';
 import { ActionPortsView } from './ActionPortsView';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
-import { ColumnLineageEdgeProps, CustomEdgeProps, flowProps, graphNodeProps, nodeSizeFor, ReactFlowNodeProps, recomputeLayout, SELECTED_ELEMENT_Z_INDEX, scheduleRelayout, selectEdge, updateColumnEdges } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { ColumnLineageEdgeProps, CustomEdgeProps, flowProps, graphNodeProps, nodeSizeFor, ReactFlowNodeProps, recomputeLayout, rememberColumnDisplay, rememberedColumnDisplay, SELECTED_ELEMENT_Z_INDEX, scheduleRelayout, selectEdge, updateColumnEdges } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { setRfNodeData, setRfNodeSize } from '../../../util/ConfigExplorer/Graphs';
 import { ColumnList, ColumnsToggle, NODE_BORDER_VAR, NODE_HEADER_HEIGHT, NodeRelationHandles, transformationText } from './DataObjectColumns';
 import { ColumnDisplay, filterColumns } from '../../../util/ConfigExplorer/ColumnModel';
@@ -401,16 +401,20 @@ export const CustomDataNode = ( {data} ) => {
     const found = buildActionPorts(label, outputLineage.flatMap(result => result.data ?? []));
     if (found.inputs.length === 0 && found.outputs.length === 0) return;
     setRfNodeData(rfi, {nodeId: label, path: 'ports', value: found});
-    setRfNodeSize(rfi, label, nodeSizeFor({ports: found, columnDisplay}));
+    // an action opened in another view or layout opens again now that it has something to show
+    const display = rememberedColumnDisplay(nodeType, label);
+    if (display !== columnDisplay) setRfNodeData(rfi, {nodeId: label, path: 'columnDisplay', value: display});
+    setRfNodeSize(rfi, label, nodeSizeFor({ports: found, columnDisplay: display}));
     updateNodeInternals(label);
     updateColumnEdges(rfi);
-    if (showColumns) scheduleRelayout(rfi, layoutDirection);
+    if (display !== 'none') scheduleRelayout(rfi, layoutDirection);
     // outputLineage is a new array on every render; its version says when what it holds changed.
     // A rebuild of the node set hands the node fresh data without ports, see the merge above
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outputLineageVersion, isPortAction, ports === undefined]);
 
   const handleColumnDisplay = (display: ColumnDisplay) => {
+    rememberColumnDisplay(nodeType, label, display);
     setRfNodeData(rfi, {nodeId: label, path: 'columnDisplay', value: display});
     setRfNodeSize(rfi, label, nodeSizeFor({columns, columnDisplay: display, ports}));
     // the edges have to move onto, resp. off, the column handles in the same go - ReactFlow drops

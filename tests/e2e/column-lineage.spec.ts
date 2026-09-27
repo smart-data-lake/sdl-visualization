@@ -229,6 +229,36 @@ test.describe('the ports of an action in the full view', () => {
 });
 
 test.describe('rebuilding the graph', () => {
+  test('an opened node stays open when the graph view changes', async ({ page }) => {
+    await page.goto('/#/config/dataObjects/int-departures');
+    await page.getByRole('button', { name: 'Open lineage' }).click();
+    await expandColumns(page, 'int-departures').click();
+    const keyColumns = await node(page, 'int-departures').locator('.lineage-column-row').count();
+    expect(keyColumns).toBeGreaterThan(0);
+    await expandColumns(page, 'join-departures-airports').click();
+    await expect(node(page, 'join-departures-airports').getByTestId('port-input-int-departures.estdepartureairport')).toBeVisible();
+
+    // the data view has no actions; the data object keeps its key columns and its edges on them
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(1).click();
+    await expect(node(page, 'join-departures-airports')).toHaveCount(0);
+    await expect.poll(() => node(page, 'int-departures').locator('.lineage-column-row').count()).toBe(keyColumns);
+    await expect(lineageEdges(page).first()).toBeAttached();
+
+    // back in the full view, the action opens on its ports again
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(0).click();
+    await expect(node(page, 'join-departures-airports').getByTestId('port-input-int-departures.estdepartureairport')).toBeVisible();
+    await expect.poll(() => node(page, 'int-departures').locator('.lineage-column-row').count()).toBe(keyColumns);
+
+    // closing is remembered too
+    await collapseColumns(page, 'int-departures').click();
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(1).click();
+    await expect(node(page, 'int-departures')).toBeVisible();
+    await expect(node(page, 'int-departures').locator('.lineage-column-row')).toHaveCount(0);
+  });
+
   test('a new layout keeps what the nodes know of their lineage', async ({ page }) => {
     await page.goto('/#/config/actions/compute-distances');
     await page.getByRole('button', { name: 'Open lineage' }).click();

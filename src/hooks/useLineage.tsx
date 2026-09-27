@@ -1,6 +1,7 @@
 import React from "react";
 import { flowProps, GraphView, LayoutDirection } from "../util/ConfigExplorer/LineageTabUtils";
 import type { ColumnRef } from "../util/ConfigExplorer/columnLineage";
+import { useManifest } from "./useManifest";
 
 /*
   State of the lineage graph in the config explorer.
@@ -60,7 +61,10 @@ const LineageProvider = (props: React.PropsWithChildren) => {
   const [lineageTabOpen, setLineageTabOpen] = React.useState(false);
   const [lineageTabProps, setLineageTabProps] = React.useState<flowProps>(emptyLineageTabProps);
   const [graphView, setGraphView] = React.useState<GraphView>('full');
-  const [layout, setLayout] = React.useState<LayoutDirection>('TB');
+  // the manifest's layout applies until the user picks one
+  const { data: manifest } = useManifest();
+  const [chosenLayout, setLayout] = React.useState<LayoutDirection>();
+  const layout: LayoutDirection = chosenLayout ?? (manifest?.lineageLayout === 'TB' ? 'TB' : 'LR');
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [selectedNodeAttributes, setSelectedNodeAttributes] = React.useState<string[]>(nodeAttributes.map(attr => attr.value));
   const [tracedColumn, setTracedColumn] = React.useState<ColumnRef | undefined>(undefined);

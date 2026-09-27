@@ -14,5 +14,6 @@
     "background_color": "#ffffff",
     "backendConfig": "local;./state",
     "baseUrl": "./",
-    "env": "dev"
+    "env": "dev",
+    "lineageLayout": "TB"
 }

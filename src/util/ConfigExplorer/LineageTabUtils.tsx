@@ -249,6 +249,23 @@ export interface ReactFlowNodeProps {
 /** Merges an exported schema and column lineage into the columns a data object's configuration declares. */
 export type ColumnsFunc = (schema?: SchemaData, lineage?: ColumnLineage[]) => ColumnInfo[];
 
+/*
+    How far each node was opened, by node type and id, so a node stays open when the graph view or
+    the layout changes, or the config explorer is left and entered again. Module state like the trace:
+    in the graph context every toggle would re-render every node.
+*/
+const columnDisplays = new Map<string, ColumnDisplay>();
+const columnDisplayKey = (nodeType: NodeType, id: string) => `${nodeType}:${id}`;
+
+export function rememberColumnDisplay(nodeType: NodeType, id: string, display: ColumnDisplay): void {
+    if (display === 'none') columnDisplays.delete(columnDisplayKey(nodeType, id));
+    else columnDisplays.set(columnDisplayKey(nodeType, id), display);
+}
+
+export function rememberedColumnDisplay(nodeType: NodeType, id: string): ColumnDisplay {
+    return columnDisplays.get(columnDisplayKey(nodeType, id)) ?? 'none';
+}
+
 /** The size a node is laid out and rendered at, from what it shows. */
 export function nodeSizeFor(data: {columns?: ColumnInfo[], columnDisplay?: ColumnDisplay, ports?: ActionPorts}): {width: number, height: number} {
     const display = data.columnDisplay ?? 'none';
@@ -419,7 +436,8 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             highlighted: false, // set by handlers in Core
             columnsFunc: columnsFunc,
             columns: columnsFunc ? columnsFunc() : [],
-            columnDisplay: 'none',
+            // an action opens once its ports are known, see the node component
+            columnDisplay: columnsFunc && nodeType === NodeType.DataNode ? rememberedColumnDisplay(nodeType, node.id) : 'none',
             isSelectedElement: node.id === props.elementName,
             placement: layoutModel.placement.get(node.id),
         }
@@ -1984,10 +2002,21 @@ export function scheduleRelayout(rfi: ReactFlowInstance, layoutDirection: Layout
     anchorId names the node that must not move - the one the user just acted on. Without it the
     result is anchored on the center node, so that a change nobody asked for does not shift the view.
 */
-/* Lay out again from scratch, giving up the nodes the user has moved by hand. */
+/* Lay out the nodes shown again from scratch: every node closed, and none where the user has moved it. */
 export function resetLayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection) {
+    closeAllColumns(rfi);
     clearManualMoves(rfi);
     recomputeLayout(rfi, layoutDirection);
+}
+
+function closeAllColumns(rfi: ReactFlowInstance): void {
+    columnDisplays.clear();
+    rfi.setNodes(nodes => nodes.map(node => (node.data?.columnDisplay ?? 'none') === 'none'
+        ? node
+        : {...node, data: {...node.data, columnDisplay: 'none'},
+           style: {...node.style, ...nodeSizeFor({...node.data, columnDisplay: 'none'})}}));
+    // the column handles are gone with the columns, so the edges go back onto the nodes
+    updateColumnEdges(rfi);
 }
 
 export function recomputeLayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection, anchorId?: string) {

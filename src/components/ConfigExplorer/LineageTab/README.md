@@ -49,6 +49,13 @@ exported schema has resolved. A table without any key column skips the `keys` st
 directions (`moreColumns`/`lessColumns` take `hasKeys`), as it would open on nothing. Key columns first because a table can have dozens of columns, and the
 ones a relation runs through are what the graph is about.
 
+How far a node is open is **remembered per node** (`rememberColumnDisplay`, module state in
+`LineageTabUtils.tsx` for the same reason as the trace), so it survives a change of graph view or
+layout and leaving the config explorer. A rebuilt data object starts at its remembered display; an
+action only once its ports are known, as the action and relations views have none. After a rebuild
+`updateColumnEdges` runs once, because a node with configured keys only loads nothing that would
+otherwise move its edges onto its columns.
+
 The strip spans the node, but **only its two ends are clickable**. The node's own graph expand
 handle is anchored in the middle of the same border — it cannot move, because that is where the
 edges attach — so it is lifted above the strip and the strip's halves stop short of the middle.
@@ -195,8 +202,9 @@ Two things this does not cover, deliberately:
   parent-relative), and that only works because dagre had just written them as absolute. Where the
   flow holds group nodes (`isGrouped`), expand, collapse and re-layout keep the old `dagreLayoutRf`
   path. `dagreLayoutRf` stays for that, and for `tests/graph.test.ts`.
-- **The toolbar's *Recompute layout* button** is the escape hatch: `resetLayout` forgets every manual
-  move and lays the current nodes out from the model again. The arrangement only ever grows as the
+- **The toolbar's *Reset layout* button** is the escape hatch: `resetLayout` closes the columns of
+  every node (and forgets that they were open), forgets every manual move and lays the nodes shown
+  out from the model again - which nodes are shown does not change. The arrangement only ever grows as the
   user explores, and only they take it apart; that button is how it is reset.
 
 `tests/lineageLayout.test.ts` pins the model and the coordinate assignment - including that the

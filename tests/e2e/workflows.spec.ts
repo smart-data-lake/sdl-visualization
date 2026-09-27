@@ -118,7 +118,7 @@ test.describe('workflows explorer', () => {
     await expect(page.locator('.react-flow .MuiMenuButton-root')).toHaveCount(1);
     // what is left acts on the viewport only
     await expect(page.getByRole('button', { name: 'Show all' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Recompute layout' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reset layout' })).toBeVisible();
     await expect(page.getByRole('button', { name: /switch to (horizontal|vertical) layout/ })).toBeVisible();
   });
 
