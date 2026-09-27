@@ -329,19 +329,21 @@ export function ColumnList({nodeId, columns, isLoading, tracedColumns}: {
     middle. A direction that is not available keeps its place as an empty half, so that the other
     chevron does not wander to the other end.
 */
-export function ColumnsToggle({display, onChange, nodeId, hasMore, titles}: {
+export function ColumnsToggle({display, onChange, nodeId, hasMore, hasKeys = true, titles}: {
     display: ColumnDisplay,
     onChange: (display: ColumnDisplay) => void,
     nodeId: string,
     /** whether opening further would actually show anything that is not shown already */
     hasMore: boolean,
+    /** whether there are key columns, else the control steps straight between none and all */
+    hasKeys?: boolean,
     /** what opening and closing say, where the steps are not the columns of a data object */
     titles?: {open: string, close: string},
 }) {
     const canOpen = display !== 'all' && hasMore;
     const canClose = display !== 'none';
-    const openTitle = titles?.open ?? (display === 'none' ? 'Show key columns' : 'Show all columns');
-    const closeTitle = titles?.close ?? (display === 'all' ? 'Show key columns only' : 'Hide columns');
+    const openTitle = titles?.open ?? (moreColumns(display, hasKeys) === 'keys' ? 'Show key columns' : 'Show all columns');
+    const closeTitle = titles?.close ?? (lessColumns(display, hasKeys) === 'keys' ? 'Show key columns only' : 'Hide columns');
 
     return (
         <Box className="lineage-column-toggle">
@@ -349,7 +351,7 @@ export function ColumnsToggle({display, onChange, nodeId, hasMore, titles}: {
                 ? <Tooltip title={closeTitle} arrow disableInteractive size="sm" enterDelay={300}>
                     <button type="button" className="lineage-column-toggle-button"
                             aria-label={closeTitle} data-testid={`columns-collapse-${nodeId}`}
-                            onClick={() => onChange(lessColumns(display))}>
+                            onClick={() => onChange(lessColumns(display, hasKeys))}>
                         <ExpandLessIcon className="lineage-column-toggle-icon"/>
                     </button>
                   </Tooltip>
@@ -358,7 +360,7 @@ export function ColumnsToggle({display, onChange, nodeId, hasMore, titles}: {
                 ? <Tooltip title={openTitle} arrow disableInteractive size="sm" enterDelay={300}>
                     <button type="button" className="lineage-column-toggle-button"
                             aria-label={openTitle} data-testid={`columns-expand-${nodeId}`}
-                            onClick={() => onChange(moreColumns(display))}>
+                            onClick={() => onChange(moreColumns(display, hasKeys))}>
                         <ExpandMoreIcon className="lineage-column-toggle-icon"/>
                     </button>
                   </Tooltip>

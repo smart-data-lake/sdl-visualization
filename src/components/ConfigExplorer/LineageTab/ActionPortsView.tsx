@@ -3,7 +3,7 @@ import Tooltip from '@mui/joy/Tooltip';
 import Typography from '@mui/joy/Typography';
 import { Handle, Position } from 'reactflow';
 
-import { ActionPorts, connectionKey, OutputPort, Port, PortRow } from '../../../util/ConfigExplorer/ActionPorts';
+import { ActionPorts, connectionKey, OutputPort, PortRow } from '../../../util/ConfigExplorer/ActionPorts';
 import { COLUMN_ROW_HEIGHT, COLUMN_TEXT_STYLE, columnHandleStyle, portHandleId, transformationText } from './DataObjectColumns';
 import './LineageTab.css';
 
@@ -26,9 +26,8 @@ function rowIndexOf(rows: PortRow[]): Map<string, number> {
 
 const middleOf = (row: number) => row * COLUMN_ROW_HEIGHT + COLUMN_ROW_HEIGHT / 2;
 
-function connectionTitle(from: Port, to: Port, texts: string[]): string {
-    return `${from.dataObjectId}.${from.column} → ${to.dataObjectId}.${to.column}\n${texts.length > 0 ? texts.join('; ') : 'unchanged'}`;
-}
+// the curve already shows which columns it connects
+const connectionTitle = (texts: string[]): string => texts.length > 0 ? texts.join('; ') : 'unchanged';
 
 function outputTitle(port: OutputPort): string {
     if (port.unresolved) return `${port.dataObjectId}.${port.column}\nlineage could not be traced`;
@@ -86,8 +85,6 @@ export function ActionPortsView({ports, tracedConnections}: {ports: ActionPorts,
     const tracedPorts = new Set(ports.connections.filter(c => traced.has(connectionKey(c.from, c.to))).flatMap(c => [c.from, c.to]));
     const inputRow = rowIndexOf(ports.inputRows), outputRow = rowIndexOf(ports.outputRows);
     const connected = new Set(ports.connections.flatMap(c => [c.from, c.to]));
-    const inputs = new Map(ports.inputs.map(port => [port.key, port]));
-    const outputs = new Map(ports.outputs.map(port => [port.key, port]));
     const height = Math.max(ports.inputRows.length, ports.outputRows.length, 1) * COLUMN_ROW_HEIGHT;
     // the traced ones last, so that they are drawn over the others
     const connections = [...ports.connections].sort((a, b) =>
@@ -111,7 +108,7 @@ export function ActionPortsView({ports, tracedConnections}: {ports: ActionPorts,
                         return (
                             <g key={key} className={`lineage-port-connection${traced.has(key) ? ' lineage-port-connection-traced' : ''}`}
                                data-testid={`connection-${key}`}>
-                                <title>{connectionTitle(inputs.get(connection.from)!, outputs.get(connection.to)!, texts)}</title>
+                                <title>{connectionTitle(texts)}</title>
                                 <path d={d} className="lineage-port-connection-hit" vectorEffect="non-scaling-stroke"/>
                                 <path d={d} className="lineage-port-connection-line" vectorEffect="non-scaling-stroke"
                                       strokeDasharray={texts.length > 0 ? '4 2' : undefined}/>
