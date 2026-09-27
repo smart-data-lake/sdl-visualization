@@ -121,7 +121,8 @@ describe('what a column trace highlights', () => {
 
   test('in the action view, an edge only where a traced column passes through its data object', () => {
     const nodes = ['a1', 'a2', 'a3'].map(actionNode);
-    const edges = [{ id: 'a1->m->a2', source: 'a1', target: 'a2' }, { id: 'a1->m->a3', source: 'a1', target: 'a3' }];
+    const edges = [{ id: 'a1->m->a2', source: 'a1', target: 'a2', data: { dataObjectId: 'm' } },
+                   { id: 'a1->m->a3', source: 'a1', target: 'a3', data: { dataObjectId: 'm' } }];
     expect([...traceHighlights(buildGraphTrace(index, { dataObjectId: 's', column: 'x' }), nodes, edges).edgeIds]).toEqual(['a1->m->a2']);
     expect([...traceHighlights(buildGraphTrace(index, { dataObjectId: 's', column: 'y' }), nodes, edges).edgeIds]).toEqual(['a1->m->a3']);
   });
@@ -137,6 +138,29 @@ describe('what a column trace highlights', () => {
       { id: 'fk', source: 's', target: 'm', data: { relation: { sourceColumn: 'x', targetColumn: 'x' } } },
     ]);
     expect([...edgeIds]).toEqual(['s.x->m.x::lineage']);
+  });
+
+  test('a column edge of the action view by the column written resp. read through its data object', () => {
+    const trace = buildGraphTrace(index, { dataObjectId: 's', column: 'x' });
+    const portEdge = (column: string, target: string, ports: { sourcePort?: string; targetPort?: string }): Edge => ({
+      id: `a1->m.${column}->${target}::port`, source: 'a1', target,
+      data: { columnLineage: { sourceColumn: column, targetColumn: column, sourceName: column, targetName: column, via: [], dataObjectId: 'm', ...ports } },
+    });
+    const { edgeIds, nodeIds } = traceHighlights(trace, ['a1', 'a2', 'a3'].map(actionNode), [
+      portEdge('x', 'a2', { sourcePort: 'm.x', targetPort: 'm.x' }),
+      portEdge('y', 'a3', { sourcePort: 'm.y', targetPort: 'm.y' }),
+      // a1 writes the traced m.x, a3 is closed: on the trace by what a1 writes
+      portEdge('x', 'a3', { sourcePort: 'm.x' }),
+    ]);
+    expect([...edgeIds].sort()).toEqual(['a1->m.x->a2::port', 'a1->m.x->a3::port']);
+    expect([...nodeIds].sort()).toEqual(['a1', 'a2', 'a3']);
+  });
+
+  test('without a built index, one document held by a data object and an action counts once', () => {
+    const shown = [{ ...dataNode('out'), data: { columnLineage: lineage } }, { ...actionNode('a1'), data: { outputLineage: [lineage[0]] } }];
+    const alone = traceIndex(undefined, [shown[0]]).index.edges.length;
+    expect(traceIndex(undefined, shown).index.edges.length).toBe(alone);
+    expect(traceIndex(undefined, [shown[1]]).index.edges.length).toBeGreaterThan(0);
   });
 
   test('without a built index, the lineage the shown nodes have read', () => {
@@ -205,5 +229,44 @@ describe('the ports of an action', () => {
       portEdge('join->out.a::port', 'join', 'out', 'a', 'sourcePort'),
     ]);
     expect([...edgeIds].sort()).toEqual(['join->out.b::port', 'right.b->join::port']);
+  });
+});
+
+describe('the column edges of the action view', () => {
+  // a1 writes m.x and m.y, a2 reads m.x and m.z
+  const docs = parseColumnLineage([
+    { actionId: 'a1', dataObjectId: 'm', columnLineage: { fields: {
+      x: { inputFields: [identity('s', 'x')] }, y: { inputFields: [identity('s', 'y')] } } } },
+    { actionId: 'a2', dataObjectId: 't', columnLineage: { fields: {
+      x: { inputFields: [identity('m', 'X')] }, z: { inputFields: [identity('m', 'z')] } } } },
+  ]);
+  const action = (id: string, display: ColumnDisplay): Node =>
+    ({ id, position: { x: 0, y: 0 }, data: { graphView: 'action', nodeType: NodeType.ActionNode, ports: buildActionPorts(id, docs), columnDisplay: display } });
+  const edge: Edge = { id: 'a1->m->a2', source: 'a1', target: 'a2', data: { dataObjectId: 'm' } };
+  const lineageOf = (e: Edge) => (e.data as CustomEdgeProps).columnLineage!;
+
+  test('there are none while both actions are closed', () => {
+    const { replaced, wanted } = columnLineageEdges([action('a1', 'none'), action('a2', 'none')], [edge]);
+    expect(wanted).toEqual([]);
+    expect(replaced.size).toBe(0);
+  });
+
+  test('both open: one edge per column both have a port for, from port to port', () => {
+    const { replaced, wanted } = columnLineageEdges([action('a1', 'all'), action('a2', 'all')], [edge]);
+    expect([...replaced]).toEqual(['a1->m->a2']);
+    expect(idsOf(wanted)).toEqual(['a1->m.x->a2::port']);
+    expect(lineageOf(wanted[0])).toMatchObject({ sourcePort: 'm.x', targetPort: 'm.x', dataObjectId: 'm' });
+  });
+
+  test('only the writer open: every column it writes, ending on the reader', () => {
+    const { wanted } = columnLineageEdges([action('a1', 'all'), action('a2', 'none')], [edge]);
+    expect(idsOf(wanted)).toEqual(['a1->m.x->a2::port', 'a1->m.y->a2::port']);
+    expect(wanted.map((e) => lineageOf(e).targetPort)).toEqual(['m.x', undefined]);
+  });
+
+  test('only the reader open: every column it reads, starting on the writer', () => {
+    const { wanted } = columnLineageEdges([action('a1', 'none'), action('a2', 'all')], [edge]);
+    expect(idsOf(wanted)).toEqual(['a1->m.x->a2::port', 'a1->m.z->a2::port']);
+    expect(wanted.map((e) => lineageOf(e).sourcePort)).toEqual(['m.x', undefined]);
   });
 });

@@ -16,7 +16,7 @@ import ErrorBoundary from './layouts/ErrorBoundary';
 import NotFound from './layouts/NotFound';
 import RootLayout from './layouts/RootLayout';
 import { WorkspaceEmpty } from './layouts/RootLayoutSpinner';
-import { amplifyTheme } from './theme';
+import { amplifyTheme, joyTheme } from './theme';
 import { LineageProvider } from './hooks/useLineage';
 import { ConfigVersionProvider } from './hooks/useConfigVersion';
 
@@ -92,7 +92,7 @@ export default function App() {
 
   return (
     <ThemeProvider theme={amplifyTheme}>
-      <CssVarsProvider>
+      <CssVarsProvider theme={joyTheme}>
         <CssBaseline />
         <RouterProvider router={router()}/>
       </CssVarsProvider>

@@ -52,7 +52,7 @@ ones a relation runs through are what the graph is about.
 How far a node is open is **remembered per node** (`rememberColumnDisplay`, module state in
 `LineageTabUtils.tsx` for the same reason as the trace), so it survives a change of graph view or
 layout and leaving the config explorer. A rebuilt data object starts at its remembered display; an
-action only once its ports are known, as the action and relations views have none. After a rebuild
+action only once its ports are known, as the data and relations views have no actions. After a rebuild
 `updateColumnEdges` runs once, because a node with configured keys only loads nothing that would
 otherwise move its edges onto its columns.
 
@@ -343,9 +343,9 @@ Three things that are easy to break:
   It names what the columns it connects do not show (`columnLineageTitle`): in the data view the
   action and its transformation per line, on a port edge of the full view only the two nodes.
 
-### The ports of an action (full view)
+### The ports of an action (full and action views)
 
-In the full view an action opens, in one step, on its **ports**: the columns it reads on the left,
+In the full and action views an action opens, in one step, on its **ports**: the columns it reads on the left,
 grouped under their data objects, the columns it writes on the right, and a curve per input column
 feeding an output column in between - dashed where the column is transformed, solid where it is
 taken over. The ports come from the lineage of the data objects the action *writes*
@@ -357,13 +357,23 @@ tells only the transformation (or `unchanged`), hovering a port the column and, 
 as the port or the column at the other end is shown, from the column of the data object to the
 port - `sourcePort`/`targetPort` on the edge name the port, `portHandleId` its handle. Data objects
 read their own lineage in the full view too, so that the columns the ports attach to exist.
+
+In the action view an edge stands for the data object two actions share (`CustomEdgeProps.dataObjectId`),
+and it makes way for one edge per column of it, from the writer's output port to the reader's input
+port - `dataObjectId` on the column edge names the data object, as neither end shows it. With both
+actions open only the columns both have a port for are drawn, since the other ones have nothing to end
+on; with one open, all of its columns, ending on the closed one's node. The hover text names the
+column and the two actions. The action keeps its output lineage as `data.outputLineage`, so that a
+trace without a built index knows what the action view shows (`traceIndex`, which counts a document
+held by a data object and an action once).
 The trace lights up the port edges and the curves inside the action it runs through
 (`data.tracedConnections`).
 
 ### Tracing a column
 
-In the full and data views, a click on the name of a row with lineage traces it; in the relations view
-the name leads along the relation instead. The tooltip only adds the full name where it is truncated,
+In the full and data views, a click on the name of a row with lineage traces it, and in the full and
+action views so does a click on the name of a port; in the relations view the name leads along the
+relation instead. The tooltip only adds the full name where it is truncated,
 whether the column is missing from the exported schema or unresolved in the column
 lineage, and "trace column" resp. the referenced data object. The click sets `tracedColumn` in `useLineageGraph()`,
 and `LineageTabCore` traces that column both ways through the **index**
@@ -374,7 +384,9 @@ reach as far as the graph does. Without a built index it falls back to exactly t
 `traceHighlights` decides what lights up, and only what the trace actually runs along: a column
 edge by its column pair; in the data view a flow edge carrying a traced pair; in the full view the
 edges of the actions reading or writing a traced column; in the action view an edge whose data
-object has a traced column written by the one action and read by the other. A relation never.
+object has a traced column written by the one action and read by the other, resp. a column edge whose
+column is - checked only at the ends that have a port. An action on the trace lights up even where
+none of its edges is shown. A relation never.
 The rows on the trace are the node's `data.tracedColumns`. The panel (`ColumnTracePanel`) lists
 the columns the whole trace begins and ends with (`traceEnds`), and its "Show all" splices in
 (`spliceNodePath`) what the graph does not show.

@@ -46,6 +46,30 @@
           } ]
         } ]
       },
+      "dl_operation" : {
+        "inputFields" : [ ],
+        "expression" : "'insertNew'"
+      },
+      "dl_ts_captured" : {
+        "inputFields" : [ ],
+        "expression" : "TIMESTAMP '2026-09-27 22:48:36.906275'"
+      },
+      "dl_ts_delimited" : {
+        "inputFields" : [ ],
+        "expression" : "TIMESTAMP '9999-12-31 00:00:00'"
+      },
+      "ident" : {
+        "inputFields" : [ {
+          "namespace" : "sdlb",
+          "name" : "stg-airports",
+          "field" : "ident",
+          "transformations" : [ {
+            "type" : "DIRECT",
+            "subtype" : "IDENTITY",
+            "masking" : false
+          } ]
+        } ]
+      },
       "latitude_deg" : {
         "inputFields" : [ {
           "namespace" : "sdlb",
@@ -83,6 +107,5 @@
         } ]
       }
     }
-  },
-  "unresolvedFields" : [ "dl_operation", "dl_ts_captured", "dl_ts_delimited", "ident" ]
+  }
 }

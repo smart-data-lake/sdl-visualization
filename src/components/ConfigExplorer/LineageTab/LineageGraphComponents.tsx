@@ -26,6 +26,7 @@ import { useFetchNewestLineageOf, useFetchDataObjectLineage, useFetchDataObjectL
 import { SchemaData } from '../../../types';
 import { ActionPorts, buildActionPorts } from '../../../util/ConfigExplorer/ActionPorts';
 import { ActionPortsView } from './ActionPortsView';
+import { useTruncated } from './useTruncated';
 import { NodeType } from '../../../util/ConfigExplorer/Graphs';
 import { ColumnLineageEdgeProps, CustomEdgeProps, flowProps, graphNodeProps, nodeSizeFor, ReactFlowNodeProps, recomputeLayout, rememberColumnDisplay, rememberedColumnDisplay, SELECTED_ELEMENT_Z_INDEX, scheduleRelayout, selectEdge, updateColumnEdges } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { setRfNodeData, setRfNodeSize } from '../../../util/ConfigExplorer/Graphs';
@@ -385,11 +386,11 @@ export const CustomDataNode = ( {data} ) => {
   }, [exportedSchema, wantsSchema, lineage, lacksLineage]);
 
   /*
-    The ports of an action in the full view: the columns it reads and writes, from the lineage of
+    The ports of an action in the full and action views: the columns it reads and writes, from the lineage of
     the data objects it writes - SDLB exports the lineage per output. An action without any has
     nothing to open.
   */
-  const isPortAction = nodeType === NodeType.ActionNode && !runContext && graphView === 'full' && jsonObject !== undefined;
+  const isPortAction = nodeType === NodeType.ActionNode && !runContext && (graphView === 'full' || graphView === 'action') && jsonObject !== undefined;
   const outputIds: string[] = isPortAction
     ? [jsonObject.outputId, ...(Array.isArray(jsonObject.outputIds) ? jsonObject.outputIds : [])].filter(id => typeof id === 'string')
     : [];
@@ -398,9 +399,11 @@ export const CustomDataNode = ( {data} ) => {
   const ports: ActionPorts | undefined = data.ports;
   useEffect(() => {
     if (!isPortAction) return;
-    const found = buildActionPorts(label, outputLineage.flatMap(result => result.data ?? []));
+    const documents = outputLineage.flatMap(result => result.data ?? []);
+    const found = buildActionPorts(label, documents);
     if (found.inputs.length === 0 && found.outputs.length === 0) return;
     setRfNodeData(rfi, {nodeId: label, path: 'ports', value: found});
+    setRfNodeData(rfi, {nodeId: label, path: 'outputLineage', value: documents.filter(doc => doc.actionId === label)});
     // an action opened in another view or layout opens again now that it has something to show
     const display = rememberedColumnDisplay(nodeType, label);
     if (display !== columnDisplay) setRfNodeData(rfi, {nodeId: label, path: 'columnDisplay', value: display});
@@ -468,6 +471,8 @@ export const CustomDataNode = ( {data} ) => {
           </Box> 
   }
 
+  const nameTruncation = useTruncated();
+
   function showObjectTitle(){    
     const objectType = nodeType === NodeType.ActionNode ? "Action Object" : "Data Object";
 
@@ -516,8 +521,9 @@ export const CustomDataNode = ( {data} ) => {
   }
 
   function showObjectName(layoutDirection: String){
-    return <Tooltip title={label} arrow disableInteractive placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
-              <Typography level="body-lg" 
+    // an empty title opens no tooltip
+    return <Tooltip title={nameTruncation.truncated ? label : ''} arrow disableInteractive placement={layoutDirection=='TB' ? 'right' : 'bottom'}>
+              <Typography level="body-lg" onMouseEnter={nameTruncation.onMouseEnter}
                           sx={{fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%', maxHeight: '30px', fontSize: 16, cursor: 'pointer'}}
                           onClick={() => handleDetailsClick(props, label, nodeType)} >
                 {label}
@@ -727,6 +733,7 @@ function metricLabelTransform(x: number, y: number, position: Position, index: n
   column is made - several lines where several actions create the same column pair.
 */
 function columnLineageTitle(source: string, target: string, lineage: ColumnLineageEdgeProps): string {
+  if (lineage.dataObjectId) return `${lineage.dataObjectId}.${lineage.sourceName}\n${source} → ${target}`;
   if (lineage.sourcePort || lineage.targetPort) return `${source} → ${target}`;
   return lineage.via.map(({actionId, transformations}) => {
     const texts = transformations.map(transformationText).filter((text): text is string => text !== undefined);

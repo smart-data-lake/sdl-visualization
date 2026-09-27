@@ -3,16 +3,21 @@ import Tooltip from '@mui/joy/Tooltip';
 import Typography from '@mui/joy/Typography';
 import { Handle, Position } from 'reactflow';
 
-import { ActionPorts, connectionKey, OutputPort, PortRow } from '../../../util/ConfigExplorer/ActionPorts';
+import { useFetchColumnLineageIndex } from '../../../hooks/useFetchData';
+import { useLineageGraph } from '../../../hooks/useLineage';
+import { ActionPorts, connectionKey, OutputPort, Port, PortRow } from '../../../util/ConfigExplorer/ActionPorts';
+import { columnId } from '../../../util/ConfigExplorer/columnLineage';
+import { indexedColumnIds } from '../../../util/ConfigExplorer/LineageTabUtils';
 import { COLUMN_ROW_HEIGHT, COLUMN_TEXT_STYLE, columnHandleStyle, portHandleId, transformationText } from './DataObjectColumns';
 import './LineageTab.css';
+import { useTruncated } from './useTruncated';
 
 /*
     The body of an expanded action node: the columns it reads on the left, the columns it writes on
     the right, grouped under their data objects, and a curve per input column feeding an output
     column in between. A connected port leads a straight line from its name to the curves, so that
     no curve runs over a long name. Every port carries a handle on the outer border, so that the edges of the
-    full view can run from a column of a data object to the port reading it (see columnLineageEdges).
+    full and action views can run to and from it (see columnLineageEdges). A port's name traces its column.
     Rows are COLUMN_ROW_HEIGHT like the rows of a data object, which nodeSizeFor relies on.
 */
 
@@ -34,21 +39,38 @@ function outputTitle(port: OutputPort): string {
     return `${port.dataObjectId}.${port.column}` + (port.expression ? `\n${port.expression}` : '');
 }
 
-function PortRowView({row, side, traced, connected}: {row: PortRow, side: 'input' | 'output', traced: Set<string>, connected: Set<string>}) {
-    if ('caption' in row) {
-        return (
-            <Box className="lineage-column-row lineage-port-caption"
-                 sx={{justifyContent: side === 'output' ? 'flex-end' : 'flex-start'}}>
-                <Typography level="body-xs" noWrap title={row.caption}
+/** The data object the ports below it belong to, named in full by a tooltip where it is cut off. */
+function PortCaption({caption, side}: {caption: string, side: 'input' | 'output'}) {
+    const {truncated, onMouseEnter} = useTruncated();
+    return (
+        <Box className="lineage-column-row lineage-port-caption"
+             sx={{justifyContent: side === 'output' ? 'flex-end' : 'flex-start'}}>
+            <Tooltip title={truncated ? caption : ''} arrow disableInteractive size="sm"
+                     placement={side === 'input' ? 'left' : 'right'} enterDelay={300}>
+                <Typography level="body-xs" noWrap onMouseEnter={onMouseEnter}
                             sx={{...COLUMN_TEXT_STYLE, fontStyle: 'italic', opacity: 0.7, textAlign: side === 'output' ? 'right' : 'left'}}>
-                    {row.caption}
+                    {caption}
                 </Typography>
-            </Box>
-        );
-    }
+            </Tooltip>
+        </Box>
+    );
+}
+
+/** How a port's name starts and stops a column trace, like a column row of a data object. */
+interface PortTrace {
+    traceable: (port: Port) => boolean;
+    isStart: (port: Port) => boolean;
+    toggle: (port: Port) => void;
+}
+
+function PortRowView({row, side, traced, connected, trace}: {row: PortRow, side: 'input' | 'output', traced: Set<string>, connected: Set<string>, trace: PortTrace}) {
+    if ('caption' in row) return <PortCaption caption={row.caption} side={side}/>;
     const port = row.port;
     const title = side === 'input' ? `${port.dataObjectId}.${port.column}` : outputTitle(port as OutputPort);
     const isUnresolved = side === 'output' && (port as OutputPort).unresolved;
+    const traceable = !isUnresolved && trace.traceable(port);
+    const isStart = trace.isStart(port);
+    const tooltip = traceable ? `${title}\n${isStart ? 'stop tracing column' : 'trace column'}` : title;
     // a straight line from the name to the middle band, where the curves are, whatever the name's length
     // drawn like the curves, with the same stroke, so that the two read as one line
     const lead = connected.has(port.key) &&
@@ -58,16 +80,18 @@ function PortRowView({row, side, traced, connected}: {row: PortRow, side: 'input
                   className="lineage-port-connection-line" vectorEffect="non-scaling-stroke"/>
         </svg>;
     return (
-        <Box className={`lineage-column-row lineage-port-row lineage-port-${side}${traced.has(port.key) ? ' lineage-column-traced' : ''}`}
+        <Box className={`lineage-column-row lineage-port-row lineage-port-${side}${traced.has(port.key) ? ' lineage-column-traced' : ''}${isStart ? ' lineage-column-trace-start' : ''}`}
              data-testid={`port-${side}-${port.key}`}
              sx={{justifyContent: side === 'output' ? 'flex-end' : 'flex-start'}}>
             {side === 'input' &&
                 <Handle type="target" position={Position.Left} id={portHandleId('target', port.key)}
                         className="lineage-column-handle" style={columnHandleStyle('left')}/>}
             {side === 'output' && lead}
-            <Tooltip title={<span style={{whiteSpace: 'pre-line'}}>{title}</span>} arrow disableInteractive size="sm"
+            <Tooltip title={<span style={{whiteSpace: 'pre-line'}}>{tooltip}</span>} arrow disableInteractive size="sm"
                      placement={side === 'input' ? 'left' : 'right'} enterDelay={300}>
-                <Typography level="body-xs" className="lineage-column-name"
+                <Typography level="body-xs" className={`lineage-column-name${traceable ? ' lineage-column-link nodrag' : ''}`}
+                            data-testid={traceable ? `trace-port-${side}-${port.key}` : undefined}
+                            onClick={traceable ? () => trace.toggle(port) : undefined}
                             sx={{...COLUMN_TEXT_STYLE, fontStyle: isUnresolved ? 'italic' : undefined}}>
                     {port.column}
                 </Typography>
@@ -81,6 +105,17 @@ function PortRowView({row, side, traced, connected}: {row: PortRow, side: 'input
 }
 
 export function ActionPortsView({ports, tracedConnections}: {ports: ActionPorts, tracedConnections?: string[]}) {
+    const { tracedColumn, setTracedColumn } = useLineageGraph();
+    const { data: index } = useFetchColumnLineageIndex();
+    const inIndex = index ? indexedColumnIds(index) : undefined;
+    const ref = (port: Port) => ({dataObjectId: port.dataObjectId, column: port.column});
+    const isStart = (port: Port) => tracedColumn !== undefined && columnId(tracedColumn) === columnId(ref(port));
+    // without an index the ports themselves come from the lineage, so every one of them can be traced
+    const trace: PortTrace = {
+        traceable: port => !inIndex || inIndex.has(columnId(ref(port))),
+        isStart,
+        toggle: port => setTracedColumn(isStart(port) ? undefined : ref(port)),
+    };
     const traced = new Set(tracedConnections ?? []);
     const tracedPorts = new Set(ports.connections.filter(c => traced.has(connectionKey(c.from, c.to))).flatMap(c => [c.from, c.to]));
     const inputRow = rowIndexOf(ports.inputRows), outputRow = rowIndexOf(ports.outputRows);
@@ -94,7 +129,7 @@ export function ActionPortsView({ports, tracedConnections}: {ports: ActionPorts,
         <Box className="lineage-column-list">
             <Box className="lineage-port-body" sx={{height}}>
                 <Box className="lineage-port-side">
-                    {ports.inputRows.map((row, i) => <PortRowView key={i} row={row} side="input" traced={tracedPorts} connected={connected}/>)}
+                    {ports.inputRows.map((row, i) => <PortRowView key={i} row={row} side="input" traced={tracedPorts} connected={connected} trace={trace}/>)}
                 </Box>
                 <svg className="lineage-port-connections" viewBox={`0 0 ${SVG_WIDTH} ${height}`} preserveAspectRatio="none"
                      height={height}>
@@ -119,7 +154,7 @@ export function ActionPortsView({ports, tracedConnections}: {ports: ActionPorts,
                     })}
                 </svg>
                 <Box className="lineage-port-side">
-                    {ports.outputRows.map((row, i) => <PortRowView key={i} row={row} side="output" traced={tracedPorts} connected={connected}/>)}
+                    {ports.outputRows.map((row, i) => <PortRowView key={i} row={row} side="output" traced={tracedPorts} connected={connected} trace={trace}/>)}
                 </Box>
             </Box>
         </Box>
