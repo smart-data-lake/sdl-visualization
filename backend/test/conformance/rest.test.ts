@@ -32,7 +32,7 @@ async function json<T = any>(url: string): Promise<T> {
   return response.json() as T;
 }
 
-/** state/index.json is JSON Lines: exactly what build_index.py writes. */
+/** state/index.json is JSON Lines: exactly what scripts/buildConfigIndex.ts writes. */
 async function fixtureIndex(): Promise<any[]> {
   const text = await readFile(path.join(FIXTURES, 'shared/state/index.json'), 'utf8');
   return text
@@ -74,7 +74,7 @@ describe('workspace', () => {
   });
 });
 
-describe('workflows and runs match what build_index.py derived from the same state files', () => {
+describe('workflows and runs match what the state index derived from the same state files', () => {
   test('the workflow summary counts every attempt and every distinct run', async () => {
     const index = await fixtureIndex();
     const workflows = await json(`/api/v1/workflows?${Q}`);

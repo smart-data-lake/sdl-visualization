@@ -44,7 +44,7 @@ There are three of them, chosen by the `backendConfig` field of `public/manifest
 ## Local setup
 
 Prerequisites:
-- Python3 installed
+- Node 22 or later and `yarn install` run (see `.nvmrc`)
 
 The easiest way to quickly get started is to directly provide the config and state files in the directory `public/config` and `public/state` respectively.
 Once that's done, an index has to be generated that will aggregate the statefiles and provide pointers to them. 
@@ -53,10 +53,10 @@ The advantage is that no uploads are needed.
 
 Once your files are placed in the correct directory, run:
 ````
-$ ./build_index.sh <path-to-statefiles> <path-to-configfiles>"
-```` 
+$ ./build_index.sh [<path-to-statefiles>] [<path-to-configfiles>]
+````
 
-> IMPORTANT: the current script doesn't allow for only providing `<path-to-configfiles>`. If only one argument is provided it will be considered as a `<path-to-statefiles>`)
+Both paths default to `public/state` and `public/config`. The script also builds the global search index and the column lineage index, which are optional.
 
 This will generate an index for each of the file sources. The outputs are JSON-Lines files named `index` and stored in `public/state` and `public/config` respectively.
 

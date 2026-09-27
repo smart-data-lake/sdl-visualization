@@ -12,6 +12,7 @@ import {
 } from '../../../src/util/WorkflowsExplorer/partitionValues.ts';
 import * as frontendSearch from '../../../src/util/ConfigExplorer/searchDocuments.ts';
 import * as frontendLineage from '../../../src/util/ConfigExplorer/columnLineage.ts';
+import { indexRecord } from '../../../scripts/buildConfigIndex.ts';
 import { ConfigDataLists_ } from '../../src/domain/filter.js';
 import { buildFullGraph } from '../../src/domain/graph.js';
 import {
@@ -24,6 +25,7 @@ import {
 } from '../../src/domain/partitionValues.js';
 import * as portedSearch from '../../src/domain/search.js';
 import * as portedLineage from '../../src/domain/columnLineage.js';
+import { normalizeStateFile, toWorkflowRun } from '../../src/domain/stateFile.js';
 import { FIXTURES } from '../../scripts/seed-fixtures.js';
 
 /**
@@ -145,6 +147,21 @@ describe('run metrics match the run table', () => {
     const action = stateFile.actionsState[name];
     expect(portedMainInput(action)).toEqual(getMainInputCount(action));
     expect(portedMainOutput(action)).toEqual(getMainOutputCount(action));
+  });
+});
+
+const stateDir = path.join(FIXTURES, 'shared/state/succeeded');
+const stateFiles = await readdir(stateDir);
+
+describe('a run is indexed the same as scripts/buildConfigIndex.ts indexes it', () => {
+  test.each(stateFiles)('%s', async (name) => {
+    const data = JSON.parse(await readFile(path.join(stateDir, name), 'utf8'));
+    const script = indexRecord(structuredClone(data), name);
+    const ported: Record<string, unknown> = { ...toWorkflowRun(normalizeStateFile(data)) };
+    // the backend also reads the top-level appVersion of older state files
+    for (const key of Object.keys(script).filter((k) => k !== 'path' && k !== 'appVersion')) {
+      expect(ported[key], key).toEqual(script[key]);
+    }
   });
 });
 

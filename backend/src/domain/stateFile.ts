@@ -5,7 +5,7 @@ import { selectedPartitionValues } from './partitionValues.js';
 /**
  * Everything that turns a raw SDLB state file into the records this service stores and serves.
  *
- * The index record it produces is a port of build_index.py's getRuns() - the same status
+ * The index record it produces is a port of scripts/buildConfigIndex.ts's indexRecord() - the same status
  * priority, the same runEndTime derivation and the same actions map - because that script is
  * the existing, working specification of what the SPA expects from a state index. The
  * precalculated fields the local backend adds afterwards in getIndex() (duration,
@@ -24,7 +24,7 @@ const PHASE_TIMESTAMPS = [
 /**
  * Status priority for aggregating a run's actions into one status.
  *
- * This is build_index.py's order, not the frontend's row.ts order, and the two genuinely
+ * This is scripts/buildConfigIndex.ts's order, not the frontend's row.ts order, and the two genuinely
  * disagree: row.ts ranks anything in progress above anything settled, so a run with one
  * FAILED and one RUNNING action aggregates to RUNNING there and to FAILED here. We follow
  * the index, because WorkflowRun.status is an index field and every existing state index was
@@ -116,7 +116,7 @@ export function aggregateRunStatus(actions: Iterable<Action>): TaskStatus {
 }
 
 /**
- * When the attempt ended. Ported from build_index.py's getRunEndTime: the latest end
+ * When the attempt ended. Ported from runEndTime in scripts/buildConfigIndex.ts: the latest end
  * timestamp any action recorded, falling back to start + duration, and never earlier than
  * the attempt's own start.
  */
@@ -163,7 +163,7 @@ export function endAnchorOf(stateFile: StateFile): number | undefined {
  * The actions of an attempt in topological order: an action follows every action that wrote one of
  * the data objects it reads. Of the actions ready at each step the alphabetically first is taken,
  * so the order does not depend on the iteration order of the state file. Plain string comparison,
- * not localeCompare, because build_index.py has to reach the same order.
+ * not localeCompare, because scripts/buildConfigIndex.ts has to reach the same order.
  *
  * An action left over by a cycle - which SDLB's DAG cannot produce, but a hand-written state file
  * can - follows by name rather than hanging the loop.

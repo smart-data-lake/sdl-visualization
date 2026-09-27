@@ -280,7 +280,7 @@ Eight pieces of logic exist twice, in `src/domain/`, and must not drift:
 | `graph.ts` | `src/util/ConfigExplorer/Graphs.ts` (without the layout and ReactFlow parts) |
 | `filter.ts` | `src/util/ConfigExplorer/ConfigData.ts` and `src/util/helpers.ts` |
 | `stateFile.ts` (normalisation) | `src/util/WorkflowsExplorer/Attempt.ts` |
-| `stateFile.ts` (index record, including `actionsInDagOrder`) | `build_index.py`'s `getRuns()` |
+| `stateFile.ts` (index record, including `actionsInDagOrder`) | `scripts/buildConfigIndex.ts`'s `indexRecord()` |
 | `search.ts` | `src/util/ConfigExplorer/searchDocuments.ts` |
 | `columnLineage.ts` | `src/util/ConfigExplorer/columnLineage.ts` |
 
@@ -292,7 +292,7 @@ would not. **Change the pair together.**
 before the field existed keeps an empty one until SDLB uploads it again. There is no
 backfill; the column it feeds is hidden by default.
 
-One deliberate divergence: `aggregateRunStatus` follows `build_index.py`'s priority
+One deliberate divergence: `aggregateRunStatus` follows `scripts/buildConfigIndex.ts`'s priority
 order, not `row.ts`'s. The two disagree — a run with one FAILED and one RUNNING
 action aggregates to RUNNING in the frontend and to FAILED here — and every existing
 state index was built the second way.
@@ -329,7 +329,7 @@ over what is stored.
 The upstream spec declares every response as an empty schema, so it pins paths and
 parameters and nothing else. `rest.test.ts` is therefore the only thing holding the
 payload contract, and it compares against `tests/e2e/fixtures/shared/state/index.json`
-— which `build_index.py` produced from the same state files and the local backend
+— which the former `build_index.py` produced from the same state files and the local backend
 serves verbatim. Treat a failure there as a release blocker.
 
 ## Uploads, and what SDLB actually sends
