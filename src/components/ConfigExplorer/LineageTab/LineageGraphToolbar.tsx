@@ -13,8 +13,7 @@ import ToggleButtonGroup from '@mui/joy/ToggleButtonGroup';
 import * as React from 'react';
 import { ReactElement } from 'react';
 
-import { Autocomplete, Button, Divider, Dropdown, IconButton, Input, ListDivider, ListItemDecorator, ListSubheader, Menu, MenuButton, MenuItem, Tooltip, Checkbox, Select, Option } from '@mui/joy';
-// import Option from '@mui/joy/Option';
+import { Autocomplete, Button, Divider, Dropdown, IconButton, Input, ListDivider, ListItemDecorator, ListSubheader, Menu, MenuButton, MenuItem, Tooltip, Checkbox } from '@mui/joy';
 import Box from '@mui/material/Box';
 import { toPng } from 'html-to-image';
 
@@ -257,6 +256,29 @@ function ResetLayoutButton() {
     )
 }
 
+// Close a menu on a press outside it: ReactFlow's pane stops the click a menu's click-away listens for.
+// Capture phase, so that it sees the press before the pane swallows it.
+function useCloseOnPressOutside(open: boolean, close: () => void) {
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!open) return;
+        const onPress = (event: PointerEvent) => {
+            const target = event.target as Node;
+            if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+            close();
+        };
+        document.addEventListener('pointerdown', onPress, true);
+        return () => document.removeEventListener('pointerdown', onPress, true);
+    }, [open, close]);
+    return {buttonRef, menuRef};
+}
+
+// the dense look of the toolbar menus: a small list with tight rows, headers and dividers
+const denseMenuSx = {'--ListItemDecorator-size': '24px', '--ListItem-minHeight': '26px', '--ListDivider-gap': '2px',
+                     '--ListItem-paddingY': '0px', py: 0.5, fontSize: 'sm', '& .MuiSvgIcon-root': {fontSize: 18}};
+const denseSubheaderSx = {minHeight: '22px'};
+
 // box the nodes by an attribute along and across the flow; changing it rebuilds the node set, like the layout direction
 function GroupingButton() {
     const rfi = useReactFlow();
@@ -266,6 +288,7 @@ function GroupingButton() {
 
     const [open, setOpen] = React.useState(false);
     const handleOpenChange = React.useCallback((_event: React.SyntheticEvent | null, isOpen: boolean) => setOpen(isOpen), []);
+    const {buttonRef, menuRef} = useCloseOnPressOutside(open, React.useCallback(() => setOpen(false), []));
 
     const option = (axis: 'along' | 'across', attribute: GroupAttribute | undefined) => {
         const Icon = attribute ? GROUP_ATTRIBUTE_ICONS[attribute] : Clear;
@@ -280,22 +303,20 @@ function GroupingButton() {
 
     return (
         <Dropdown open={open} onOpenChange={handleOpenChange}>
-            <MenuButton disabled={unavailable} endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />}
+            <MenuButton ref={buttonRef} disabled={unavailable} endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />}
                         sx={{ padding: 1, outline: '0 !important' }} aria-label='Grouping'>
                 <Tooltip arrow title={unavailable ? 'Grouping needs a layered layout of a flow' : 'Group nodes into boxes'}
                          enterDelay={500} enterNextDelay={500} placement='top'>
                     <WorkspacesIcon color={isGrouping(grouping) ? 'primary' : undefined}/>
                 </Tooltip>
             </MenuButton>
-            {/* dense: a small list with tight rows, headers and dividers */}
-            <Menu size="sm" sx={{'--ListItemDecorator-size': '24px', '--ListItem-minHeight': '26px', '--ListDivider-gap': '2px',
-                                 '--ListItem-paddingY': '0px', py: 0.5, '& .MuiSvgIcon-root': {fontSize: 18}}}>
-                <ListSubheader sx={{minHeight: '22px'}}>{layout === 'LR' ? 'Rows' : 'Columns'} along the flow</ListSubheader>
+            <Menu ref={menuRef} size="sm" sx={denseMenuSx}>
+                <ListSubheader sx={denseSubheaderSx}>{layout === 'LR' ? 'Rows' : 'Columns'} along the flow</ListSubheader>
                 {option('along', undefined)}
                 {option('along', 'feed')}
                 {option('along', 'subjectArea')}
                 <ListDivider/>
-                <ListSubheader sx={{minHeight: '22px'}}>{layout === 'LR' ? 'Columns' : 'Rows'} across the flow</ListSubheader>
+                <ListSubheader sx={denseSubheaderSx}>{layout === 'LR' ? 'Columns' : 'Rows'} across the flow</ListSubheader>
                 {option('across', undefined)}
                 {option('across', 'layer')}
                 <ListDivider/>
@@ -313,53 +334,43 @@ function GroupingButton() {
 function NodeAttributeSelector() {
     const { selectedNodeAttributes: selected, setSelectedNodeAttributes } = useLineageGraph();
 
-    const handleChange = (_, newValue) => {
-        setSelectedNodeAttributes(newValue);
-    };
+    const toggle = (value: string) => setSelectedNodeAttributes(
+        selected.includes(value) ? selected.filter(v => v !== value) : [...selected, value]);
 
-    // Divide attributes into data and action node attributes
-    const dataNodeAttributes = nodeAttributes.filter(attr => attr.value.startsWith("data"))
-    const actionNodeAttributes = nodeAttributes.filter(attr => attr.value.startsWith("action"))
+    // several attributes are ticked in a row, so a click on an item does not close the menu
+    const [open, setOpen] = React.useState(false);
+    const handleOpenChange = React.useCallback((event: React.SyntheticEvent | null, isOpen: boolean) => {
+        if (!isOpen && (event?.target as Element | undefined)?.closest?.('[role="menuitem"]')) return;
+        setOpen(isOpen);
+    }, []);
+    const {buttonRef, menuRef} = useCloseOnPressOutside(open, React.useCallback(() => setOpen(false), []));
+
+    const option = (attr: {label: string, value: string}) => (
+        <MenuItem key={attr.value} onClick={() => toggle(attr.value)} sx={{ outline: '0 !important' }}>
+            <ListItemDecorator>
+                <Checkbox size="sm" checked={selected.includes(attr.value)} tabIndex={-1} sx={{ pointerEvents: 'none' }}/>
+            </ListItemDecorator>
+            {attr.label}
+        </MenuItem>
+    );
 
     return (
-        <Tooltip
-            arrow
-            title={<>Select which attributes should be shown for the displayed nodes.</>}
-            enterDelay={500}
-            enterNextDelay={500}
-            placement='top'
-        >
-            <Select
-                multiple
-                value={selected}
-                onChange={handleChange}
-                startDecorator={<FilterList />}
-                variant="plain" // Do not show shadow box
-                placeholder=""
-                renderValue={() => null} // Do not display selected items
-                className = 'attribute-selection-dropdown-parent'
-                slotProps={{
-                    // Set class on <ul> for CSS selector
-                    listbox: {
-                        className: 'attribute-selection-dropdown',
-                    }
-                }}
-            >
-                {dataNodeAttributes.map(attr => (
-                    <Option key={attr.value} value={attr.value} >
-                        <Checkbox checked={selected.includes(attr.value)} />
-                        {attr.label}
-                    </Option>
-                ))}
-                <Divider/>
-                {actionNodeAttributes.map(attr => (
-                    <Option key={attr.value} value={attr.value} >
-                        <Checkbox checked={selected.includes(attr.value)} />
-                        {attr.label}
-                    </Option>
-                ))}
-            </Select>
-        </Tooltip>
+        <Dropdown open={open} onOpenChange={handleOpenChange}>
+            <MenuButton ref={buttonRef} className='attribute-selection-dropdown-parent' aria-label='Node attributes'
+                        endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />}
+                        sx={{ padding: 1, outline: '0 !important' }}>
+                <Tooltip arrow title='Select attributes to show on nodes' enterDelay={500} enterNextDelay={500} placement='top'>
+                    <FilterList />
+                </Tooltip>
+            </MenuButton>
+            <Menu ref={menuRef} size="sm" className='attribute-selection-dropdown' sx={denseMenuSx}>
+                <ListSubheader sx={denseSubheaderSx}>Data objects</ListSubheader>
+                {nodeAttributes.filter(attr => attr.value.startsWith("data")).map(option)}
+                <ListDivider/>
+                <ListSubheader sx={denseSubheaderSx}>Actions</ListSubheader>
+                {nodeAttributes.filter(attr => attr.value.startsWith("action")).map(option)}
+            </Menu>
+        </Dropdown>
     );
 }
 

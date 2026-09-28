@@ -51,8 +51,8 @@ type LineageGraphContextType = {
 };
 
 export const nodeAttributes = [
-  { label: "Action Execution Mode", value: "action-executionMode" },
-  { label: "Data Partition State", value: "data-partitionState" },
+  { label: "Execution Mode", value: "action-executionMode" },
+  { label: "Partitioned", value: "data-partitionState" },
 ];
 
 const emptyLineageTabProps: flowProps = {
