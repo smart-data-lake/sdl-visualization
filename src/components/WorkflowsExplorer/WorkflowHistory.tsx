@@ -6,6 +6,7 @@ import { useParams } from "react-router-dom";
 import { fetcher } from "../../api/Fetcher";
 import { useFetchWorkflowRuns } from "../../hooks/useFetchData";
 import { useUser } from "../../hooks/useUser";
+import { useLiveWorkflowUpdates } from "../../hooks/useLiveWorkflowUpdates";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import NotFound from "../../layouts/NotFound";
 import PageHeader from "../../layouts/PageHeader";
@@ -124,7 +125,9 @@ const columns = [{
 export default function WorkflowHistory() {
 	const {flowId} = useParams();
     const userContext = useUser();
-	const { data, isLoading, isFetching, refetch } = useFetchWorkflowRuns(flowId!, !userContext || userContext.authenticated);
+	const enabled = !userContext || userContext.authenticated;
+	const { data, isLoading, refetch } = useFetchWorkflowRuns(flowId!, enabled);
+	const live = useLiveWorkflowUpdates(flowId, enabled, !!data?.some(run => run.status?.toUpperCase().endsWith('ING')));
 	const [filterParams, setFilterParams] = useState<FilterParams>({searchMode: 'startsWith', searchColumn: 'runId', additionalFilters: []})
     const [[additionalLeftToolbarElements, additionalRightToolbarElements], setAdditionalToolbarElements] = useState<[JSX.Element?, JSX.Element?]>([]);
 	const {navigateRel} = useWorkspace();
@@ -160,16 +163,17 @@ export default function WorkflowHistory() {
 		queryClient.invalidateQueries(["workflows"]);
 	}
 
-	if (isLoading || isFetching) {
+	// only the first load: a refetch keeps showing the runs until the new list arrives
+	if (isLoading) {
 		return <CenteredCircularProgress />;
 	}
 
 	return (
 		<>
-		{!data || isLoading || isFetching ? <CenteredCircularProgress/> : null}
+		{!data ? <CenteredCircularProgress/> : null}
 		{data ? (
 			<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>
-				<PageHeader title={flowId!} refresh={refreshData} />    
+				<PageHeader title={flowId!} refresh={refreshData} live={live} />    
 				<Sheet>
 					<Sheet sx={{display: 'flex', width: '100%', pb: '0.5rem', gap: '1rem'}}>
 						<Tooltip variant="solid" placement="right" title="This chart displays the runs in the current page. You can select a range or jump to a detailed run view by clicking on the corresponding bar.">

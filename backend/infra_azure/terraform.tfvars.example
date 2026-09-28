@@ -18,3 +18,6 @@ databricks_hosts = [
 # `terraform output -raw static_site_url`, apply again, and restart the function app;
 # without it the browser blocks every authenticated call. See static_site.tf.
 allowed_origins = []
+
+# Push run state changes to open run views through Azure Web PubSub, see live_updates.tf.
+live_updates = false

@@ -45,6 +45,14 @@ export const SCHEMA = [
      PRIMARY KEY (repo, env, id)
    ) WITHOUT ROWID`,
 
+  `CREATE TABLE IF NOT EXISTS live_registrations (
+     repo TEXT NOT NULL,
+     env TEXT NOT NULL,
+     workflow TEXT NOT NULL,
+     expires_at TEXT,
+     PRIMARY KEY (repo, env, workflow)
+   ) WITHOUT ROWID`,
+
   `CREATE TABLE IF NOT EXISTS tstamps (
      repo TEXT NOT NULL,
      env TEXT NOT NULL,

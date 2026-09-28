@@ -36,6 +36,12 @@ export type BlobStoreConfig =
   | { kind: 'azureBlob'; auth: AzureStorageAuth; container: string }
   | { kind: 'filesystem'; root: string };
 
+/** Where upload notifications for watching UIs go, see notify/. */
+export type LiveUpdatesConfig =
+  | { kind: 'none' }
+  | { kind: 'sse' }
+  | { kind: 'webpubsub'; endpoint: string; hub: string };
+
 export interface Settings {
   /**
    * The two stores are chosen independently, because they are independent: the code has
@@ -56,6 +62,7 @@ export interface Settings {
    * see routes/rateLimit.ts.
    */
   authRateLimitPerMinute: number;
+  liveUpdates: LiveUpdatesConfig;
 }
 
 let _settings: Settings | undefined;
@@ -133,6 +140,22 @@ function readBlobStore(): BlobStoreConfig {
   };
 }
 
+/** Web PubSub when an endpoint is configured, otherwise nothing unless asked for by name. */
+function readLiveUpdates(): LiveUpdatesConfig {
+  const endpoint = process.env.SDLB_WEBPUBSUB_ENDPOINT;
+  const kind = process.env.SDLB_LIVE_UPDATES || (endpoint ? 'webpubsub' : 'none');
+  switch (kind) {
+    case 'none':
+    case 'sse':
+      return { kind };
+    case 'webpubsub':
+      if (!endpoint) throw new Error('SDLB_LIVE_UPDATES=webpubsub needs SDLB_WEBPUBSUB_ENDPOINT');
+      return { kind, endpoint, hub: optional('SDLB_WEBPUBSUB_HUB', 'sdlb') };
+    default:
+      throw new Error(`SDLB_LIVE_UPDATES must be "webpubsub", "sse" or "none", got "${kind}"`);
+  }
+}
+
 function readSettings(): Settings {
   const authMode = optional('SDLB_AUTH_MODE', 'databricks') as AuthMode;
   if (authMode !== 'databricks' && authMode !== 'disabled') {
@@ -149,5 +172,6 @@ function readSettings(): Settings {
       .filter((h) => h.length > 0),
     authCacheTtlMs: Number(optional('SDLB_AUTH_CACHE_TTL_SECONDS', '300')) * 1000,
     authRateLimitPerMinute: Number(optional('SDLB_AUTH_RATE_LIMIT_PER_MINUTE', '10')),
+    liveUpdates: readLiveUpdates(),
   };
 }

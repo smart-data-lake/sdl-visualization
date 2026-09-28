@@ -1,11 +1,19 @@
 import { KeyboardArrowLeft, KeyboardArrowRight, RefreshOutlined } from "@mui/icons-material";
-import { Box, IconButton, Sheet, Typography } from "@mui/joy";
+import { Badge, Box, IconButton, Sheet, Tooltip, Typography } from "@mui/joy";
+import type { LiveIndicator } from "../hooks/useLiveWorkflowUpdates";
+
+const LIVE_TITLES: Record<LiveIndicator, string> = {
+    running: 'Live: updates while the workflow runs. Click to refresh now.',
+    finished: 'Live: the workflow has finished, a new run will show up by itself. Click to refresh now.',
+};
 /**
  * The PageHeader component is the header of each page. It contains the title, subtitle, and description of the page.
  * It is used in pages such as Workflows, Workflow and Run.
  */
-const PageHeader = (props: {title : string | React.ReactElement, subtitle?: string, description?: string, enablePrevNext?: boolean, prevNavigate?: () => void, nextNavigate?: () => void, corner?: string | React.ReactElement, refresh?: () => void}) => {
-    const { title, subtitle, description, enablePrevNext, prevNavigate, nextNavigate, corner, refresh } = props;
+const PageHeader = (props: {title : string | React.ReactElement, subtitle?: string, description?: string, enablePrevNext?: boolean, prevNavigate?: () => void, nextNavigate?: () => void, corner?: string | React.ReactElement, refresh?: () => void, live?: LiveIndicator}) => {
+    const { title, subtitle, description, enablePrevNext, prevNavigate, nextNavigate, corner, refresh, live } = props;
+    // while connected for live updates, a dot on the refresh button: green while running, grey once finished
+    const liveTitle = live && LIVE_TITLES[live];
 
     return ( 
             <Sheet sx={{
@@ -31,9 +39,17 @@ const PageHeader = (props: {title : string | React.ReactElement, subtitle?: stri
                     </IconButton>}
                     <Box sx={{ flex: 1 }}/>
                     {typeof corner === "string" ? <Typography level="body-sm">{corner}</Typography> : corner}
-                    {refresh && <IconButton onClick={refresh} variant="plain" color="neutral" size="sm">
-                        <RefreshOutlined/>
-                    </IconButton>}
+                    {refresh && (liveTitle
+                        ? <Tooltip title={liveTitle} variant="solid" size="sm">
+                            <IconButton onClick={refresh} variant="plain" color="neutral" size="sm" aria-label={liveTitle} data-live={live}>
+                                <Badge color={live === 'running' ? 'success' : 'neutral'} size="sm" badgeInset="14%">
+                                    <RefreshOutlined/>
+                                </Badge>
+                            </IconButton>
+                        </Tooltip>
+                        : <IconButton onClick={refresh} variant="plain" color="neutral" size="sm">
+                            <RefreshOutlined/>
+                        </IconButton>)}
                 </Box>
             </Sheet>
      );

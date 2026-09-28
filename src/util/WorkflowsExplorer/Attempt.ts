@@ -70,6 +70,12 @@ export function endAnchorOf(stateFile: StateFile): number | undefined {
     return known.length > 0 ? Math.max(...known) : undefined;
 }
 
+/** Whether the attempt is still going, by the same rule as endAnchorOf. */
+export function isRunning(stateFile: StateFile): boolean {
+    const actions = Object.values(stateFile.actionsState ?? {});
+    return !(stateFile.isFinal ?? !actions.some((a) => a.state?.toUpperCase().endsWith('ING')));
+}
+
 export default class Attempt {
     appName: string;
     runId: number;
