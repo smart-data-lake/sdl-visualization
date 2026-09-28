@@ -105,6 +105,8 @@ jobs:
           !build/envConfig
           !build/description
           !build/schema
+          !build/state
+          !build/search
 
   # What the Function app is fed. `yarn package` (backend/scripts/package.ts) decides
   # what is in it, and infra_azure/deploy-backend.sh uploads what that produces - so
