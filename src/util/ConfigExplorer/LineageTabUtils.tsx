@@ -19,7 +19,7 @@ import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
 import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, ExpandSides, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, expandSidesFrom, isColumnLineageEdge, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
 import { LayoutDirection, LayoutMode, NodePlacement, assignCoordinates, fitGroupBoxes, forceCentreOf, forceModelOf, layoutModelOf, placementOf } from './LineageLayout';
-import { COLLAPSED_GROUP_HEIGHT, COLLAPSED_GROUP_WIDTH, GROUP_BOX_TYPE, GROUP_EDGE_PREFIX, GroupAxis, GroupBoxData, Grouping, NodeGroups, boxDataOf, groupBoxId, groupingKey, groupsOf, groupsOfGraph, isGroupBox, isGroupCollapsed, isGroupEdge, isGrouping, setGroupCollapsed } from './Grouping';
+import { GROUP_BOX_TYPE, GROUP_EDGE_PREFIX, GroupAxis, GroupBoxData, Grouping, NodeGroups, boxDataOf, groupBoxId, groupingKey, groupsOf, groupsOfGraph, isGroupBox, isGroupCollapsed, isGroupEdge, isGrouping, setGroupCollapsed } from './Grouping';
 
 
 /*
@@ -1535,8 +1535,10 @@ export function groupFlowNodes(nodes: ReactFlowNode[]): ReactFlowNode[] {
         const collapsed = isGroupCollapsed(id);
         const other: GroupAxis = axis === 'along' ? 'across' : 'along';
         const placements = inside.map(placementOf).filter((p): p is NodePlacement => p !== undefined);
-        const byRank = [...placements].sort((a, b) => a.rank - b.rank || a.order - b.order);
-        const middle = byRank[Math.floor((byRank.length - 1) / 2)];
+        // the last rank, where the flow leaves the box: a node feeding the same successors stands beside it, not on its edge
+        const lastRank = Math.max(...placements.map(p => p.rank));
+        const last = placements.filter(p => p.rank === lastRank).sort((a, b) => a.order - b.order);
+        const middle = last[Math.floor((last.length - 1) / 2)];
         const otherKeys = new Set(inside.map(node => groupsOf(node)?.[other]));
         const box: GroupBoxData = {
             axis, attribute: grouping[axis]!, key, collapsed,
@@ -1548,9 +1550,11 @@ export function groupFlowNodes(nodes: ReactFlowNode[]): ReactFlowNode[] {
             order: middle.order,
             lane: axis === 'along' ? middle.lane : majority(placements.map(p => p.lane).filter((v): v is number => v !== undefined)),
             column: middle.column,
+            track: middle.track,
         } : undefined;
         const kept = existing.get(id);
-        const size = collapsed ? {width: COLLAPSED_GROUP_WIDTH, height: COLLAPSED_GROUP_HEIGHT} : kept?.style;
+        // collapsed, the size of a closed node, so that it takes the same room in the layout
+        const size = collapsed ? {width: nodeWidthFor(false), height: nodeHeightFor(0)} : kept?.style;
         const node: ReactFlowNode = {
             id, type: GROUP_BOX_TYPE,
             position: kept?.position ?? {x: 0, y: 0},

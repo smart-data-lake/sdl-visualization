@@ -10,7 +10,7 @@ import dagre from 'dagre';
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, SimulationNodeDatum } from 'd3-force';
 import { Edge as ReactFlowEdge, Node as ReactFlowNode } from 'reactflow';
 import { DAGraph, isColumnLineageEdge, rfNodeSize } from './Graphs';
-import { NodeGroups, boxDataOf, groupGap, groupInset, groupsOf, isGroupBox } from './Grouping';
+import { GROUP_PADDING, GroupAxis, NodeGroups, boxDataOf, groupGap, groupInset, groupInsetOn, groupsOf, isGroupBox } from './Grouping';
 
 export type LayoutDirection = 'TB' | 'LR';
 /* layered: ranks and order, see above. force: a force directed placement, offered for the relations view */
@@ -31,6 +31,8 @@ export interface NodePlacement {
     lane?: number;
     /* with a grouping across the flow: the node's column, which owns a contiguous run of ranks */
     column?: number;
+    /* with columns but no lanes: the band on the cross axis of the node's column, as columns can share ranks */
+    track?: number;
 }
 
 export interface LayoutModel {
@@ -106,53 +108,229 @@ function orderGroups(ids: string[], keyOf: (id: string) => string, valueOf: (id:
         .map(({key}, index) => [key, index]));
 }
 
+// How far each node is from the sources along the longest path - where the flow puts it, unlike dagre,
+// which pulls a source up to its successor. A node on a cycle keeps its fallback rank.
+function longestPathRanks(ids: string[], edges: [string, string][], fallback: (id: string) => number): Map<string, number> {
+    const known = new Set(ids);
+    const successors = new Map<string, string[]>();
+    const indegree = new Map(ids.map(id => [id, 0]));
+    edges.filter(([source, target]) => source !== target && known.has(source) && known.has(target)).forEach(([source, target]) => {
+        successors.set(source, [...(successors.get(source) ?? []), target]);
+        indegree.set(target, indegree.get(target)! + 1);
+    });
+    const rank = new Map<string, number>();
+    const ready = ids.filter(id => indegree.get(id) === 0);
+    ready.forEach(id => rank.set(id, 0));
+    while (ready.length > 0) {
+        const id = ready.shift()!;
+        (successors.get(id) ?? []).forEach(next => {
+            rank.set(next, Math.max(rank.get(next) ?? 0, rank.get(id)! + 1));
+            indegree.set(next, indegree.get(next)! - 1);
+            if (indegree.get(next) === 0) ready.push(next);
+        });
+    }
+    ids.filter(id => indegree.get(id)! > 0).forEach(id => rank.set(id, fallback(id)));
+    return rank;
+}
+
+/*
+    The columns in the order of the flow, and each node's column key. A node without a value does not
+    join one column of all of them, which would sit wherever their median falls and drag the others
+    along against the flow; it goes into a column without a box in the gap its rank falls into.
+*/
+function orderColumns(ids: string[], edges: [string, string][], valueOf: (id: string) => string | undefined,
+                      fallback: (id: string) => number): {columns: Map<string, number>, keyOf: Map<string, string>} {
+    const rank = longestPathRanks(ids, edges, fallback);
+    const grouped = ids.filter(id => valueOf(id) !== undefined);
+    const ordered = orderGroups(grouped, id => valueOf(id)!, id => rank.get(id)!);
+    const medians = [...ordered.keys()].map(key => median(grouped.filter(id => valueOf(id) === key).map(id => rank.get(id)!)));
+
+    const gapKey = (gap: number) => `\u0000gap-${gap}`;
+    const keyOf = new Map(ids.map(id => {
+        const value = valueOf(id);
+        return [id, value ?? gapKey(medians.filter(at => at <= rank.get(id)!).length)];
+    }));
+    const used = new Set(keyOf.values());
+    const sequence = [...ordered.keys()].flatMap((key, i) => [gapKey(i), key]).concat(gapKey(ordered.size)).filter(key => used.has(key));
+    return {columns: new Map(sequence.map((key, index) => [key, index])), keyOf};
+}
+
+// The lane every node is laid out in. An ungrouped node joins the lane most of its neighbours are in,
+// at a rank outside that lane's box, so that it sits in line with them rather than in a band of its own.
+function assignHostLanes(ids: string[], edges: [string, string][], rankOf: ReadonlyMap<string, number>,
+                         laneKey: (id: string) => string, lanes: ReadonlyMap<string, number>): Map<string, number> {
+    const laneOf = new Map(ids.map(id => [id, lanes.get(laneKey(id))!]));
+    const ungrouped = lanes.get('');
+    if (ungrouped === undefined) return laneOf;
+
+    const span = new Map<number, {min: number, max: number}>();
+    ids.filter(id => laneKey(id) !== '').forEach(id => {
+        const lane = laneOf.get(id)!, rank = rankOf.get(id)!, current = span.get(lane);
+        span.set(lane, {min: Math.min(current?.min ?? rank, rank), max: Math.max(current?.max ?? rank, rank)});
+    });
+    const neighbours = new Map<string, string[]>();
+    edges.filter(([source, target]) => source !== target && laneOf.has(source) && laneOf.has(target)).forEach(([source, target]) => {
+        neighbours.set(source, [...(neighbours.get(source) ?? []), target]);
+        neighbours.set(target, [...(neighbours.get(target) ?? []), source]);
+    });
+
+    // a few passes, so that a chain of ungrouped nodes follows the one next to a lane
+    const guests = ids.filter(id => laneKey(id) === '');
+    for (var pass = 0; pass < guests.length; pass++) {
+        var changed = false;
+        guests.forEach(id => {
+            const rank = rankOf.get(id)!;
+            const votes = new Map<number, number>();
+            (neighbours.get(id) ?? []).map(other => laneOf.get(other)!)
+                .filter(lane => lane !== ungrouped && !(span.get(lane)!.min <= rank && rank <= span.get(lane)!.max))
+                .forEach(lane => votes.set(lane, (votes.get(lane) ?? 0) + 1));
+            const host = [...votes.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] ?? ungrouped;
+            if (host !== laneOf.get(id)) {
+                laneOf.set(id, host);
+                changed = true;
+            }
+        });
+        if (!changed) break;
+    }
+    return laneOf;
+}
+
 // Every column owns contiguous ranks and every lane a contiguous stretch of each rank, so boxes cannot
 // overlap. Boundary nodes steer dagre, the compaction per column guarantees it - see the README.
 function buildGroupedModel(graph: DAGraph, direction: LayoutDirection, groups: LayoutGroups): LayoutModel {
     const ids = graph.nodes.map(node => node.id).sort();
     const base = layoutModelOf(graph, direction);
-    const columnKey = (id: string) => groups.of.get(id)?.across ?? '';
     const laneKey = (id: string) => groups.of.get(id)?.along ?? '';
-    const columns = groups.across ? orderGroups(ids, columnKey, id => base.placement.get(id)!.rank) : undefined;
-
     const edges = graphEdges(graph);
+    const across = groups.across ? orderColumns(ids, edges, id => groups.of.get(id)?.across, id => base.placement.get(id)!.rank) : undefined;
+    const columnKey = (id: string) => across?.keyOf.get(id) ?? '';
+    const columns = across?.columns;
+
+    const columnKeys = columns ? [...columns.keys()].sort((a, b) => columns.get(a)! - columns.get(b)!) : [''];
+    const membersOf = new Map(columnKeys.map(key => [key, ids.filter(id => !columns || columnKey(id) === key)]));
+    // a column only follows the columns it reads from, so that unrelated ones can share ranks
+    const follows: [string, string][] = !columns ? [] : [...new Set(graphEdges(graph)
+        .filter(([source, target]) => columns.has(columnKey(source)) && columns.has(columnKey(target))
+            && columns.get(columnKey(source))! < columns.get(columnKey(target))!)
+        .map(([source, target]) => `${columnKey(source)}\u0001${columnKey(target)}`))]
+        .sort().map(pair => pair.split('\u0001') as [string, string]);
+
     const boundaries: string[] = [];
-    if (columns) {
-        const byColumn = [...columns.keys()].sort((a, b) => columns.get(a)! - columns.get(b)!)
-            .map(key => ids.filter(id => columnKey(id) === key));
-        byColumn.slice(0, -1).forEach((members, i) => {
-            const boundary = `\u0000column-boundary-${i}`;
-            boundaries.push(boundary);
-            members.forEach(id => edges.push([id, boundary]));
-            byColumn[i + 1].forEach(id => edges.push([boundary, id]));
-        });
-    }
+    follows.forEach(([before, after], i) => {
+        const boundary = `\u0000column-boundary-${i}`;
+        boundaries.push(boundary);
+        membersOf.get(before)!.forEach(id => edges.push([id, boundary]));
+        membersOf.get(after)!.forEach(id => edges.push([boundary, id]));
+    });
     const laidOut = runDagre([...ids, ...boundaries], edges, direction);
 
-    // ranks: per column, the distinct main coordinates of its nodes, one column after the other
-    const rankOf = new Map<string, number>();
-    const columnKeys = columns ? [...columns.keys()].sort((a, b) => columns.get(a)! - columns.get(b)!) : [''];
-    let offset = 0;
-    columnKeys.forEach(key => {
-        const members = ids.filter(id => !columns || columnKey(id) === key);
-        const mains = [...new Set(members.map(id => laidOut.get(id)!.main))].sort((a, b) => a - b);
-        members.forEach(id => rankOf.set(id, offset + mains.indexOf(laidOut.get(id)!.main)));
-        offset += mains.length;
-    });
-
+    // ranks: per column, the distinct main coordinates of its nodes, from where the column starts
+    const mainsOf = new Map(columnKeys.map(key =>
+        [key, [...new Set(membersOf.get(key)!.map(id => laidOut.get(id)!.main))].sort((a, b) => a - b)]));
+    const lengthOf = (key: string) => mainsOf.get(key)!.length;
     const lanes = groups.along ? orderGroups(ids, laneKey, id => laidOut.get(id)!.cross) : undefined;
+    let startOf: Map<string, number>, rankOf: Map<string, number>, laneOf: Map<string, number> | undefined;
+    // with lanes, two columns sharing ranks are side by side only if their lanes are; otherwise the later follows
+    for (let pass = 0; ; pass++) {
+        startOf = columnStarts(columnKeys, follows, lengthOf);
+        rankOf = new Map<string, number>();
+        columnKeys.forEach(key => membersOf.get(key)!.forEach(id =>
+            rankOf.set(id, startOf.get(key)! + mainsOf.get(key)!.indexOf(laidOut.get(id)!.main))));
+        laneOf = lanes ? assignHostLanes(ids, graphEdges(graph), rankOf, laneKey, lanes) : undefined;
+        const clash = laneOf && laneClash(columnKeys, membersOf, startOf, lengthOf, laneOf);
+        if (!clash || pass > columnKeys.length * columnKeys.length) break;
+        follows.push(clash);
+    }
+    const shared = columnKeys.some((a, i) => columnKeys.slice(i + 1).some(b => spansMeet(startOf, lengthOf, a, b)));
+    const trackOf = columns && !groups.along ? columnTracks(columnKeys, startOf, lengthOf) : undefined;
+    const bandOf = (id: string) => laneOf?.get(id) ?? trackOf?.get(columnKey(id)) ?? 0;
+    const byRank = new Map<number, string[]>();
+    [...new Set(rankOf.values())].sort((a, b) => a - b).forEach(rank => byRank.set(rank, ids.filter(id => rankOf.get(id) === rank)
+        .sort((a, b) => bandOf(a) - bandOf(b) || laidOut.get(a)!.cross - laidOut.get(b)!.cross || a.localeCompare(b))));
+    // dagre ordered the ranks with the columns one after the other, not side by side
+    if (shared) reorderByNeighbours(byRank, graphEdges(graph), rankOf, bandOf);
     const placement = new Map<string, NodePlacement>();
-    [...new Set(rankOf.values())].forEach(rank => {
-        ids.filter(id => rankOf.get(id) === rank)
-            .sort((a, b) => (lanes ? lanes.get(laneKey(a))! - lanes.get(laneKey(b))! : 0)
-                || laidOut.get(a)!.cross - laidOut.get(b)!.cross || a.localeCompare(b))
-            .forEach((id, order) => placement.set(id, {
+    byRank.forEach((rankIds, rank) => {
+        rankIds.forEach((id, order) => placement.set(id, {
                 rank, order,
-                ...(lanes && {lane: lanes.get(laneKey(id))}),
+                ...(laneOf && {lane: laneOf.get(id)}),
                 ...(columns && {column: columns.get(columnKey(id))}),
+                ...(trackOf && {track: trackOf.get(columnKey(id))}),
             }));
     });
     return {direction, placement};
+}
+
+// Sort each rank within its bands by the median position of its neighbours, down the ranks and back up once.
+function reorderByNeighbours(byRank: Map<number, string[]>, edges: [string, string][], rankOf: ReadonlyMap<string, number>,
+                             bandOf: (id: string) => number): void {
+    const neighbours = new Map<string, string[]>();
+    edges.filter(([source, target]) => source !== target && rankOf.has(source) && rankOf.has(target)).forEach(([source, target]) => {
+        neighbours.set(source, [...(neighbours.get(source) ?? []), target]);
+        neighbours.set(target, [...(neighbours.get(target) ?? []), source]);
+    });
+    // the band dominates, the order within the rank breaks the tie
+    const keyOf = new Map<string, number>();
+    const index = (rankIds: string[]) => rankIds.forEach((id, i) => keyOf.set(id, bandOf(id) + (i + 0.5) / rankIds.length));
+    byRank.forEach(index);
+
+    const ranks = [...byRank.keys()].sort((a, b) => a - b);
+    const sweep = (order: number[], before: (other: number, rank: number) => boolean) => order.forEach(rank => {
+        const rankIds = byRank.get(rank)!;
+        const wanted = new Map(rankIds.map(id => {
+            const keys = (neighbours.get(id) ?? []).filter(other => before(rankOf.get(other)!, rank)).map(other => keyOf.get(other)!);
+            return [id, keys.length > 0 ? median(keys) : keyOf.get(id)!];
+        }));
+        const current = new Map(rankIds.map((id, i) => [id, i]));
+        rankIds.sort((a, b) => bandOf(a) - bandOf(b) || wanted.get(a)! - wanted.get(b)! || current.get(a)! - current.get(b)!);
+        index(rankIds);
+    });
+    sweep(ranks, (other, rank) => other < rank);
+    sweep([...ranks].reverse(), (other, rank) => other > rank);
+}
+
+const spansMeet = (start: ReadonlyMap<string, number>, lengthOf: (key: string) => number, a: string, b: string) =>
+    start.get(a)! <= start.get(b)! + lengthOf(b) - 1 && start.get(b)! <= start.get(a)! + lengthOf(a) - 1;
+
+// The first pair of columns that share ranks although the lanes they cover overlap, earlier column first.
+function laneClash(keys: string[], membersOf: ReadonlyMap<string, string[]>, start: ReadonlyMap<string, number>,
+                   lengthOf: (key: string) => number, laneOf: ReadonlyMap<string, number>): [string, string] | undefined {
+    const lanesOf = (key: string) => membersOf.get(key)!.map(id => laneOf.get(id)!);
+    for (let i = 0; i < keys.length; i++) {
+        for (let j = i + 1; j < keys.length; j++) {
+            if (!spansMeet(start, lengthOf, keys[i], keys[j])) continue;
+            const a = lanesOf(keys[i]), b = lanesOf(keys[j]);
+            if (Math.min(...a) <= Math.max(...b) && Math.min(...b) <= Math.max(...a)) return [keys[i], keys[j]];
+        }
+    }
+    return undefined;
+}
+
+// Where each column starts: after the columns it follows, then as late as the ones following it allow,
+// so that a column feeding a later one - extern into integration - ends right before it. In column order.
+function columnStarts(keys: string[], follows: [string, string][], lengthOf: (key: string) => number): Map<string, number> {
+    const start = new Map<string, number>();
+    keys.forEach(key => start.set(key, Math.max(0, ...follows.filter(([, after]) => after === key)
+        .map(([before]) => start.get(before)! + lengthOf(before)))));
+    [...keys].reverse().forEach(key => {
+        const next = follows.filter(([before]) => before === key).map(([, after]) => start.get(after)!);
+        if (next.length > 0) start.set(key, Math.max(start.get(key)!, Math.min(...next) - lengthOf(key)));
+    });
+    return start;
+}
+
+// The band on the cross axis each column is laid out in: the first one free over all of its ranks, earlier columns first.
+function columnTracks(keys: string[], start: ReadonlyMap<string, number>, lengthOf: (key: string) => number): Map<string, number> {
+    const taken: {from: number, to: number}[][] = [];
+    const tracks = new Map<string, number>();
+    [...keys].sort((a, b) => start.get(a)! - start.get(b)! || keys.indexOf(a) - keys.indexOf(b)).forEach(key => {
+        const from = start.get(key)!, to = from + lengthOf(key) - 1;
+        let track = taken.findIndex(spans => spans.every(span => span.to < from || to < span.from));
+        if (track < 0) track = taken.push([]) - 1;
+        taken[track].push({from, to});
+        tracks.set(key, track);
+    });
+    return tracks;
 }
 
 // one model per graph, direction and grouping; the DAGraph instances are stable per ConfigData
@@ -272,7 +450,10 @@ export function assignCoordinates(nodes: ReactFlowNode[], edges: ReactFlowEdge[]
     const laid = [...byRank.values()].flat();
     const {along, across} = groupedAxes(laid);
     const bothAxes = along && across;
-    const laneOf = (node: ReactFlowNode) => placementOf(node)!.lane ?? 0;
+    // a band of the cross axis: a lane, or without lanes the track of a column sharing its ranks with another
+    const tracked = !along && laid.some(node => placementOf(node)?.track !== undefined);
+    const banded = along || tracked;
+    const laneOf = (node: ReactFlowNode) => placementOf(node)!.lane ?? placementOf(node)!.track ?? 0;
 
     // the cross axis first: every lane as wide as its widest stretch in any rank - without lanes, the widest rank
     const segments = new Map<number, {lane: number, nodes: ReactFlowNode[], extent: number}[]>();
@@ -289,7 +470,8 @@ export function assignCoordinates(nodes: ReactFlowNode[], edges: ReactFlowEdge[]
         });
         segments.set(rank, cut);
     });
-    const laneGap = Math.max(nodesep, groupGap('along', bothAxes));
+    // with lanes, two columns sharing ranks are apart on the cross axis too, lane bands in between
+    const laneGap = Math.max(nodesep, groupGap('along', bothAxes, cross), bothAxes ? groupGap('across', bothAxes, cross) : 0);
     const laneStart = new Map<number, number>();
     let crossCursor = 0;
     [...laneExtent.keys()].sort((a, b) => a - b).forEach(lane => {
@@ -309,13 +491,21 @@ export function assignCoordinates(nodes: ReactFlowNode[], edges: ReactFlowEdge[]
                 cursor += sizeOf(node)[crossSize] + nodesep;
             });
             // a lane keeps its nodes; without lanes they are free to go where their neighbours pull them
-            return along ? {nodes: segment.nodes, lo: start, hi: start + extent} : {nodes: segment.nodes, lo: -Infinity, hi: Infinity};
+            return banded ? {nodes: segment.nodes, lo: start, hi: start + extent} : {nodes: segment.nodes, lo: -Infinity, hi: Infinity};
         }));
     });
-    alignWithNeighbours(bounded, edges.filter(edge => !isColumnLineageEdge(edge)), crossOf, node => sizeOf(node)[crossSize], nodesep);
+    const flowEdges = edges.filter(edge => !isColumnLineageEdge(edge));
+    alignWithNeighbours(bounded, flowEdges, crossOf, node => sizeOf(node)[crossSize], nodesep);
+    if (banded) {
+        const axis: GroupAxis = along ? 'along' : 'across';
+        const columnsApart = bothAxes
+            ? columnBoxesApart(laid, crossOf, node => sizeOf(node)[crossSize], groupInsetOn('across', bothAxes, cross)) : undefined;
+        shiftLanes(byRank, flowEdges, crossOf, node => sizeOf(node)[crossSize], axis,
+            {...groupInsetOn(axis, bothAxes, cross), box: Math.max(nodesep, groupGap(axis, bothAxes, cross)), node: nodesep}, columnsApart);
+    }
 
     // the main axis: empty ranks are left out, and where the column changes the gap leaves room for two boxes
-    const columnGap = Math.max(ranksep, groupGap('across', bothAxes));
+    const columnGap = Math.max(ranksep, groupGap('across', bothAxes, main));
     const columnOfRank = (rank: number) => placementOf(byRank.get(rank)![0])!.column;
     const mainCentre = new Map<number, number>();
     let cursor = 0;
@@ -384,9 +574,9 @@ export function fitGroupBoxes(nodes: ReactFlowNode[], defaultWidth = REFERENCE_N
             maxX = Math.max(maxX, node.position.x + width);
             maxY = Math.max(maxY, node.position.y + height);
         });
-        const {side, top} = groupInset(axis, bothAxes);
+        const {side, top, bottom} = groupInset(axis, bothAxes);
         const position = {x: minX - side, y: minY - top};
-        const width = maxX - minX + 2 * side, height = maxY - minY + top + side;
+        const width = maxX - minX + 2 * side, height = maxY - minY + top + bottom;
         if (box.position.x === position.x && box.position.y === position.y
             && box.style?.width === width && box.style?.height === height) return [box.id, box];
         return [box.id, {...box, position, positionAbsolute: position, style: {...box.style, width, height}}];
@@ -491,8 +681,10 @@ function alignWithNeighbours(byRank: Map<number, Segment[]>, edges: ReactFlowEdg
 
     const sweep = (order: number[], step: number) => order.forEach(rank => byRank.get(rank)!.forEach(segment => {
         const wanted = segment.nodes.map(node => {
-            const centres = (adjacent.get(node.id) ?? [])
-                .filter(id => rankOf.get(id) === rank + step)
+            // the nearest rank on that side with a neighbour: an edge can skip ranks, e.g. past a column in between
+            const beside = (adjacent.get(node.id) ?? []).filter(id => (rankOf.get(id)! - rank) * step > 0);
+            const nearest = Math.min(...beside.map(id => Math.abs(rankOf.get(id)! - rank)));
+            const centres = beside.filter(id => Math.abs(rankOf.get(id)! - rank) === nearest)
                 .map(id => centreOf(id, nodeById.get(id)!));
             if (centres.length === 0) return crossOf.get(node.id)!;
             return median(centres) - crossSizeOf(node) / 2;
@@ -504,6 +696,136 @@ function alignWithNeighbours(byRank: Map<number, Segment[]>, edges: ReactFlowEdg
         sweep(ranks, -1);                  // towards the rank before
         sweep([...ranks].reverse(), 1);    // and towards the one after
     }
+}
+
+/* What a lane takes up of the cross axis in one rank: its box's extent, or outside the box its nodes'. */
+interface Occupancy {
+    lo: number;
+    hi: number;
+    box: boolean;
+}
+
+/*
+    Move every lane as a whole towards the lanes it is connected to, e.g. so that a box ending where
+    the next one starts lines up with it. Two lanes only keep apart at the ranks both occupy: a box
+    every rank of its span, a node outside a box its own rank. The lanes start stacked, which is
+    feasible, and each move stays within what the others allow, so it remains feasible.
+*/
+function shiftLanes(byRank: Map<number, ReactFlowNode[]>, edges: ReactFlowEdge[], crossOf: Map<string, number>,
+                    crossSizeOf: (node: ReactFlowNode) => number, axis: GroupAxis,
+                    gaps: {before: number, after: number, box: number, node: number},
+                    columnsApart?: () => boolean): void {
+    const laneOf = new Map<string, number>();
+    const nodeById = new Map<string, ReactFlowNode>();
+    byRank.forEach(rankNodes => rankNodes.forEach(node => {
+        laneOf.set(node.id, placementOf(node)!.lane ?? placementOf(node)!.track ?? 0);
+        nodeById.set(node.id, node);
+    }));
+    const lanes = [...new Set(laneOf.values())].sort((a, b) => a - b);
+    if (lanes.length < 2) return;
+    const ranks = [...byRank.keys()].sort((a, b) => a - b);
+    // the box a node is drawn in: its lane, or on a track its column - a track holds several, one after the other
+    const boxOf = (node: ReactFlowNode) => groupsOf(node)?.[axis];
+    const centreOf = (id: string) => crossOf.get(id)! + crossSizeOf(nodeById.get(id)!) / 2;
+
+    const occupancy = (lane: number): Map<number, Occupancy> => {
+        const extent = (nodes: ReactFlowNode[]) => ({
+            lo: Math.min(...nodes.map(node => crossOf.get(node.id)!)),
+            hi: Math.max(...nodes.map(node => crossOf.get(node.id)! + crossSizeOf(node))),
+        });
+        const inLane = ranks.flatMap(rank => byRank.get(rank)!.filter(node => laneOf.get(node.id) === lane));
+        const boxes = [...new Set(inLane.map(boxOf).filter((key): key is string => key !== undefined))].map(key => {
+            const members = inLane.filter(node => boxOf(node) === key);
+            const memberRanks = members.map(node => placementOf(node)!.rank);
+            return {...extent(members), from: Math.min(...memberRanks), to: Math.max(...memberRanks)};
+        });
+        const result = new Map<number, Occupancy>();
+        ranks.forEach(rank => {
+            const box = boxes.find(box => box.from <= rank && rank <= box.to);
+            if (box) {
+                result.set(rank, {lo: box.lo, hi: box.hi, box: true});
+                return;
+            }
+            const others = byRank.get(rank)!.filter(node => laneOf.get(node.id) === lane);
+            if (others.length > 0) result.set(rank, {...extent(others), box: false});
+        });
+        return result;
+    };
+    // what has to lie between the lane before and the one after: the boxes' insets and a margin
+    const gapBetween = (first: Occupancy, second: Occupancy) => first.box && second.box ? gaps.box
+        : (first.box ? gaps.after : 0) + (second.box ? gaps.before : 0) + (first.box || second.box ? gaps.node / 2 : gaps.node);
+
+    for (var pass = 0; pass < 3; pass++) {
+        lanes.forEach(lane => {
+            const wanted = edges.flatMap(edge => {
+                if (!laneOf.has(edge.source) || !laneOf.has(edge.target) || laneOf.get(edge.source) === laneOf.get(edge.target)) return [];
+                if (laneOf.get(edge.source) === lane) return [centreOf(edge.target) - centreOf(edge.source)];
+                if (laneOf.get(edge.target) === lane) return [centreOf(edge.source) - centreOf(edge.target)];
+                return [];
+            });
+            if (wanted.length === 0) return;
+
+            const own = occupancy(lane);
+            let lowest = -Infinity, highest = Infinity;
+            lanes.filter(other => other !== lane).forEach(other => occupancy(other).forEach((theirs, rank) => {
+                const mine = own.get(rank);
+                if (!mine) return;
+                if (other < lane) lowest = Math.max(lowest, theirs.hi + gapBetween(theirs, mine) - mine.lo);
+                else highest = Math.min(highest, theirs.lo - gapBetween(mine, theirs) - mine.hi);
+            }));
+            if (lowest > highest) return;
+            const delta = Math.min(Math.max(median(wanted), lowest), highest);
+            if (Math.abs(delta) < 0.5) return;
+            const members = [...laneOf.entries()].filter(([, ofNode]) => ofNode === lane).map(([id]) => id);
+            const origin = new Map(members.map(id => [id, crossOf.get(id)!]));
+            const moveBy = (by: number) => members.forEach(id => crossOf.set(id, origin.get(id)! + by));
+            moveBy(delta);
+            if (!columnsApart || columnsApart()) return;
+            // the columns crossing the lane limit it too: as far as keeps them apart, between none and all of it
+            let [feasible, infeasible] = [0, delta];
+            for (var step = 0; step < 12; step++) {
+                const middle = (feasible + infeasible) / 2;
+                moveBy(middle);
+                if (columnsApart()) feasible = middle; else infeasible = middle;
+            }
+            moveBy(feasible);
+        });
+    }
+}
+
+/*
+    Whether the column boxes sharing ranks - side by side where lanes cross them - keep apart on the
+    cross axis, and no node outside a column lies in its box. Columns of different ranks are apart anyway.
+*/
+function columnBoxesApart(nodes: ReactFlowNode[], crossOf: ReadonlyMap<string, number>, crossSizeOf: (node: ReactFlowNode) => number,
+                          inset: {before: number, after: number}): () => boolean {
+    const keyOf = (node: ReactFlowNode) => groupsOf(node)?.across;
+    const byKey = new Map<string, ReactFlowNode[]>();
+    nodes.forEach(node => { const key = keyOf(node); if (key !== undefined) byKey.set(key, [...(byKey.get(key) ?? []), node]); });
+    const spans = [...byKey.entries()].map(([key, members]) => ({
+        key, members,
+        from: Math.min(...members.map(node => placementOf(node)!.rank)),
+        to: Math.max(...members.map(node => placementOf(node)!.rank)),
+    }));
+    const pairs = spans.flatMap((a, i) => spans.slice(i + 1).filter(b => a.from <= b.to && b.from <= a.to).map(b => [a, b]));
+    const outside = nodes.filter(node => keyOf(node) === undefined);
+    if (pairs.length === 0 && outside.every(node => spans.every(span =>
+        placementOf(node)!.rank < span.from || span.to < placementOf(node)!.rank))) return () => true;
+
+    return () => {
+        const box = new Map(spans.map(span => [span.key, {
+            lo: Math.min(...span.members.map(node => crossOf.get(node.id)!)) - inset.before,
+            hi: Math.max(...span.members.map(node => crossOf.get(node.id)! + crossSizeOf(node))) + inset.after,
+        }]));
+        const apart = (a: {lo: number, hi: number}, b: {lo: number, hi: number}) => a.hi + GROUP_PADDING <= b.lo || b.hi + GROUP_PADDING <= a.lo;
+        if (!pairs.every(([a, b]) => apart(box.get(a.key)!, box.get(b.key)!))) return false;
+        return outside.every(node => spans.every(span => {
+            const rank = placementOf(node)!.rank;
+            if (rank < span.from || span.to < rank) return true;
+            const lo = crossOf.get(node.id)!;
+            return apart(box.get(span.key)!, {lo, hi: lo + crossSizeOf(node)});
+        }));
+    };
 }
 
 /*

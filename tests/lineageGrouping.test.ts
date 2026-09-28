@@ -119,6 +119,67 @@ describe('the grouped layout model', () => {
     });
 });
 
+describe('nodes without a layer', () => {
+    // like the getting-started project in public/config: ext-airports and the btl data objects carry no layer
+    const json = JSON.parse(readFileSync('tests/e2e/fixtures/exported/exportedConfig.json', 'utf8'));
+    ['ext-airports', 'btl-departures-arrivals-airports', 'btl-distances'].forEach(id => delete json.dataObjects[id].metadata.layer);
+    const partial = new ConfigData(json);
+    const graph = partial.fullGraph!;
+    const grouping: Grouping = {across: 'layer'};
+    const of = groupsOfGraph(graph, partial, grouping);
+    const model = layoutModelOf(graph, 'LR', {key: groupingKey(grouping), of, along: false, across: true});
+    const rank = (id: string) => model.placement.get(id)!.rank;
+
+    it('go into the gap between the columns their rank falls into, not into one column of their own', () => {
+        expect(rank('ext-airports')).toBeLessThan(rank('download-airports'));
+        expect(rank('join-departures-airports')).toBeGreaterThan(rank('int-airports'));
+        expect(model.placement.get('ext-airports')!.column).not.toBe(model.placement.get('join-departures-airports')!.column);
+    });
+
+    it('leave the columns in the order of the flow, so that none is strung out into one line', () => {
+        const columnOf = (id: string) => model.placement.get(id)!.column!;
+        expect(columnOf('ext-departures')).toBeLessThan(columnOf('download-airports'));
+        expect(columnOf('download-airports')).toBeLessThan(columnOf('int-airports'));
+        expect(rank('int-airports')).toBe(rank('int-departures'));
+    });
+
+    it('let a column share the ranks of one it is not connected to, on a track of its own', () => {
+        // extern holds only ext-departures, which feeds integration; nothing connects it to staging
+        expect(rank('ext-departures')).toBe(rank('stg-airports'));
+        expect(rank('ext-departures')).toBe(rank('download-deduplicate-departures') - 1);
+        expect(model.placement.get('ext-departures')!.track).not.toBe(model.placement.get('stg-airports')!.track);
+        // and the column it feeds is ordered to match, so that its edges do not cross
+        const order = (id: string) => model.placement.get(id)!.order;
+        expect(order('historize-airports')).toBeLessThan(order('download-deduplicate-departures'));
+        expect(order('int-airports')).toBeLessThan(order('int-departures'));
+    });
+
+    it('let columns share ranks where lanes cross them, as long as they cover different lanes', () => {
+        const both: Grouping = {along: 'feed', across: 'layer'};
+        const grid = layoutModelOf(graph, 'LR', {key: groupingKey(both), of: groupsOfGraph(graph, partial, both), along: true, across: true});
+        const at = (id: string) => grid.placement.get(id)!;
+        expect([...grid.placement.values()].every(p => p.track === undefined)).toBe(true);
+        expect(at('ext-departures').rank).toBe(at('stg-airports').rank);
+        expect(at('ext-departures').lane).not.toBe(at('stg-airports').lane);
+    });
+
+    it('overlap neither each other nor a box', () => {
+        clearCollapsedGroups();
+        const nodes = graph.nodes.map(node => ({
+            id: node.id, type: 'customDataNode', position: {x: 0, y: 0}, style: {width: 200, height: 92},
+            data: {label: node.id, placement: model.placement.get(node.id), grouping, groups: of.get(node.id), layoutDirection: 'LR'},
+        }) as ReactFlowNode);
+        const edges = graph.edges.map(edge => ({id: edge.id, source: edge.fromNode.id, target: edge.toNode.id, data: {}}) as ReactFlowEdge);
+        const laid = fitGroupBoxes(assignCoordinates(groupFlowNodes(nodes), edges, 'LR'));
+        const elements = laid.filter(node => !isGroupBox(node));
+        elements.forEach((a, i) => elements.slice(i + 1).forEach(b => expect(overlap(rectOf(a), rectOf(b)), `${a.id} and ${b.id}`).toBe(false)));
+        const boxes = laid.filter(isGroupBox);
+        elements.forEach(node => boxes.filter(box => boxDataOf(box).key !== node.data.groups?.across)
+            .forEach(box => expect(overlap(rectOf(node), rectOf(box)), `${node.id} in ${box.id}`).toBe(false)));
+        boxes.forEach((a, i) => boxes.slice(i + 1).forEach(b => expect(overlap(rectOf(a), rectOf(b)), `${a.id} and ${b.id}`).toBe(false)));
+    });
+});
+
 describe('the boxes', () => {
     const graph = configData.fullGraph!;
 
@@ -143,6 +204,71 @@ describe('the boxes', () => {
         }
     });
 
+    it('puts an ungrouped node in line with the lane it feeds, where that lane has no box', () => {
+        clearCollapsedGroups();
+        for (const direction of ['TB', 'LR'] as LayoutDirection[]) {
+            const {nodes} = laidOut(graph, {along: 'feed'}, direction);
+            const cross = direction === 'TB' ? 'x' : 'y', crossSize = direction === 'TB' ? 'width' : 'height';
+            const centreOf = (id: string) => {
+                const rect = rectOf(nodes.find(node => node.id === id)!);
+                return rect[cross] + rect[crossSize] / 2;
+            };
+
+            expect(placementOf(nodes.find(node => node.id === 'ext-airports')!)!.lane)
+                .toBe(placementOf(nodes.find(node => node.id === 'download-airports')!)!.lane);
+            expect(centreOf('ext-airports'), direction).toBeCloseTo(centreOf('download-airports'));
+            expect(centreOf('ext-departures'), direction).toBeCloseTo(centreOf('download-deduplicate-departures'));
+        }
+    });
+
+    it('moves a lane in line with the one it feeds where their boxes share no rank', () => {
+        clearCollapsedGroups();
+        for (const direction of ['TB', 'LR'] as LayoutDirection[]) {
+            const {nodes} = laidOut(graph, {along: 'feed'}, direction);
+            const cross = direction === 'TB' ? 'x' : 'y', crossSize = direction === 'TB' ? 'width' : 'height';
+            const centreOf = (id: string) => {
+                const rect = rectOf(nodes.find(node => node.id === id)!);
+                return rect[cross] + rect[crossSize] / 2;
+            };
+
+            expect(centreOf('stg-airports'), direction).toBeCloseTo(centreOf('historize-airports'));
+            const boxes = nodes.filter(isGroupBox).map(rectOf);
+            expect(overlap(boxes[0], boxes[1]), direction).toBe(false);
+        }
+    });
+
+    it('keeps every ungrouped node outside the lane boxes', () => {
+        clearCollapsedGroups();
+        for (const direction of ['TB', 'LR'] as LayoutDirection[]) {
+            for (const grouping of [{along: 'feed'}, {along: 'subjectArea'}, {along: 'feed', across: 'layer'}, {along: 'subjectArea', across: 'layer'}] as Grouping[]) {
+                for (const view of [configData.fullGraph!, configData.dataGraph!, configData.actionGraph!]) {
+                    const {nodes} = laidOut(view, grouping, direction);
+                    const lanes = nodes.filter(node => isGroupBox(node) && boxDataOf(node).axis === 'along');
+                    nodes.filter(node => !isGroupBox(node) && node.data.groups?.along === undefined).forEach(node =>
+                        lanes.forEach(box => expect(overlap(rectOf(node), rectOf(box)), `${direction} ${grouping.along} ${node.id} in ${box.id}`).toBe(false)));
+                    lanes.forEach((a, i) => lanes.slice(i + 1).forEach(b =>
+                        expect(overlap(rectOf(a), rectOf(b)), `${direction} ${grouping.along} ${a.id} and ${b.id}`).toBe(false)));
+                }
+            }
+        }
+    });
+
+    it('pulls a node towards a neighbour ranks away, so that the lanes can line up', () => {
+        // both extern data objects start at rank 0, their readers are ranks away past staging
+        clearCollapsedGroups();
+        for (const direction of ['TB', 'LR'] as LayoutDirection[]) {
+            const {nodes} = laidOut(graph, {along: 'feed', across: 'layer'}, direction);
+            const cross = direction === 'TB' ? 'x' : 'y', crossSize = direction === 'TB' ? 'width' : 'height';
+            const centreOf = (id: string) => {
+                const rect = rectOf(nodes.find(node => node.id === id)!);
+                return rect[cross] + rect[crossSize] / 2;
+            };
+
+            expect(centreOf('ext-departures'), direction).toBeCloseTo(centreOf('download-deduplicate-departures'));
+            expect(centreOf('historize-airports'), direction).toBeCloseTo(centreOf('stg-airports'));
+        }
+    });
+
     it('a collapsed box hides its members and takes a place of its own', () => {
         clearCollapsedGroups();
         setGroupCollapsed(groupBoxId('along', 'compute'), true);
@@ -154,6 +280,20 @@ describe('the boxes', () => {
         expect(nodes.filter(node => node.hidden).map(node => node.id).sort()).toEqual(boxDataOf(box).memberIds);
         expect(placementOf(box)).toBeDefined();
         expect(overlap(rectOf(box), rectOf(nodes.find(node => node.id === 'download-airports')!))).toBe(false);
+        clearCollapsedGroups();
+    });
+
+    it('a collapsed box takes the last rank of its members, beside a node feeding the same successors', () => {
+        clearCollapsedGroups();
+        setGroupCollapsed(groupBoxId('along', 'download'), true);
+        setGroupCollapsed(groupBoxId('along', 'compute'), true);
+        const {nodes} = laidOut(configData.fullGraph!, {along: 'feed'}, 'LR');
+        const nodeOf = (id: string) => nodes.find(node => node.id === id)!;
+
+        // download-airports and stg-airports are ranks 1 and 2; ext-departures is rank 2 and read by compute
+        expect(placementOf(nodeOf('group:along:download'))!.rank).toBe(placementOf(nodeOf('ext-departures'))!.rank);
+        expect(nodeOf('group:along:download').position.x).toBe(nodeOf('ext-departures').position.x);
+        expect(overlap(rectOf(nodeOf('group:along:download')), rectOf(nodeOf('ext-departures')))).toBe(false);
         clearCollapsedGroups();
     });
 
