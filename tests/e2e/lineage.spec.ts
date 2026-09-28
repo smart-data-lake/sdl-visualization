@@ -275,7 +275,15 @@ test.describe('lineage graph', () => {
     expect(await nodeIds(page)).toEqual(before);
 
     await page.locator('.attribute-selection-dropdown-parent').click();
-    await page.locator('.attribute-selection-dropdown li').first().click();
+    const firstAttribute = page.locator('.attribute-selection-dropdown li').first();
+    await expect(firstAttribute.locator('input[type="checkbox"]')).toBeChecked();
+    await firstAttribute.click();
+    // the menu stays open, so that several attributes can be ticked in a row
+    await expect(firstAttribute).toBeVisible();
+    await expect(firstAttribute.locator('input[type="checkbox"]')).not.toBeChecked();
+    // a press on the graph closes it, although the pane swallows the click
+    await page.locator('.react-flow__pane').click({ position: { x: 20, y: 300 } });
+    await expect(firstAttribute).toBeHidden();
     await page.keyboard.press('Escape');
     expect(await nodeIds(page)).toEqual(before);
   });

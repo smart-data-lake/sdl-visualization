@@ -60,17 +60,6 @@
 }
 
 /* Node Attribution Selection */
-.attribute-selection-dropdown-parent{
-   >.MuiSelect-indicator {
-      margin-left: -10px;
-    }
-}
-
-.attribute-selection-dropdown li{
-  background: transparent !important;
-
-}
-
 /* Letter styling for the ActionNode ExecutionMode 'icon'*/
 .circle-letter-parent {
     display: flex;
