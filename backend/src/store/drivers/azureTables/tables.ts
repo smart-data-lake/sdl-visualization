@@ -34,6 +34,7 @@ export const TABLES = {
   workspaces: 'Workspaces',
   mcpTokens: 'McpTokens',
   meta: 'Meta',
+  liveRegistrations: 'LiveRegistrations',
 } as const;
 
 export type TableName = (typeof TABLES)[keyof typeof TABLES];

@@ -68,3 +68,8 @@ output "databricks_hosts" {
   description = "Workspaces allowed to use this deployment. The frontend deploy script puts them in the page's connect-src, since the browser talks to them directly during sign-in."
   value       = var.databricks_hosts
 }
+
+output "live_updates_origin" {
+  description = "Origin browsers open live update WebSockets to, for connect-src. Empty with live_updates = false."
+  value       = var.live_updates ? "wss://${azurerm_web_pubsub.this[0].hostname}" : ""
+}

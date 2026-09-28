@@ -33,6 +33,8 @@ if (process.env.SDLB_START_AZURITE === '1') {
   process.env.SDLB_STORAGE_BACKEND ??= 'local';
 }
 process.env.SDLB_AUTH_MODE ??= 'disabled';
+// a plain Node process can hold event streams open, which a Function should not
+process.env.SDLB_LIVE_UPDATES ??= 'sse';
 
 const app = await buildFastify();
 

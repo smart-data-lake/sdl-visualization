@@ -5,6 +5,7 @@ import { AuthError } from './auth/verifyBearer.js';
 import { HttpError } from './errors.js';
 import { registerRestRoutes } from './routes/rest/index.js';
 import { registerUploadRoutes } from './routes/upload/index.js';
+import { registerLiveRoutes } from './routes/live.js';
 
 /**
  * The Fastify application: the SPA's REST API and SDLB's upload API.
@@ -49,6 +50,7 @@ export async function buildFastify(): Promise<FastifyInstance> {
 
   await app.register(registerRestRoutes, { prefix: '/api/v1' });
   await app.register(registerUploadRoutes, { prefix: '/api/v1' });
+  await app.register(registerLiveRoutes, { prefix: '/api/v1' });
 
   await app.ready();
   return app;
