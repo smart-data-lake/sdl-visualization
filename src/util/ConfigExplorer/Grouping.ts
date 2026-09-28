@@ -130,19 +130,26 @@ export const boxDataOf = (node: ReactFlowNode): GroupBoxData => node.data.box;
 // the space between a box's border and its members, and the header on top of that
 export const GROUP_PADDING = 20;
 export const GROUP_HEADER = 32;
-export const COLLAPSED_GROUP_WIDTH = 200;
-export const COLLAPSED_GROUP_HEIGHT = 64;
+// between the header and the members: the header's own height already leaves room around its title
+export const GROUP_HEADER_GAP = 4;
 
-// how far a box reaches past its members; a column box encloses the headers of the lanes crossing it
-export function groupInset(axis: GroupAxis, bothAxes: boolean): {side: number, top: number} {
-    const side = axis === 'across' && bothAxes ? 2 * GROUP_PADDING + GROUP_HEADER : GROUP_PADDING;
-    return {side, top: side + GROUP_HEADER};
+// How far a box reaches past its members, per side of the screen. A column box crossed by lanes
+// encloses theirs: their padding and, on top, their header as well.
+export function groupInset(axis: GroupAxis, bothAxes: boolean): {side: number, top: number, bottom: number} {
+    const around = axis === 'across' && bothAxes ? 2 : 1;
+    return {side: around * GROUP_PADDING, top: around * (GROUP_HEADER + GROUP_HEADER_GAP), bottom: around * GROUP_PADDING};
 }
 
-/* The gap two neighbouring boxes of an axis need between their members, so that the boxes keep apart. */
-export function groupGap(axis: GroupAxis, bothAxes: boolean): number {
-    const {side, top} = groupInset(axis, bothAxes);
-    return side + top + GROUP_PADDING;
+/* The insets of a box on both ends of a screen axis: left and right on x, top and bottom on y. */
+export function groupInsetOn(axis: GroupAxis, bothAxes: boolean, screenAxis: 'x' | 'y'): {before: number, after: number} {
+    const {side, top, bottom} = groupInset(axis, bothAxes);
+    return screenAxis === 'x' ? {before: side, after: side} : {before: top, after: bottom};
+}
+
+/* The gap two boxes of an axis next to each other on a screen axis need between their members. */
+export function groupGap(axis: GroupAxis, bothAxes: boolean, screenAxis: 'x' | 'y'): number {
+    const {before, after} = groupInsetOn(axis, bothAxes, screenAxis);
+    return after + before + GROUP_PADDING;
 }
 
 // which boxes are collapsed: module state like the column displays, so that it survives a rebuild of the node set

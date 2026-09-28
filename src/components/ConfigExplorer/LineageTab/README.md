@@ -250,20 +250,58 @@ any node.
   columns, which every node of the one points to and which points to every node of the next, so that
   its ordering works on the ranks the columns end up with; an edge running against the column order
   makes a cycle, which dagre breaks wherever it likes, so the ranks are afterwards compacted column by
-  column, which holds regardless. The columns are in the order of the median rank of their members.
+  column, which holds regardless. The columns are in the order of the median of their members'
+  longest path rank from the sources (`orderColumns`) - not dagre's rank, which pulls a source up to
+  its successor, so that `ext-departures` would put the extern column after staging.
+
+  With columns but no lanes, a column only follows the columns it reads from: the boundary nodes run
+  only between columns an edge connects, and `columnStarts` starts each one after those and then as
+  late as the columns reading it allow. Two columns nothing connects can so share ranks - an extern
+  column holding only `ext-departures`, which feeds integration, sits under staging instead of before
+  it. `columnTracks` gives each column the first band of the cross axis that is free over all of its
+  ranks (`NodePlacement.track`), which `assignCoordinates` treats like a lane band and `shiftLanes`
+  keeps apart per box; and since dagre ordered the ranks without the tracks, `reorderByNeighbours`
+  sorts each rank within its bands once down and once up by the median position of its neighbours.
+  Where lanes cross the columns, the lanes are the bands: two columns may share ranks only where the
+  lanes they cover do not overlap (`laneClash`, which otherwise makes the later one follow), and
+  `shiftLanes` moves a lane only as far as keeps the column boxes sharing a rank apart
+  (`columnBoxesApart`) - so the extern column still sits beside staging, in the lane of what it feeds.
 - A lane owns a contiguous stretch of every rank: each rank is sorted by lane first. The lanes are in
   the order of the median cross position of their members.
 
 Nodes without a value form a lane resp. column of their own, without a box, so that they cannot end
-up inside another one. `assignCoordinates` then gives every lane a band on the cross axis as wide as
+up inside another one. For columns that is one column per gap between the layers: an ungrouped node
+goes after the last column whose median rank it reaches. One column of all of them would sit wherever
+their median falls - with the btl data objects unlayered, after integration - and drag an unlayered
+`ext-airports` along, against the flow, which dagre can only resolve by stringing the columns out
+into one line. A lane box only covers the ranks from its first member to its last, though, so
+an ungrouped node joins the lane most of its neighbours are in wherever its rank lies outside that
+span (`assignHostLanes`): `ext-airports` is laid out in line with `download-airports` rather than in a
+band of its own, which keeps its edges short. Its `groups` stay empty, so the box ignores it; only the
+placement's `lane` names the host. A chain of ungrouped nodes follows over a few passes.
+
+The bands start stacked, one lane after the other, but two lanes only have to keep apart at the ranks
+both occupy - a box every rank from its first member to its last, a node outside a box only its own.
+The barycentre pass pulls a node towards its neighbours in the nearest rank on either side that has
+any, not only the adjacent one: with the extern column at rank 0 and staging in between,
+`ext-departures` would otherwise stay in the middle of its band and hold the compute lane down. So
+after the barycentre pass `shiftLanes` moves every lane as a whole towards the median of its
+edges to other lanes, as far as the lanes sharing a rank with it allow: where the download box ends
+before the compute box begins, `stg-airports` lines up with `historize-airports`. A box needs its
+inset and half a `nodesep` to a node outside it, two boxes `groupGap` between them. `assignCoordinates` then gives every lane a band on the cross axis as wide as
 its widest stretch, keeps the barycentre pass within that band (`placeInOrder` clamps to it), and
 leaves room for two boxes' padding and header between bands and between ranks of different columns
-(`groupGap`). A column box reaches further than a lane box, so that its header sits above the lane
-headers where they cross.
+(`groupGap`, per screen axis). A box reaches `GROUP_PADDING` past its members on three sides and its
+header plus `GROUP_HEADER_GAP` on top (`groupInset`); a column box crossed by lanes reaches past the
+lane boxes by the same amounts, so that its header sits above theirs where they cross.
 
 **Collapsing.** A collapsed box hides its members (`hidden`, so that their columns, drag offsets and
-expansion counts survive) and becomes a node with a place of its own: the median rank of its
-members, their lane resp. column, and in the other axis the one most of them share. Which boxes are
+expansion counts survive) and becomes a node with a place of its own: the last rank of its
+members, their lane resp. column, and in the other axis the one most of them share. The last rank is
+where the flow leaves the box, so a node of another lane feeding the same successors - `ext-departures`
+beside a collapsed download box, both read by compute - stands next to it instead of on its outgoing
+edge; the ranks its hidden members leave empty are compacted away, so its incoming edges do not
+lengthen. For a column, which owns its ranks, any of them would do. Which boxes are
 collapsed is module state (`setGroupCollapsed`), so it survives a rebuild. `groupFlowEdges` gives the
 flow edges with an end inside a collapsed box to the box instead, merged per pair of ends and labelled
 with how many they stand for (`CustomEdgeProps.groupCount`); edges within the box disappear. The
