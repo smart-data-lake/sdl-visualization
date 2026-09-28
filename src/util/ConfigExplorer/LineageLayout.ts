@@ -10,6 +10,7 @@ import dagre from 'dagre';
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, SimulationNodeDatum } from 'd3-force';
 import { Edge as ReactFlowEdge, Node as ReactFlowNode } from 'reactflow';
 import { DAGraph, isColumnLineageEdge, rfNodeSize } from './Graphs';
+import { NodeGroups, boxDataOf, groupGap, groupInset, groupsOf, isGroupBox } from './Grouping';
 
 export type LayoutDirection = 'TB' | 'LR';
 /* layered: ranks and order, see above. force: a force directed placement, offered for the relations view */
@@ -26,11 +27,23 @@ const REFERENCE_NODE_HEIGHT = 36;
 export interface NodePlacement {
     rank: number;
     order: number;
+    /* with a grouping along the flow: the node's lane, whose nodes keep together in every rank */
+    lane?: number;
+    /* with a grouping across the flow: the node's column, which owns a contiguous run of ranks */
+    column?: number;
 }
 
 export interface LayoutModel {
     direction: LayoutDirection;
     placement: ReadonlyMap<string, NodePlacement>;
+}
+
+/* The groups a model is built for, see Grouping.ts. The key names them for the cache. */
+export interface LayoutGroups {
+    key: string;
+    of: ReadonlyMap<string, NodeGroups>;
+    along: boolean;
+    across: boolean;
 }
 
 // the main axis is the one the ranks advance along, the cross axis the one nodes are ordered along
@@ -40,61 +53,123 @@ function axes(direction: LayoutDirection) {
         : {main: 'x' as const, cross: 'y' as const, mainSize: 'width' as const, crossSize: 'height' as const};
 }
 
-/*
-    Lay the whole graph out once to learn where its nodes belong relative to each other.
-
-    The input is sorted first: dagre is deterministic for a given insertion order but its ordering
-    heuristic is sensitive to it, so without this the same graph comes out differently depending on
-    which node the caller happened to build its node list around.
-*/
-function buildLayoutModel(graph: DAGraph, direction: LayoutDirection): LayoutModel {
+// dagre from sorted input: its ordering is sensitive to insertion order, so the result would depend on how the node list was built
+function runDagre(ids: string[], edges: [string, string][], direction: LayoutDirection): Map<string, {main: number, cross: number}> {
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({rankdir: direction, nodesep: LAYOUT_NODESEP, ranksep: LAYOUT_RANKSEP});
     dagreGraph.setDefaultEdgeLabel(() => ({}));
-
-    const ids = graph.nodes.map(node => node.id).sort();
-    ids.forEach(id => dagreGraph.setNode(id, {width: REFERENCE_NODE_WIDTH, height: REFERENCE_NODE_HEIGHT}));
-
-    graph.edges
-        .map(edge => [edge.fromNode.id, edge.toNode.id])
+    [...ids].sort().forEach(id => dagreGraph.setNode(id, {width: REFERENCE_NODE_WIDTH, height: REFERENCE_NODE_HEIGHT}));
+    edges
         .filter(([source, target]) => source !== target && dagreGraph.hasNode(source) && dagreGraph.hasNode(target))
         .sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]))
         .forEach(([source, target]) => dagreGraph.setEdge(source, target));
-
     dagre.layout(dagreGraph);
 
-    // every node of a rank has the same centre on the main axis, so the distinct centres are the ranks
     const {main, cross} = axes(direction);
-    const laidOut = ids.map(id => {
+    return new Map(ids.map(id => {
         const node = dagreGraph.node(id);
-        return {id, main: Math.round(node[main]), cross: node[cross]};
-    });
-    const rankOf = new Map([...new Set(laidOut.map(node => node.main))].sort((a, b) => a - b).map((v, i) => [v, i]));
+        return [id, {main: Math.round(node[main]), cross: node[cross]}];
+    }));
+}
 
+const graphEdges = (graph: DAGraph): [string, string][] => graph.edges.map(edge => [edge.fromNode.id, edge.toNode.id]);
+
+/* Lay the whole graph out once to learn where its nodes belong relative to each other. */
+function buildLayoutModel(graph: DAGraph, direction: LayoutDirection): LayoutModel {
+    const ids = graph.nodes.map(node => node.id).sort();
+    const laidOut = runDagre(ids, graphEdges(graph), direction);
+
+    // every node of a rank has the same centre on the main axis, so the distinct centres are the ranks
+    const rankOf = new Map([...new Set([...laidOut.values()].map(node => node.main))].sort((a, b) => a - b).map((v, i) => [v, i]));
     const placement = new Map<string, NodePlacement>();
     rankOf.forEach((rank, mainCoordinate) => {
-        laidOut
-            .filter(node => node.main === mainCoordinate)
-            .sort((a, b) => a.cross - b.cross || a.id.localeCompare(b.id))
-            .forEach((node, order) => placement.set(node.id, {rank, order}));
+        ids.filter(id => laidOut.get(id)!.main === mainCoordinate)
+            .sort((a, b) => laidOut.get(a)!.cross - laidOut.get(b)!.cross || a.localeCompare(b))
+            .forEach((id, order) => placement.set(id, {rank, order}));
     });
-
     return {direction, placement};
 }
 
-// one model per graph and direction; the DAGraph instances are stable per ConfigData
-const models = new WeakMap<DAGraph, Map<LayoutDirection, LayoutModel>>();
+const median = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+};
 
-export function layoutModelOf(graph: DAGraph, direction: LayoutDirection): LayoutModel {
-    let byDirection = models.get(graph);
-    if (!byDirection) {
-        byDirection = new Map();
-        models.set(graph, byDirection);
+// the groups of an axis in the order of the median of their members, nodes without a group forming one of their own
+function orderGroups(ids: string[], keyOf: (id: string) => string, valueOf: (id: string) => number): Map<string, number> {
+    const members = new Map<string, number[]>();
+    ids.forEach(id => members.set(keyOf(id), [...(members.get(keyOf(id)) ?? []), valueOf(id)]));
+    return new Map([...members.entries()]
+        .map(([key, values]) => ({key, at: median(values)}))
+        .sort((a, b) => a.at - b.at || a.key.localeCompare(b.key))
+        .map(({key}, index) => [key, index]));
+}
+
+// Every column owns contiguous ranks and every lane a contiguous stretch of each rank, so boxes cannot
+// overlap. Boundary nodes steer dagre, the compaction per column guarantees it - see the README.
+function buildGroupedModel(graph: DAGraph, direction: LayoutDirection, groups: LayoutGroups): LayoutModel {
+    const ids = graph.nodes.map(node => node.id).sort();
+    const base = layoutModelOf(graph, direction);
+    const columnKey = (id: string) => groups.of.get(id)?.across ?? '';
+    const laneKey = (id: string) => groups.of.get(id)?.along ?? '';
+    const columns = groups.across ? orderGroups(ids, columnKey, id => base.placement.get(id)!.rank) : undefined;
+
+    const edges = graphEdges(graph);
+    const boundaries: string[] = [];
+    if (columns) {
+        const byColumn = [...columns.keys()].sort((a, b) => columns.get(a)! - columns.get(b)!)
+            .map(key => ids.filter(id => columnKey(id) === key));
+        byColumn.slice(0, -1).forEach((members, i) => {
+            const boundary = `\u0000column-boundary-${i}`;
+            boundaries.push(boundary);
+            members.forEach(id => edges.push([id, boundary]));
+            byColumn[i + 1].forEach(id => edges.push([boundary, id]));
+        });
     }
-    let model = byDirection.get(direction);
+    const laidOut = runDagre([...ids, ...boundaries], edges, direction);
+
+    // ranks: per column, the distinct main coordinates of its nodes, one column after the other
+    const rankOf = new Map<string, number>();
+    const columnKeys = columns ? [...columns.keys()].sort((a, b) => columns.get(a)! - columns.get(b)!) : [''];
+    let offset = 0;
+    columnKeys.forEach(key => {
+        const members = ids.filter(id => !columns || columnKey(id) === key);
+        const mains = [...new Set(members.map(id => laidOut.get(id)!.main))].sort((a, b) => a - b);
+        members.forEach(id => rankOf.set(id, offset + mains.indexOf(laidOut.get(id)!.main)));
+        offset += mains.length;
+    });
+
+    const lanes = groups.along ? orderGroups(ids, laneKey, id => laidOut.get(id)!.cross) : undefined;
+    const placement = new Map<string, NodePlacement>();
+    [...new Set(rankOf.values())].forEach(rank => {
+        ids.filter(id => rankOf.get(id) === rank)
+            .sort((a, b) => (lanes ? lanes.get(laneKey(a))! - lanes.get(laneKey(b))! : 0)
+                || laidOut.get(a)!.cross - laidOut.get(b)!.cross || a.localeCompare(b))
+            .forEach((id, order) => placement.set(id, {
+                rank, order,
+                ...(lanes && {lane: lanes.get(laneKey(id))}),
+                ...(columns && {column: columns.get(columnKey(id))}),
+            }));
+    });
+    return {direction, placement};
+}
+
+// one model per graph, direction and grouping; the DAGraph instances are stable per ConfigData
+const models = new WeakMap<DAGraph, Map<string, LayoutModel>>();
+
+export function layoutModelOf(graph: DAGraph, direction: LayoutDirection, groups?: LayoutGroups): LayoutModel {
+    let byKey = models.get(graph);
+    if (!byKey) {
+        byKey = new Map();
+        models.set(graph, byKey);
+    }
+    const grouped = groups && (groups.along || groups.across) ? groups : undefined;
+    const key = `${direction}|${grouped?.key ?? ''}`;
+    let model = byKey.get(key);
     if (!model) {
-        model = buildLayoutModel(graph, direction);
-        byDirection.set(direction, model);
+        model = grouped ? buildGroupedModel(graph, direction, grouped) : buildLayoutModel(graph, direction);
+        byKey.set(key, model);
     }
     return model;
 }
@@ -170,11 +245,11 @@ export interface CoordinateOptions {
 /*
     Coordinates for the given nodes, from their placement and the size they declare.
 
-    Pure, unlike dagreLayoutRf: the nodes are returned as new objects in the order they came in.
-    Nodes without a placement - the grouping boxes - are passed through untouched.
+    Pure: the nodes are returned as new objects in the order they came in.
+    Nodes without a placement - the open grouping boxes - and hidden nodes are passed through untouched.
 */
 export function assignCoordinates(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: LayoutDirection, options: CoordinateOptions = {}): ReactFlowNode[] {
-    if (nodes.some(node => forceCentreOf(node))) return assignForceCoordinates(nodes, options);
+    if (nodes.some(node => !node.hidden && forceCentreOf(node))) return assignForceCoordinates(nodes, options);
     const {main, cross, mainSize, crossSize} = axes(direction);
     const nodesep = options.nodesep ?? LAYOUT_NODESEP;
     const ranksep = options.ranksep ?? LAYOUT_RANKSEP;
@@ -187,42 +262,69 @@ export function assignCoordinates(nodes: ReactFlowNode[], edges: ReactFlowEdge[]
     const seen = new Set<string>();
     nodes.forEach(node => {
         const placement = placementOf(node);
-        if (!placement || seen.has(node.id)) return;
+        if (!placement || node.hidden || seen.has(node.id)) return;
         seen.add(node.id);
         byRank.set(placement.rank, [...(byRank.get(placement.rank) ?? []), node]);
     });
     byRank.forEach(rank => rank.sort((a, b) =>
         (placementOf(a)!.order - placementOf(b)!.order) || a.id.localeCompare(b.id)));
 
-    // the cross axis first, so that the ranks can be centred on the widest one
-    const crossStart = new Map<string, number>();
-    const crossExtent = new Map<number, number>();
+    const laid = [...byRank.values()].flat();
+    const {along, across} = groupedAxes(laid);
+    const bothAxes = along && across;
+    const laneOf = (node: ReactFlowNode) => placementOf(node)!.lane ?? 0;
+
+    // the cross axis first: every lane as wide as its widest stretch in any rank - without lanes, the widest rank
+    const segments = new Map<number, {lane: number, nodes: ReactFlowNode[], extent: number}[]>();
+    const laneExtent = new Map<number, number>();
     byRank.forEach((rankNodes, rank) => {
-        let cursor = 0;
+        const cut: {lane: number, nodes: ReactFlowNode[], extent: number}[] = [];
         rankNodes.forEach(node => {
-            crossStart.set(node.id, cursor);
-            cursor += sizeOf(node)[crossSize] + nodesep;
+            if (cut.length === 0 || cut[cut.length - 1].lane !== laneOf(node)) cut.push({lane: laneOf(node), nodes: [], extent: 0});
+            cut[cut.length - 1].nodes.push(node);
         });
-        crossExtent.set(rank, Math.max(0, cursor - nodesep));
+        cut.forEach(segment => {
+            segment.extent = segment.nodes.reduce((sum, node) => sum + sizeOf(node)[crossSize], 0) + nodesep * (segment.nodes.length - 1);
+            laneExtent.set(segment.lane, Math.max(laneExtent.get(segment.lane) ?? 0, segment.extent));
+        });
+        segments.set(rank, cut);
     });
-    const widestRank = Math.max(0, ...crossExtent.values());
+    const laneGap = Math.max(nodesep, groupGap('along', bothAxes));
+    const laneStart = new Map<number, number>();
+    let crossCursor = 0;
+    [...laneExtent.keys()].sort((a, b) => a - b).forEach(lane => {
+        laneStart.set(lane, crossCursor);
+        crossCursor += laneExtent.get(lane)! + laneGap;
+    });
 
-    // where each node starts on the cross axis, the ranks centred on the widest one. This is only
-    // the starting point: the sweeps below pull each node towards the nodes it is connected to
+    // each stretch starts centred in its lane; the sweeps below pull each node towards its neighbours
     const crossOf = new Map<string, number>();
-    byRank.forEach((rankNodes, rank) => {
-        const shift = (widestRank - crossExtent.get(rank)!) / 2;
-        rankNodes.forEach(node => crossOf.set(node.id, crossStart.get(node.id)! + shift));
+    const bounded: Map<number, Segment[]> = new Map();
+    segments.forEach((cut, rank) => {
+        bounded.set(rank, cut.map(segment => {
+            const start = laneStart.get(segment.lane)!, extent = laneExtent.get(segment.lane)!;
+            let cursor = start + (extent - segment.extent) / 2;
+            segment.nodes.forEach(node => {
+                crossOf.set(node.id, cursor);
+                cursor += sizeOf(node)[crossSize] + nodesep;
+            });
+            // a lane keeps its nodes; without lanes they are free to go where their neighbours pull them
+            return along ? {nodes: segment.nodes, lo: start, hi: start + extent} : {nodes: segment.nodes, lo: -Infinity, hi: Infinity};
+        }));
     });
-    alignWithNeighbours(byRank, edges.filter(edge => !isColumnLineageEdge(edge)), crossOf, node => sizeOf(node)[crossSize], nodesep);
+    alignWithNeighbours(bounded, edges.filter(edge => !isColumnLineageEdge(edge)), crossOf, node => sizeOf(node)[crossSize], nodesep);
 
-    // the main axis: empty ranks are left out, so hiding a whole rank closes the gap it leaves
+    // the main axis: empty ranks are left out, and where the column changes the gap leaves room for two boxes
+    const columnGap = Math.max(ranksep, groupGap('across', bothAxes));
+    const columnOfRank = (rank: number) => placementOf(byRank.get(rank)![0])!.column;
     const mainCentre = new Map<number, number>();
     let cursor = 0;
-    [...byRank.keys()].sort((a, b) => a - b).forEach(rank => {
+    const ranks = [...byRank.keys()].sort((a, b) => a - b);
+    ranks.forEach((rank, i) => {
         const extent = Math.max(...byRank.get(rank)!.map(node => sizeOf(node)[mainSize]));
+        if (i > 0) cursor += columnOfRank(ranks[i - 1]) !== columnOfRank(rank) ? columnGap : ranksep;
         mainCentre.set(rank, cursor + extent / 2);
-        cursor += extent + ranksep;
+        cursor += extent;
     });
 
     const positioned = new Map<string, {x: number, y: number}>();
@@ -252,6 +354,46 @@ export function assignCoordinates(nodes: ReactFlowNode[], edges: ReactFlowEdge[]
     });
 }
 
+/* Which axes the placed nodes are grouped on: a node carries a lane resp. column once the model is grouped. */
+function groupedAxes(nodes: ReactFlowNode[]): {along: boolean, across: boolean} {
+    return {
+        along: nodes.some(node => placementOf(node)?.lane !== undefined),
+        across: nodes.some(node => placementOf(node)?.column !== undefined),
+    };
+}
+
+// fit every open box around its shown members - a box has no place of its own, it follows them
+export function fitGroupBoxes(nodes: ReactFlowNode[], defaultWidth = REFERENCE_NODE_WIDTH, defaultHeight = REFERENCE_NODE_HEIGHT,
+                              exceptId?: string): ReactFlowNode[] {
+    // exceptId: the box being dragged, which ReactFlow places itself
+    const boxes = nodes.filter(node => isGroupBox(node) && !boxDataOf(node).collapsed && node.id !== exceptId);
+    if (boxes.length === 0) return nodes;
+    const {along, across} = groupedAxes(nodes.filter(node => !node.hidden));
+    const bothAxes = along && across;
+    const members = nodes.filter(node => !node.hidden && !(isGroupBox(node) && !boxDataOf(node).collapsed));
+
+    const fitted = new Map(boxes.map(box => {
+        const {axis, key} = boxDataOf(box);
+        const inside = members.filter(node => groupsOf(node)?.[axis] === key);
+        if (inside.length === 0) return [box.id, box];
+        let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
+        inside.forEach(node => {
+            const {width, height} = rfNodeSize(node, defaultWidth, defaultHeight);
+            minX = Math.min(minX, node.position.x);
+            minY = Math.min(minY, node.position.y);
+            maxX = Math.max(maxX, node.position.x + width);
+            maxY = Math.max(maxY, node.position.y + height);
+        });
+        const {side, top} = groupInset(axis, bothAxes);
+        const position = {x: minX - side, y: minY - top};
+        const width = maxX - minX + 2 * side, height = maxY - minY + top + side;
+        if (box.position.x === position.x && box.position.y === position.y
+            && box.style?.width === width && box.style?.height === height) return [box.id, box];
+        return [box.id, {...box, position, positionAbsolute: position, style: {...box.style, width, height}}];
+    }));
+    return nodes.map(node => fitted.get(node.id) ?? node);
+}
+
 /*
     Coordinates for nodes carrying a force layout centre: that centre, the user's displacement, and
     then as little movement as removes the overlaps of nodes that have grown, e.g. opened their columns.
@@ -264,7 +406,7 @@ function assignForceCoordinates(nodes: ReactFlowNode[], options: CoordinateOptio
     const seen = new Set<string>();
     nodes.forEach(node => {
         const centre = forceCentreOf(node);
-        if (!centre || seen.has(node.id)) return;
+        if (!centre || node.hidden || seen.has(node.id)) return;
         seen.add(node.id);
         const {width, height} = sizeOf(node);
         const offset = manualOffsetOf(node) ?? {x: 0, y: 0};
@@ -312,6 +454,13 @@ function separateBoxes(boxes: {id: string, x: number, y: number, width: number, 
     }
 }
 
+/* A stretch of one rank whose nodes keep their order and stay within [lo, hi] - a lane of it, or all of it. */
+interface Segment {
+    nodes: ReactFlowNode[];
+    lo: number;
+    hi: number;
+}
+
 /*
     Pull every node towards the nodes it is connected to, without changing the order within a rank.
 
@@ -320,11 +469,15 @@ function separateBoxes(boxes: {id: string, x: number, y: number, width: number, 
     placed as close as possible to the median of its neighbours in the rank before resp. after it -
     the classic barycentre pass, except that the order is fixed and only the gaps are solved for.
 */
-function alignWithNeighbours(byRank: Map<number, ReactFlowNode[]>, edges: ReactFlowEdge[],
+function alignWithNeighbours(byRank: Map<number, Segment[]>, edges: ReactFlowEdge[],
                              crossOf: Map<string, number>, crossSizeOf: (node: ReactFlowNode) => number,
                              nodesep: number): void {
     const rankOf = new Map<string, number>();
-    byRank.forEach((rankNodes, rank) => rankNodes.forEach(node => rankOf.set(node.id, rank)));
+    const nodeById = new Map<string, ReactFlowNode>();
+    byRank.forEach((segments, rank) => segments.forEach(segment => segment.nodes.forEach(node => {
+        rankOf.set(node.id, rank);
+        nodeById.set(node.id, node);
+    })));
 
     const adjacent = new Map<string, string[]>();
     edges.forEach(edge => {
@@ -335,23 +488,17 @@ function alignWithNeighbours(byRank: Map<number, ReactFlowNode[]>, edges: ReactF
 
     const ranks = [...byRank.keys()].sort((a, b) => a - b);
     const centreOf = (id: string, node: ReactFlowNode) => crossOf.get(id)! + crossSizeOf(node) / 2;
-    const nodeById = new Map<string, ReactFlowNode>();
-    byRank.forEach(rankNodes => rankNodes.forEach(node => nodeById.set(node.id, node)));
 
-    const sweep = (order: number[], step: number) => order.forEach(rank => {
-        const rankNodes = byRank.get(rank)!;
-        const wanted = rankNodes.map(node => {
+    const sweep = (order: number[], step: number) => order.forEach(rank => byRank.get(rank)!.forEach(segment => {
+        const wanted = segment.nodes.map(node => {
             const centres = (adjacent.get(node.id) ?? [])
                 .filter(id => rankOf.get(id) === rank + step)
-                .map(id => centreOf(id, nodeById.get(id)!))
-                .sort((a, b) => a - b);
+                .map(id => centreOf(id, nodeById.get(id)!));
             if (centres.length === 0) return crossOf.get(node.id)!;
-            const middle = centres.length % 2 === 1 ? centres[(centres.length - 1) / 2]
-                : (centres[centres.length / 2 - 1] + centres[centres.length / 2]) / 2;
-            return middle - crossSizeOf(node) / 2;
+            return median(centres) - crossSizeOf(node) / 2;
         });
-        placeInOrder(rankNodes, wanted, crossOf, crossSizeOf, nodesep);
-    });
+        placeInOrder(segment, wanted, crossOf, crossSizeOf, nodesep);
+    }));
 
     for (var pass = 0; pass < 2; pass++) {
         sweep(ranks, -1);                  // towards the rank before
@@ -360,15 +507,17 @@ function alignWithNeighbours(byRank: Map<number, ReactFlowNode[]>, edges: ReactF
 }
 
 /*
-    Place a rank's nodes as close as possible to where they want to be, keeping their order and a
-    gap of nodesep between them. Subtracting the space taken by the nodes before it turns the gaps
-    into a "must not decrease" constraint, which pooling adjacent violators solves exactly.
+    Place a segment's nodes as close as possible to where they want to be, keeping their order, a
+    gap of nodesep between them and the segment's bounds. Subtracting the space taken by the nodes
+    before it turns the gaps into a "must not decrease" constraint, which pooling adjacent violators
+    solves exactly; clamping to the bounds keeps it exact.
 */
-function placeInOrder(rankNodes: ReactFlowNode[], wanted: number[], crossOf: Map<string, number>,
+function placeInOrder(segment: Segment, wanted: number[], crossOf: Map<string, number>,
                       crossSizeOf: (node: ReactFlowNode) => number, nodesep: number): void {
     const offsets: number[] = [];
     var taken = 0;
-    rankNodes.forEach(node => { offsets.push(taken); taken += crossSizeOf(node) + nodesep; });
+    segment.nodes.forEach(node => { offsets.push(taken); taken += crossSizeOf(node) + nodesep; });
+    const lowest = segment.lo, highest = segment.hi - (taken - nodesep);
 
     const blocks: {sum: number, count: number}[] = [];
     wanted.forEach((want, i) => {
@@ -382,7 +531,8 @@ function placeInOrder(rankNodes: ReactFlowNode[], wanted: number[], crossOf: Map
 
     var i = 0;
     blocks.forEach(block => {
-        for (var n = 0; n < block.count; n++, i++) crossOf.set(rankNodes[i].id, block.sum / block.count + offsets[i]);
+        const start = Math.min(Math.max(block.sum / block.count, lowest), highest);
+        for (var n = 0; n < block.count; n++, i++) crossOf.set(segment.nodes[i].id, start + offsets[i]);
     });
 }
 

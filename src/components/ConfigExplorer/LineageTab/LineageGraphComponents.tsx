@@ -821,7 +821,7 @@ export const CustomEdge = ({
   }
   const relation = data?.relation ? relationPaths(sourceX, sourceY, sourcePosition, targetX, targetY) : undefined;
   // column lineage edges run many to a node, and curves keep them apart where right angles would overlap
-  const [edgePath] = relation && source !== target ? [relation.edgePath]
+  const [edgePath, labelX, labelY] = relation && source !== target ? [relation.edgePath]
     : data?.columnLineage
     ? getBezierPath({sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition})
     : getSmoothStepPath({
@@ -869,6 +869,15 @@ export const CustomEdge = ({
           {relation && <path style={{...style, fill: 'none'}} className="lineage-relation-foot" d={relation.footPath}/>}
         </g>
       </Tooltip>
+      {/* an edge of a collapsed grouping box says how many edges it stands for */}
+      {(data?.groupCount ?? 0) > 1 && labelX !== undefined &&
+        <EdgeLabelRenderer>
+          <div className="nodrag nopan lineage-group-edge-count" data-testid={`group-edge-count-${id}`}
+               style={{position: 'absolute', transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`}}>
+            {data!.groupCount}
+          </div>
+        </EdgeLabelRenderer>
+      }
       {(output || input) &&
         <EdgeLabelRenderer>
           {output &&
@@ -887,13 +896,4 @@ export const CustomEdge = ({
       }
     </>
   );
-}
-
-
-export const ParentNode = ({props}) => {
-  return (
-    <Box>
-      
-    </Box>
-  )
 }

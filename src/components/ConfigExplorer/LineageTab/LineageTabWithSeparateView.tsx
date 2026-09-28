@@ -2,8 +2,8 @@
     A newer version of the lineage tab under construction that has the following features:
 
     - Separated view for data objects and actions and the full graph
-    - Expand and collapse functionality based on the selected node / group
-    - Group view
+    - Expand and collapse functionality based on the selected node
+    - Grouping into boxes that can be collapsed, see the README
     - Customizable node and edge components
     - real-time informationfor nodes and edges, including, but not restricted to:
         1. progress bar
@@ -32,11 +32,14 @@ import Box from '@mui/material/Box';
 
 // local imports
 import { useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
-import { assignCoordinates } from '../../../util/ConfigExplorer/LineageLayout';
 import {
   expandNeighbours,
   flowProps,
   getGraph,
+  groupBoxMemberIds,
+  layoutFlow,
+  moveGroupBoxMembers,
+  revealGroupMember,
   recordManualMoves,
   prepareAndRenderGraph,
   resetEdgeStyles, resetNodeStyles,
@@ -51,6 +54,10 @@ import { useFetchColumnLineageIndex } from '../../../hooks/useFetchData';
 import { ColumnTracePanel } from './ColumnTracePanel';
 import CenteredCirularProgress from '../../Common/CenteredCircularProgress';
 import { CustomDataNode, CustomEdge } from './LineageGraphComponents';
+import { GroupBoxNode } from './GroupBoxNode';
+import { GROUP_BOX_TYPE, boxDataOf, isGroupBox } from '../../../util/ConfigExplorer/Grouping';
+
+const isOpenGroupBox = (node: ReactFlowNode) => isGroupBox(node) && !boxDataOf(node).collapsed;
 import LineageGraphToolbar from './LineageGraphToolbar';
 import { useWorkspace } from '../../../hooks/useWorkspace';
 import { useGraphWheelGestures } from '../../../hooks/useGraphWheelGestures';
@@ -60,6 +67,7 @@ import { useGraphWheelGestures } from '../../../hooks/useGraphWheelGestures';
 */
 const nodeTypes = {
   customDataNode: CustomDataNode,
+  [GROUP_BOX_TYPE]: GroupBoxNode,
 }
 
 const edgeTypes = {
@@ -88,7 +96,7 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
   // workaround to wait for reactflow div mounted, in order to get container width/height
   const [rfContainerMounted, setRfContainerMounted] = useState(false);
 
-  const { graphView: selectedGraphView, isExpanded, layout, layoutMode } = useLineageGraph();
+  const { graphView: selectedGraphView, isExpanded, layout, layoutMode, grouping } = useLineageGraph();
   // a graph passed in through the props brings its own view, the selector cannot switch it
   const graphView = props.graph ? (props.graphView ?? 'action') : selectedGraphView;
 
@@ -110,9 +118,9 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
     that is selected now, which is why the memo reads props but does not watch it.
   */
   const {nodes, edges, navigateTo} = useMemo(() => {
-    const prepared = prepareAndRenderGraph(reactFlow, {graphView, props, layout, layoutMode, isExpanded});
-    return {...prepared, nodes: assignCoordinates(prepared.nodes, prepared.edges, layout, {defaultWidth: nodeWidth, defaultHeight: nodeHeight})};
-  }, [isExpanded, graphView, layout, layoutMode, builtAround.elementName, builtAround.elementType,
+    const prepared = prepareAndRenderGraph(reactFlow, {graphView, props, layout, layoutMode, isExpanded, grouping});
+    return {...prepared, nodes: layoutFlow(prepared.nodes, prepared.edges, layout)};
+  }, [isExpanded, graphView, layout, layoutMode, grouping, builtAround.elementName, builtAround.elementType,
       props.configData, props.graph, props.graphView, props.runContext,
       props.nodeStatuses, props.edgeMetrics, props.nodeMetrics]);
 
@@ -165,6 +173,7 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
       return;
     }
     if (!reactFlow.getNode(props.elementName)) spliceNodePath(reactFlow, props, props.elementName, graphView, layout);
+    revealGroupMember(reactFlow, props.elementName, layout); // selected inside a collapsed box
     setSelectedNode(reactFlow, props.elementName);
     expandNeighbours(reactFlow, props, props.elementName, graphView, layout);
     updateExpandSides(reactFlow, props.elementName); // the sides face away from what is selected now
@@ -197,6 +206,11 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
     resetNodeStyles(reactFlow);
   }
 
+  // an open box covers the pane, so a click on it does what a click on the pane does
+  const onNodeClick = (_event, node: ReactFlowNode) => {
+    if (isOpenGroupBox(node)) onPaneClick();
+  }
+
   // highlight edge, its metric labels and src, target nodes' border
   const onEdgeClick = (_event, edge: ReactFlowEdge) => {
     setTracedColumn(undefined);
@@ -209,14 +223,29 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
     dragged rather than as a position, so the node still follows its neighbours when they move.
   */
   const dragStart = useRef(new Map<string, {x: number, y: number}>());
+  const dragLast = useRef(new Map<string, {x: number, y: number}>());
   const onNodeDragStart = (_event, _node: ReactFlowNode, dragged: ReactFlowNode[]) => {
     dragStart.current = new Map(dragged.map((node) => [node.id, {...node.position}]));
+    dragLast.current = new Map(dragStart.current);
+  }
+  // an open grouping box takes its members along
+  const onNodeDrag = (_event, _node: ReactFlowNode, dragged: ReactFlowNode[]) => {
+    dragged.filter(isOpenGroupBox).forEach((box) => {
+      const last = dragLast.current.get(box.id) ?? box.position;
+      moveGroupBoxMembers(reactFlow, box.id, {x: box.position.x - last.x, y: box.position.y - last.y});
+      dragLast.current.set(box.id, {...box.position});
+    });
   }
   const onNodeDragStop = (_event, _node: ReactFlowNode, dragged: ReactFlowNode[]) => {
-    recordManualMoves(reactFlow, new Map(dragged.map((node) => {
+    const moves = new Map<string, {x: number, y: number}>();
+    dragged.forEach((node) => {
       const from = dragStart.current.get(node.id) ?? node.position;
-      return [node.id, {x: node.position.x - from.x, y: node.position.y - from.y}];
-    })));
+      const move = {x: node.position.x - from.x, y: node.position.y - from.y};
+      // an open box has no place of its own, what is remembered is that its members moved
+      if (isOpenGroupBox(node)) groupBoxMemberIds(reactFlow.getNodes(), node.id).forEach((id) => moves.set(id, move));
+      else moves.set(node.id, move);
+    });
+    recordManualMoves(reactFlow, moves);
   }
 
   // without a center node - the run view shows the whole graph - the view is fitted on all nodes,
@@ -232,7 +261,9 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
           defaultEdges={edges}
           onEdgeClick={onEdgeClick}
           onPaneClick={onPaneClick}
+          onNodeClick={onNodeClick}
           onNodeDragStart={onNodeDragStart}
+          onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
           nodesConnectable={false}
           nodeTypes={nodeTypes}

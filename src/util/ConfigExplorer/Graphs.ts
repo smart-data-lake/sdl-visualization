@@ -549,52 +549,6 @@ export class DAGraph {
         }
         return [nodes, edges];
     }
-
-    // return a set of subgraphs spanned by the nodes associated to the given nodeIds. 
-    getConnectedNodeComponents(nodeIds: string[], G: DAGraph): Map<string, Node[]>{
-        const visited = new Set<string>();
-        const components = new Map<string, Node[]>();
-        let id = 0; // component id
-
-        const visit = (n: Node, currId: number) => {
-            visited.add(n.id);
-            if(!components.has(id.toString())){
-                components.set(id.toString(), [n]);
-            } else {
-                components.get(id.toString())!.push(n); // TODO: debug. current debug case does not have the zlr tag
-            }
-            const [neighbourNodes, _] = G.returnDirectNeighbours(n.id); 
-            neighbourNodes.forEach(node => {
-                if(nodeIds.includes(node.id) && !visited.has(node.id)){ // if result contains neighbour nodes
-                    visit(node, currId);
-                }
-            })
-        };
-
-        nodeIds.forEach(nid => {
-            if (!visited.has(nid)){
-                visit(this.getNodeById(nid)!, id);
-                id += 1;
-            }
-        });
-
-        return components;
-    }; 
-
-    getSubgroups(F: (node: Node, fargs: any) => any, args: any, 
-                 toGroupId?: (result: any, targs: any) => string, taggerArgs?: any): Map<string, Node[]>{
-        const groups = new Map<string, Node[]>();
-        this.nodes.forEach(node => {
-            const result = F(node, args);
-            const id = toGroupId ? `#${toGroupId(result, taggerArgs)}` : `#parentId: ${node.id}`; 
-            if(!groups.has(id)){
-                groups.set(id, [node]);
-            } else {
-                groups.get(id)!.push(node);
-            }
-        })
-        return groups;
-    }
 }
 
 /*
@@ -607,12 +561,15 @@ export class DAGraph {
 */
 export const isColumnLineageEdge = (edge: ReactFlowEdge) => edge.data?.columnLineage !== undefined;
 
+// the edges of a collapsed grouping box are derived like the column lineage edges, see groupFlowEdges
+const isDerivedEdge = (edge: ReactFlowEdge) => isColumnLineageEdge(edge) || edge.id.startsWith('group-edge:');
+
 function getFwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEdge[]{
-    return edges.filter(e => e.source === node.data.label && !isColumnLineageEdge(e));
+    return edges.filter(e => e.source === node.data.label && !isDerivedEdge(e));
 }
 
 function getBwdRfEdges(node: ReactFlowNode, edges: ReactFlowEdge[]): ReactFlowEdge[]{
-    return edges.filter(e => e.target === node.data.label && !isColumnLineageEdge(e))
+    return edges.filter(e => e.target === node.data.label && !isDerivedEdge(e))
 }
 
 export interface RfNodeDataUpdate {
@@ -1021,33 +978,6 @@ export function setRfNodeSize(rfi: ReactFlowInstance, nodeId: string, size: {wid
     rfi.setNodes(nodes => nodes.map(node => node.id === nodeId
         ? {...node, style: {...node.style, width: size.width, height: size.height}}
         : node));
-}
-
-export function dagreLayoutRf(nodes: ReactFlowNode[], edges: ReactFlowEdge[], direction: string, nodeWidth: number = 172, nodeHeight: number = 36): ReactFlowNode[] {
-    
-    //instantiate dagre Graph
-    const dagreGraph = new dagre.graphlib.Graph();
-    dagreGraph.setGraph({});
-    dagreGraph.setDefaultEdgeLabel(function() { return {}; });
-
-    // set graph layout and the minimum between-node distance, ranksep is needed for computing all node distances
-    dagreGraph.setGraph({ rankdir: direction, nodesep: 150, ranksep: 150});
-    
-    //add nodes + edges to the graph and calculate layout
-    nodes.forEach((node)=> dagreGraph.setNode(node.id, rfNodeSize(node, nodeWidth, nodeHeight)));
-    edges.forEach((edge) => dagreGraph.setEdge(edge.source, edge.target));
-    dagre.layout(dagreGraph); 
-
-    // Shift the dagre node position (anchor=center center) to the top left, so that it matches the
-    // React Flow node anchor point - as dagreLayout does. With one size for every node that is a
-    // constant shift of the whole graph, but nodes showing their columns have different heights.
-    nodes.forEach((node) => {
-        const nodeWithPosition = dagreGraph.node(node.id);
-        const {width, height} = rfNodeSize(node, nodeWidth, nodeHeight);
-        node.position = {x: nodeWithPosition.x - width / 2, y: nodeWithPosition.y - height / 2};
-    });
-
-    return nodes;
 }
 
   

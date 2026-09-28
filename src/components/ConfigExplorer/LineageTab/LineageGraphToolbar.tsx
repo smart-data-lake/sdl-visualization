@@ -1,4 +1,4 @@
-import { Abc, AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull, Search, Send, FilterList } from '@mui/icons-material';
+import { AlignVerticalTop, Apps, ArrowDropDown, Clear, FitScreen, OpenInFull, Search, FilterList, UnfoldLess, UnfoldMore } from '@mui/icons-material';
 import AlignHorizontalLeft from '@mui/icons-material/AlignHorizontalLeft';
 import BubbleChartOutlined from '@mui/icons-material/BubbleChartOutlined';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
@@ -13,7 +13,7 @@ import ToggleButtonGroup from '@mui/joy/ToggleButtonGroup';
 import * as React from 'react';
 import { ReactElement } from 'react';
 
-import { Autocomplete, Button, Divider, Dropdown, IconButton, Input, ListItemDecorator, Menu, MenuButton, MenuItem, Tooltip, Checkbox, Select, Option } from '@mui/joy';
+import { Autocomplete, Button, Divider, Dropdown, IconButton, Input, ListDivider, ListItemDecorator, ListSubheader, Menu, MenuButton, MenuItem, Tooltip, Checkbox, Select, Option } from '@mui/joy';
 // import Option from '@mui/joy/Option';
 import Box from '@mui/material/Box';
 import { toPng } from 'html-to-image';
@@ -22,7 +22,9 @@ import { useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { LayoutChoice, nodeAttributes, useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
-import { flowProps, getGraphFromConfig, groupByFeed, groupBySubstring, recomputeLayout, resetLayout, resetViewPort, resetViewPortCentered, restoreGroupSettings, restoreGroupSettingsBySubgroup } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { flowProps, resetLayout, resetViewPort, resetViewPortCentered, revealGroupMember, setAllGroupBoxesCollapsed } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { GROUP_ATTRIBUTE_LABELS, GroupAttribute, isGroupBox, isGrouping } from '../../../util/ConfigExplorer/Grouping';
+import { GROUP_ATTRIBUTE_ICONS } from './GroupBoxNode';
 
 /*
   Styling
@@ -255,85 +257,53 @@ function ResetLayoutButton() {
     )
 }
 
-function GroupingButton({props: lineageTabProps}: {props: flowProps}) {
+// box the nodes by an attribute along and across the flow; changing it rebuilds the node set, like the layout direction
+function GroupingButton() {
     const rfi = useReactFlow();
-    const { graphView, layout, layoutMode, isExpanded } = useLineageGraph();
-    const configData = lineageTabProps.configData;
-
-    const [showByNameSelector, setShowByNameSelector] = useState(false);
-    const [groupingOption, setGroupingOption] = useState<string>();
-    const [groupingRoutine, setGroupingRoutine] = useState<'components' | 'subgroups'>();
-
-    // TODO: consider interaction with other buttons
-    const handleReset = () => {
-        groupingRoutine === 'components' ? restoreGroupSettings(rfi)
-                                         : restoreGroupSettingsBySubgroup(rfi, {graphView, props: lineageTabProps, layout, layoutMode, isExpanded});
-        setGroupingOption(undefined);
-        setGroupingRoutine(undefined);
-        recomputeLayout(rfi, layout);
-    }
-
-    const handleApplyByName = (ev: React.FormEvent<HTMLFormElement>) => {
-        ev.preventDefault();
-        const name = ev.currentTarget.elements['name'].value;
-        if (name && name.length>0) {
-            setGroupingOption('byName');
-            groupBySubstring(rfi, getGraphFromConfig(configData, graphView), {substring: name});
-        }
-        setOpen(false);
-        setShowByNameSelector(false);
-    }
-
-    const handleApplyByFeed = () => {
-        setGroupingOption('byFeed');
-        groupByFeed(rfi, getGraphFromConfig(configData, graphView), layout);
-    }
+    const { graphView, layout, layoutMode, grouping, setGrouping } = useLineageGraph();
+    // foreign keys are not a flow, and a force layout has no lanes or columns to keep boxes apart
+    const unavailable = graphView === 'relations' || layoutMode === 'force';
 
     const [open, setOpen] = React.useState(false);
-    const handleOpenChange = React.useCallback((event: React.SyntheticEvent | null, isOpen: boolean) => {
-        setOpen(isOpen);
-        setShowByNameSelector(false);
-    }, []);
+    const handleOpenChange = React.useCallback((_event: React.SyntheticEvent | null, isOpen: boolean) => setOpen(isOpen), []);
+
+    const option = (axis: 'along' | 'across', attribute: GroupAttribute | undefined) => {
+        const Icon = attribute ? GROUP_ATTRIBUTE_ICONS[attribute] : Clear;
+        return (
+            <MenuItem key={`${axis}-${attribute ?? 'none'}`} selected={grouping[axis] === attribute}
+                      onClick={() => setGrouping({...grouping, [axis]: attribute})} sx={{ outline: '0 !important' }}>
+                <ListItemDecorator><Icon/></ListItemDecorator>
+                {attribute ? GROUP_ATTRIBUTE_LABELS[attribute] : 'None'}
+            </MenuItem>
+        );
+    };
 
     return (
         <Dropdown open={open} onOpenChange={handleOpenChange}>
-            <MenuButton  endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />} sx={{ padding: 1, outline: '0 !important' }}>
-                <Tooltip arrow title='EXPERIMENTAL: Show grouping options' enterDelay={500} enterNextDelay={500} placement='top'>
-                    <WorkspacesIcon />
+            <MenuButton disabled={unavailable} endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />}
+                        sx={{ padding: 1, outline: '0 !important' }} aria-label='Grouping'>
+                <Tooltip arrow title={unavailable ? 'Grouping needs a layered layout of a flow' : 'Group nodes into boxes'}
+                         enterDelay={500} enterNextDelay={500} placement='top'>
+                    <WorkspacesIcon color={isGrouping(grouping) ? 'primary' : undefined}/>
                 </Tooltip>
             </MenuButton>
-            <Menu sx={{'--ListItemDecorator-size': '20px', overflow: 'visible' }}>
-                {/* this is a normal button to avoid closing the dropdown */}
-                <Button className='byName' onClick={() => setShowByNameSelector(true)} sx={{backgroundColor: (groupingOption=='byName' ? '#e6eef7' : 'white')}}>
-                    <Tooltip arrow title='group by name' enterDelay={500} enterNextDelay={500} placement='right'>
-                        <ListItemDecorator>
-                            <Abc />
-                        </ListItemDecorator>
-                    </Tooltip>
-                </Button>
-                {/* this is an improvised "submenu" showing an input box for the name */}
-                {showByNameSelector &&
-                    <Box position="absolute" top={5} left={55} >
-                        <form onSubmit={ev => handleApplyByName(ev)}>
-                            <Input id="name" size="sm" sx={{width: 200}} autoFocus placeholder='Name substring...' endDecorator={<IconButton type="submit" size="sm"><Send/></IconButton>}/>
-                        </form>
-                    </Box>
-                }
-                <Tooltip arrow title='group by feed (only enabled if "action graph view" is selected)' enterDelay={500} enterNextDelay={500} placement='right'>
-                    <span>{/* <span> is used to show tooltip also if MenuItem is disabled */}
-                        <MenuItem className='byFeed' selected={groupingOption === 'byFeed'} onClick={handleApplyByFeed} disabled={graphView !== 'action'} sx={{ outline: '0 !important' }}>
-                            <ListItemDecorator>
-                                <SchemaIcon />
-                            </ListItemDecorator>
-                        </MenuItem>
-                    </span>
-                </Tooltip>
-                <MenuItem onClick={handleReset} sx={{ outline: '0 !important' }}>
-                    <ListItemDecorator>
-                        <Tooltip arrow title='reset grouping' enterDelay={500} enterNextDelay={500} placement='right'>
-                            <Clear />
-                        </Tooltip>
-                    </ListItemDecorator>
+            {/* dense: a small list with tight rows, headers and dividers */}
+            <Menu size="sm" sx={{'--ListItemDecorator-size': '24px', '--ListItem-minHeight': '26px', '--ListDivider-gap': '2px',
+                                 '--ListItem-paddingY': '0px', py: 0.5, '& .MuiSvgIcon-root': {fontSize: 18}}}>
+                <ListSubheader sx={{minHeight: '22px'}}>{layout === 'LR' ? 'Rows' : 'Columns'} along the flow</ListSubheader>
+                {option('along', undefined)}
+                {option('along', 'feed')}
+                {option('along', 'subjectArea')}
+                <ListDivider/>
+                <ListSubheader sx={{minHeight: '22px'}}>{layout === 'LR' ? 'Columns' : 'Rows'} across the flow</ListSubheader>
+                {option('across', undefined)}
+                {option('across', 'layer')}
+                <ListDivider/>
+                <MenuItem disabled={!isGrouping(grouping)} onClick={() => setAllGroupBoxesCollapsed(rfi, true, layout)}>
+                    <ListItemDecorator><UnfoldLess/></ListItemDecorator>Collapse all
+                </MenuItem>
+                <MenuItem disabled={!isGrouping(grouping)} onClick={() => setAllGroupBoxesCollapsed(rfi, false, layout)}>
+                    <ListItemDecorator><UnfoldMore/></ListItemDecorator>Expand all
                 </MenuItem>
             </Menu>
         </Dropdown>
@@ -396,6 +366,7 @@ function NodeAttributeSelector() {
 
 export const NodeSearchButton = () => {
     const rfi = useReactFlow();
+    const { layout } = useLineageGraph();
     const [elementSearchText, setElementSearchText] = useState("");
     const [suggestions, setSuggestions] = useState<any>([]);
 
@@ -407,29 +378,11 @@ export const NodeSearchButton = () => {
         const nodeIdLower = node.id.toLowerCase();
         let match = false;
 
-        const innerExpr = "((prefix|suffix|includes):)?((?!children).*)";
-        const groupMatch = text.match(new RegExp(`^group:${innerExpr}$`));
-        const childrenMatch = text.match(new RegExp(`^group:children:(.*)$`));
         const prefixMatch = text.match(/^prefix:(.*)$/);
         const suffixMatch = text.match(/^suffix:(.*)$/);
         const includesMatch = text.match(/^includes:(.*)$/);
 
-        if (groupMatch) {
-            const [, , groupType, groupName] = groupMatch;
-            if (!groupType && !groupName) {
-                // Matches all group nodes
-                match = node.type === 'group';
-            } else if (groupType === 'prefix') {
-                match = node.type === 'group' && nodeIdLower.startsWith(groupName.toLowerCase());
-            } else if (groupType === 'suffix') {
-                match = node.type === 'group' && nodeIdLower.endsWith(groupName.toLowerCase());
-            } else if (groupType === 'includes') {
-                match = node.type === 'group' && nodeIdLower.includes(groupName.toLowerCase());
-            }
-        } else if (childrenMatch) {
-            const [, groupName] = childrenMatch;
-            match = node.parentId === groupName;
-        } else if (prefixMatch) {
+        if (prefixMatch) {
             const [, prefix] = prefixMatch;
             match = nodeIdLower.startsWith(prefix.toLowerCase());
         } else if (suffixMatch) {
@@ -453,7 +406,7 @@ export const NodeSearchButton = () => {
                 .filter(node => regexSearch(node, elementSearchText))
                 .map(node => ({
                     id: node.id,
-                    type: node.type === 'group' ? 'Parent Node' : 'Non-Parent Node',
+                    type: isGroupBox(node) ? 'Groups' : 'Elements',
                 }));
             setSuggestions(filteredSuggestions);
         } else {
@@ -464,6 +417,8 @@ export const NodeSearchButton = () => {
 
     const handleSuggestionClick = (_, suggestion) => {
         if (suggestion) {
+            // a node inside a collapsed box is shown first
+            revealGroupMember(rfi, suggestion.id, layout);
             const rfNode = rfi.getNode(suggestion.id)!;
             resetViewPortCentered(rfi, [rfNode]);
             setOpen(false);
@@ -527,7 +482,7 @@ export default function LineageGraphToolbar({props}: {props: flowProps}) {
                     <ToggleButtonGroup variant="plain" spacing={0.1}>
                         {showCenterNodeOptions && isPropsConfigDefined && <GraphExpansionButton />}
                         {showCenterNodeOptions && <GraphViewSelector props={props} />}
-                        {isPropsConfigDefined && <GroupingButton props={props} />}
+                        {isPropsConfigDefined && <GroupingButton />}
                         {isPropsConfigDefined && <NodeAttributeSelector />}
                     </ToggleButtonGroup>
                 </>}
