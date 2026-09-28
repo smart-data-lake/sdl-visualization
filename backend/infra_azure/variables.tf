@@ -126,6 +126,27 @@ variable "static_site_sku" {
   }
 }
 
+variable "live_updates" {
+  description = <<-EOT
+    Whether to create an Azure Web PubSub instance, so an open run view updates while
+    SDLB uploads the run's state, instead of on a click on refresh. Off by default
+    because the Free tier exists once per subscription.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "web_pubsub_sku" {
+  description = "Free_F1 (20 concurrent connections, 20 000 messages a day) or Standard_S1."
+  type        = string
+  default     = "Free_F1"
+
+  validation {
+    condition     = contains(["Free_F1", "Standard_S1", "Premium_P1"], var.web_pubsub_sku)
+    error_message = "web_pubsub_sku must be \"Free_F1\", \"Standard_S1\" or \"Premium_P1\"."
+  }
+}
+
 variable "network_isolation" {
   description = <<-EOT
     How reachable the storage account is. A ladder, cheapest first.

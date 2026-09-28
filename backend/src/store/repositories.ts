@@ -149,6 +149,13 @@ export interface RunRepository {
   listRunElements(scope: Scope, ref: ElementRef, limit: number): Promise<RunElementRecord[]>;
 }
 
+/** Which workflows a UI is watching, so an upload only publishes a notification someone will receive. */
+export interface LiveRepository {
+  register(scope: Scope, workflow: string, expiresAt: string): Promise<void>;
+  /** When the registration of a workflow expires, or undefined if it has none. */
+  expiresAt(scope: Scope, workflow: string): Promise<string | undefined>;
+}
+
 export interface Repositories {
   runs: RunRepository;
   scopes: ScopeRepository;
@@ -156,6 +163,7 @@ export interface Repositories {
   tokens: TokenRepository;
   schemaStats: SchemaStatsRepository;
   configs: ConfigRepository;
+  live: LiveRepository;
 }
 
 let resolved: Promise<Repositories> | undefined;

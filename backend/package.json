@@ -30,6 +30,7 @@
     "@azure/data-tables": "^13.3.2",
     "@azure/identity": "^4.13.2",
     "@azure/storage-blob": "^12.33.0",
+    "@azure/web-pubsub": "^1.2.0",
     "@fastify/cors": "^11.3.0",
     "@fastify/multipart": "^10.1.1",
     "@modelcontextprotocol/client": "^2.0.0",

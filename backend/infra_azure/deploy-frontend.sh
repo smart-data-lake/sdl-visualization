@@ -169,6 +169,10 @@ api_base_url="$(terraform_output -raw api_base_url || true)"
 api_origin="$(sed -E 's#^(https?://[^/]+).*#\1#' <<<"$api_base_url")"
 info "API:            $api_base_url"
 
+# Live updates arrive over a WebSocket to Web PubSub, when the deployment has it.
+live_origin="$(terraform_output -raw live_updates_origin || true)"
+[[ -n "$live_origin" ]] && info "live updates:   $live_origin"
+
 # The browser posts the authorization code straight to the workspace's token
 # endpoint, so those origins have to be in connect-src alongside the API.
 databricks_hosts_json="$(terraform_output -json databricks_hosts || echo '[]')"
@@ -356,6 +360,7 @@ log 'Rendering staticwebapp.config.json'
 # its origins are only known after apply: the API, and the workspaces the browser
 # reaches during sign-in.
 sed -e "s#__API_ORIGIN__#$api_origin#" \
+    -e "s#__LIVE_ORIGIN__#$live_origin#" \
     -e "s#__DATABRICKS_ORIGINS__#$databricks_origins#" \
     "$CONFIG_TEMPLATE" > "$staging/staticwebapp.config.json"
 
@@ -365,7 +370,7 @@ if grep -q '__[A-Z_]*__' "$staging/staticwebapp.config.json"; then
   die "unsubstituted placeholder in $staging/staticwebapp.config.json: $(grep -o '__[A-Z_]*__' "$staging/staticwebapp.config.json" | sort -u | tr '\n' ' ')"
 fi
 jq -e . "$staging/staticwebapp.config.json" >/dev/null || die 'the rendered config is not valid JSON.'
-info "connect-src:    'self' $api_origin $databricks_origins"
+info "connect-src:    'self' $api_origin $live_origin $databricks_origins"
 
 if (( package_only )); then
   log "Done - not uploading (--package-only). The artefact is $staging"

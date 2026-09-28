@@ -92,6 +92,15 @@ keeps the state in a storage account rather than in the working tree. It is an
 example rather than an installed workflow on purpose; deploying from a laptop is the
 supported path.
 
+## Live updates
+
+`live_updates = true` adds an Azure Web PubSub instance (`live_updates.tf`, `web_pubsub_sku`,
+default `Free_F1`: 20 connections, 20 000 messages a day, one per subscription), so an open run
+view follows SDLB's uploads. Local auth is off; the app holds `Web PubSub Service Owner`.
+Its endpoint stays public whatever `network_isolation` says, because browsers connect to it,
+and `deploy-frontend.sh` adds it to `connect-src` - so redeploy the frontend after turning it
+on. How it works is in the Live updates section of `backend/README.md`.
+
 ## What is in here
 
 | | |

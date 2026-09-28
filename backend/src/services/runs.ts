@@ -11,6 +11,7 @@ import { blobPaths, readJson, writeJson } from '../store/blobs.js';
 import type { StateFile, TaskStatus, Workflow, WorkflowRun } from '../domain/types.js';
 import { aggregateRunStatus, normalizeStateFile, runElementFacts, toWorkflowRun } from '../domain/stateFile.js';
 import { registerScope } from './scope.js';
+import { notifyRunChanged } from '../notify/index.js';
 import { truncate } from '../store/limits.js';
 import { badRequest, notFound } from '../errors.js';
 
@@ -48,6 +49,7 @@ export async function putState(scope: Scope, raw: unknown): Promise<{ name: stri
   await writeJson(path, stateFile);
   await indexState(scope, stateFile);
   await registerScope(scope);
+  await notifyRunChanged(scope, name, stateFile.runId, stateFile.attemptId);
   return { name, runId: stateFile.runId, attemptId: stateFile.attemptId };
 }
 
@@ -77,6 +79,7 @@ export async function patchState(
   const normalized = normalizeStateFile(stateFile);
   await writeJson(path, normalized);
   await indexState(scope, normalized);
+  await notifyRunChanged(scope, name, runId, attemptId);
 }
 
 async function indexState(scope: Scope, stateFile: StateFile): Promise<void> {

@@ -1,6 +1,7 @@
 import { LicenseInfo, SchemaData, StateFile, Stats, TstampEntry, User, Workflow, WorkflowRun } from "../types";
 import { ConfigData } from "../util/ConfigExplorer/ConfigData";
 import type { ColumnLineage, ColumnLineageIndex } from "../util/ConfigExplorer/columnLineage";
+import type { LiveStatus } from "./liveUpdates";
 
 /**
  * The fetchApi interface is the skeletton for any API implementation. It methods must be implemented to create entry points for the data sources used by the UI.
@@ -56,6 +57,15 @@ export interface fetchAPI {
      */
     uploadUrl?: (tenant: string, repo: string, env: string) => string;
 
+    /**** Live updates ****/
+
+    /**
+     * Calls onChange whenever the backend reports that a run of the workflow changed, and with
+     * undefined after a reconnect, when anything may have; onStatus follows the connection.
+     * Returns the unsubscribe function.
+     */
+    subscribeWorkflowUpdates?: (tenant: string, repo: string, env: string, workflow: string, onChange: (change: RunChange | undefined) => void, onStatus?: (status: LiveStatus) => void) => () => void;
+
     /**** Global search ****/
 
     /**
@@ -71,6 +81,13 @@ export interface fetchAPI {
     getColumnLineage?: (lineageTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => Promise<ColumnLineage[] | undefined>;
     /** Every column dependency of the scope, or undefined where no index was built - a normal state. */
     getColumnLineageIndex?: (tenant: string, repo: string, env: string) => Promise<ColumnLineageIndex | undefined>;
+}
+
+/** The notification the backend publishes per upload: which attempt to refetch, not its content. */
+export interface RunChange {
+    application: string;
+    runId: number;
+    attemptId: number;
 }
 
 /** What GET /search/index returns: the serialized MiniSearch plus what is in it. */

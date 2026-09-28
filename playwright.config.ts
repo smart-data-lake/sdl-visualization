@@ -28,6 +28,9 @@ const viteCmd = 'yarn vite --config vite.config.e2e.ts';
  */
 const EXPORTED_ONLY = ['**/exported-config.spec.ts', '**/search-index.spec.ts'];
 
+/** Specs that need the backend: live updates are pushed by it, so no static fixture has them. */
+const AZURE_ONLY = ['**/live-updates.spec.ts'];
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -51,7 +54,7 @@ export default defineConfig({
   projects: [
     {
       name: 'hocon',
-      testIgnore: EXPORTED_ONLY,
+      testIgnore: [...EXPORTED_ONLY, ...AZURE_ONLY],
       use: { baseURL: 'http://localhost:3000' },
     },
     {

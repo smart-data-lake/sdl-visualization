@@ -78,6 +78,9 @@ Copy `local.settings.json.example` to `local.settings.json`.
 | `SDLB_AUTH_MODE` | `databricks`, or `disabled` for local work |
 | `SDLB_DATABRICKS_HOSTS` | comma-separated workspace origins that may use this deployment |
 | `SDLB_AUTH_CACHE_TTL_SECONDS` | how long a verified token is trusted, default 300 |
+| `SDLB_LIVE_UPDATES` | `webpubsub`, `sse` or `none`: where upload notifications go, see [Live updates](#live-updates). Default `webpubsub` when an endpoint is set, otherwise `none`; `yarn serve` defaults to `sse` |
+| `SDLB_WEBPUBSUB_ENDPOINT` | `https://<name>.webpubsub.azure.com`, reached with the managed identity |
+| `SDLB_WEBPUBSUB_HUB` | default `sdlb` |
 
 ## Authentication with Databricks
 
@@ -369,6 +372,38 @@ Things that are easy to get wrong, and fail quietly:
   of it. **Set `stagePath`**: it turns a missed upload into a retry on the next run
   instead of a failed job, and it is free. Raising `global.uiBackend.timeouts` or
   keeping an instance warm are the more expensive answers to the same problem.
+
+## Live updates
+
+An open run view or run history follows what SDLB uploads, without polling (issue #131). Polling
+would cost a Function call per open view per interval, and an event stream held open by a Function
+is billed for as long as it is open, so the push goes through a service built for it:
+
+1. The view calls `POST /api/v1/live/register?tenant&repo&env&application`. The backend writes a
+   registration for that workflow, valid for 30 minutes, and answers with a URL to connect to. The
+   view renews it after two thirds of that, and `url` is `null` where no driver is configured.
+2. Every `POST` and `PATCH /state` of a registered workflow publishes
+   `{type: 'runChanged', application, runId, attemptId}` - which attempt changed, not its content.
+   That happens inside the upload call SDLB already makes, so it costs no extra Function call; for
+   a workflow nobody watches nothing is published. Whether one is watched is cached per instance
+   (until the registration expires, or 10 seconds for "not watched"), so most uploads read nothing.
+3. The view waits 1.5 seconds for more of them, since SDLB starts a stage's actions in the same
+   millisecond, and then refetches through the ordinary REST routes (`useLiveWorkflowUpdates`).
+   While connected, the refresh button carries a dot: green while the workflow has a run in
+   progress, grey once it has finished. Without a connection it is a plain refresh button, and a
+   click refreshes in either case.
+
+A failed notification is logged and never fails the upload. The drivers live in `src/notify/`:
+
+- `webpubsub` - Azure Web PubSub, the deployment's (`live_updates = true` in `infra_azure`). The
+  client token joins its group on connect, so the browser opens a plain WebSocket and sends nothing.
+  The app authenticates with its identity (`Web PubSub Service Owner`), local auth is off. Browsers
+  connect to it directly, which is why its public endpoint stays on in every `network_isolation`
+  mode, and why `deploy-frontend.sh` puts its origin into `connect-src`.
+- `sse` - server-sent events from the process itself, with a URL token signed by a per-process
+  secret, since `EventSource` cannot send a header. For `yarn serve` and the e2e suite only: it
+  works on one process, and a Function should not hold streams open.
+- `none` - `register` answers `{url: null}` and the views keep their refresh button only.
 
 ## What gets deployed, and cold start
 

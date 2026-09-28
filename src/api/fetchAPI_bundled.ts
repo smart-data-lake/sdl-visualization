@@ -1,6 +1,7 @@
 import { getAuthHeaders } from "../auth/tokenProvider";
 import { LicenseInfo, User, WorkflowRun } from "../types";
-import { BackendCapabilities, McpToken } from "./fetchAPI";
+import { BackendCapabilities, McpToken, RunChange } from "./fetchAPI";
+import { LiveRegistration, LiveStatus, subscribeLive } from "./liveUpdates";
 import { fetchAPI_rest, processWorkflowHistory } from "./fetchAPI_rest";
 
 /**
@@ -116,6 +117,15 @@ export class fetchAPI_bundled extends fetchAPI_rest {
     getLicenses = async (): Promise<LicenseInfo> => ({});
 
     capabilities = (): BackendCapabilities => ({ userManagement: false, mcpTokens: true });
+
+    /**** Live updates ****/
+
+    subscribeWorkflowUpdates = (tenant: string, repo: string, env: string, workflow: string, onChange: (change: RunChange | undefined) => void, onStatus?: (status: LiveStatus) => void): () => void => {
+        const query = new URLSearchParams({ tenant, repo, env, application: workflow });
+        const register = (): Promise<LiveRegistration> =>
+            this.fetch(`${this.url}/live/register?${query}`, this.getRequestInfo("POST"));
+        return subscribeLive(register, onChange, onStatus);
+    };
 
     /**** MCP access ****/
 

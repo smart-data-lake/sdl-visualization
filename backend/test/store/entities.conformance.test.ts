@@ -407,6 +407,18 @@ describe.each(DRIVERS)('$name', ({ create }) => {
     });
   });
 
+  describe('live registrations', () => {
+    test('a registration is renewed in place and kept apart per workflow', async () => {
+      const scope = freshScope();
+      expect(await store.live.expiresAt(scope, 'wf')).toBeUndefined();
+      await store.live.register(scope, 'wf', '2026-01-01T00:00:00.000Z');
+      await store.live.register(scope, 'wf', '2026-01-01T00:30:00.000Z');
+      expect(await store.live.expiresAt(scope, 'wf')).toBe('2026-01-01T00:30:00.000Z');
+      expect(await store.live.expiresAt(scope, 'other')).toBeUndefined();
+      expect(await store.live.expiresAt(freshScope(), 'wf')).toBeUndefined();
+    });
+  });
+
   describe('scopes and workflows', () => {
     test('registering a scope makes its repo and env findable', async () => {
       const scope = freshScope();

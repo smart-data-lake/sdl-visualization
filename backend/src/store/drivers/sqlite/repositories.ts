@@ -1,5 +1,6 @@
 import type {
   ConfigRepository,
+  LiveRepository,
   Repositories,
   RunRepository,
   SchemaStatsRepository,
@@ -189,6 +190,31 @@ function tokenRepository(db: Db): TokenRepository {
         id,
         last_used_at: at,
       });
+    },
+  };
+}
+
+/* --------------------------------------------------------------------- live */
+
+function liveRepository(db: Db): LiveRepository {
+  return {
+    async register(scope: Scope, workflow: string, expiresAt: string): Promise<void> {
+      db.upsert('live_registrations', ['repo', 'env', 'workflow'], {
+        ...scopeOf(scope),
+        workflow: assertKeyPart(workflow, 'workflow'),
+        expires_at: expiresAt,
+      });
+    },
+
+    async expiresAt(scope: Scope, workflow: string): Promise<string | undefined> {
+      const { repo, env } = scopeOf(scope);
+      const row = db.get<{ expires_at: string | null }>(
+        'SELECT expires_at FROM live_registrations WHERE repo = ? AND env = ? AND workflow = ?',
+        repo,
+        env,
+        workflow,
+      );
+      return opt(row?.expires_at ?? null);
     },
   };
 }
@@ -702,5 +728,6 @@ export function buildRepositories(db: Db): Repositories {
     tokens: tokenRepository(db),
     schemaStats: schemaStatsRepository(db),
     configs: configRepository(db),
+    live: liveRepository(db),
   };
 }

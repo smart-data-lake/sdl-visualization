@@ -5,11 +5,13 @@ import { useWorkspace } from "../../../hooks/useWorkspace";
 import NotFound from "../../../layouts/NotFound";
 import PageHeader from "../../../layouts/PageHeader";
 import { compareMultiFunc } from "../../../util/helpers";
-import Attempt, { updateStateFile } from "../../../util/WorkflowsExplorer/Attempt";
+import Attempt, { isRunning, updateStateFile } from "../../../util/WorkflowsExplorer/Attempt";
 import CenteredCircularProgress from "../../Common/CenteredCircularProgress";
 import TabNav from "./Tabs";
 import { useQueryClient } from "react-query";
 import { Sheet } from "@mui/joy";
+import { useMemo } from "react";
+import { useLiveWorkflowUpdates } from "../../../hooks/useLiveWorkflowUpdates";
 
 /**
     The Run component displays information about a specific run of a workflow.
@@ -22,14 +24,16 @@ const Run = () => {
     const {flowId, runIdAttempt} = useParams();
     const [runId,attemptNb] = runIdAttempt!.split(".").map(x => parseInt(x));
     const userContext = useUser();
-    const { data, isLoading, isFetching, refetch } = useFetchRun(flowId!, runId!, attemptNb!, !userContext || userContext.authenticated);
-	const { data: runs } = useFetchWorkflowRuns(flowId!, !userContext || userContext.authenticated);
+    const enabled = !userContext || userContext.authenticated;
+    const { data, isLoading, refetch } = useFetchRun(flowId!, runId!, attemptNb!, enabled);
+	const { data: runs } = useFetchWorkflowRuns(flowId!, enabled);
 	const {navigateContent} = useWorkspace();
     const queryClient = useQueryClient();
+    const live = useLiveWorkflowUpdates(flowId, enabled, !!data && isRunning(data));
+    const attempt = useMemo(() => data ? new Attempt(updateStateFile(data)) : undefined, [data]);
 
-    if (isLoading || isFetching) return <CenteredCircularProgress/>
-    
-    const attempt = (data ? new Attempt(updateStateFile(data)) : undefined);
+    // only the first load: a refetch keeps showing the attempt until the new state arrives
+    if (isLoading) return <CenteredCircularProgress/>
     
 	function refreshData() {
 		refetch();
@@ -49,7 +53,7 @@ const Run = () => {
 
     return (
 		<Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>
-            <PageHeader title= {(attempt? flowId + ': ' : '') + 'run ' + runId + ' attempt ' + attemptNb} enablePrevNext={true} prevNavigate={prevNavigate} nextNavigate={nextNavigate} refresh={refreshData} />
+            <PageHeader title= {(attempt? flowId + ': ' : '') + 'run ' + runId + ' attempt ' + attemptNb} enablePrevNext={true} prevNavigate={prevNavigate} nextNavigate={nextNavigate} refresh={refreshData} live={live} />
             {attempt ? <TabNav attempt={attempt}/> : <NotFound errorType={500} errorMessage={'run ' + runId + ' attempt ' + attemptNb + " not found!"}/>}
         </Sheet>    
     );
