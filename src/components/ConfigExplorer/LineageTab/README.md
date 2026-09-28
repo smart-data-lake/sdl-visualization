@@ -29,8 +29,9 @@ no way to turn it into a data object without guessing, and a wrong relation is w
 key naming a data object this configuration does *not* describe — one filtered away by a feed
 selection, say — keeps its reference and renders as unresolved.
 
-Everything downstream of `getGraphFromConfig` — centering, expand and collapse, grouping, layout,
-search, the PNG download — works on all four, because all four are a `DAGraph`. The relations graph
+Everything downstream of `getGraphFromConfig` — centering, expand and collapse, layout, search, the
+PNG download — works on all four, because all four are a `DAGraph`. Grouping works on the three
+views of the flow, see *Grouping*. The relations graph
 is the one that is **not acyclic**: foreign keys point in circles (orders reference customers,
 customers reference their latest order), so the traversals in `Graphs.ts` carry a visited set.
 
@@ -110,7 +111,7 @@ graph and silently loses every one of those overrides — handle cursors and off
 
 ## Where the state lives
 
-- **Toolbar settings** are React context (`useLineage.tsx`). A change to one of them rebuilds the
+- **Toolbar settings** are React context (`useLineage.tsx`), the grouping among them. A change to one of them rebuilds the
   node set, which is handed to the live flow rather than re-creating it, so per-node state that has
   to survive that still cannot live there.
 - **How much of its columns a node shows** is `rfNode.data.columnDisplay`, written through
@@ -196,22 +197,87 @@ made at the other. The offset is applied *before* the anchoring, which compares 
 actually are. A rebuild - a new graph view, direction or the expand-all toggle - creates new nodes
 and so starts without offsets.
 
-Two things this does not cover, deliberately:
-
-- **Grouping boxes own their children's coordinates** (`computeNodePositionFromParent` makes them
-  parent-relative), and that only works because dagre had just written them as absolute. Where the
-  flow holds group nodes (`isGrouped`), expand, collapse and re-layout keep the old `dagreLayoutRf`
-  path. `dagreLayoutRf` stays for that, and for `tests/graph.test.ts`.
-- **The toolbar's *Reset layout* button** is the escape hatch: `resetLayout` closes the columns of
-  every node (and forgets that they were open), forgets every manual move and lays the nodes shown
-  out from the model again - which nodes are shown does not change. The arrangement only ever grows as the
-  user explores, and only they take it apart; that button is how it is reset.
+**The toolbar's *Reset layout* button** is the escape hatch: `resetLayout` closes the columns of
+every node (and forgets that they were open), forgets every manual move and lays the nodes shown
+out from the model again - which nodes are shown does not change. The arrangement only ever grows as the
+user explores, and only they take it apart; that button is how it is reset.
 
 `tests/lineageLayout.test.ts` pins the model and the coordinate assignment - including that the
 model is invariant under permuting the graph's nodes and edges - and
 `tests/e2e/lineage-stability.spec.ts` asserts the property the user actually sees: **zero order
 inversions** among the nodes that are shown before and after an interaction, and the node that was
 acted on not moving at all.
+
+## Grouping
+
+The toolbar's grouping menu puts the nodes into boxes by a metadata attribute, one per axis:
+
+| axis | attribute | box |
+|---|---|---|
+| along the flow | `feed`, `subjectArea` | a lane the flow runs through - a row in `LR`, a column in `TB` |
+| across the flow | `layer` | a band the flow crosses - a column in `LR`, a row in `TB` |
+
+With both, lanes and columns cross each other as a grid. It needs the configuration behind the
+nodes, so the run view does not offer it, and it is disabled in the relations view and the force
+layout: foreign keys are not a flow, and a force layout has no ranks to keep boxes apart in.
+
+**Membership** (`groupsOfGraph` in `src/util/ConfigExplorer/Grouping.ts`). SDLB puts `feed` on
+actions and `layer`/`subjectArea` on data objects; the other type derives the attribute from the
+full graph, whichever view is shown - a data object takes the feed of the actions writing it, an
+action the layer and subject area of what it writes, in both cases only where they agree. A node
+without a value stays outside the boxes.
+
+**No subflows.** ReactFlow's subflows make a child's position relative to its parent, which would take
+the coordinates away from `assignCoordinates`, and they have no notion of a collapsed parent that the
+edges of its children end on. So every node keeps absolute coordinates, and a box is a node of its
+own (`GroupBoxNode.tsx`) that is **derived** from its members, like the column lineage edges:
+`groupFlowNodes` makes one per group with a member in the flow, and `fitGroupBoxes` sizes an open one
+to enclose the members that are shown. Every layout goes through `layoutFlow`, which does both around
+`assignCoordinates`. An open box is drawn under the edges (`baseZIndexOf`, which `resetNodeStyles`
+and the trace keep), so its collapse button sits in the upper right corner, clear of the edges
+running through the middle of the box. A click on its area does what a click on the pane does.
+
+**Dragging a box** drags its members: `onNodeDrag` moves them by the box's step
+(`moveGroupBoxMembers`, which also refits the boxes crossing it), and on release the move is recorded
+on each member as a manual offset, not on the box - an open box has no place of its own, so the
+next layout keeps the arrangement because its members keep theirs. A collapsed box is dragged like
+any node.
+
+**Boxes that cannot overlap.** The layout model is built per grouping (`buildGroupedModel` in
+`LineageLayout.ts`, cached next to the ungrouped one) and gives every node a `lane` and a `column`:
+
+- A column owns a contiguous run of ranks. dagre is given a boundary node between two consecutive
+  columns, which every node of the one points to and which points to every node of the next, so that
+  its ordering works on the ranks the columns end up with; an edge running against the column order
+  makes a cycle, which dagre breaks wherever it likes, so the ranks are afterwards compacted column by
+  column, which holds regardless. The columns are in the order of the median rank of their members.
+- A lane owns a contiguous stretch of every rank: each rank is sorted by lane first. The lanes are in
+  the order of the median cross position of their members.
+
+Nodes without a value form a lane resp. column of their own, without a box, so that they cannot end
+up inside another one. `assignCoordinates` then gives every lane a band on the cross axis as wide as
+its widest stretch, keeps the barycentre pass within that band (`placeInOrder` clamps to it), and
+leaves room for two boxes' padding and header between bands and between ranks of different columns
+(`groupGap`). A column box reaches further than a lane box, so that its header sits above the lane
+headers where they cross.
+
+**Collapsing.** A collapsed box hides its members (`hidden`, so that their columns, drag offsets and
+expansion counts survive) and becomes a node with a place of its own: the median rank of its
+members, their lane resp. column, and in the other axis the one most of them share. Which boxes are
+collapsed is module state (`setGroupCollapsed`), so it survives a rebuild. `groupFlowEdges` gives the
+flow edges with an end inside a collapsed box to the box instead, merged per pair of ends and labelled
+with how many they stand for (`CustomEdgeProps.groupCount`); edges within the box disappear. The
+edges of the hidden members stay in the flow, which draws no edge of a hidden node, so the expansion
+bookkeeping still counts them - it skips the box edges the way it skips column lineage edges. Where
+a node is hidden in both a collapsed lane and a collapsed column, the lane stands for it.
+
+Collapsing and expanding anchor on the box: a collapsed box comes in where its open one was, and an
+expanded one has no placement to anchor on, so `layoutFlow` moves the result to keep it in place.
+Selecting an element inside a collapsed box - from the configuration, the node search or a trace -
+opens the box first (`revealGroupMember`).
+
+`tests/lineageGrouping.test.ts` covers membership, the model, the boxes and their edges,
+`tests/e2e/lineage-grouping.spec.ts` the rendering.
 
 ## Sizes and handles
 
@@ -424,7 +490,7 @@ The rows on the trace are the node's `data.tracedColumns`. The panel (`ColumnTra
 the columns the whole trace begins and ends with (`traceEnds`), and its "Show all" splices in
 (`spliceNodePath`) what the graph does not show.
 
-The trace that is shown is module state in `LineageTabUtils.tsx`, like the grouping state, because
+The trace that is shown is module state in `LineageTabUtils.tsx`, like the column displays, because
 `updateColumnEdges` has to re-apply it whenever it rebuilds the column edges. Clicking the pane or an
 edge ends it; so does clicking the name of the start row.
 

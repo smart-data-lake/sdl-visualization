@@ -2,6 +2,7 @@ import React from "react";
 import { flowProps, GraphView, LayoutDirection } from "../util/ConfigExplorer/LineageTabUtils";
 import type { LayoutMode } from "../util/ConfigExplorer/LineageLayout";
 import type { ColumnRef } from "../util/ConfigExplorer/columnLineage";
+import type { Grouping } from "../util/ConfigExplorer/Grouping";
 import { useManifest } from "./useManifest";
 
 /*
@@ -44,6 +45,9 @@ type LineageGraphContextType = {
   /** the column whose dependencies and impact are highlighted, see traceHighlights */
   tracedColumn: ColumnRef | undefined;
   setTracedColumn: (column: ColumnRef | undefined) => void;
+  /** the attributes the nodes are boxed by, along and across the flow, see Grouping.ts */
+  grouping: Grouping;
+  setGrouping: (grouping: Grouping) => void;
 };
 
 export const nodeAttributes = [
@@ -77,6 +81,7 @@ const LineageProvider = (props: React.PropsWithChildren) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [selectedNodeAttributes, setSelectedNodeAttributes] = React.useState<string[]>(nodeAttributes.map(attr => attr.value));
   const [tracedColumn, setTracedColumn] = React.useState<ColumnRef | undefined>(undefined);
+  const [grouping, setGrouping] = React.useState<Grouping>({});
 
   const panelContext = React.useMemo(() => ({
     lineageTabOpen, setLineageTabOpen, lineageTabProps, setLineageTabProps
@@ -84,8 +89,8 @@ const LineageProvider = (props: React.PropsWithChildren) => {
 
   const graphContext = React.useMemo(() => ({
     graphView, setGraphView, layout, setLayout, layoutChoice, layoutMode, isExpanded, setIsExpanded, selectedNodeAttributes, setSelectedNodeAttributes,
-    tracedColumn, setTracedColumn,
-  }), [graphView, layout, layoutChoice, layoutMode, isExpanded, selectedNodeAttributes, tracedColumn]);
+    tracedColumn, setTracedColumn, grouping, setGrouping,
+  }), [graphView, layout, layoutChoice, layoutMode, isExpanded, selectedNodeAttributes, tracedColumn, grouping]);
 
   return (
     <LineagePanelContext.Provider value={panelContext}>

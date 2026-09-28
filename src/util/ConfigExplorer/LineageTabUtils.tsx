@@ -9,7 +9,6 @@ import assert from 'assert';
 
 import { nodeHeight, nodeWidth } from '../../components/ConfigExplorer/LineageTab/LineageTabWithSeparateView';
 import { SchemaData, TaskStatus } from '../../types';
-import { findFirstKeyWithObject } from '../helpers';
 import { ColumnDisplay, ColumnInfo, buildColumnModel, filterColumns, isKnownDataObject } from './ColumnModel';
 import { ConfigData } from './ConfigData';
 import { RelationEdge, getIncomingRefs } from './RelationsGraph';
@@ -18,23 +17,16 @@ import { ColumnLineage, ColumnLineageIndex, ColumnRef, ColumnTransformation, Ind
 import { ACTION_NODE_WIDTH_WITH_PORTS, columnHandleId, nodeHeightFor, nodeRelationHandleId, nodeWidthFor, portHandleId } from '../../components/ConfigExplorer/LineageTab/DataObjectColumns';
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
-import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, ExpandSides, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dagreLayoutRf, dfsRemoveRfElems, expandSidesFrom, isColumnLineageEdge, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
-import { LayoutDirection, LayoutMode, NodePlacement, assignCoordinates, forceCentreOf, forceModelOf, layoutModelOf } from './LineageLayout';
+import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, ExpandSides, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, expandSidesFrom, isColumnLineageEdge, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
+import { LayoutDirection, LayoutMode, NodePlacement, assignCoordinates, fitGroupBoxes, forceCentreOf, forceModelOf, layoutModelOf, placementOf } from './LineageLayout';
+import { COLLAPSED_GROUP_HEIGHT, COLLAPSED_GROUP_WIDTH, GROUP_BOX_TYPE, GROUP_EDGE_PREFIX, GroupAxis, GroupBoxData, Grouping, NodeGroups, boxDataOf, groupBoxId, groupingKey, groupsOf, groupsOfGraph, isGroupBox, isGroupCollapsed, isGroupEdge, isGrouping, setGroupCollapsed } from './Grouping';
 
 
 /*
     Constants
 */
-const SUBFLOW_BORDER_SIZE = 30;
-const RF_NODE_WIDTH_CUSTOM = 200;
-const RF_NODE_HEIGHT_CUSTOM = 80;
-const RF_NODE_WIDTH_DEFAULT = 172;
-const RF_NODE_HEIGHT_DEFAULT = 36;
-
-const LABEL_COLOR = '#fcae1e';
 const EDGE_COLOR_DEFAULT = '#b1b1b7';
 const EDGE_COLOR_HIGHLIGHTED = '#096bde';
-const PARENT_NODE_COLOR_DEFAULT = 'rgba(255, 0, 0, 0.2)';
 const EDGE_STROKE_WIDTH_DEFAULT = 3
 const EDGE_STROKE_WIDTH_HIGHLIGHTED = 5;
 // a column lineage edge is one of many between two nodes, so it is drawn finer
@@ -50,21 +42,6 @@ const strokeWidthOf = (edge: ReactFlowEdge, highlighted: boolean) => isColumnLin
     from the same attribute (see groupEdgesByZLevel resp. createNodeInternals).
 */
 export const SELECTED_ELEMENT_Z_INDEX = 1000;
-
-
-/*
-    Grouping working state.
-
-    This is imperative bookkeeping for the ReactFlow instance, not React state - it is only ever
-    read and written by the functions in this file, and it must survive re-renders of the lineage
-    tab, which is why it lives at module level.
-*/
-const groupingState: {
-    components?: Map<string, GraphNode[]>,          // connected components of the retrieved graph elements
-    componentsRf?: Map<string, ReactFlowNode[]>,    // the same components mapped to the current rfi
-    subgroups?: Map<string, GraphNode[]>,
-    subgroupsRf?: Map<string, ReactFlowNode[]>
-} = {};
 
 
 /*
@@ -121,6 +98,7 @@ export interface lineageGraphState {
     layout: LayoutDirection;
     layoutMode?: LayoutMode;
     isExpanded: boolean;
+    grouping?: Grouping;
 }
 
 export interface graphNodeProps {
@@ -167,6 +145,7 @@ export interface CustomEdgeProps {
     inputIndex: number,           // position among the edges entering the target
     highlighted: boolean,
     relation?: RelationEdgeProps, // set in the relations view, where an edge is a foreign key
+    groupCount?: number,          // on an edge of a collapsed box: how many edges it stands for
     columnLineage?: ColumnLineageEdgeProps, // set on the column edges of the data view
     dataObjectId?: string,        // in the action view: the data object two actions share
 }
@@ -254,6 +233,9 @@ export interface ReactFlowNodeProps {
     forceCentre?: {x: number, y: number},
     /* in the action view: how an action's port groups are ordered, see portGroupRanks */
     portGroupRanks?: PortGroupRanks,
+    /* the grouping the node set was built with, and the boxes this node belongs to, see Grouping.ts */
+    grouping?: Grouping,
+    groups?: NodeGroups,
 }
 
 /** Where each data object's port group of an action goes, per side - the key PortOrder.groupRankOf reads. */
@@ -393,9 +375,13 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     graphView: GraphView,
     expandNodeFunc: (id: string, isExpanded: boolean, direction: ExpandDirection, graphView: GraphView, layout: LayoutDirection) => void,
     props: flowProps,
-    layoutMode: LayoutMode = 'layered'
+    layoutMode: LayoutMode = 'layered',
+    requestedGrouping: Grouping = {}
 ): ReactFlowNode[] {
     const dataObjectsAndActions = getGraph(props, graphView);
+    // foreign keys are not a flow, and a force layout has no lanes or columns to keep boxes apart in
+    const grouping: Grouping = graphView === 'relations' ? {} : requestedGrouping;
+    const groups = isGrouping(grouping) ? groupsOfGraph(dataObjectsAndActions, props.configData, grouping) : undefined;
     const columnsOf = makeColumnsOf(props);
     const isHorizontal = layoutDirection === 'LR';
 
@@ -420,7 +406,8 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     // If we need more information to be displayed on the node,
     // just add more fields to the flowProps interface and access it in the custom node component.
     // The additional props can be passed in ElementDetails where the LineageTab is opened.
-    const layoutModel = layoutModelOf(dataObjectsAndActions, layoutDirection);
+    const layoutModel = layoutModelOf(dataObjectsAndActions, layoutDirection,
+        groups && {key: groupingKey(grouping), of: groups, along: !!grouping.along, across: !!grouping.across});
     // only the relations view offers a force layout, see LineageLayout.ts
     const forceModel = graphView === 'relations' && layoutMode === 'force' ? forceModelOf(dataObjectsAndActions) : undefined;
 
@@ -478,6 +465,8 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
             forceCentre: forceModel?.get(node.id),
             portGroupRanks: graphView === 'action' && nodeType === NodeType.ActionNode
                 ? portGroupRanks(dataObjectsAndActions, node.id, layoutModel.placement) : undefined,
+            grouping: grouping,
+            groups: groups?.get(node.id),
         }
 
         const newNode = {
@@ -719,6 +708,7 @@ function syncColumnLineageEdges(rfi: ReactFlowInstance) {
  * columns, its columns or its lineage changed, or the node set changed.
  */
 export function updateColumnEdges(rfi: ReactFlowInstance) {
+    syncGroupEdges(rfi);
     syncColumnLineageEdges(rfi);
     updateColumnEdgeHandles(rfi);
     // edges created just now know nothing of a trace that is shown
@@ -840,7 +830,7 @@ export function traceHighlights(trace: GraphTrace, rfNodes: ReactFlowNode[], rfE
 }
 
 /*
-    The trace that is shown. Module state for the same reason the grouping state is: only the
+    The trace that is shown. Module state for the same reason the column displays are: only the
     imperative code in this file reads it, and it has to be re-applied whenever the column edges are
     rebuilt, which happens far from the component that set it.
 */
@@ -870,7 +860,7 @@ function applyColumnTrace(rfi: ReactFlowInstance, trace: GraphTrace) {
         if ((node.data.highlighted === true) === highlighted
             && (node.data.tracedColumns ?? []).join() === (tracedColumns ?? []).join()
             && (node.data.tracedConnections ?? []).join() === (tracedConnections ?? []).join()) return node;
-        return {...node, zIndex: highlighted ? SELECTED_ELEMENT_Z_INDEX : 0,
+        return {...node, zIndex: highlighted ? SELECTED_ELEMENT_Z_INDEX : baseZIndexOf(node),
                 data: {...node.data, highlighted, tracedColumns, tracedConnections}};
     }));
 }
@@ -954,7 +944,7 @@ export function createReactFlowEdges(selectedEdges: GraphEdge[],
     return result;
 }
 
-function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection, isExpanded: boolean, layoutMode?: LayoutMode): [ReactFlowNode[], ReactFlowEdge[]] {
+function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection, isExpanded: boolean, layoutMode?: LayoutMode, grouping?: Grouping): [ReactFlowNode[], ReactFlowEdge[]] {
     var partialGraphPair: [GraphNode[], GraphEdge[]] = [[], []];
     var centralNodeId: string = props.elementName;
     const centralNode = doa.getNodeById(centralNodeId);
@@ -968,7 +958,7 @@ function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: Gra
         const partialGraph = new PartialDataObjectsAndActions(partialGraphPair[0], partialGraphPair[1], layout, props.configData, true);
         if (centralNode) partialGraph.setCenterNode(centralNode);
 
-        let newNodes = createReactFlowNodes(partialGraphPair[0], layout, isExpanded, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props, layoutMode);
+        let newNodes = createReactFlowNodes(partialGraphPair[0], layout, isExpanded, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props, layoutMode, grouping);
         let newEdges = createReactFlowEdges(partialGraphPair[1], props, graphView, undefined);
 
         return [newNodes, newEdges];
@@ -981,24 +971,24 @@ function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: Gra
 /*
     Renders the whole graph, without a center node and without expand/collapse handles on the nodes.
 */
-function prepareGraphComplete(rfi: ReactFlowInstance, doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection): [ReactFlowNode[], ReactFlowEdge[]] {
+function prepareGraphComplete(rfi: ReactFlowInstance, doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection, grouping?: Grouping): [ReactFlowNode[], ReactFlowEdge[]] {
     // no node is the center node, otherwise a previously selected one would still be colored
     doa.nodes.forEach((node) => node.setIsCenterNode(false));
 
-    const nodes = createReactFlowNodes(doa.nodes, layout, true, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props);
+    const nodes = createReactFlowNodes(doa.nodes, layout, true, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props, 'layered', grouping);
     const edges = createReactFlowEdges(doa.edges, props, graphView, undefined);
     return [nodes, edges];
 }
 
 export function prepareAndRenderGraph(rfi: ReactFlowInstance, lineageState: lineageGraphState): preparedGraph {
-    const { graphView, props, layout, isExpanded, layoutMode } = lineageState;
+    const { graphView, props, layout, isExpanded, layoutMode, grouping } = lineageState;
 
     var doa: DAGraph; // data objects and actions
     var navigateTo: string | undefined;
 
     // a graph given through the props is shown as a whole, there is no element to center it on
     if (props.graph) {
-        const [nodes, edges] = prepareGraphComplete(rfi, props.graph, graphView, props, layout);
+        const [nodes, edges] = prepareGraphComplete(rfi, props.graph, graphView, props, layout, grouping);
         return { nodes: applyExpandSides(nodes, edges, undefined), edges };
     }
 
@@ -1035,7 +1025,7 @@ export function prepareAndRenderGraph(rfi: ReactFlowInstance, lineageState: line
     if (navigateTo) return { nodes: [], edges: [], navigateTo };
 
     // reset isCenterNode flags otherwise all previous ones will be colored
-    const [nodes, edges] = prepareGraphDirect(rfi, doa, graphView, props, layout, isExpanded, layoutMode);
+    const [nodes, edges] = prepareGraphDirect(rfi, doa, graphView, props, layout, isExpanded, layoutMode, grouping);
     return { nodes: applyExpandSides(nodes, edges, props.elementName), edges };
 }
 
@@ -1063,6 +1053,11 @@ export function updateExpandSides(rfi: ReactFlowInstance, selectedId?: string): 
 // nodes added to a shown graph follow the layout its nodes were created with
 function flowLayoutMode(rfi: ReactFlowInstance): LayoutMode {
     return rfi.getNodes().some(node => forceCentreOf(node)) ? 'force' : 'layered';
+}
+
+// and the grouping they were created with
+function flowGrouping(rfi: ReactFlowInstance): Grouping {
+    return rfi.getNodes().find(node => !isGroupBox(node))?.data?.grouping ?? {};
 }
 
 function makeExpandNodeFunc(rfi: ReactFlowInstance, props: flowProps) {
@@ -1098,7 +1093,8 @@ function expandNodeFunc(rfi: ReactFlowInstance, props: flowProps,
             graphView,
             makeExpandNodeFunc(rfi, props),
             props,
-            flowLayoutMode(rfi));
+            flowLayoutMode(rfi),
+            flowGrouping(rfi));
 
         let rfEdges = createReactFlowEdges(neighbourEdges,
             props,
@@ -1130,8 +1126,8 @@ function expandNodeFunc(rfi: ReactFlowInstance, props: flowProps,
     setRfNodeData(rfi, {nodeId: id, path: isFwd ? 'isExpandedForward' : 'isExpandedBackward', value: !isExpanded});
     setSelectedNode(rfi, selectedId); // the new nodes were built from the props of their creator
     dropDanglingEdges(rfi);
+    syncGroupEdges(rfi);
     updateExpandSides(rfi, selectedId);
-    prioritizeParentNodes(rfi);
 }
 
 /*
@@ -1175,7 +1171,7 @@ export function spliceNodePath(rfi: ReactFlowInstance, props: flowProps, nodeId:
     const anchorId = pathNodes.length > 0 ? pathNodes[pathNodes.length - 1].id : undefined;
 
     const newRfNodes = createReactFlowNodes(nodes.filter(node => !shownIds.includes(node.id)),
-        layoutDirection, false, true, undefined, graphView, makeExpandNodeFunc(rfi, props), props, flowLayoutMode(rfi));
+        layoutDirection, false, true, undefined, graphView, makeExpandNodeFunc(rfi, props), props, flowLayoutMode(rfi), flowGrouping(rfi));
     const newRfEdges = createReactFlowEdges(pathEdges, props, graphView, undefined);
 
     rfi.setEdges(eds => [...eds, ...newRfEdges.filter(edge => !eds.some(e => e.id === edge.id))]);
@@ -1188,11 +1184,7 @@ export function spliceNodePath(rfi: ReactFlowInstance, props: flowProps, nodeId:
         setRfNodeData(rfi, {nodeId: edge.toNode.id, path: 'numBwdActiveEdges', value: 1, fromOwnProps: 'data.numBwdActiveEdges', combine: add});
     });
 
-    if (!isGrouped(rfi)) {
-        rfi.setNodes(nds => assignCoordinates(nds, rfi.getEdges(), layoutDirection, {anchorId}));
-    } else {
-        recomputeLayout(rfi, layoutDirection, anchorId);
-    }
+    rfi.setNodes(nds => layoutFlow(nds, rfi.getEdges(), layoutDirection, {anchorId}));
     updateColumnEdges(rfi);
 }
 
@@ -1263,39 +1255,18 @@ function updateLineageGraphOnExpand(rfi: ReactFlowInstance, rfEdges: ReactFlowEd
     });
 
     rfi.setNodes((nds) => {
-        const newRfNodes = rfNodes;
         rfNodes = Array.from(new Set(nds.concat(rfNodes))); // existing nodes first, then the new ones
-        if (!isGrouped(rfi)) {
-            // the new nodes bring their own place in the layout, so nothing that is shown reorders
-            return assignCoordinates(rfNodes, rfEdges, layoutDirection, {anchorId: currRfNode.id});
-        }
-
-        // grouped: the boxes have to follow their children, and a child's position is relative to its box
-        const nonParentNodes = dagreLayoutRf(getNonParentNodesFromArray(rfNodes), rfEdges, layoutDirection, nodeWidth, nodeHeight);
-        rfNodes = Array.from(new Set(nonParentNodes));
-        rfNodes = rfNodes.map(rfNode => newRfNodes.includes(rfNode) ? assignNodeToParent(rfNode, rfi)! : rfNode);
-        const parentNodes = computeParentNodePositionFromArray(rfNodes, getParentNodesFromRFI(rfi));
-        rfNodes = Array.from(new Set([...rfNodes, ...parentNodes]));
-        rfNodes = computeNodePositionFromParent(rfNodes, rfNodes);
-        return rfNodes;
+        // the new nodes bring their own place in the layout, so nothing that is shown reorders
+        return layoutFlow(rfNodes, rfEdges, layoutDirection, {anchorId: currRfNode.id});
     });
 }
 
 function updateLineageGraphOnCollapse(rfi: ReactFlowInstance, props: any) {
-    const { currRfNode, expandDirection, layoutDirection, grouped } = props;
+    const { currRfNode, expandDirection } = props;
     const [nodesIdsToRemove, edgesIdsToRemove] = dfsRemoveRfElems(rfi, currRfNode, expandDirection);
     rfi.setEdges((eds) => eds.filter(e => !edgesIdsToRemove.includes(e.id)));
-    rfi.setNodes((nds) => {
-        var rfNodes = nds.filter(n => !nodesIdsToRemove.includes(n.id));
-        // taking nodes away leaves the rest where it is - there is nothing to lay out
-        if (!isGrouped(rfi)) return rfNodes;
-
-        // grouped: the boxes shrink onto what is left of their children
-        var nonParentNodes = Array.from(new Set(dagreLayoutRf(getNonParentNodesFromArray(rfNodes), rfi.getEdges(), layoutDirection, nodeWidth, nodeHeight)));
-        const parentNodes = computeParentNodePositionFromArray(nonParentNodes, getParentNodesFromArrayIds(rfi, nonParentNodes));
-        nonParentNodes = computeNodePositionFromParent(nonParentNodes, parentNodes);
-        return [...nonParentNodes, ...parentNodes];
-    });
+    // taking nodes away leaves the rest where it is - only the boxes shrink onto what is left
+    rfi.setNodes((nds) => fitGroupBoxes(groupFlowNodes(nds.filter(n => !nodesIdsToRemove.includes(n.id))), nodeWidth, nodeHeight));
 }
 
 
@@ -1422,7 +1393,7 @@ export function resetNodeStyles(rfi: ReactFlowInstance) {
         return node.map((elem) => {
             const newElem = {
                 ...elem,
-                zIndex: 0,
+                zIndex: baseZIndexOf(elem),
                 data: {
                     ...elem.data,
                     highlighted: false,
@@ -1516,539 +1487,198 @@ export function selectEdge(rfi: ReactFlowInstance, edge: SelectableEdge) {
 }
 
 
-/*
-    Functions for Grouping / Retrieval
-    These should be done on the DAGraph instance only, to separete computation from rendering the ReactFlowInstance
+/* ------------------------------------------------------------ grouping boxes */
 
-    - A grouping function can be abstracted as follows:
+// open boxes are drawn under the edges, and columns under the lanes crossing them
+const LANE_Z_INDEX = -1;
+const COLUMN_Z_INDEX = -2;
 
-    function groupBy(args){
-        const groupingFunction = ...
-        groupingRoutine(groupingFuntion, args)
-    }
-
-    optionally, the grouper takes as input a Tagger function and its arguments to create custom group names.
-*/
-function getGraphNodeElementsByConnectedComponent(G: DAGraph, F: (g: DAGraph, fargs: any) => GraphNode[], args: any) {
-    // a generic grouping function interface that retrieves the elements from G via a getter fuction F
-    // returns the connected components 
-    const elems = F(G, args);
-    const components: Map<string, GraphNode[]> = G.getConnectedNodeComponents(graphNodeElementsToId(elems) as string[], G);
-    return components;
+export function baseZIndexOf(node: ReactFlowNode): number {
+    if (!isGroupBox(node) || boxDataOf(node).collapsed) return 0;
+    return boxDataOf(node).axis === 'along' ? LANE_Z_INDEX : COLUMN_Z_INDEX;
 }
 
-function getGraphNodeElementsBySubgroups(G: DAGraph, F: (node: GraphNode, fargs: any) => any, args: any,
-    Tagger?: (result: any, targs: any) => string, taggerArgs?: any) {
-    const subgroups: Map<string, GraphNode[]> = G.getSubgroups(F, args, Tagger, taggerArgs);
-    return subgroups;
+const AXES: GroupAxis[] = ['along', 'across'];
+const collapsedBoxOf = (groups: NodeGroups | undefined, axis: GroupAxis) =>
+    groups?.[axis] !== undefined && isGroupCollapsed(groupBoxId(axis, groups[axis]!)) ? groupBoxId(axis, groups[axis]!) : undefined;
+
+// the collapsed box a hidden node is drawn as - the lane's before the column's; undefined for a shown node
+function representativeOf(node: ReactFlowNode): string | undefined {
+    if (isGroupBox(node)) return undefined;
+    return collapsedBoxOf(groupsOf(node), 'along') ?? collapsedBoxOf(groupsOf(node), 'across');
 }
 
-function graphNodeElementsToId(elements: GraphNode[]): string[] {
-    return elements.map(node => node.id);
+// the value most of them have, ties to the smallest
+function majority(values: number[]): number | undefined {
+    const counts = new Map<number, number>();
+    values.forEach(value => counts.set(value, (counts.get(value) ?? 0) + 1));
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0];
 }
 
-function getRfElementsfromDAGElements(elements: GraphNode[], rfi: ReactFlowInstance): ReactFlowNode[] {
-    // maps retrieved elements to currently shown reactFlow elements
-    // can also be done in the components computation
-    const graphElemIds = graphNodeElementsToId(elements);
-    return rfi.getNodes().filter(n => graphElemIds.includes(n.id));
-}
+// One box per group with a member in the flow, derived like the column lineage edges; a collapsed one
+// hides its members and takes a placement from theirs, see the Grouping section of the README.
+export function groupFlowNodes(nodes: ReactFlowNode[]): ReactFlowNode[] {
+    const members = nodes.filter(node => !isGroupBox(node));
+    const existing = new Map(nodes.filter(isGroupBox).map(box => [box.id, box]));
+    const grouping: Grouping = members.find(node => node.data?.grouping)?.data.grouping ?? {};
+    const direction: LayoutDirection = members[0]?.data?.layoutDirection ?? 'TB';
 
-export function getParentNodesFromRFI(rfi: ReactFlowInstance) {
-    return rfi.getNodes().filter(node => node.type === 'group');
-}
-
-export function getParentNodesFromArray(rfNodes: ReactFlowNode[]) {
-    return rfNodes.filter(node => node.type === 'group');
-}
-
-export function getNonParentNodesFromRFI(rfi: ReactFlowInstance) {
-    return rfi.getNodes().filter(node => node.type !== 'group');
-}
-
-export function getNonParentNodesFromArray(rfNodes: ReactFlowNode[]) {
-    return rfNodes.filter(node => node.type !== 'group');
-}
-
-export function getFreeNodesFromRFI(rfi: ReactFlowInstance) {
-    return rfi.getNodes().filter(node => node.type !== 'group' && node.parentId === undefined);
-}
-
-export function getFreeNodesFromArray(rfNodes: ReactFlowNode[]) {
-    return rfNodes.filter(node => node.type !== 'group' && node.parentId === undefined);
-}
-
-export function getParentNodeIds(rfNodes: ReactFlowNode[]) {
-    // returns an array of distinct parent node ids from the given array
-    // filter out undefined
-    return Array.from(new Set(rfNodes.map(rfNode => rfNode.parentId).filter(e => e)));
-}
-
-export function getParentNodesFromArrayIds(rfi: ReactFlowInstance, rfNodes: ReactFlowNode[]) {
-    // return the array of distinct parent nodes of the given array rfNodes 
-    const ids = getParentNodeIds(rfNodes);
-    return getParentNodesFromRFI(rfi).filter(node => ids.includes(node.id));
-}
-
-export function getParentNodeFromRFI(rfi: ReactFlowInstance, parentId: string): ReactFlowNode | undefined {
-    // assume now that no parent nodes overlap
-    return getParentNodesFromRFI(rfi).filter(node => node.id === parentId)[0]
-}
-
-export function getParentNodeFromArray(parentNodes: ReactFlowNode[], parentId: string) {
-    // assume now that no parent nodes overlap
-    return parentNodes.filter(node => node.id === parentId)[0]
-}
-
-function computeParentNodeCoordsFromChildren(rfElements: ReactFlowNode[]) {
-    let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
-    // the far corner is taken from each child's own size - a node showing its columns is taller
-    // than the default, and the box would clip it
-    rfElements.forEach(elem => {
-        const {width, height} = rfNodeSize(elem, RF_NODE_WIDTH_CUSTOM, RF_NODE_HEIGHT_CUSTOM);
-        xMin = Math.min(xMin, elem.position.x);
-        xMax = Math.max(xMax, elem.position.x + width);
-        yMin = Math.min(yMin, elem.position.y);
-        yMax = Math.max(yMax, elem.position.y + height);
-    });
-
-    // Adjust by the border size B. (x, y) position is the upper left corner
-    xMin -= SUBFLOW_BORDER_SIZE;
-    xMax += SUBFLOW_BORDER_SIZE;
-    yMin -= SUBFLOW_BORDER_SIZE;
-    yMax += SUBFLOW_BORDER_SIZE;
-
-    const centerX = (xMin + xMax) / 2;
-    const centerY = (yMin + yMax) / 2;
-
-    return { xMin: xMin, yMin: yMin, xMax: xMax, yMax: yMax, centerX: centerX, centerY: centerY };
-}
-
-export function computeChildNodeRelativePosition(childNode: ReactFlowNode, parentNode: ReactFlowNode) {
-    // used to update child nodes' relative positions, assuming they have been created already.
-    // note that a child node always has a positionAbsolute prop by implementation, but not necessarily a position prop
-    return {
-        x: childNode.position.x - parentNode.position.x,
-        y: childNode.position.y - parentNode.position.y
-    }
-}
-
-function computeParentNodePositionFromRFI(rfi: ReactFlowInstance): ReactFlowNode[] {
-    // returns the parent nodes whose positions are computed from their children 
-    // this is inefficient, we should pass component information to rfi props and get them directly 
-    // could be replaced / adapted by a mapGroupStateToRFI() function
-    const rfNodes = rfi.getNodes();
-    var parentNodes = getParentNodesFromArray(rfNodes);
-    parentNodes = parentNodes.map(parentNode => {
-        const children = rfNodes.filter(rfNode => rfNode.parentId === parentNode.id);
-        const coords = computeParentNodeCoordsFromChildren(children);
-        const parentNodeWidth = coords.xMax - coords.xMin;
-        const parentNodeHeight = coords.yMax - coords.yMin;
-        const initPosition = { x: coords.xMin, y: coords.yMin };
-        parentNode = {
-            ...parentNode,
-            data: { ...parentNode.data, initPosition: initPosition },
-            position: initPosition,
-            zIndex: -1,
-            style: { ...parentNode.style, width: parentNodeWidth, height: parentNodeHeight },
-        }
-        return parentNode;
-    });
-    return parentNodes;
-}
-
-export function computeParentNodePositionFromArray(rfNodes: ReactFlowNode[], parentNodes: ReactFlowNode[]): ReactFlowNode[] {
-    // same as computeParentNodePositionFromRFI, except that the parentNodes are not get from the rfi, but from the provided argument parentNodes
-    // as we do not necessarily want to recompute all parent node positions
-    // rfNodes is the array of nodes we compute the parents' position from
-    parentNodes = parentNodes.map(parentNode => {
-        const children = rfNodes.filter(rfNode => rfNode.parentId === parentNode.id);
-        const coords = computeParentNodeCoordsFromChildren(children);
-        const parentNodeWidth = coords.xMax - coords.xMin;
-        const parentNodeHeight = coords.yMax - coords.yMin;
-        const initPosition = { x: coords.xMin, y: coords.yMin };
-        parentNode = {
-            ...parentNode,
-            data: { ...parentNode.data, initPosition: initPosition },
-            position: initPosition,
-            zIndex: -1,
-            style: { ...parentNode.style, width: parentNodeWidth, height: parentNodeHeight },
-        }
-        return parentNode;
-    });
-    return parentNodes;
-}
-
-export function computeNodePositionFromParent(nonParentNodes: ReactFlowNode[], parentNodes: ReactFlowNode[]) {
-    nonParentNodes = nonParentNodes.map(rfNode => {
-        if (rfNode.parentId !== undefined) {
-            const parentNode = getParentNodeFromArray(parentNodes, rfNode.parentId!);
-            rfNode = {
-                ...rfNode,
-                position: computeChildNodeRelativePosition(rfNode, parentNode!),
-            }
-        }
-        return rfNode;
-    }
-    );
-    return nonParentNodes;
-}
-
-// TODO: adapt this
-function assignNodeToParent(rfNode: ReactFlowNode, rfi: ReactFlowInstance) {
-    // get parentId of the node and assign it to the respective parent component, return the updated note
-    // if the parent does not yet exist in the flow, create it. Otherwise, the unmodified node is returned
-    // note that we don't recompute the child's position here as parent node's position has not been fixed yet
-    const { components, componentsRf, subgroups, subgroupsRf } = groupingState;
-    if ((!components || !componentsRf) && (!subgroups || !subgroupsRf)) { return rfNode }
-
-    // TODO: adapt logic to subgroups here
-    const parentId = findFirstKeyWithObject(components!, rfNode.id, (a) => (a.map(elem => (elem as GraphNode).id)));
-    if (parentId === undefined) { return rfNode }
-
-    if (getParentNodeFromRFI(rfi, parentId) === undefined) {
-        const coords = computeParentNodeCoordsFromChildren([rfNode]); // rfNode is the first child that appears
-        const parentNodeWidth = coords.xMax - coords.xMin;
-        const parentNodeHeight = coords.yMax - coords.yMin;
-        const initPosition = { x: coords.xMin, y: coords.yMin };
-        const parentNode = {
-            id: parentId,
-            data: { label: parentId, initPosition: initPosition },
-            position: initPosition,
-            style: { backgroundColor: PARENT_NODE_COLOR_DEFAULT, width: parentNodeWidth, height: parentNodeHeight },
-            type: 'group',
-            zIndex: -1
-        } as ReactFlowNode;
-        rfi.addNodes(parentNode);
-    }
-
-    const updatedRfNode = {
-        ...rfNode,
-        parentId: parentId,
-        extent: 'parent',
-        expandParent: true,
-    } as ReactFlowNode;
-    // FIXME: this pushes a ReactFlow node into the map of graph nodes. It only ever compiled because the
-    // grouping state was read from the redux store as 'any' - kept as is to not change behaviour.
-    (components!.get(parentId)! as any[]).push(updatedRfNode);
-    rfNode = updatedRfNode;
-
-    return rfNode;
-}
-
-// TODO: refactor into one function to govern mapping from custom graph to reactflow graph
-export function createParentNodesFromComponentsByGroup(rfi: ReactFlowInstance, layoutDirection: LayoutDirection) {
-    const componentsRf = groupingState.subgroupsRf;
-    const rfNodeIds = rfi.getNodes().map(node => node.id);
-    assert(componentsRf !== undefined, "subgroups should not be undefined!");
-
-    const isHorizontal = layoutDirection === 'LR';
-    const targetPos = isHorizontal ? Position.Left : Position.Top;
-    const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
-
-    // assume for now that every node has at most 1 parent
-    // create a new graph where all nodes belonging to a group are replaced by one single parent node
-    const groupedNodeIds: string[] = [];        // ids of nodes to remove
-    const parentNodes: ReactFlowNode[] = [];    // parent nodes to keep 
-    const edgesToParent: ReactFlowEdge[] = [];  // edges to parent nodes to keep
-    const edgesToChildrenIds: string[] = [];    // ids of edges to remove
-
-    componentsRf.forEach((v, k) => {
-        if (v.length > 0) {
-            // TODO: the following can be refactored
-            const groupId = k;
-            const initPosition = { x: 0, y: 0 };
-
-            const parentNode = {
-                id: groupId,
-                data: { label: groupId, initPosition: initPosition, children: v.map(rfNode => rfNode.id) },
-                position: initPosition,
-                sourcePosition: sourcePos,
-                targetPosition: targetPos,
-                style: { backgroundColor: PARENT_NODE_COLOR_DEFAULT, width: RF_NODE_WIDTH_CUSTOM, height: RF_NODE_HEIGHT_CUSTOM },
-                // type: 'group',
-            } as ReactFlowNode;
-
-            if (rfNodeIds.includes(groupId)) {
-                throw Error(`parent node with id ${groupId} already exists!`);
-            }
-
-            // remove children and keep parent
-            parentNodes.push(parentNode);
-        }
-    });
-
-    const edgeIdSet = new Set<string>();// keep track of exisiting edge ids
-    componentsRf.forEach((v, k) => {
-        if (v.length > 0) {
-            const groupId = k;
-            v.forEach(rfNode => {
-                // reroute all edges to children to the new parent node
-                groupedNodeIds.push(rfNode.id);
-                const rfEdges = rfi.getEdges().filter(rfEdge => rfEdge.source === rfNode.id || rfEdge.target === rfNode.id);
-                rfEdges.forEach(rfEdge => {
-                    edgesToChildrenIds.push(rfEdge.id);
-                    const isOutgoing = rfEdge.source === rfNode.id;
-                    const otherChildNodeId = isOutgoing ? rfEdge.target : rfEdge.source;
-                    const otherParentNode = parentNodes.find(parentNode => (parentNode.data.children! as [string]).includes(otherChildNodeId));
-                    const otherId = otherParentNode ? otherParentNode.id : rfEdge.id;
-                    const newEdgeId = isOutgoing ? `${groupId}===${otherId}` : `${otherId}===${groupId}`;
-                    if (!edgeIdSet.has(newEdgeId) && otherId !== groupId) { // find if rfEdge end is within a different parent
-                        edgeIdSet.add(newEdgeId);
-                        edgesToParent.push({ // if rfEdge comes from a node in another parent component, only one edge is kept
-                            type: 'customEdge',
-                            id: newEdgeId,
-                            source: isOutgoing ? groupId : otherId,
-                            target: isOutgoing ? otherId : groupId,
-                            markerEnd: {
-                                type: MarkerType.ArrowClosed,
-                                width: 10,
-                                height: 10,
-                                color: EDGE_COLOR_DEFAULT,
-                            },
-                            labelBgPadding: [7, 7],
-                            labelBgBorderRadius: 8,
-                            labelBgStyle: { fill: '#fff', fillOpacity: 0.75, stroke: LABEL_COLOR },
-                            style: { stroke: EDGE_COLOR_DEFAULT, strokeWidth: EDGE_STROKE_WIDTH_DEFAULT },
-                        } as ReactFlowEdge);
-                    }
-
-                });
-            });
-        }
-    })
-
-    const newNodes = [...rfi.getNodes().filter(node => !groupedNodeIds.includes(node.id)), ...parentNodes];
-    const newEdges = [...rfi.getEdges().filter(edge => !edgesToChildrenIds.includes(edge.id)), ...edgesToParent]
-    rfi.setNodes(dagreLayoutRf(newNodes, newEdges, layoutDirection, RF_NODE_WIDTH_CUSTOM, RF_NODE_HEIGHT_CUSTOM));
-    rfi.setEdges(newEdges);
-}
-
-export function createParentNodesFromComponents(rfi: ReactFlowInstance) {
-    // creates initial parent nodes from the grouped component
-    const componentsRf = groupingState.componentsRf;
-    const rfNodeIds = rfi.getNodes().map(node => node.id);
-    assert(componentsRf !== undefined, "connected components should not be undefined!");
-
-    componentsRf.forEach((v, k) => {
-        if (v.length > 0) {
-            const groupId = k; // group nodes have to be in front of the children in the sorted rfNode array
-            const coords = computeParentNodeCoordsFromChildren(v);
-            const parentNodeWidth = coords.xMax - coords.xMin;
-            const parentNodeHeight = coords.yMax - coords.yMin;
-            const initPosition = { x: coords.xMin, y: coords.yMin };
-
-            const groupedNode = {
-                id: groupId,
-                data: { label: groupId, initPosition: initPosition },
-                position: initPosition,
-                style: { backgroundColor: PARENT_NODE_COLOR_DEFAULT, width: parentNodeWidth, height: parentNodeHeight },
-                type: 'group',
-            } as ReactFlowNode;
-
-            if (!rfNodeIds.includes(groupId)) {
-                rfi.addNodes(groupedNode);
-            } else {
-                throw Error(`parent node with id ${groupId} already exists!`);
-            }
-
-            //map rfElements to parent nodes
-            const idsInComponent = v.map(n => n.id);
-            rfi.setNodes(rfNodes => {
-                return rfNodes.map(rfNode => {
-                    if (idsInComponent.includes(rfNode.id)) {
-                        rfNode = {
-                            ...rfNode,
-                            parentId: groupId,
-                            extent: 'parent',
-                            expandParent: true,
-                            position: computeChildNodeRelativePosition(rfNode, groupedNode),
-                        }
-                    }
-                    return rfNode;
-                });
-            });
-        }
-    });
-}
-
-export function prioritizeParentNodes(rfi: ReactFlowInstance) {
-    // needed for subflow, see:
-    // https://github.com/xyflow/xyflow/issues/3041 
-
-    const sortNodes = (a: ReactFlowNode, b: ReactFlowNode): number => {
-        // break ties
-        if (a.parentId === b.parentId) {
-            return -1;
-        }
-
-        // not all nodes have a parent node
-        if (a.parentId === undefined && b.parentId !== undefined) {
-            return -1;
-        } else if (a.parentId !== undefined && b.parentId === undefined) {
-            return 1;
-        } else {
-            return a.parentId! > b.parentId! ? 1 : -1;
-        }
-    };
-    rfi.setNodes(nodes => nodes.sort(sortNodes));
-}
-
-function highlightRoutine(G: DAGraph, F: (graph: DAGraph, fargs: any) => GraphNode[], args: any, rfi: ReactFlowInstance) {
-    /*
-        Compute the components based on the retrieved results / aggregation 
-    */
-    const components = getGraphNodeElementsByConnectedComponent(G, F, args) as Map<string, GraphNode[]>;
-
-    /*
-        Update ReactFlow Instance
-    */
-    const ids: string[] = Array.from(components.values()).flatMap((nodes) => nodes.map(node => node.id));
-    setNodeStyles(rfi, ids);
-}
-
-function groupingRoutineBySubgroup(G: DAGraph, rfi: ReactFlowInstance, layoutDirection: LayoutDirection,
-    F: (node: GraphNode, fargs: any) => any, groupingArgs: any,
-    Tagger?: (result: any, targs: any) => string, taggerArgs?: any,) {
-    /*
-        Compute the components based on the retrieved results / aggregation and map them to ReactFlow elements
-
-        Parent nodes have to be in front of all other nodes in the sorted rfNode array, hence the tagger has to produce
-        a group name with a unique identifier that guarantees this order (e.g. by prepending a '#').
-        This is handled in Graphs.ts
-    */
-    const subgroups = getGraphNodeElementsBySubgroups(G, F, groupingArgs, Tagger, taggerArgs) as Map<string, GraphNode[]>;
-    const subgroupsRf: Map<string, ReactFlowNode[]> = new Map();
-    subgroups.forEach((v, k) => { subgroupsRf.set(k, getRfElementsfromDAGElements(v, rfi)); })
-
-    /*
-        Update ReactFlow Instance
-    */
-    groupingState.subgroups = subgroups;
-    groupingState.subgroupsRf = subgroupsRf;
-    createParentNodesFromComponentsByGroup(rfi, layoutDirection);
-
-    prioritizeParentNodes(rfi);
-}
-
-const groupingRoutine = (G: DAGraph, rfi: ReactFlowInstance,
-    F: (graph: DAGraph, fargs: any) => GraphNode[], args: any,
-    Tagger?: (targs: any) => string, taggerArgs?: any) => {
-    /*
-        Compute the components based on the retrieved results / aggregation and map them to ReactFlow elements
-    */
-    const components = getGraphNodeElementsByConnectedComponent(G, F, args) as Map<string, GraphNode[]>;
-    const componentsRf: Map<string, ReactFlowNode[]> = new Map();
-    components.forEach((v, k) => { componentsRf.set(k, getRfElementsfromDAGElements(v, rfi)); }
-    );
-    /*
-        Update ReactFlow Instance
-    */
-    groupingState.components = components;
-    groupingState.componentsRf = componentsRf;
-    createParentNodesFromComponents(rfi);
-
-    // recompute layout in favor of the parent nodes and adjust the children in each parent node
-    // rfi.setNodes(computeLayout(rfi.getNodes().filter(node => !(node.extent === 'parent')), // includes all parent nodes and non grouped nodes
-    //                            rfi.getEdges(), 
-    //                            args.layoutDirection));
-    // TODO: for each component, shift the children nodes by the origin of the parent node to get the relative coords and recompute layout (is the recompute guarenteed to stay in the parent node's frame?)
-    // This works only if we have created and merged the new edges as well?
-    // computeChildeNodeRelativePosition()
-
-    // extra step to sort the reactFlow children nodes, as required by the current ReactFlow implementation...
-    prioritizeParentNodes(rfi);
-}
-
-
-export function restoreGroupSettings(rfi: ReactFlowInstance) {
-    // remove all parent nodes and reset child node props (TODO: remove edges after we incorporate collapse/expand on nodes)
-    // the order matters
-    rfi.setNodes(nodes => nodes.map(node => {
-        node = {
-            ...node,
-            parentId: undefined,
-            extent: undefined,
-            expandParent: false,
-            position: node.position,
-        }
-        return node;
+    const byBox = new Map<string, {axis: GroupAxis, key: string, members: ReactFlowNode[]}>();
+    members.forEach(node => AXES.forEach(axis => {
+        const key = groupsOf(node)?.[axis];
+        if (key === undefined || !grouping[axis]) return;
+        const id = groupBoxId(axis, key);
+        byBox.set(id, {axis, key, members: [...(byBox.get(id)?.members ?? []), node]});
     }));
-    rfi.setNodes(nodes => nodes.filter(node => !(node.type === 'group')));
-    groupingState.components = undefined;
-    groupingState.componentsRf = undefined;
+
+    const boxes: ReactFlowNode[] = [...byBox.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([id, {axis, key, members: inside}]) => {
+        const collapsed = isGroupCollapsed(id);
+        const other: GroupAxis = axis === 'along' ? 'across' : 'along';
+        const placements = inside.map(placementOf).filter((p): p is NodePlacement => p !== undefined);
+        const byRank = [...placements].sort((a, b) => a.rank - b.rank || a.order - b.order);
+        const middle = byRank[Math.floor((byRank.length - 1) / 2)];
+        const otherKeys = new Set(inside.map(node => groupsOf(node)?.[other]));
+        const box: GroupBoxData = {
+            axis, attribute: grouping[axis]!, key, collapsed,
+            memberIds: inside.map(node => node.id).sort(),
+            groups: collapsed && otherKeys.size === 1 ? {[other]: [...otherKeys][0]} : undefined,
+        };
+        const placement: NodePlacement | undefined = collapsed && middle ? {
+            rank: middle.rank,
+            order: middle.order,
+            lane: axis === 'along' ? middle.lane : majority(placements.map(p => p.lane).filter((v): v is number => v !== undefined)),
+            column: middle.column,
+        } : undefined;
+        const kept = existing.get(id);
+        const size = collapsed ? {width: COLLAPSED_GROUP_WIDTH, height: COLLAPSED_GROUP_HEIGHT} : kept?.style;
+        const node: ReactFlowNode = {
+            id, type: GROUP_BOX_TYPE,
+            position: kept?.position ?? {x: 0, y: 0},
+            data: {
+                ...kept?.data,
+                label: id, box, groups: box.groups, placement,
+                layoutDirection: direction,
+                graphNodeProps: {isCenterNode: false, isSink: false, isSource: false},
+            },
+            style: {...kept?.style, width: size?.width, height: size?.height},
+            // dragging an open box drags its members, see moveGroupBoxMembers
+            draggable: true, selectable: false,
+            sourcePosition: direction === 'LR' ? Position.Right : Position.Bottom,
+            targetPosition: direction === 'LR' ? Position.Left : Position.Top,
+        };
+        return {...node, zIndex: baseZIndexOf(node)};
+    });
+
+    const shown = members.map(node => {
+        const hidden = representativeOf(node) !== undefined;
+        return (node.hidden === true) === hidden ? node : {...node, hidden};
+    });
+    // an open box whose members are all drawn as another, collapsed box has nothing to enclose
+    const visible = new Set(shown.filter(node => !node.hidden).map(node => node.id));
+    const fitted = boxes.map(box => {
+        const hidden = !boxDataOf(box).collapsed && !boxDataOf(box).memberIds.some(id => visible.has(id));
+        return (box.hidden === true) === hidden ? box : {...box, hidden};
+    });
+    return [...fitted, ...shown];
 }
 
-export function restoreGroupSettingsBySubgroup(rfi: ReactFlowInstance, lineageState: lineageGraphState) {
-    // restore the flow state to the state in configData
-    const { graphView, props, layout, isExpanded, layoutMode } = lineageState;
+// The edges of the collapsed boxes, merged per pair of ends. The hidden members' own edges stay, as
+// ReactFlow draws no edge of a hidden node and the expansion bookkeeping counts them.
+export function groupFlowEdges(nodes: ReactFlowNode[], edges: ReactFlowEdge[]): ReactFlowEdge[] {
+    const repOf = new Map<string, string>();
+    nodes.forEach(node => { const rep = representativeOf(node); if (rep) repOf.set(node.id, rep); });
+    const existing = new Map(edges.filter(isGroupEdge).map(edge => [edge.id, edge]));
+    const flowEdges = edges.filter(edge => !isGroupEdge(edge));
 
-    groupingState.subgroups = undefined;
-    groupingState.subgroupsRf = undefined;
+    const merged = new Map<string, {source: string, target: string, count: number}>();
+    flowEdges.forEach(edge => {
+        if (isColumnLineageEdge(edge) || edge.data?.relation) return;
+        if (!repOf.has(edge.source) && !repOf.has(edge.target)) return;
+        const source = repOf.get(edge.source) ?? edge.source, target = repOf.get(edge.target) ?? edge.target;
+        if (source === target) return;
+        const id = `${GROUP_EDGE_PREFIX}${source}->${target}`;
+        merged.set(id, {source, target, count: (merged.get(id)?.count ?? 0) + 1});
+    });
+    if (merged.size === 0 && existing.size === 0) return edges;
 
-    const graph: DAGraph = getGraph(props, graphView);
-    const [nodes, edges] = props.graph ? prepareGraphComplete(rfi, graph, graphView, props, layout)
-                                       : prepareGraphDirect(rfi, graph, graphView, props, layout, isExpanded, layoutMode);
-    rfi.setNodes(nodes);
-    rfi.setEdges(edges);
+    const groupEdges = [...merged.entries()].map(([id, {source, target, count}]) => {
+        const kept = existing.get(id);
+        if (kept) return kept.data.groupCount === count ? kept : {...kept, data: {...kept.data, groupCount: count}};
+        return {
+            type: 'customEdge', id, source, target, sourceHandle: source, targetHandle: target,
+            markerEnd: {type: MarkerType.ArrowClosed, width: 10, height: 10, color: EDGE_COLOR_DEFAULT},
+            data: {outputIndex: 0, inputIndex: 0, highlighted: false, groupCount: count} as CustomEdgeProps,
+            style: {stroke: EDGE_COLOR_DEFAULT, strokeWidth: EDGE_STROKE_WIDTH_DEFAULT},
+        } as ReactFlowEdge;
+    });
+    return [...flowEdges, ...groupEdges];
 }
 
-export function highlightBySubstring(rfi: ReactFlowInstance, G: DAGraph, args: string) {
-    // required args: substring
-    const F = (graph: DAGraph, fargs: any) => {
-        return graph.nodes.filter(node => (node as DataOrActionObject).data.id.includes(fargs.substring));
-    }
-    highlightRoutine(G, F, args, rfi);
+export function syncGroupEdges(rfi: ReactFlowInstance): void {
+    const nodes = rfi.getNodes();
+    rfi.setEdges(edges => groupFlowEdges(nodes, edges));
 }
 
-export function groupBySubstring(rfi: ReactFlowInstance, G: DAGraph, args: any) {
-    // required args: substring
-    const F = (graph: DAGraph, fargs: any) => {
-        return graph.nodes.filter(node => (node as DataOrActionObject).data.id.includes(fargs.substring));
-    }
-    groupingRoutine(G, rfi, F, args);
+// Boxes, coordinates, box sizes. An open box has no placement to anchor on, so the result is moved to keep it in place.
+export function layoutFlow(nodes: ReactFlowNode[], edges: ReactFlowEdge[], layoutDirection: LayoutDirection,
+                           options: {anchorId?: string} = {}): ReactFlowNode[] {
+    const grouped = groupFlowNodes(nodes);
+    const anchor = grouped.find(node => node.id === options.anchorId);
+    const placedAnchor = anchor && placementOf(anchor) ? anchor.id : undefined;
+    const laidOut = fitGroupBoxes(assignCoordinates(grouped, edges, layoutDirection,
+        {anchorId: placedAnchor, defaultWidth: nodeWidth, defaultHeight: nodeHeight}), nodeWidth, nodeHeight);
+    if (!anchor || placedAnchor) return laidOut;
+    const moved = laidOut.find(node => node.id === anchor.id)!;
+    const delta = {x: anchor.position.x - moved.position.x, y: anchor.position.y - moved.position.y};
+    if (delta.x === 0 && delta.y === 0) return laidOut;
+    return laidOut.map(node => ({...node, position: {x: node.position.x + delta.x, y: node.position.y + delta.y}}));
 }
 
-export function groupByFeedName(rfi: ReactFlowInstance, G: DAGraph, args: any) {
-    // required args: feedName
-    const F = (graph: DAGraph, fargs: any) => {
-        return graph.nodes.filter(node => (node as ActionObject).jsonObject.metadata?.feed === fargs.feedName);
-    }
-    groupingRoutine(G, rfi, F, args);
+/* What an open box drags along: its shown members, a collapsed box of the other axis among them. */
+export function groupBoxMemberIds(nodes: ReactFlowNode[], boxId: string): string[] {
+    const box = nodes.find(node => node.id === boxId);
+    if (!box || !isGroupBox(box) || boxDataOf(box).collapsed) return [];
+    const {axis, key} = boxDataOf(box);
+    return nodes.filter(node => !node.hidden && node.id !== boxId && groupsOf(node)?.[axis] === key
+        && !(isGroupBox(node) && !boxDataOf(node).collapsed)).map(node => node.id);
 }
 
-// TODO: merge this with groupBYFeed
-export function groupByFeed(rfi: ReactFlowInstance, G: DAGraph, layoutDirection: LayoutDirection) {
-    // Returns the feed of the (action) object
-    const F = (node: GraphNode, _: any) => {
-        return (node as ActionObject).jsonObject.metadata?.feed;
-    }
-    const Tagger = (result, _) => result;
-    groupingRoutineBySubgroup(G, rfi, layoutDirection, F, undefined, Tagger, undefined);
+/* Move the members of an open box that is being dragged, and the boxes crossing it with them. */
+export function moveGroupBoxMembers(rfi: ReactFlowInstance, boxId: string, delta: {x: number, y: number}): void {
+    if (delta.x === 0 && delta.y === 0) return;
+    const ids = new Set(groupBoxMemberIds(rfi.getNodes(), boxId));
+    if (ids.size === 0) return;
+    rfi.setNodes(nodes => fitGroupBoxes(nodes.map(node => ids.has(node.id)
+        ? {...node, position: {x: node.position.x + delta.x, y: node.position.y + delta.y}}
+        : node), nodeWidth, nodeHeight, boxId));
 }
 
-export function groupByObjectType(rfi: ReactFlowInstance, G: DAGraph, args: any) {
-    // required args: objectType
-    const F = (graph: DAGraph, fargs: any) => {
-        return graph.nodes.filter(node => (node as DataOrActionObject).jsonObject.type === fargs.objectType);
-    }
-    groupingRoutine(G, rfi, F, args);
+/* Collapse or expand one box, which stays where it is. */
+export function setGroupBoxCollapsed(rfi: ReactFlowInstance, boxId: string, collapsed: boolean, layoutDirection: LayoutDirection): void {
+    setGroupCollapsed(boxId, collapsed);
+    relayoutGroups(rfi, layoutDirection, boxId);
 }
 
-export function groupByTableName(rfi: ReactFlowInstance, G: DAGraph, args: any) {
-    // required args: tableName
-    const F = (graph: DAGraph, fargs: any) => {
-        return graph.nodes.filter(node => (node as DataObject).jsonObject.table.name === fargs.objectType);
-    }
-    groupingRoutine(G, rfi, F, args);
+/* Collapse or expand every box in the flow. */
+export function setAllGroupBoxesCollapsed(rfi: ReactFlowInstance, collapsed: boolean, layoutDirection: LayoutDirection): void {
+    rfi.getNodes().filter(isGroupBox).forEach(box => setGroupCollapsed(box.id, collapsed));
+    relayoutGroups(rfi, layoutDirection);
 }
 
-export function groupByConnectionId(rfi: ReactFlowInstance, G: DAGraph, args: any) {
-    // required args: connectionId
-    const F = (graph: DAGraph, fargs: any) => {
-        return graph.nodes.filter(node => (node as DataObject).jsonObject.connectionId === fargs.connectionId);
-    }
-    groupingRoutine(G, rfi, F, args);
+function relayoutGroups(rfi: ReactFlowInstance, layoutDirection: LayoutDirection, anchorId?: string): void {
+    rfi.setNodes(nodes => groupFlowNodes(nodes));
+    syncGroupEdges(rfi);
+    recomputeLayout(rfi, layoutDirection, anchorId);
+    updateColumnEdges(rfi);
+}
+
+/* Open the collapsed boxes a node is hidden in, e.g. because it was selected. */
+export function revealGroupMember(rfi: ReactFlowInstance, nodeId: string, layoutDirection: LayoutDirection): void {
+    const node = rfi.getNode(nodeId);
+    const boxes = AXES.map(axis => collapsedBoxOf(groupsOf(node), axis)).filter((id): id is string => id !== undefined);
+    if (boxes.length === 0) return;
+    boxes.forEach(id => setGroupCollapsed(id, false));
+    relayoutGroups(rfi, layoutDirection, nodeId);
 }
 
 /*
@@ -2062,6 +1692,8 @@ export function recordManualMoves(rfi: ReactFlowInstance, moves: Map<string, {x:
         const offset = node.data.manualOffset ?? {x: 0, y: 0};
         return {...node, data: {...node.data, manualOffset: {x: offset.x + move.x, y: offset.y + move.y}}};
     }));
+    // a box follows its members wherever they are dragged
+    rfi.setNodes(nodes => fitGroupBoxes(nodes, nodeWidth, nodeHeight));
 }
 
 /* Forget every manual move - the toolbar's way back to the layout as it is computed. */
@@ -2069,11 +1701,6 @@ export function clearManualMoves(rfi: ReactFlowInstance): void {
     rfi.setNodes(nodes => nodes.map(node => node.data.manualOffset === undefined
         ? node
         : {...node, data: {...node.data, manualOffset: undefined}}));
-}
-
-/* Whether the flow currently holds grouping boxes, which own their children's coordinates. */
-export function isGrouped(rfi: ReactFlowInstance): boolean {
-    return getParentNodesFromRFI(rfi).length > 0;
 }
 
 /*
@@ -2120,19 +1747,5 @@ function closeAllColumns(rfi: ReactFlowInstance): void {
 export function recomputeLayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection, anchorId?: string) {
     const rfNodes = rfi.getNodes();
     const anchor = anchorId ?? rfNodes.find(node => node.data?.graphNodeProps?.isCenterNode)?.id;
-
-    if (!isGrouped(rfi)) {
-        rfi.setNodes(assignCoordinates(rfNodes, rfi.getEdges(), layoutDirection, {anchorId: anchor}));
-        return;
-    }
-
-    // grouped: the boxes have to keep surrounding their children, whose coordinates are relative to them
-    const nonParentNodes = getNonParentNodesFromArray(rfNodes);
-    const parentNodes = getParentNodesFromArray(rfNodes);
-    var layoutedNonParentNodes = dagreLayoutRf(nonParentNodes, rfi.getEdges(), layoutDirection, nodeWidth, nodeHeight);
-    var layoutedParentNodes = computeParentNodePositionFromArray(layoutedNonParentNodes, parentNodes);
-    layoutedNonParentNodes = computeNodePositionFromParent(layoutedNonParentNodes, layoutedParentNodes);
-
-    rfi.setNodes([...layoutedNonParentNodes, ...layoutedParentNodes]);
-    prioritizeParentNodes(rfi);
+    rfi.setNodes(layoutFlow(rfNodes, rfi.getEdges(), layoutDirection, {anchorId: anchor}));
 }

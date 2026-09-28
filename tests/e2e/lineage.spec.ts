@@ -14,7 +14,6 @@ const nodeIds = async (page: Page) =>
 
 // the toolbar dropdowns render an icon only, so they have no accessible name
 const graphViewMenu = (page: Page) => page.locator('.react-flow .MuiMenuButton-root').nth(1);
-const groupingMenu = (page: Page) => page.locator('.react-flow .MuiMenuButton-root').nth(2);
 
 async function openLineage(page: Page, url: string) {
   await page.goto(url);
@@ -264,24 +263,6 @@ test.describe('lineage graph', () => {
 
     await expandForward.click();
     await expect.poll(() => nodeIds(page)).not.toContain('btl-departures-arrivals-airports');
-  });
-
-  test('grouping by feed replaces the nodes by their group, reset restores them', async ({ page }) => {
-    await openLineage(page, '/#/config/actions/join-departures-airports');
-
-    // group by feed is only enabled in the action view
-    await graphViewMenu(page).click();
-    await page.getByRole('menuitem').nth(2).click();
-    await expect(nodes(page).first()).toBeVisible();
-    const ungrouped = await nodeIds(page);
-
-    await groupingMenu(page).click();
-    await page.locator('.byFeed').click();
-    await expect.poll(() => nodeIds(page)).not.toEqual(ungrouped);
-
-    await groupingMenu(page).click();
-    await page.getByRole('menuitem').last().click(); // reset grouping
-    await expect.poll(() => nodeIds(page)).toEqual(ungrouped);
   });
 
   test('the attribute filter and the viewport buttons keep the graph intact', async ({ page }) => {
