@@ -105,7 +105,7 @@ const LineageProvider = (props: React.PropsWithChildren) => {
   const graphContext = React.useMemo(() => ({
     graphView, setGraphView, layoutOf, setLayout, isExpanded, setIsExpanded, selectedNodeAttributes, setSelectedNodeAttributes,
     tracedColumn, setTracedColumn, grouping, setGrouping,
-  }), [graphView, layoutOf, isExpanded, selectedNodeAttributes, tracedColumn, grouping]);
+  }), [graphView, layoutOf, setLayout, isExpanded, selectedNodeAttributes, tracedColumn, grouping]);
 
   return (
     <LineagePanelContext.Provider value={panelContext}>

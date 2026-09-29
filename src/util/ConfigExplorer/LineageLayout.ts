@@ -373,7 +373,8 @@ export interface ForceGroups {
     of: ReadonlyMap<string, string | undefined>;
 }
 
-type ForceNode = SimulationNodeDatum & {id: string, group?: string};
+// w/h: the node's size, given on a re-run; the model of a whole graph lays out closed nodes
+type ForceNode = SimulationNodeDatum & {id: string, group?: string, w: number, h: number};
 
 /*
     Where each node of the graph belongs in a force directed layout: its centre, once per graph and grouping.
@@ -388,24 +389,76 @@ function buildForceModel(graph: DAGraph, groups?: ForceGroups): Map<string, {x: 
     The force layout of what a flow shows now: the nodes drawn - a collapsed group as one node, its
     members left out - and the edges between them, grouped as the nodes are. The toolbar re-runs it.
 */
-export function forceModelOfFlow(nodes: ReactFlowNode[], edges: ReactFlowEdge[]): Map<string, {x: number, y: number}> {
+export function forceModelOfFlow(nodes: ReactFlowNode[], edges: ReactFlowEdge[], options: {keepMoved?: boolean} = {}):
+        {centres: Map<string, {x: number, y: number}>, anchorId?: string} {
     const shown = nodes.filter(node => !node.hidden && forceCentreOf(node));
-    const ids = new Set(shown.map(node => node.id));
+    const ids = [...new Set(shown.map(node => node.id))];
+    const known = new Set(ids);
     const groupOf = new Map(shown.map(node => [node.id, forceGroupOf(node)]));
     const pairs = new Map<string, [string, string]>();
     edges.forEach(edge => {
-        if (edge.hidden || !ids.has(edge.source) || !ids.has(edge.target)) return;
+        if (edge.hidden || !known.has(edge.source) || !known.has(edge.target)) return;
         pairs.set(`${edge.source}\u0000${edge.target}`, [edge.source, edge.target]);
     });
-    return simulateForces([...ids], [...pairs.values()], id => groupOf.get(id));
+    // the nodes as they are shown, e.g. opened on their columns
+    const sizes = new Map(shown.map(node => [node.id, rfNodeSize(node, REFERENCE_NODE_WIDTH, REFERENCE_NODE_HEIGHT)]));
+    const fresh = simulateForces(ids, [...pairs.values()], id => groupOf.get(id), undefined, sizes);
+    if (!options.keepMoved || fresh.size === 0) return {centres: fresh};
+
+    /*
+        Keeping the moved nodes, the result depends only on what is shown, where the moved nodes are
+        and where one unmoved node is - never on where the others happen to be - so that re-running
+        again changes nothing. The fresh layout, moved onto that node, is the start; it and the moved
+        nodes are pinned, and the rest settles between them.
+    */
+    const isMoved = (node: ReactFlowNode) => manualOffsetOf(node) !== undefined;
+    const byId = [...shown].sort((a, b) => a.id.localeCompare(b.id));
+    const centreNode = shown.find(node => node.data?.graphNodeProps?.isCenterNode);
+    const anchor = (centreNode && !isMoved(centreNode) ? centreNode : undefined) ?? byId.find(node => !isMoved(node)) ?? byId[0];
+    const at = shownForceCentreOf(anchor), from = fresh.get(anchor.id)!;
+    const delta = {x: at.x - from.x, y: at.y - from.y};
+    const placed = new Map([...fresh].map(([id, p]) => [id, {x: p.x + delta.x, y: p.y + delta.y}]));
+    const moved = shown.filter(isMoved);
+    if (moved.length === 0) return {centres: placed, anchorId: anchor.id};
+    const start = new Map(ids.map(id => [id, {...placed.get(id)!, pinned: id === anchor.id}]));
+    moved.forEach(node => start.set(node.id, {...shownForceCentreOf(node), pinned: true}));
+    return {centres: simulateForces(ids, [...pairs.values()], id => groupOf.get(id), start, sizes), anchorId: anchor.id};
 }
 
-function simulateForces(ids: string[], pairs: [string, string][], groupOf: (id: string) => string | undefined): Map<string, {x: number, y: number}> {
+/* Where a collapsed group of a force layout goes: its box centred in the hull its members make, moves included. */
+export function collapsedForceCentreOf(members: ReactFlowNode[], boxHeight: number): {x: number, y: number} | undefined {
+    const rects = members.filter(node => forceCentreOf(node)).map(node => {
+        const centre = forceCentreOf(node)!, offset = manualOffsetOf(node) ?? {x: 0, y: 0};
+        const {width, height} = rfNodeSize(node, REFERENCE_NODE_WIDTH, REFERENCE_NODE_HEIGHT);
+        return {x: centre.x + offset.x - width / 2, y: centre.y + offset.y - REFERENCE_NODE_HEIGHT / 2, width, height};
+    });
+    if (rects.length === 0) return undefined;
+    const bounds = boundsOf(hullOfRects(rects, HULL_INSET));
+    return {x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 - boxHeight / 2 + REFERENCE_NODE_HEIGHT / 2};
+}
+
+/* The force centre that would place a node where it is shown now: the inverse of assignForceCoordinates. */
+export function shownForceCentreOf(node: ReactFlowNode, defaultWidth = REFERENCE_NODE_WIDTH): {x: number, y: number} {
+    const {width} = rfNodeSize(node, defaultWidth, REFERENCE_NODE_HEIGHT);
+    return {x: node.position.x + width / 2, y: node.position.y + REFERENCE_NODE_HEIGHT / 2};
+}
+
+// from a warm start the simulation only settles what changed, rather than unfolding the graph again
+const FORCE_WARM_ALPHA = 0.4;
+
+function simulateForces(ids: string[], pairs: [string, string][], groupOf: (id: string) => string | undefined,
+                        start?: ReadonlyMap<string, {x: number, y: number, pinned: boolean}>,
+                        sizes?: ReadonlyMap<string, {width: number, height: number}>): Map<string, {x: number, y: number}> {
     const grouped = ids.some(id => groupOf(id) !== undefined);
     // by group, so that the initial spiral already starts every group in one piece
     const nodes: ForceNode[] = [...ids]
         .sort((a, b) => (groupOf(a) ?? '\uffff').localeCompare(groupOf(b) ?? '\uffff') || a.localeCompare(b))
-        .map(id => ({id, group: groupOf(id)}));
+        .map(id => {
+            const at = start?.get(id);
+            const size = sizes?.get(id);
+            const node = {id, group: groupOf(id), w: size?.width ?? REFERENCE_NODE_WIDTH, h: size?.height ?? REFERENCE_NODE_HEIGHT};
+            return at ? {...node, x: at.x, y: at.y, ...(at.pinned ? {fx: at.x, fy: at.y} : {})} : node;
+        });
     const known = new Set(nodes.map(node => node.id));
     const links = pairs
         .map(([source, target]) => ({source, target}))
@@ -420,6 +473,11 @@ function simulateForces(ids: string[], pairs: [string, string][], groupOf: (id: 
 
     let seed = 1;
     const random = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+    // a warm start is in the flow's coordinates, so the pull holding the components together is centred there
+    const starts = start ? [...start.values()] : [];
+    const centre = starts.length > 0
+        ? {x: starts.reduce((sum, p) => sum + p.x, 0) / starts.length, y: starts.reduce((sum, p) => sum + p.y, 0) / starts.length}
+        : {x: 0, y: 0};
     const simulation = forceSimulation(nodes)
         .randomSource(random)
         .force('link', forceLink<ForceNode, {source: string, target: string}>(links).id(node => node.id).distance(FORCE_LINK_DISTANCE)
@@ -429,12 +487,15 @@ function simulateForces(ids: string[], pairs: [string, string][], groupOf: (id: 
         .force('charge', forceManyBody().strength(-1500))
         .force('collide', forceCollide(FORCE_COLLIDE_RADIUS))
         // keeps the connected components, which repel each other, from drifting apart
-        .force('x', forceX(0).strength(0.05))
-        .force('y', forceY(0).strength(0.05))
+        .force('x', forceX(centre.x).strength(0.05))
+        .force('y', forceY(centre.y).strength(0.05))
         .force('sideBySide', sideBySideForce(nodes, links));
+    // nodes of their real size are not circles: tall ones would be pushed apart vertically, steepening their relations
+    if (sizes) simulation.force('collide', rectCollideForce(nodes, links));
     if (grouped) {
         simulation.force('cluster', clusterForce(nodes)).force('groups', groupSeparationForce(nodes));
     }
+    if (start) simulation.alpha(FORCE_WARM_ALPHA);
     simulation.stop().tick(FORCE_TICKS);
 
     return new Map(nodes.map(node => [node.id, {x: node.x ?? 0, y: node.y ?? 0}]));
@@ -448,7 +509,8 @@ function groupCircles(nodes: ForceNode[]): Map<string, {x: number, y: number, r:
     [...byGroup.entries()].sort((a, b) => a[0].localeCompare(b[0])).forEach(([group, members]) => {
         const x = members.reduce((sum, node) => sum + node.x!, 0) / members.length;
         const y = members.reduce((sum, node) => sum + node.y!, 0) / members.length;
-        const r = Math.max(...members.map(node => Math.hypot(node.x! - x, node.y! - y))) + FORCE_COLLIDE_RADIUS + HULL_INSET.side;
+        const r = Math.max(...members.map(node => Math.hypot(node.x! - x, node.y! - y) + Math.max(FORCE_COLLIDE_RADIUS, node.h / 2)))
+            + HULL_INSET.side;
         circles.set(group, {x, y, r, members});
     });
     return circles;
@@ -479,7 +541,7 @@ function sideBySideForce(nodes: ForceNode[], links: {source: string, target: str
         push(ma, 0, dy);
         push(mb, 0, -dy);
         const dx = b.x! - a.x!;
-        const short = FORCE_SIDE_BY_SIDE_DISTANCE - Math.abs(dx);
+        const short = (a.w + b.w) / 2 + FORCE_SIDE_BY_SIDE_DISTANCE - REFERENCE_NODE_WIDTH - Math.abs(dx);
         if (short <= 0) return;
         // which way round they already are; ties by id, so the result does not depend on floating point noise
         const sign = dx > 0 || (dx === 0 && a.id < b.id) ? 1 : -1;
@@ -487,6 +549,37 @@ function sideBySideForce(nodes: ForceNode[], links: {source: string, target: str
         push(ma, -vx, 0);
         push(mb, vx, 0);
     });
+}
+
+/*
+    Keep the nodes' rectangles apart, a node reaching down from its header (see assignForceCoordinates).
+    Related nodes are pushed apart sideways, as that is where their relation leaves and enters.
+*/
+function rectCollideForce(nodes: ForceNode[], links: {source: string | ForceNode, target: string | ForceNode}[]) {
+    const idOf = (end: string | ForceNode) => typeof end === 'string' ? end : end.id;
+    const related = new Set(links.flatMap(link => [`${idOf(link.source)}\u0000${idOf(link.target)}`, `${idOf(link.target)}\u0000${idOf(link.source)}`]));
+    const top = (node: ForceNode) => node.y! - REFERENCE_NODE_HEIGHT / 2;
+    return (alpha: number) => {
+        for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+                const a = nodes[i], b = nodes[j];
+                const overlapX = (a.w + b.w) / 2 + FORCE_NODE_GAP - Math.abs(b.x! - a.x!);
+                const overlapY = Math.min(top(a) + a.h, top(b) + b.h) - Math.max(top(a), top(b)) + FORCE_NODE_GAP;
+                if (overlapX <= 0 || overlapY <= 0) continue;
+                const sideways = related.has(`${a.id}\u0000${b.id}`) || overlapX < overlapY;
+                const k = Math.max(alpha, 0.1) / 2;
+                if (sideways) {
+                    const sign = b.x! > a.x! || (b.x === a.x && a.id < b.id) ? 1 : -1;
+                    a.vx! -= sign * overlapX * k;
+                    b.vx! += sign * overlapX * k;
+                } else {
+                    const sign = top(b) + b.h / 2 > top(a) + a.h / 2 || (top(b) === top(a) && a.id < b.id) ? 1 : -1;
+                    a.vy! -= sign * overlapY * k;
+                    b.vy! += sign * overlapY * k;
+                }
+            }
+        }
+    };
 }
 
 // pull every member towards the centre of its group
@@ -757,15 +850,18 @@ function assignForceCoordinates(nodes: ReactFlowNode[], options: CoordinateOptio
         boxes.push({id: node.id, x: centre.x - width / 2 + offset.x, y: centre.y - REFERENCE_NODE_HEIGHT / 2 + offset.y, width, height});
     });
     boxes.sort((a, b) => a.id.localeCompare(b.id));
+    // a node the user has moved stays where it was put, and so does the anchor
+    const fixed = new Set(nodes.filter(node => manualOffsetOf(node)).map(node => node.id));
+    if (options.anchorId) fixed.add(options.anchorId);
     const groupOf = new Map(nodes.map(node => [node.id, forceGroupOf(node)]));
     if (boxes.some(box => groupOf.get(box.id) !== undefined)) {
         // the groups are only moved as a whole, so the nodes are pushed apart in between
         for (let pass = 0; pass < 30; pass++) {
-            separateBoxes(boxes, options.anchorId, options.nodesep ?? FORCE_NODE_GAP);
-            if (!separateHulls(boxes, groupOf, options.anchorId)) break;
+            separateBoxes(boxes, fixed, options.nodesep ?? FORCE_NODE_GAP);
+            if (!separateHulls(boxes, groupOf, fixed)) break;
         }
     } else {
-        separateBoxes(boxes, options.anchorId, options.nodesep ?? FORCE_NODE_GAP);
+        separateBoxes(boxes, fixed, options.nodesep ?? FORCE_NODE_GAP);
     }
 
     const positioned = new Map(boxes.map(box => [box.id, {x: box.x, y: box.y}]));
@@ -779,9 +875,10 @@ function assignForceCoordinates(nodes: ReactFlowNode[], options: CoordinateOptio
 
 /*
     Move whole groups apart until their hulls keep HULL_GAP between each other, and every node of no
-    group out of the hulls. A group holding the anchor does not move. Whether anything moved.
+    group out of the hulls. A group holding a fixed node does not move; where both sides hold one, the
+    overlap stays, as the user put them there. Whether anything moved.
 */
-function separateHulls(boxes: (Rect & {id: string})[], groupOf: Map<string, string | undefined>, anchorId: string | undefined): boolean {
+function separateHulls(boxes: (Rect & {id: string})[], groupOf: Map<string, string | undefined>, fixed: ReadonlySet<string>): boolean {
     const byGroup = new Map<string, (Rect & {id: string})[]>();
     boxes.forEach(box => {
         const group = groupOf.get(box.id);
@@ -791,7 +888,7 @@ function separateHulls(boxes: (Rect & {id: string})[], groupOf: Map<string, stri
     const free = boxes.filter(box => groupOf.get(box.id) === undefined);
     const shift = (members: Rect[], share: number, move: Point) =>
         members.forEach(box => { box.x += move.x * share; box.y += move.y * share; });
-    const holdsAnchor = (members: {id: string}[]) => members.some(box => box.id === anchorId);
+    const holdsFixed = (members: {id: string}[]) => members.some(box => fixed.has(box.id));
 
     let moved = false;
     for (let pass = 0; pass < 100; pass++) {
@@ -801,8 +898,8 @@ function separateHulls(boxes: (Rect & {id: string})[], groupOf: Map<string, stri
             for (let j = i + 1; j < groups.length; j++) {
                 const a = byGroup.get(groups[i])!, b = byGroup.get(groups[j])!;
                 const move = separation(hulls.get(groups[i])!, hulls.get(groups[j])!, HULL_GAP);
-                if (!move || Math.hypot(move.x, move.y) < 0.5) continue;
-                const aShare = holdsAnchor(a) ? 0 : holdsAnchor(b) ? 1 : 0.5;
+                if (!move || Math.hypot(move.x, move.y) < 0.5 || (holdsFixed(a) && holdsFixed(b))) continue;
+                const aShare = holdsFixed(a) ? 0 : holdsFixed(b) ? 1 : 0.5;
                 shift(a, -aShare, move);
                 shift(b, 1 - aShare, move);
                 hulls.set(groups[i], hullOfRects(a, HULL_INSET));
@@ -813,8 +910,11 @@ function separateHulls(boxes: (Rect & {id: string})[], groupOf: Map<string, stri
         free.forEach(box => groups.forEach(group => {
             const move = separation(hulls.get(group)!, corners(box), HULL_GAP);
             if (!move || Math.hypot(move.x, move.y) < 0.5) return;
-            // the node gives way, unless it is the anchor
-            if (box.id === anchorId) shift(byGroup.get(group)!, -1, move);
+            // the node gives way, unless it is fixed
+            if (fixed.has(box.id)) {
+                if (holdsFixed(byGroup.get(group)!)) return;
+                shift(byGroup.get(group)!, -1, move);
+            }
             else shift([box], 1, move);
             hulls.set(group, hullOfRects(byGroup.get(group)!, HULL_INSET));
             movedNow = true;
@@ -827,9 +927,9 @@ function separateHulls(boxes: (Rect & {id: string})[], groupOf: Map<string, stri
 
 /*
     Push overlapping boxes apart along the axis they overlap less on, until a gap of `gap` is kept
-    between any two. The anchor does not move; the other box of a pair with it takes the whole push.
+    between any two. A fixed box does not move; the other box of a pair with it takes the whole push.
 */
-function separateBoxes(boxes: {id: string, x: number, y: number, width: number, height: number}[], anchorId: string | undefined, gap: number): void {
+function separateBoxes(boxes: {id: string, x: number, y: number, width: number, height: number}[], fixed: ReadonlySet<string>, gap: number): void {
     for (var pass = 0; pass < 100; pass++) {
         var moved = false;
         for (var i = 0; i < boxes.length; i++) {
@@ -837,7 +937,7 @@ function separateBoxes(boxes: {id: string, x: number, y: number, width: number, 
                 const a = boxes[i], b = boxes[j];
                 const overlapX = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x) + gap;
                 const overlapY = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y) + gap;
-                if (overlapX <= 0.5 || overlapY <= 0.5) continue;
+                if (overlapX <= 0.5 || overlapY <= 0.5 || (fixed.has(a.id) && fixed.has(b.id))) continue;
                 moved = true;
                 const alongX = overlapX < overlapY;
                 const aCentre = alongX ? a.x + a.width / 2 : a.y + a.height / 2;
@@ -845,7 +945,7 @@ function separateBoxes(boxes: {id: string, x: number, y: number, width: number, 
                 // ties go by id order, so the result does not depend on floating point noise
                 const sign = bCentre > aCentre || (bCentre === aCentre && a.id < b.id) ? 1 : -1;
                 const push = alongX ? overlapX : overlapY;
-                const aShare = a.id === anchorId ? 0 : b.id === anchorId ? 1 : 0.5;
+                const aShare = fixed.has(a.id) ? 0 : fixed.has(b.id) ? 1 : 0.5;
                 const axis = alongX ? 'x' : 'y';
                 a[axis] -= sign * push * aShare;
                 b[axis] += sign * push * (1 - aShare);

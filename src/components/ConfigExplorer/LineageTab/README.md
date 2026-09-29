@@ -349,7 +349,10 @@ its bounds, and `GroupBoxNode` draws it as a rounded SVG path. The node itself d
 pointer (`lineage-hull-box` in `LineageTab.css`), only the drawn path and the header do, so the empty
 corners of its bounds stay part of the pane. The path is drawn relative to the hull's own bounds,
 so it moves with the node while a drag is under way; the header keeps clear of the rounded corners
-(`HULL_CORNER`). Collapsed, a group is a node at its members' mean centre, and `groupFlowEdges`
+(`HULL_CORNER`). Collapsed, a group is a node in the middle of the hull its members make, their
+moves included (`collapsedForceCentreOf`); collapsing forgets where the group node was dragged
+before, and anchors on a node outside the group, since the hull collapses onto its middle rather
+than onto its corner, and `groupFlowEdges`
 merges the relations of its members onto it, ending on the other data object's relation handle. In
 a force layout those edges are `straight`: `CustomEdge` draws them centre to centre, cut at both
 nodes' borders (`useFloatingEnds`), as a force layout has no side for them to leave from. `tests/forceGrouping.test.ts` checks that no two hulls overlap and no free
@@ -449,11 +452,27 @@ together. It is **static**, not a running simulation, so everything under
   end. On the dense synthetic graph of `tests/forceGrouping.test.ts` it raises the share
   of relations running closer to horizontal than vertical from about half to three quarters. The
   strengths are tuned by hand; much stronger and the simulation no longer settles.
-- **Re-run** (`rerunForceLayout`, the toolbar button next to *Reset layout*): simulates again on what
+- **Re-run** (`rerunForceLayout`, the split button next to *Reset layout*): simulates again on what
   the flow shows now (`forceModelOfFlow`) - a collapsed group as one node, its members left out, only
-  the nodes expanded so far - and forgets the manual moves. A collapsed group's hidden members move
-  by the group's step, as its place is their mean centre. The result lives on the nodes, so a
-  toolbar change that rebuilds the flow goes back to the model of the whole graph.
+  the nodes expanded so far. A click keeps the **moved nodes** (those with a manual offset, so a
+  dragged hull pins all its members) where they are: they are pinned (`fx`/`fy`) at where they are
+  shown (`shownForceCentreOf`), and the others start from the fresh layout of what is shown, moved so
+  that one node stays put - the first moved node, else the centre node, else the first by id - at a
+  lower alpha, the pull holding the components together centred there. They deliberately do not
+  start from where they are shown: that fed each result into the next click, which kept changing
+  the layout for a dozen clicks and, with the one sided pushes of the final pass, let it drift. So a
+  re-run depends only on what is shown and where the moved nodes are, and repeating it changes
+  nothing. A re-run also simulates the nodes at the size they are shown (`rectCollideForce`, which
+  keeps rectangles apart rather than circles, and pushes related ones apart sideways): the model of
+  the whole graph lays out closed nodes, and once they open their columns the final pass separates
+  them along the axis they overlap less on, which for tall nodes is vertical and steepens their
+  relations. The arrow offers *Re-run from scratch*, which forgets the moves. A
+  collapsed group's hidden members move by the group's step, as its place is their mean centre. The
+  result lives on the nodes, so a toolbar change that rebuilds the flow goes back to the model of the
+  whole graph.
+- The final pass never pushes a moved node aside: `separateBoxes` and `separateHulls` treat it like
+  the anchor, the other side gives way, and where both sides are pinned the overlap stays, as the
+  user put them there.
 
 In a force layout a node may lie left of the node it references. The relation handles stay on the
 left and right borders, so when the target lies to the left `CustomEdge` moves both ends of a

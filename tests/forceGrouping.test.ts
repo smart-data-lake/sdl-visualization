@@ -10,8 +10,8 @@ import { ConfigData } from '../src/util/ConfigExplorer/ConfigData';
 import { DAGraph, DataObject, Edge } from '../src/util/ConfigExplorer/Graphs';
 import { Grouping, HULL_GAP, boxDataOf, clearCollapsedGroups, groupBoxId, groupingKey, groupsOfGraph, isGroupBox, setGroupCollapsed } from '../src/util/ConfigExplorer/Grouping';
 import { Point, boundsOf, centroidOf, convexHull, corners, separation } from '../src/util/ConfigExplorer/Hull';
-import { ForceGroups, assignCoordinates, fitGroupBoxes, forceModelOf, forceModelOfFlow } from '../src/util/ConfigExplorer/LineageLayout';
-import { groupFlowEdges, groupFlowNodes } from '../src/util/ConfigExplorer/LineageTabUtils';
+import { ForceGroups, assignCoordinates, fitGroupBoxes, forceModelOf, forceModelOfFlow, shownForceCentreOf } from '../src/util/ConfigExplorer/LineageLayout';
+import { groupFlowEdges, groupFlowNodes, rerunForceLayout } from '../src/util/ConfigExplorer/LineageTabUtils';
 
 describe('convex hull', () => {
     it('keeps the outer points, clockwise on the screen, and drops inner and collinear ones', () => {
@@ -190,11 +190,139 @@ describe('relations in the force layout', () => {
         setGroupCollapsed(groupBoxId('along', 'g1'), true);
         const flow = forceFlowOf(graph, groupOf, {along: 'subjectArea'});
         const nodes = laidOut(flow);
-        const centres = forceModelOfFlow(nodes, groupFlowEdges(nodes, flow.edges));
+        const {centres} = forceModelOfFlow(nodes, groupFlowEdges(nodes, flow.edges));
 
         expect(centres.has(groupBoxId('along', 'g1'))).toBe(true);
         expect([...centres.keys()].some(id => groupOf.get(id) === 'g1')).toBe(false);
         expect(centres.has('g2-n0')).toBe(true);
+    });
+});
+
+describe('re-running the force layout, keeping the moved nodes', () => {
+    beforeEach(() => clearCollapsedGroups());
+    const grouping: Grouping = {along: 'subjectArea'};
+    const moved = (node: ReactFlowNode, by: {x: number, y: number}) =>
+        ({...node, position: {x: node.position.x + by.x, y: node.position.y + by.y}, data: {...node.data, manualOffset: by}});
+
+    it('pins a moved node where it is shown and lets the others settle around it', () => {
+        const {graph, groupOf} = syntheticGraph();
+        const flow = forceFlowOf(graph, groupOf, grouping);
+        const nodes = laidOut(flow).map(node => node.id === 'free-1' ? moved(node, {x: 400, y: -300}) : node);
+
+        const kept = forceModelOfFlow(nodes, flow.edges, {keepMoved: true}).centres;
+        const pinned = nodes.find(node => node.id === 'free-1')!;
+        expect(kept.get('free-1')).toEqual(shownForceCentreOf(pinned));
+        const fresh = forceModelOfFlow(nodes, flow.edges).centres;
+        expect(fresh.get('free-1')).not.toEqual(shownForceCentreOf(pinned));
+    });
+
+    it('does not push a moved node aside to make room, the others give way', () => {
+        const {graph, groupOf} = syntheticGraph();
+        const flow = forceFlowOf(graph, groupOf, grouping);
+        const laid = laidOut(flow);
+        const target = laid.find(node => node.id === 'g2-n0')!.position;
+        const free = laid.find(node => node.id === 'free-2')!;
+        // dropped right onto a member of another group
+        const nodes = flow.nodes.map(node => node.id === 'free-2'
+            ? {...node, data: {...node.data, manualOffset: {x: target.x - free.position.x, y: target.y - free.position.y}}} : node);
+
+        const after = laidOut({nodes, edges: flow.edges});
+        expect(after.find(node => node.id === 'free-2')!.position).toEqual(target);
+        expectApart(after, groupOf);
+    });
+});
+
+describe('re-running the force layout again', () => {
+    beforeEach(() => clearCollapsedGroups());
+
+    // just enough of a ReactFlow instance for rerunForceLayout
+    function flowInstance(nodes: ReactFlowNode[], edges: ReactFlowEdge[]) {
+        const state = {nodes, edges};
+        const set = <T,>(key: 'nodes' | 'edges') => (update: T[] | ((current: T[]) => T[])) => {
+            (state as any)[key] = typeof update === 'function' ? (update as any)(state[key]) : update;
+        };
+        return {state, rfi: {getNodes: () => state.nodes, getEdges: () => state.edges,
+                             setNodes: set<ReactFlowNode>('nodes'), setEdges: set<ReactFlowEdge>('edges')} as any};
+    }
+    const positions = (nodes: ReactFlowNode[]) => new Map(nodes.filter(node => !node.hidden).map(node => [node.id, node.position]));
+    const expectSame = (a: Map<string, {x: number, y: number}>, b: Map<string, {x: number, y: number}>) => {
+        expect([...b.keys()].sort()).toEqual([...a.keys()].sort());
+        a.forEach((p, id) => {
+            expect(b.get(id)!.x, id).toBeCloseTo(p.x, 3);
+            expect(b.get(id)!.y, id).toBeCloseTo(p.y, 3);
+        });
+    };
+
+    const cases: [string, boolean][] = [['with a moved node', true], ['without any', false], ];
+    cases.forEach(([name, withMoved]) => it(`changes nothing when repeated, ${name}, also with a group collapsed`, () => {
+        const {graph, groupOf} = syntheticGraph();
+        setGroupCollapsed(groupBoxId('along', 'g3'), true);
+        const flow = forceFlowOf(graph, groupOf, {along: 'subjectArea'});
+        let nodes = laidOut(flow);
+        if (withMoved) nodes = nodes.map(node => node.id === 'g1-n0'
+            ? {...node, position: {x: node.position.x - 500, y: node.position.y + 200}, data: {...node.data, manualOffset: {x: -500, y: 200}}} : node);
+        const {state, rfi} = flowInstance(nodes, groupFlowEdges(nodes, flow.edges));
+        const movedAt = state.nodes.find(node => node.id === 'g1-n0')!.position;
+
+        rerunForceLayout(rfi, true);
+        const first = positions(state.nodes);
+        if (withMoved) {
+            expect(first.get('g1-n0')!.x).toBeCloseTo(movedAt.x, 6);
+            expect(first.get('g1-n0')!.y).toBeCloseTo(movedAt.y, 6);
+        }
+        for (let click = 0; click < 3; click++) {
+            rerunForceLayout(rfi, true);
+            expectSame(first, positions(state.nodes));
+        }
+    }));
+
+    it('re-runs with the nodes at their real size, so that tall ones do not stack and steepen their relations', () => {
+        // the star of the screenshot: one data object related to two others, all three open on their columns
+        const ids = ['btl', 'int-airports', 'int-departures'];
+        const objects = new Map(ids.map(id => [id, new DataObject(id)]));
+        const graph = new DAGraph([...objects.values()], [
+            new Edge(objects.get('btl')!, objects.get('int-airports')!, 'e0'),
+            new Edge(objects.get('int-departures')!, objects.get('int-airports')!, 'e1'),
+        ]);
+        const groupOf = new Map(ids.map(id => [id, 'compute']));
+        const tall = (id: string) => ({width: 172, height: id === 'int-airports' ? 260 : 120});
+        const flow = forceFlowOf(graph, groupOf, {along: 'feed'}, tall);
+        const {state, rfi} = flowInstance(laidOut(flow), flow.edges);
+
+        rerunForceLayout(rfi, false);
+        const centre = (id: string) => {
+            const node = state.nodes.find(node => node.id === id)!;
+            return {x: node.position.x + 86, y: node.position.y + 18}; // the header, where the key columns start
+        };
+        ['btl', 'int-departures'].forEach(id => {
+            const a = centre(id), b = centre('int-airports');
+            const angle = Math.atan2(Math.abs(b.y - a.y), Math.abs(b.x - a.x)) * 180 / Math.PI;
+            expect(angle, id).toBeLessThan(10);
+        });
+    });
+});
+
+describe('collapsing a hull', () => {
+    beforeEach(() => clearCollapsedGroups());
+
+    it('puts the collapsed group in the middle of its hull, also after a member was moved', () => {
+        const {graph, groupOf} = syntheticGraph();
+        const flow = forceFlowOf(graph, groupOf, {along: 'subjectArea'});
+        // a member dragged away stretches the hull, and the collapsed group follows it there
+        const nodes = flow.nodes.map(node => node.id === 'g2-n0' ? {...node, data: {...node.data, manualOffset: {x: -250, y: 120}}} : node);
+        const open = laidOut({nodes, edges: flow.edges});
+        const hull = open.find(node => node.id === groupBoxId('along', 'g2'))!;
+        const middle = {x: hull.position.x + Number(hull.style!.width) / 2, y: hull.position.y + Number(hull.style!.height) / 2};
+
+        setGroupCollapsed(groupBoxId('along', 'g2'), true);
+        // laid out from where the members are, not from the open layout the final pass may have moved
+        const collapsed = fitGroupBoxes(assignCoordinates(groupFlowNodes(open.map(node =>
+            isGroupBox(node) ? node : {...node, data: {...node.data, forceCentre: {x: node.position.x + 86 - (node.data.manualOffset?.x ?? 0),
+                                                                              y: node.position.y + 18 - (node.data.manualOffset?.y ?? 0)}}})), flow.edges, 'LR'));
+        const box = collapsed.find(node => node.id === groupBoxId('along', 'g2'))!;
+        const size = {width: Number(box.style!.width), height: Number(box.style!.height)};
+        expect(box.position.x + size.width / 2).toBeCloseTo(middle.x, 0);
+        expect(box.position.y + size.height / 2).toBeCloseTo(middle.y, 0);
     });
 });
 
