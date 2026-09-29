@@ -30,14 +30,24 @@ type LineagePanelContextType = {
 /** what the layout menu offers: a layered layout in either direction, or a force directed one */
 export type LayoutChoice = LayoutDirection | 'force';
 
+/** the layout a view is shown in */
+export interface ViewLayout {
+  choice: LayoutChoice;
+  /** the direction handles and ranks follow; a force layout keeps the relation handles' left to right */
+  direction: LayoutDirection;
+  mode: LayoutMode;
+}
+
+export function viewLayoutOf(choice: LayoutChoice): ViewLayout {
+  return {choice, direction: choice === 'force' ? 'LR' : choice, mode: choice === 'force' ? 'force' : 'layered'};
+}
+
 type LineageGraphContextType = {
   graphView: GraphView;
   setGraphView: (view: GraphView) => void;
-  /** the direction handles and ranks follow; a force layout keeps the relation handles' left to right */
-  layout: LayoutDirection;
-  setLayout: (layout: LayoutChoice) => void;
-  layoutChoice: LayoutChoice;
-  layoutMode: LayoutMode;
+  /** the relations view keeps a layout of its own, force directed until another is chosen; the flows share one */
+  layoutOf: (view: GraphView) => ViewLayout;
+  setLayout: (view: GraphView, layout: LayoutChoice) => void;
   isExpanded: boolean;
   setIsExpanded: (isExpanded: boolean) => void;
   selectedNodeAttributes: string[];
@@ -74,10 +84,15 @@ const LineageProvider = (props: React.PropsWithChildren) => {
   const [graphView, setGraphView] = React.useState<GraphView>('full');
   // the manifest's layout applies until the user picks one
   const { data: manifest } = useManifest();
-  const [chosenLayout, setLayout] = React.useState<LayoutChoice>();
-  const layoutChoice: LayoutChoice = chosenLayout ?? (manifest?.lineageLayout === 'TB' ? 'TB' : 'LR');
-  const layout: LayoutDirection = layoutChoice === 'force' ? 'LR' : layoutChoice;
-  const layoutMode: LayoutMode = layoutChoice === 'force' ? 'force' : 'layered';
+  const [chosenFlowLayout, setFlowLayout] = React.useState<LayoutDirection>();
+  const [relationsLayout, setRelationsLayout] = React.useState<LayoutChoice>('force');
+  const flowLayout: LayoutDirection = chosenFlowLayout ?? (manifest?.lineageLayout === 'TB' ? 'TB' : 'LR');
+  const layoutOf = React.useCallback((view: GraphView) => viewLayoutOf(view === 'relations' ? relationsLayout : flowLayout),
+    [relationsLayout, flowLayout]);
+  const setLayout = React.useCallback((view: GraphView, choice: LayoutChoice) => {
+    if (view === 'relations') setRelationsLayout(choice);
+    else if (choice !== 'force') setFlowLayout(choice); // only the relations view offers a force layout
+  }, []);
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [selectedNodeAttributes, setSelectedNodeAttributes] = React.useState<string[]>(nodeAttributes.map(attr => attr.value));
   const [tracedColumn, setTracedColumn] = React.useState<ColumnRef | undefined>(undefined);
@@ -88,9 +103,9 @@ const LineageProvider = (props: React.PropsWithChildren) => {
   }), [lineageTabOpen, lineageTabProps]);
 
   const graphContext = React.useMemo(() => ({
-    graphView, setGraphView, layout, setLayout, layoutChoice, layoutMode, isExpanded, setIsExpanded, selectedNodeAttributes, setSelectedNodeAttributes,
+    graphView, setGraphView, layoutOf, setLayout, isExpanded, setIsExpanded, selectedNodeAttributes, setSelectedNodeAttributes,
     tracedColumn, setTracedColumn, grouping, setGrouping,
-  }), [graphView, layout, layoutChoice, layoutMode, isExpanded, selectedNodeAttributes, tracedColumn, grouping]);
+  }), [graphView, layoutOf, isExpanded, selectedNodeAttributes, tracedColumn, grouping]);
 
   return (
     <LineagePanelContext.Provider value={panelContext}>

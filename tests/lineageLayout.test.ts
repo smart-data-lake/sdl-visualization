@@ -275,6 +275,16 @@ describe('force layout', () => {
         expect(is.y).toBeCloseTo(was.y);
     });
 
+    it('grows a node downwards from its header, so that its first rows stay level with its neighbours', () => {
+        const model = forceModelOf(graphOf(['d', 'e'], [['d', 'e']]));
+        const closed = assignCoordinates(['d', 'e'].map(id => forceNode(id, model)), [], 'LR');
+        const opened = assignCoordinates(['d', 'e'].map(id => forceNode(id, model, id === 'd' ? {width: 172, height: 300} : undefined)), [], 'LR');
+        const at = (list: ReactFlowNode[], id: string) => list.find(node => node.id === id)!.position;
+
+        expect(at(opened, 'd').y).toBeCloseTo(at(closed, 'd').y);
+        expect(at(opened, 'd').y - at(opened, 'e').y).toBeCloseTo(at(closed, 'd').y - at(closed, 'e').y);
+    });
+
     it('keeps the displacement of a dragged node', () => {
         const model = forceModelOf(graphOf(...RELATIONS));
         const nodes = RELATIONS[0].map(id => forceNode(id, model));

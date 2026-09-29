@@ -4,6 +4,7 @@
 import { Edge as ReactFlowEdge, Node as ReactFlowNode } from 'reactflow';
 import { ConfigData } from './ConfigData';
 import { DAGraph, NodeType } from './Graphs';
+import type { Point } from './Hull';
 
 export type AlongAttribute = 'feed' | 'subjectArea';
 export type AcrossAttribute = 'layer';
@@ -30,6 +31,16 @@ export const GROUP_ATTRIBUTE_LABELS: Record<GroupAttribute, string> = {
 
 export const isGrouping = (grouping: Grouping | undefined) => !!(grouping?.along || grouping?.across);
 export const groupingKey = (grouping: Grouping | undefined) => `${grouping?.along ?? ''}|${grouping?.across ?? ''}`;
+
+/* The one level the force layout groups by: the attribute along the flow before the one across it. */
+export function singleGrouping(grouping: Grouping): Grouping {
+    return grouping.along ? {along: grouping.along} : grouping.across ? {across: grouping.across} : {};
+}
+
+/* The only axis of a single level grouping. */
+export function singleAxisOf(grouping: Grouping | undefined): GroupAxis | undefined {
+    return grouping?.along ? 'along' : grouping?.across ? 'across' : undefined;
+}
 
 /* ------------------------------------------------------------ membership */
 
@@ -123,9 +134,12 @@ export interface GroupBoxData {
     memberIds: string[];
     /* while collapsed: its box in the other axis, if all of its members share one */
     groups?: NodeGroups;
+    /* in the force layout: a convex hull around the members instead of a box, in flow coordinates */
+    hull?: Point[];
 }
 
 export const boxDataOf = (node: ReactFlowNode): GroupBoxData => node.data.box;
+export const isHullBox = (node: ReactFlowNode) => isGroupBox(node) && node.data.box.hull !== undefined;
 
 // the space between a box's border and its members, and the header on top of that
 export const GROUP_PADDING = 20;
@@ -138,6 +152,17 @@ export const GROUP_HEADER_GAP = 4;
 export function groupInset(axis: GroupAxis, bothAxes: boolean): {side: number, top: number, bottom: number} {
     const around = axis === 'across' && bothAxes ? 2 : 1;
     return {side: around * GROUP_PADDING, top: around * (GROUP_HEADER + GROUP_HEADER_GAP), bottom: around * GROUP_PADDING};
+}
+
+/* How far a hull reaches past each member: a box's single level inset, the header on top of every member. */
+export const HULL_INSET = groupInset('along', false);
+// between two hulls, and between a hull and a node outside it
+export const HULL_GAP = GROUP_PADDING;
+
+/* The group a node of a force layout belongs to, if any: its key in the grouping's only axis. */
+export function forceGroupOf(node: ReactFlowNode): string | undefined {
+    const axis = singleAxisOf(node.data?.grouping);
+    return axis ? groupsOf(node)?.[axis] : undefined;
 }
 
 /* The insets of a box on both ends of a screen axis: left and right on x, top and bottom on y. */

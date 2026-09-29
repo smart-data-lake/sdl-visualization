@@ -6,6 +6,7 @@ import {CloudDownload, Close} from '@mui/icons-material';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import HubOutlined from '@mui/icons-material/HubOutlined';
+import Replay from '@mui/icons-material/Replay';
 import SchemaIcon from '@mui/icons-material/Schema';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
 import WorkspacesIcon from '@mui/icons-material/Workspaces';
@@ -21,8 +22,8 @@ import { useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { LayoutChoice, nodeAttributes, useLineageGraph, useLineagePanel } from '../../../hooks/useLineage';
-import { flowProps, resetLayout, resetViewPort, resetViewPortCentered, revealGroupMember, setAllGroupBoxesCollapsed } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { GROUP_ATTRIBUTE_LABELS, GroupAttribute, isGroupBox, isGrouping } from '../../../util/ConfigExplorer/Grouping';
+import { GraphView, flowProps, offeredGraphViews, shownGraphView, rerunForceLayout, resetLayout, resetViewPort, resetViewPortCentered, revealGroupMember, setAllGroupBoxesCollapsed } from '../../../util/ConfigExplorer/LineageTabUtils';
+import { GROUP_ATTRIBUTE_LABELS, GroupAttribute, isGroupBox, isGrouping, singleGrouping } from '../../../util/ConfigExplorer/Grouping';
 import { GROUP_ATTRIBUTE_ICONS } from './GroupBoxNode';
 
 /*
@@ -41,8 +42,11 @@ function downloadImage(dataUrl: string) {
     a.click();
 }
 
-function GraphViewSelector({props}: {props: flowProps}) {
-    const { graphView, setGraphView, layoutChoice, setLayout } = useLineageGraph();
+// a disabled menu item ignores the pointer, which would also hide the tooltip saying why it is disabled
+const disabledItemHoverSx = {'&.Mui-disabled': {pointerEvents: 'auto', cursor: 'default'}};
+
+function GraphViewSelector({props, graphView}: {props: flowProps, graphView: GraphView}) {
+    const { setGraphView } = useLineageGraph();
 
     const options = {
         full: {title: 'show full graph', icon: SchemaIcon},
@@ -51,21 +55,11 @@ function GraphViewSelector({props}: {props: flowProps}) {
         relations: {title: 'show relations between data objects', icon: HubOutlined},
     }
 
-    // nothing to show when the configuration declares no foreign key, which is the common case
-    const hasRelations = (props.configData?.relationsGraph?.edges.length ?? 0) > 0;
+    // without any foreign key the view still shows the selected data object; it is only missing when building it failed
+    const hasRelationsGraph = props.configData?.relationsGraph !== undefined;
 
-    const handleSelect = (value) => {
-        setGraphView(value);
-        /*
-            An entity relation diagram is drawn left to right, and so are the relations: a column
-            handle is on the left or the right border of its row, so in a top to bottom layout the
-            edges would leave a node's lower border only to come back into the next node's left one.
-            The layout button still switches it back for anyone who wants that.
-        */
-        if (value === 'relations') setLayout('LR');
-        // the other views are a flow, which only a layered layout draws
-        else if (layoutChoice === 'force') setLayout('LR');
-    };
+    // each view comes back in its own layout, see useLineage
+    const handleSelect = (value) => setGraphView(value);
 
     /*
         The view that is shown is the one in the context, not one this component remembers: the
@@ -80,10 +74,10 @@ function GraphViewSelector({props}: {props: flowProps}) {
         const Icon = options[identifier]['icon']
 
         return (
-            <MenuItem selected={graphView === identifier} disabled={disabled}
+            <MenuItem key={identifier} selected={graphView === identifier} disabled={disabled}
                       onClick={() => { if (!disabled) handleSelect(identifier); }}
-                      sx={{ justifyContent: 'center' }}>
-                <Tooltip arrow title={disabled ? title + ' (no foreign keys are configured)' : title}
+                      sx={{ justifyContent: 'center', ...disabledItemHoverSx }}>
+                <Tooltip arrow title={disabled ? title + ' (the foreign keys of this configuration could not be read)' : title}
                          enterDelay={500} enterNextDelay={500} placement='right'>
                     <Icon />
                 </Tooltip>
@@ -101,10 +95,7 @@ function GraphViewSelector({props}: {props: flowProps}) {
                 </Tooltip>
             </MenuButton>
             <Menu>
-                {createTooltip('full', options)}
-                {createTooltip('data', options)}
-                {createTooltip('action', options)}
-                {createTooltip('relations', options, !hasRelations)}
+                {offeredGraphViews(props).map(view => createTooltip(view, options, view === 'relations' && !hasRelationsGraph))}
             </Menu>
         </Dropdown>
     )
@@ -112,8 +103,10 @@ function GraphViewSelector({props}: {props: flowProps}) {
 
 
 /* The layout: layered in either direction, or force directed, which only the relations view offers. */
-function LayoutSelector({forceAvailable}: {forceAvailable: boolean}) {
-    const { layoutChoice, setLayout } = useLineageGraph();
+function LayoutSelector({graphView}: {graphView: GraphView}) {
+    const { layoutOf, setLayout } = useLineageGraph();
+    const layoutChoice = layoutOf(graphView).choice;
+    const forceAvailable = graphView === 'relations';
 
     const options: Record<LayoutChoice, {title: string, icon: typeof AlignVerticalTop}> = {
         TB: {title: 'vertical layout', icon: AlignVerticalTop},
@@ -125,8 +118,8 @@ function LayoutSelector({forceAvailable}: {forceAvailable: boolean}) {
         const Icon = options[choice].icon;
         return (
             <MenuItem key={choice} selected={layoutChoice === choice} disabled={disabled} data-testid={`layout-${choice}`}
-                      onClick={() => { if (!disabled) setLayout(choice); }} sx={{ justifyContent: 'center' }}>
-                <Tooltip arrow title={disabled ? options[choice].title + ' (only in the relations view)' : options[choice].title}
+                      onClick={() => { if (!disabled) setLayout(graphView, choice); }} sx={{ justifyContent: 'center', ...disabledItemHoverSx }}>
+                <Tooltip arrow title={disabled ? options[choice].title + ' - only available in the relations view' : options[choice].title}
                          enterDelay={500} enterNextDelay={500} placement='right'>
                     <Icon />
                 </Tooltip>
@@ -238,9 +231,9 @@ function CenterFocusButton() {
     )
 }
 
-function ResetLayoutButton() {
+function ResetLayoutButton({graphView}: {graphView: GraphView}) {
     const rfi = useReactFlow();
-    const { layout: layoutDirection } = useLineageGraph();
+    const layoutDirection = useLineageGraph().layoutOf(graphView).direction;
 
     // the nodes shown stay; their columns close and the manual moves are given up
     const handleOnClick = () => {
@@ -254,6 +247,18 @@ function ResetLayoutButton() {
             </IconButton>
         </Tooltip>
     )
+}
+
+// the force simulation once more, on the groups and nodes as they are shown now
+function RerunForceLayoutButton() {
+    const rfi = useReactFlow();
+    return (
+        <Tooltip arrow title='Re-run the force layout on what is shown' enterDelay={500} enterNextDelay={500} placement='top'>
+            <IconButton onClick={() => rerunForceLayout(rfi)} aria-label='Re-run force layout'>
+                <Replay />
+            </IconButton>
+        </Tooltip>
+    );
 }
 
 // Close a menu on a press outside it: ReactFlow's pane stops the click a menu's click-away listens for.
@@ -280,11 +285,14 @@ const denseMenuSx = {'--ListItemDecorator-size': '24px', '--ListItem-minHeight':
 const denseSubheaderSx = {minHeight: '22px'};
 
 // box the nodes by an attribute along and across the flow; changing it rebuilds the node set, like the layout direction
-function GroupingButton() {
+function GroupingButton({graphView}: {graphView: GraphView}) {
     const rfi = useReactFlow();
-    const { graphView, layout, layoutMode, grouping, setGrouping } = useLineageGraph();
-    // foreign keys are not a flow, and a force layout has no lanes or columns to keep boxes apart
-    const unavailable = graphView === 'relations' || layoutMode === 'force';
+    const { layoutOf, grouping, setGrouping } = useLineageGraph();
+    const { direction: layout, mode: layoutMode } = layoutOf(graphView);
+    // foreign keys are not a flow: the relations view groups only in the force layout, one level of hulls
+    const force = graphView === 'relations' && layoutMode === 'force';
+    const unavailable = graphView === 'relations' && !force;
+    const shown = force ? singleGrouping(grouping) : grouping;
 
     const [open, setOpen] = React.useState(false);
     const handleOpenChange = React.useCallback((_event: React.SyntheticEvent | null, isOpen: boolean) => setOpen(isOpen), []);
@@ -292,9 +300,12 @@ function GroupingButton() {
 
     const option = (axis: 'along' | 'across', attribute: GroupAttribute | undefined) => {
         const Icon = attribute ? GROUP_ATTRIBUTE_ICONS[attribute] : Clear;
+        const selected = force ? (attribute === undefined ? !isGrouping(shown) : shown[axis] === attribute) : grouping[axis] === attribute;
+        // one level: choosing an attribute replaces the other axis' one
+        const choose = () => setGrouping(force ? (attribute ? {[axis]: attribute} : {}) : {...grouping, [axis]: attribute});
         return (
-            <MenuItem key={`${axis}-${attribute ?? 'none'}`} selected={grouping[axis] === attribute}
-                      onClick={() => setGrouping({...grouping, [axis]: attribute})} sx={{ outline: '0 !important' }}>
+            <MenuItem key={`${axis}-${attribute ?? 'none'}`} selected={selected}
+                      onClick={choose} sx={{ outline: '0 !important' }}>
                 <ListItemDecorator><Icon/></ListItemDecorator>
                 {attribute ? GROUP_ATTRIBUTE_LABELS[attribute] : 'None'}
             </MenuItem>
@@ -304,13 +315,21 @@ function GroupingButton() {
     return (
         <Dropdown open={open} onOpenChange={handleOpenChange}>
             <MenuButton ref={buttonRef} disabled={unavailable} endDecorator={<ArrowDropDown sx={{ position: 'absolute', bottom: 8, left: 25 }} />}
-                        sx={{ padding: 1, outline: '0 !important' }} aria-label='Grouping'>
-                <Tooltip arrow title={unavailable ? 'Grouping needs a layered layout of a flow' : 'Group nodes into boxes'}
+                        sx={{ padding: 1, outline: '0 !important', ...disabledItemHoverSx }} aria-label='Grouping'>
+                <Tooltip arrow title={unavailable ? 'In the relations view, grouping needs the force directed layout'
+                                            : force ? 'Group nodes into hulls' : 'Group nodes into boxes'}
                          enterDelay={500} enterNextDelay={500} placement='top'>
-                    <WorkspacesIcon color={isGrouping(grouping) ? 'primary' : undefined}/>
+                    <WorkspacesIcon color={isGrouping(shown) && !unavailable ? 'primary' : undefined}/>
                 </Tooltip>
             </MenuButton>
             <Menu ref={menuRef} size="sm" sx={denseMenuSx}>
+                {force ? [
+                    <ListSubheader key='header' sx={denseSubheaderSx}>Group by</ListSubheader>,
+                    option('along', undefined),
+                    option('along', 'feed'),
+                    option('along', 'subjectArea'),
+                    option('across', 'layer'),
+                ] : <>
                 <ListSubheader sx={denseSubheaderSx}>{layout === 'LR' ? 'Rows' : 'Columns'} along the flow</ListSubheader>
                 {option('along', undefined)}
                 {option('along', 'feed')}
@@ -319,11 +338,12 @@ function GroupingButton() {
                 <ListSubheader sx={denseSubheaderSx}>{layout === 'LR' ? 'Columns' : 'Rows'} across the flow</ListSubheader>
                 {option('across', undefined)}
                 {option('across', 'layer')}
+                </>}
                 <ListDivider/>
-                <MenuItem disabled={!isGrouping(grouping)} onClick={() => setAllGroupBoxesCollapsed(rfi, true, layout)}>
+                <MenuItem disabled={!isGrouping(shown)} onClick={() => setAllGroupBoxesCollapsed(rfi, true, layout)}>
                     <ListItemDecorator><UnfoldLess/></ListItemDecorator>Collapse all
                 </MenuItem>
-                <MenuItem disabled={!isGrouping(grouping)} onClick={() => setAllGroupBoxesCollapsed(rfi, false, layout)}>
+                <MenuItem disabled={!isGrouping(shown)} onClick={() => setAllGroupBoxesCollapsed(rfi, false, layout)}>
                     <ListItemDecorator><UnfoldMore/></ListItemDecorator>Expand all
                 </MenuItem>
             </Menu>
@@ -375,9 +395,9 @@ function NodeAttributeSelector() {
 }
 
 
-export const NodeSearchButton = () => {
+export const NodeSearchButton = ({graphView}: {graphView: GraphView}) => {
     const rfi = useReactFlow();
-    const { layout } = useLineageGraph();
+    const layout = useLineageGraph().layoutOf(graphView).direction;
     const [elementSearchText, setElementSearchText] = useState("");
     const [suggestions, setSuggestions] = useState<any>([]);
 
@@ -477,7 +497,9 @@ export default function LineageGraphToolbar({props}: {props: flowProps}) {
     const showCloseButton = !props.runContext;
     // avoid DOM warning for Draggable, see https://github.com/react-grid-layout/react-draggable/blob/v4.4.2/lib/DraggableCore.js#L159-L171
     const nodeRef = useRef(null);
-    const { graphView } = useLineageGraph();
+    const { graphView: selectedGraphView, layoutOf } = useLineageGraph();
+    const graphView = shownGraphView(props, selectedGraphView);
+    const offersGraphViews = offeredGraphViews(props).length > 1;
 
     return (
         <Draggable bounds="parent" nodeRef={nodeRef}>
@@ -486,14 +508,14 @@ export default function LineageGraphToolbar({props}: {props: flowProps}) {
             }}
             >
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
-                    <NodeSearchButton/>
+                    <NodeSearchButton graphView={graphView}/>
                 </ToggleButtonGroup>
-                {(showCenterNodeOptions || isPropsConfigDefined) && <>
+                {(offersGraphViews || isPropsConfigDefined) && <>
                     <Divider orientation="vertical" />
                     <ToggleButtonGroup variant="plain" spacing={0.1}>
                         {showCenterNodeOptions && isPropsConfigDefined && <GraphExpansionButton />}
-                        {showCenterNodeOptions && <GraphViewSelector props={props} />}
-                        {isPropsConfigDefined && <GroupingButton />}
+                        {offersGraphViews && <GraphViewSelector props={props} graphView={graphView} />}
+                        {isPropsConfigDefined && <GroupingButton graphView={graphView} />}
                         {isPropsConfigDefined && <NodeAttributeSelector />}
                     </ToggleButtonGroup>
                 </>}
@@ -501,8 +523,9 @@ export default function LineageGraphToolbar({props}: {props: flowProps}) {
                 <ToggleButtonGroup variant="plain" spacing={0.1}>
                     <ShowAllButton />
                     {showCenterNodeOptions && <CenterFocusButton />}
-                    <ResetLayoutButton />
-                    <LayoutSelector forceAvailable={showCenterNodeOptions && graphView === 'relations'} />
+                    <ResetLayoutButton graphView={graphView} />
+                    {graphView === 'relations' && layoutOf(graphView).mode === 'force' && <RerunForceLayoutButton />}
+                    <LayoutSelector graphView={graphView} />
                 </ToggleButtonGroup>
                 <Divider orientation="vertical" />
                 <ToggleButtonGroup variant="plain" spacing={0.1}>

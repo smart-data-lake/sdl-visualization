@@ -154,14 +154,18 @@ export default function ElementTable(props: {dataLists: ConfigDataLists, configD
     // an open panel never keeps showing the elements of another tab or of a wider filter.
     const lineageProps: flowProps = useMemo(() => {
         const isActions = elementTypeShown === 'actions';
-        const graph = isActions ? configData.actionGraph : configData.dataGraph;
         const rows = isActions ? dataLists.actions : (elementTypeShown === 'dataObjects' ? dataLists.dataObjects : []);
+        const ids = rows.map(row => row.id);
+        // the data objects listed are shown by how they relate, unless their lineage is chosen instead
+        const relations = elementTypeShown === 'dataObjects' ? configData.relationsGraph?.getSubGraph(ids) : undefined;
+        const lineage = (isActions ? configData.actionGraph : configData.dataGraph)?.getSubGraph(ids);
         return {
             elementName: '', // the graph is shown as a whole, there is no element to center it on
             elementType: elementTypeShown,
             configData: configData,
-            graph: graph?.getSubGraph(rows.map(row => row.id)),
-            graphView: isActions ? 'action' : 'data'
+            graph: relations ?? lineage,
+            graphView: relations ? 'relations' : isActions ? 'action' : 'data',
+            graphs: relations && lineage ? {data: lineage} : undefined,
         };
     }, [configData, dataLists, elementTypeShown]);
 

@@ -19,7 +19,9 @@ graphs themselves in `src/util/ConfigExplorer/Graphs.ts`.
 The first three describe **what flows where** and are derived from the actions. The fourth describes
 **how the data relates** and is derived from `table.foreignKeys` alone — two data objects can be
 related without an action connecting them, and two data objects an action connects need not be
-related. It is built in `src/util/ConfigExplorer/RelationsGraph.ts`.
+related. It is built in `src/util/ConfigExplorer/RelationsGraph.ts`. The view is offered even when
+the configuration declares no foreign key (getting-started, for one): it then shows the selected
+data object on its own, with its columns, rather than a disabled button nobody can explain.
 
 A foreign key names the data object it references — `dataObjectId`, since SDLB 3.x replaced the
 former `db`/`table` pair ([smart-data-lake#1148](https://github.com/smart-data-lake/smart-data-lake/pull/1148)) —
@@ -218,8 +220,9 @@ The toolbar's grouping menu puts the nodes into boxes by a metadata attribute, o
 | across the flow | `layer` | a band the flow crosses - a column in `LR`, a row in `TB` |
 
 With both, lanes and columns cross each other as a grid. It needs the configuration behind the
-nodes, so the run view does not offer it, and it is disabled in the relations view and the force
-layout: foreign keys are not a flow, and a force layout has no ranks to keep boxes apart in.
+nodes, so the run view does not offer it. Foreign keys are not a flow, so the layered relations view
+does not group either; its force layout groups into hulls instead, see
+[Hulls in the force layout](#hulls-in-the-force-layout).
 
 **Membership** (`groupsOfGraph` in `src/util/ConfigExplorer/Grouping.ts`). SDLB puts `feed` on
 actions and `layer`/`subjectArea` on data objects; the other type derives the attribute from the
@@ -317,6 +320,41 @@ opens the box first (`revealGroupMember`).
 `tests/lineageGrouping.test.ts` covers membership, the model, the boxes and their edges,
 `tests/e2e/lineage-grouping.spec.ts` the rendering.
 
+### Hulls in the force layout
+
+The force layout of the relations view has no lanes or columns, so it groups by **one** attribute
+(`singleGrouping`: the one along the flow before `layer`; the menu offers a single list there and
+choosing an attribute replaces the other) and draws each group as a convex hull around its members
+instead of a box. Nodes without a value stay free, outside every hull. The priorities are, in this
+order: groups tight, hulls apart, relations short.
+
+**The model** (`buildForceModel`, cached per grouping key like the layered one). On top of the
+ungrouped forces a *cluster* force pulls every member towards its group's centroid, and a
+*separation* force treats each group as a circle around that centroid and pushes overlapping circles
+apart as a whole, and free nodes out of every circle. A link leaving a group pulls with
+`FORCE_INTERGROUP_LINK_STRENGTH` of the usual strength, so that relations between groups do not drag
+them into each other. Nodes start sorted by group, so d3's initial spiral already starts each group
+in one piece.
+
+**The guarantee** is in `assignForceCoordinates`, because circles only approximate the hulls and the
+nodes grow when their columns open: it alternates `separateBoxes` (single nodes, with their real
+sizes) with `separateHulls`, which moves whole groups apart by the separating axis of their hull
+polygons (`separation` in `src/util/ConfigExplorer/Hull.ts`) until `HULL_GAP` is kept, and moves free
+nodes out of hulls. The group holding the anchor does not move.
+
+**The hull** (`fitGroupBoxes`, `hullOfRects`) is the convex hull of the members' rectangles, each
+widened by `HULL_INSET` - a box's inset, header on top of every member, so the highest member leaves a
+flat top edge the header sits on. It is stored on the box data in flow coordinates, the box node takes
+its bounds, and `GroupBoxNode` draws it as a rounded SVG path. The node itself does not take the
+pointer (`lineage-hull-box` in `LineageTab.css`), only the drawn path and the header do, so the empty
+corners of its bounds stay part of the pane. The path is drawn relative to the hull's own bounds,
+so it moves with the node while a drag is under way; the header keeps clear of the rounded corners
+(`HULL_CORNER`). Collapsed, a group is a node at its members' mean centre, and `groupFlowEdges`
+merges the relations of its members onto it, ending on the other data object's relation handle. In
+a force layout those edges are `straight`: `CustomEdge` draws them centre to centre, cut at both
+nodes' borders (`useFloatingEnds`), as a force layout has no side for them to leave from. `tests/forceGrouping.test.ts` checks that no two hulls overlap and no free
+node is inside one, also with grown nodes.
+
 ## Sizes and handles
 
 The layout has to know how tall a node is **before** it is rendered, so a node *declares* its size
@@ -384,10 +422,12 @@ itself runs along. The layout menu still switches it back.
 
 ### Force layout of the relations view
 
-The layout menu offers a third choice, `force`, in the relations view only (`LayoutChoice` in
-`useLineage.tsx`; leaving the view falls back to `LR`, as the other views are a flow). Foreign keys
-are not a flow and point in circles, so ranks put related tables far apart; a force directed
-placement keeps them together. It is **static**, not a running simulation, so everything under
+The layout menu offers a third choice, `force`, in the relations view only, and it is that view's
+default. The relations view keeps a layout choice of its own (`layoutOf(view)`/`setLayout(view, …)`
+in `useLineage.tsx`), so switching views brings each back in the layout last chosen for it; the
+flows share the other, which the manifest's `lineageLayout` starts. Foreign keys are not a flow and
+point in circles, so ranks put related tables far apart; a force directed placement keeps them
+together. It is **static**, not a running simulation, so everything under
 *Layout stability* still holds:
 
 - `forceModelOf` (`LineageLayout.ts`) runs d3-force once per graph, synchronously and from sorted
@@ -399,6 +439,21 @@ placement keeps them together. It is **static**, not a running simulation, so ev
   flow they join (`flowLayoutMode`).
 - The model is built at the reference size, so `assignCoordinates` then pushes apart what overlaps
   at the nodes' declared sizes, leaving the anchor where it is. Drag offsets apply as before.
+- A relation leaves and enters on a left or right border, so a *side by side* force levels the two
+  ends of every relation and keeps them at least a node width apart horizontally
+  (`FORCE_LEVEL_STRENGTH`, `FORCE_SIDE_BY_SIDE_STRENGTH`); stacked, the edge would leave at an angle
+  of more than 90°. A relation between two groups moves the groups as a whole, its push shared among
+  all of the group's relations to others, since the cluster force would pull a single member back.
+  And a node grows downwards from its header rather than around its centre when it opens its
+  columns: the key columns come first, so the rows most relations end on stay level with their other
+  end. On the dense synthetic graph of `tests/forceGrouping.test.ts` it raises the share
+  of relations running closer to horizontal than vertical from about half to three quarters. The
+  strengths are tuned by hand; much stronger and the simulation no longer settles.
+- **Re-run** (`rerunForceLayout`, the toolbar button next to *Reset layout*): simulates again on what
+  the flow shows now (`forceModelOfFlow`) - a collapsed group as one node, its members left out, only
+  the nodes expanded so far - and forgets the manual moves. A collapsed group's hidden members move
+  by the group's step, as its place is their mean centre. The result lives on the nodes, so a
+  toolbar change that rebuilds the flow goes back to the model of the whole graph.
 
 In a force layout a node may lie left of the node it references. The relation handles stay on the
 left and right borders, so when the target lies to the left `CustomEdge` moves both ends of a

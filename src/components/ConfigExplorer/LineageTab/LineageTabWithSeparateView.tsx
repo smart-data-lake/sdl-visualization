@@ -43,6 +43,7 @@ import {
   recordManualMoves,
   prepareAndRenderGraph,
   resetEdgeStyles, resetNodeStyles,
+  shownGraphView,
   revealNode,
   selectEdge,
   setSelectedNode,
@@ -96,9 +97,10 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
   // workaround to wait for reactflow div mounted, in order to get container width/height
   const [rfContainerMounted, setRfContainerMounted] = useState(false);
 
-  const { graphView: selectedGraphView, isExpanded, layout, layoutMode, grouping } = useLineageGraph();
-  // a graph passed in through the props brings its own view, the selector cannot switch it
-  const graphView = props.graph ? (props.graphView ?? 'action') : selectedGraphView;
+  const { graphView: selectedGraphView, isExpanded, layoutOf, grouping } = useLineageGraph();
+  // a graph passed in through the props brings its own view, unless it offers the selected one too
+  const graphView = shownGraphView(props, selectedGraphView);
+  const { direction: layout, mode: layoutMode } = layoutOf(graphView);
 
   const reactFlow = useReactFlow();
 
@@ -121,7 +123,7 @@ function LineageTabCore({graphProps}: {graphProps?: flowProps}) {
     const prepared = prepareAndRenderGraph(reactFlow, {graphView, props, layout, layoutMode, isExpanded, grouping});
     return {...prepared, nodes: layoutFlow(prepared.nodes, prepared.edges, layout)};
   }, [isExpanded, graphView, layout, layoutMode, grouping, builtAround.elementName, builtAround.elementType,
-      props.configData, props.graph, props.graphView, props.runContext,
+      props.configData, props.graph, props.graphView, props.graphs, props.runContext,
       props.nodeStatuses, props.edgeMetrics, props.nodeMetrics]);
 
   // the selected element does not exist in the selected graph view, so switch to one that does.

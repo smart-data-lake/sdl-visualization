@@ -10,7 +10,8 @@ import dagre from 'dagre';
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, SimulationNodeDatum } from 'd3-force';
 import { Edge as ReactFlowEdge, Node as ReactFlowNode } from 'reactflow';
 import { DAGraph, isColumnLineageEdge, rfNodeSize } from './Graphs';
-import { GROUP_PADDING, GroupAxis, NodeGroups, boxDataOf, groupGap, groupInset, groupInsetOn, groupsOf, isGroupBox } from './Grouping';
+import { GROUP_PADDING, GroupAxis, HULL_GAP, HULL_INSET, NodeGroups, boxDataOf, forceGroupOf, groupGap, groupInset, groupInsetOn, groupsOf, isGroupBox, isHullBox } from './Grouping';
+import { Point, Rect, boundsOf, corners, hullOfRects, separation } from './Hull';
 
 export type LayoutDirection = 'TB' | 'LR';
 /* layered: ranks and order, see above. force: a force directed placement, offered for the relations view */
@@ -357,43 +358,185 @@ const FORCE_COLLIDE_RADIUS = REFERENCE_NODE_WIDTH / 2 + 40;
 const FORCE_TICKS = 300;
 // the gap assignCoordinates keeps between two nodes of a force layout once they have their real size
 export const FORCE_NODE_GAP = 40;
+// grouped: tight groups first, short relations between them second
+const FORCE_CLUSTER_STRENGTH = 0.4;
+const FORCE_INTERGROUP_LINK_STRENGTH = 0.05;
+const FORCE_GROUP_SEPARATION_STRENGTH = 0.6;
+// a relation leaves and enters on a left or right border, so related nodes are best side by side and level
+const FORCE_LEVEL_STRENGTH = 0.8;
+const FORCE_SIDE_BY_SIDE_STRENGTH = 0.8;
+const FORCE_SIDE_BY_SIDE_DISTANCE = REFERENCE_NODE_WIDTH + 2 * FORCE_NODE_GAP;
+
+/* The group of each node a force model is built for; the key names the grouping for the cache. */
+export interface ForceGroups {
+    key: string;
+    of: ReadonlyMap<string, string | undefined>;
+}
+
+type ForceNode = SimulationNodeDatum & {id: string, group?: string};
 
 /*
-    Where each node of the graph belongs in a force directed layout: its centre, once per graph.
+    Where each node of the graph belongs in a force directed layout: its centre, once per graph and grouping.
     Deterministic - sorted input and a seeded random source - so it is a function of the graph alone.
 */
-function buildForceModel(graph: DAGraph): Map<string, {x: number, y: number}> {
-    type ForceNode = SimulationNodeDatum & {id: string};
-    const nodes: ForceNode[] = graph.nodes.map(node => node.id).sort().map(id => ({id}));
+function buildForceModel(graph: DAGraph, groups?: ForceGroups): Map<string, {x: number, y: number}> {
+    return simulateForces(graph.nodes.map(node => node.id), graph.edges.map(edge => [edge.fromNode.id, edge.toNode.id]),
+                          id => groups?.of.get(id));
+}
+
+/*
+    The force layout of what a flow shows now: the nodes drawn - a collapsed group as one node, its
+    members left out - and the edges between them, grouped as the nodes are. The toolbar re-runs it.
+*/
+export function forceModelOfFlow(nodes: ReactFlowNode[], edges: ReactFlowEdge[]): Map<string, {x: number, y: number}> {
+    const shown = nodes.filter(node => !node.hidden && forceCentreOf(node));
+    const ids = new Set(shown.map(node => node.id));
+    const groupOf = new Map(shown.map(node => [node.id, forceGroupOf(node)]));
+    const pairs = new Map<string, [string, string]>();
+    edges.forEach(edge => {
+        if (edge.hidden || !ids.has(edge.source) || !ids.has(edge.target)) return;
+        pairs.set(`${edge.source}\u0000${edge.target}`, [edge.source, edge.target]);
+    });
+    return simulateForces([...ids], [...pairs.values()], id => groupOf.get(id));
+}
+
+function simulateForces(ids: string[], pairs: [string, string][], groupOf: (id: string) => string | undefined): Map<string, {x: number, y: number}> {
+    const grouped = ids.some(id => groupOf(id) !== undefined);
+    // by group, so that the initial spiral already starts every group in one piece
+    const nodes: ForceNode[] = [...ids]
+        .sort((a, b) => (groupOf(a) ?? '\uffff').localeCompare(groupOf(b) ?? '\uffff') || a.localeCompare(b))
+        .map(id => ({id, group: groupOf(id)}));
     const known = new Set(nodes.map(node => node.id));
-    const links = graph.edges
-        .map(edge => ({source: edge.fromNode.id, target: edge.toNode.id}))
+    const links = pairs
+        .map(([source, target]) => ({source, target}))
         .filter(link => link.source !== link.target && known.has(link.source) && known.has(link.target))
         .sort((a, b) => a.source.localeCompare(b.source) || a.target.localeCompare(b.target));
+    const degree = new Map<string, number>();
+    links.forEach(link => [link.source, link.target].forEach(id => degree.set(id, (degree.get(id) ?? 0) + 1)));
+    const between = (link: {source: string, target: string}) => {
+        const a = groupOf(link.source), b = groupOf(link.target);
+        return a !== b && (a !== undefined || b !== undefined);
+    };
 
     let seed = 1;
     const random = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
-    forceSimulation(nodes)
+    const simulation = forceSimulation(nodes)
         .randomSource(random)
-        .force('link', forceLink<ForceNode, {source: string, target: string}>(links).id(node => node.id).distance(FORCE_LINK_DISTANCE))
+        .force('link', forceLink<ForceNode, {source: string, target: string}>(links).id(node => node.id).distance(FORCE_LINK_DISTANCE)
+            // d3's default strength, weakened where a relation leaves a group so that it does not pull the groups into each other
+            .strength(link => (between(link) ? FORCE_INTERGROUP_LINK_STRENGTH : 1)
+                / Math.min(degree.get(link.source as string) ?? 1, degree.get(link.target as string) ?? 1)))
         .force('charge', forceManyBody().strength(-1500))
         .force('collide', forceCollide(FORCE_COLLIDE_RADIUS))
         // keeps the connected components, which repel each other, from drifting apart
         .force('x', forceX(0).strength(0.05))
         .force('y', forceY(0).strength(0.05))
-        .stop()
-        .tick(FORCE_TICKS);
+        .force('sideBySide', sideBySideForce(nodes, links));
+    if (grouped) {
+        simulation.force('cluster', clusterForce(nodes)).force('groups', groupSeparationForce(nodes));
+    }
+    simulation.stop().tick(FORCE_TICKS);
 
     return new Map(nodes.map(node => [node.id, {x: node.x ?? 0, y: node.y ?? 0}]));
 }
 
-const forceModels = new WeakMap<DAGraph, Map<string, {x: number, y: number}>>();
+// the circle a group takes up in the simulation: around its members' centroid, reaching past the farthest of them
+function groupCircles(nodes: ForceNode[]): Map<string, {x: number, y: number, r: number, members: ForceNode[]}> {
+    const byGroup = new Map<string, ForceNode[]>();
+    nodes.forEach(node => { if (node.group !== undefined) byGroup.set(node.group, [...(byGroup.get(node.group) ?? []), node]); });
+    const circles = new Map<string, {x: number, y: number, r: number, members: ForceNode[]}>();
+    [...byGroup.entries()].sort((a, b) => a[0].localeCompare(b[0])).forEach(([group, members]) => {
+        const x = members.reduce((sum, node) => sum + node.x!, 0) / members.length;
+        const y = members.reduce((sum, node) => sum + node.y!, 0) / members.length;
+        const r = Math.max(...members.map(node => Math.hypot(node.x! - x, node.y! - y))) + FORCE_COLLIDE_RADIUS + HULL_INSET.side;
+        circles.set(group, {x, y, r, members});
+    });
+    return circles;
+}
 
-export function forceModelOf(graph: DAGraph): ReadonlyMap<string, {x: number, y: number}> {
-    let model = forceModels.get(graph);
+// level the ends of every relation, and keep them a node width apart horizontally rather than stacked
+function sideBySideForce(nodes: ForceNode[], links: {source: string, target: string}[]) {
+    const byId = new Map(nodes.map(node => [node.id, node]));
+    const members = new Map<string, ForceNode[]>();
+    nodes.forEach(node => { if (node.group !== undefined) members.set(node.group, [...(members.get(node.group) ?? []), node]); });
+    // forceLink replaces the ids of a link by its nodes
+    const end = (end: string | ForceNode) => typeof end === 'string' ? byId.get(end)! : end;
+    // a relation between groups moves the groups as a whole, as the cluster force would pull a single member back
+    const leaves = (node: ForceNode, other: ForceNode) => node.group !== undefined && node.group !== other.group;
+    const pairs = () => links.map(link => [end(link.source), end(link.target)] as const);
+    // shared among a group's relations to others, so that a group with many does not outweigh its own cohesion
+    const outgoing = new Map<string, number>();
+    pairs().forEach(([a, b]) => [[a, b], [b, a]].forEach(([u, v]) => {
+        if (leaves(u, v)) outgoing.set(u.group!, (outgoing.get(u.group!) ?? 0) + 1);
+    }));
+    const movers = (node: ForceNode, other: ForceNode): [ForceNode[], number] =>
+        leaves(node, other) ? [members.get(node.group!)!, 1 / outgoing.get(node.group!)!] : [[node], 1];
+    const push = ([list, share]: [ForceNode[], number], vx: number, vy: number) =>
+        list.forEach(node => { node.vx! += vx * share; node.vy! += vy * share; });
+    return (alpha: number) => pairs().forEach(([a, b]) => {
+        const [ma, mb] = [movers(a, b), movers(b, a)];
+        const dy = (b.y! - a.y!) * alpha * FORCE_LEVEL_STRENGTH / 2;
+        push(ma, 0, dy);
+        push(mb, 0, -dy);
+        const dx = b.x! - a.x!;
+        const short = FORCE_SIDE_BY_SIDE_DISTANCE - Math.abs(dx);
+        if (short <= 0) return;
+        // which way round they already are; ties by id, so the result does not depend on floating point noise
+        const sign = dx > 0 || (dx === 0 && a.id < b.id) ? 1 : -1;
+        const vx = sign * short * alpha * FORCE_SIDE_BY_SIDE_STRENGTH / 2;
+        push(ma, -vx, 0);
+        push(mb, vx, 0);
+    });
+}
+
+// pull every member towards the centre of its group
+function clusterForce(nodes: ForceNode[]) {
+    return (alpha: number) => groupCircles(nodes).forEach(circle => circle.members.forEach(node => {
+        node.vx! += (circle.x - node.x!) * alpha * FORCE_CLUSTER_STRENGTH;
+        node.vy! += (circle.y - node.y!) * alpha * FORCE_CLUSTER_STRENGTH;
+    }));
+}
+
+// push overlapping groups apart as a whole, and the nodes of no group out of every group
+function groupSeparationForce(nodes: ForceNode[]) {
+    const push = (members: ForceNode[], dx: number, dy: number) => members.forEach(node => { node.vx! += dx; node.vy! += dy; });
+    return (alpha: number) => {
+        const circles = [...groupCircles(nodes).values()];
+        for (let i = 0; i < circles.length; i++) {
+            for (let j = i + 1; j < circles.length; j++) {
+                const a = circles[i], b = circles[j];
+                const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+                const depth = a.r + b.r + HULL_GAP - d;
+                if (depth <= 0) continue;
+                const k = depth * alpha * FORCE_GROUP_SEPARATION_STRENGTH / 2 / d;
+                push(a.members, -dx * k, -dy * k);
+                push(b.members, dx * k, dy * k);
+            }
+        }
+        nodes.filter(node => node.group === undefined).forEach(node => circles.forEach(circle => {
+            const dx = node.x! - circle.x, dy = node.y! - circle.y, d = Math.hypot(dx, dy) || 1;
+            const depth = circle.r + FORCE_COLLIDE_RADIUS - d;
+            if (depth <= 0) return;
+            const k = depth * alpha * FORCE_GROUP_SEPARATION_STRENGTH / d;
+            node.vx! += dx * k;
+            node.vy! += dy * k;
+        }));
+    };
+}
+
+const forceModels = new WeakMap<DAGraph, Map<string, Map<string, {x: number, y: number}>>>();
+
+export function forceModelOf(graph: DAGraph, groups?: ForceGroups): ReadonlyMap<string, {x: number, y: number}> {
+    let byKey = forceModels.get(graph);
+    if (!byKey) {
+        byKey = new Map();
+        forceModels.set(graph, byKey);
+    }
+    const key = groups?.key ?? '';
+    let model = byKey.get(key);
     if (!model) {
-        model = buildForceModel(graph);
-        forceModels.set(graph, model);
+        model = buildForceModel(graph, groups);
+        byKey.set(key, model);
     }
     return model;
 }
@@ -574,6 +717,15 @@ export function fitGroupBoxes(nodes: ReactFlowNode[], defaultWidth = REFERENCE_N
             maxX = Math.max(maxX, node.position.x + width);
             maxY = Math.max(maxY, node.position.y + height);
         });
+        if (isHullBox(box)) {
+            const hull = hullOfRects(inside.map(node => ({...node.position, ...rfNodeSize(node, defaultWidth, defaultHeight)})), HULL_INSET);
+            const bounds = boundsOf(hull);
+            const position = {x: bounds.x, y: bounds.y};
+            const same = (p: Point[] | undefined) => p?.length === hull.length && p.every((q, i) => q.x === hull[i].x && q.y === hull[i].y);
+            if (same(boxDataOf(box).hull) && box.position.x === position.x && box.position.y === position.y) return [box.id, box];
+            return [box.id, {...box, position, positionAbsolute: position, style: {...box.style, width: bounds.width, height: bounds.height},
+                             data: {...box.data, box: {...boxDataOf(box), hull}}}];
+        }
         const {side, top, bottom} = groupInset(axis, bothAxes);
         const position = {x: minX - side, y: minY - top};
         const width = maxX - minX + 2 * side, height = maxY - minY + top + bottom;
@@ -600,10 +752,21 @@ function assignForceCoordinates(nodes: ReactFlowNode[], options: CoordinateOptio
         seen.add(node.id);
         const {width, height} = sizeOf(node);
         const offset = manualOffsetOf(node) ?? {x: 0, y: 0};
-        boxes.push({id: node.id, x: centre.x - width / 2 + offset.x, y: centre.y - height / 2 + offset.y, width, height});
+        // the centre places the closed node, and a node grows downwards from its header: the key
+        // columns come first, so the rows most relations end on stay level with their other end
+        boxes.push({id: node.id, x: centre.x - width / 2 + offset.x, y: centre.y - REFERENCE_NODE_HEIGHT / 2 + offset.y, width, height});
     });
     boxes.sort((a, b) => a.id.localeCompare(b.id));
-    separateBoxes(boxes, options.anchorId, options.nodesep ?? FORCE_NODE_GAP);
+    const groupOf = new Map(nodes.map(node => [node.id, forceGroupOf(node)]));
+    if (boxes.some(box => groupOf.get(box.id) !== undefined)) {
+        // the groups are only moved as a whole, so the nodes are pushed apart in between
+        for (let pass = 0; pass < 30; pass++) {
+            separateBoxes(boxes, options.anchorId, options.nodesep ?? FORCE_NODE_GAP);
+            if (!separateHulls(boxes, groupOf, options.anchorId)) break;
+        }
+    } else {
+        separateBoxes(boxes, options.anchorId, options.nodesep ?? FORCE_NODE_GAP);
+    }
 
     const positioned = new Map(boxes.map(box => [box.id, {x: box.x, y: box.y}]));
     const delta = translation(nodes, positioned, options.anchorId);
@@ -612,6 +775,54 @@ function assignForceCoordinates(nodes: ReactFlowNode[], options: CoordinateOptio
         if (!position) return node;
         return {...node, position: {x: position.x + delta.x, y: position.y + delta.y}};
     });
+}
+
+/*
+    Move whole groups apart until their hulls keep HULL_GAP between each other, and every node of no
+    group out of the hulls. A group holding the anchor does not move. Whether anything moved.
+*/
+function separateHulls(boxes: (Rect & {id: string})[], groupOf: Map<string, string | undefined>, anchorId: string | undefined): boolean {
+    const byGroup = new Map<string, (Rect & {id: string})[]>();
+    boxes.forEach(box => {
+        const group = groupOf.get(box.id);
+        if (group !== undefined) byGroup.set(group, [...(byGroup.get(group) ?? []), box]);
+    });
+    const groups = [...byGroup.keys()].sort();
+    const free = boxes.filter(box => groupOf.get(box.id) === undefined);
+    const shift = (members: Rect[], share: number, move: Point) =>
+        members.forEach(box => { box.x += move.x * share; box.y += move.y * share; });
+    const holdsAnchor = (members: {id: string}[]) => members.some(box => box.id === anchorId);
+
+    let moved = false;
+    for (let pass = 0; pass < 100; pass++) {
+        let movedNow = false;
+        const hulls = new Map(groups.map(group => [group, hullOfRects(byGroup.get(group)!, HULL_INSET)]));
+        for (let i = 0; i < groups.length; i++) {
+            for (let j = i + 1; j < groups.length; j++) {
+                const a = byGroup.get(groups[i])!, b = byGroup.get(groups[j])!;
+                const move = separation(hulls.get(groups[i])!, hulls.get(groups[j])!, HULL_GAP);
+                if (!move || Math.hypot(move.x, move.y) < 0.5) continue;
+                const aShare = holdsAnchor(a) ? 0 : holdsAnchor(b) ? 1 : 0.5;
+                shift(a, -aShare, move);
+                shift(b, 1 - aShare, move);
+                hulls.set(groups[i], hullOfRects(a, HULL_INSET));
+                hulls.set(groups[j], hullOfRects(b, HULL_INSET));
+                movedNow = true;
+            }
+        }
+        free.forEach(box => groups.forEach(group => {
+            const move = separation(hulls.get(group)!, corners(box), HULL_GAP);
+            if (!move || Math.hypot(move.x, move.y) < 0.5) return;
+            // the node gives way, unless it is the anchor
+            if (box.id === anchorId) shift(byGroup.get(group)!, -1, move);
+            else shift([box], 1, move);
+            hulls.set(group, hullOfRects(byGroup.get(group)!, HULL_INSET));
+            movedNow = true;
+        }));
+        if (!movedNow) break;
+        moved = true;
+    }
+    return moved;
 }
 
 /*

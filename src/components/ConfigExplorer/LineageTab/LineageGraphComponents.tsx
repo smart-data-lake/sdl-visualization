@@ -21,7 +21,7 @@ import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import { Link } from "react-router-dom";
 
-import { Position } from 'reactflow';
+import { Position, Node as ReactFlowNode } from 'reactflow';
 import { useFetchNewestLineageOf, useFetchNewestSchemaOf, useFetchDataObjectLineage, useFetchDataObjectLineageEntries, useFetchDataObjectSchema, useFetchDataObjectSchemaEntries, useFetchWorkflowRunsByElement } from '../../../hooks/useFetchData';
 import { SchemaData } from '../../../types';
 import { ActionPorts, buildActionPorts } from '../../../util/ConfigExplorer/ActionPorts';
@@ -797,6 +797,29 @@ function useOppositeHandle(nodeId: string, handleId: string | null | undefined):
 }
 
 //https://github.com/xyflow/xyflow/discussions/2347
+// where the line between two nodes' centres crosses their borders, for an edge drawn straight
+function useFloatingEnds(source: string, target: string, enabled: boolean): [number, number, number, number] | undefined {
+  const rectOf = (node: ReactFlowNode | undefined) => {
+    if (!enabled || !node) return undefined;
+    const {x, y} = node.positionAbsolute ?? node.position;
+    return `${x},${y},${node.width ?? 0},${node.height ?? 0}`;
+  };
+  // strings, so that the edge only re-renders when an end actually moves
+  const from = useStore(store => rectOf(store.nodeInternals.get(source)));
+  const to = useStore(store => rectOf(store.nodeInternals.get(target)));
+  if (!from || !to) return undefined;
+  const [a, b] = [from, to].map(rect => rect.split(',').map(Number));
+  const centre = (r: number[]) => ({x: r[0] + r[2] / 2, y: r[1] + r[3] / 2});
+  const ca = centre(a), cb = centre(b);
+  const border = (r: number[], c: {x: number, y: number}, towards: {x: number, y: number}) => {
+    const dx = towards.x - c.x, dy = towards.y - c.y;
+    const t = Math.min(dx ? r[2] / 2 / Math.abs(dx) : Infinity, dy ? r[3] / 2 / Math.abs(dy) : Infinity, 1);
+    return {x: c.x + dx * t, y: c.y + dy * t};
+  };
+  const s = border(a, ca, cb), t = border(b, cb, ca);
+  return [s.x, s.y, t.x, t.y];
+}
+
 export const CustomEdge = ({
   id,
   source, target,
@@ -820,8 +843,11 @@ export const CustomEdge = ({
     targetPosition = Position.Right;
   }
   const relation = data?.relation ? relationPaths(sourceX, sourceY, sourcePosition, targetX, targetY) : undefined;
+  const floating = useFloatingEnds(source, target, data?.straight === true);
+  if (floating) [sourceX, sourceY, targetX, targetY] = floating;
   // column lineage edges run many to a node, and curves keep them apart where right angles would overlap
-  const [edgePath, labelX, labelY] = relation && source !== target ? [relation.edgePath]
+  const [edgePath, labelX, labelY] = floating ? getStraightPath({sourceX, sourceY, targetX, targetY})
+    : relation && source !== target ? [relation.edgePath]
     : data?.columnLineage
     ? getBezierPath({sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition})
     : getSmoothStepPath({
