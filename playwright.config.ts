@@ -14,13 +14,20 @@ import { defineConfig, devices } from '@playwright/test';
  * point of it: if the app cannot tell the two backends apart, the backend
  * implements the contract.
  *
- * Running all three projects at once puts three dev servers, a backend and a
- * storage emulator on one machine, and the ReactFlow specs are timing sensitive
- * enough to notice. If the azure project flakes locally, run it on its own
- * (`npx playwright test --project=azure`) before believing it.
+ * Locally the azure project only runs when asked for (E2E_AZURE=1, or
+ * `yarn test:e2e:azure`): it repeats the hocon specs against the backend and
+ * roughly doubles the run. CI always runs it.
+ *
+ * `yarn test:e2e` builds the app once and serves the build (E2E_PREVIEW=1), which
+ * loads much faster than dev servers compiling on first request. A plain
+ * `npx playwright test` uses dev servers, so it never tests a stale build.
  */
 
-const viteCmd = 'yarn vite --config vite.config.e2e.ts';
+const preview = !!process.env.E2E_PREVIEW;
+const azure = !!process.env.CI || !!process.env.E2E_AZURE;
+const serverCmd = (port: number) => preview
+  ? `yarn vite preview --config vite.config.e2e.ts --port ${port}`
+  : `yarn vite --config vite.config.e2e.ts --port ${port}`;
 
 /**
  * Specs that only make sense on the exported fixture: it is the one carrying a prebuilt
@@ -41,7 +48,8 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   use: {
     trace: 'on-first-retry',
-    video: 'retain-on-failure',
+    // recording every test costs CPU the timing sensitive specs notice; locally a failure is rerun instead
+    video: process.env.CI ? 'retain-on-failure' : 'off',
     // timestamps are rendered in the browser's zone, pin it so assertions on
     // dates don't depend on where the tests run
     timezoneId: 'UTC',
@@ -59,40 +67,39 @@ export default defineConfig({
       testMatch: EXPORTED_ONLY,
       use: { baseURL: 'http://localhost:3001' },
     },
-    {
+    ...(azure ? [{
       name: 'azure',
       testIgnore: EXPORTED_ONLY,
       use: { baseURL: 'http://localhost:3002' },
-    },
+    }] : []),
   ],
   webServer: [
     {
-      command: `${viteCmd} --port 3000`,
+      command: serverCmd(3000),
       url: 'http://localhost:3000',
       env: { E2E_FIXTURE: 'hocon' },
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
     },
     {
-      command: `${viteCmd} --port 3001`,
+      command: serverCmd(3001),
       url: 'http://localhost:3001',
       env: { E2E_FIXTURE: 'exported' },
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
     },
-    {
+    ...(azure ? [{
       // The backend on its local store, with the fixtures seeded, in one process.
       command: 'yarn --cwd backend serve:e2e',
       url: 'http://localhost:7071/health',
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
-    },
-    {
-      command: `${viteCmd} --port 3002`,
+    }, {
+      command: serverCmd(3002),
       url: 'http://localhost:3002',
       env: { E2E_FIXTURE: 'azure' },
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
-    },
+    }] : []),
   ],
 });

@@ -98,7 +98,9 @@
     "test": "vitest",
     "test:ci": "vitest run",
     "coverage": "vitest --coverage",
-    "test:e2e": "playwright test",
+    "build:e2e": "vite build --config vite.config.e2e.ts",
+    "test:e2e": "yarn build:e2e && E2E_PREVIEW=1 playwright test",
+    "test:e2e:azure": "yarn build:e2e && E2E_PREVIEW=1 E2E_AZURE=1 playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"
   },

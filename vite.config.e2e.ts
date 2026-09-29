@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig, type Plugin, type UserConfig } from 'vite';
@@ -17,6 +18,10 @@ import baseConfig from './vite.config';
  *   exported - config is read from exportedConfig.json, as the deployed
  *              getting-started visualizer does
  * Both variants share the same state files, schemas and descriptions.
+ *
+ * The fixtures are served by the dev server and by `vite preview` alike: `yarn test:e2e`
+ * builds the app once into build-e2e/ and previews it per variant, as a production build
+ * loads much faster than a dev server compiling every module on first request.
  */
 
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
@@ -48,32 +53,37 @@ function fixtureBackend(variant: string): Plugin {
     if (!fs.existsSync(root)) throw new Error(`E2E fixture directory does not exist: ${root}`);
   });
 
+  const serveFixtures = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+    const urlPath = decodeURIComponent((req.url ?? '').split('?')[0]);
+    if (!fixturePrefixes.some((p) => urlPath === p || urlPath.startsWith(p + '/'))) return next();
+
+    for (const root of roots) {
+      const file = path.join(root, urlPath);
+      // don't let a crafted url escape the fixture directory
+      if (!file.startsWith(root + path.sep)) break;
+      if (fs.existsSync(file) && fs.statSync(file).isFile()) {
+        res.setHeader('Content-Type', contentTypes[path.extname(file)] ?? 'text/plain');
+        res.end(fs.readFileSync(file));
+        return;
+      }
+    }
+
+    // Answer with 404 rather than falling through to vite's index.html
+    // fallback: the app's fallbacks (e.g. directory listing -> config/index)
+    // key on the response not being ok.
+    res.statusCode = 404;
+    res.end(`no e2e fixture for ${urlPath}`);
+  };
+
   return {
     name: 'e2e-fixture-backend',
-    // configureServer runs before vite's internal static/spa-fallback middlewares,
+    // both hooks run before vite's internal static/spa-fallback middlewares,
     // so fixtures take precedence over public/
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const urlPath = decodeURIComponent((req.url ?? '').split('?')[0]);
-        if (!fixturePrefixes.some((p) => urlPath === p || urlPath.startsWith(p + '/'))) return next();
-
-        for (const root of roots) {
-          const file = path.join(root, urlPath);
-          // don't let a crafted url escape the fixture directory
-          if (!file.startsWith(root + path.sep)) break;
-          if (fs.existsSync(file) && fs.statSync(file).isFile()) {
-            res.setHeader('Content-Type', contentTypes[path.extname(file)] ?? 'text/plain');
-            res.end(fs.readFileSync(file));
-            return;
-          }
-        }
-
-        // Answer with 404 rather than falling through to vite's index.html
-        // fallback: the app's fallbacks (e.g. directory listing -> config/index)
-        // key on the response not being ok.
-        res.statusCode = 404;
-        res.end(`no e2e fixture for ${urlPath}`);
-      });
+      server.middlewares.use(serveFixtures);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(serveFixtures);
     },
   };
 }
@@ -86,5 +96,8 @@ export default defineConfig(async (env) => {
     cacheDir: `node_modules/.vite-e2e-${variant}`,
     plugins: [fixtureBackend(variant)],
     server: { strictPort: true },
+    preview: { strictPort: true },
+    // one build for all variants: the fixtures only change what the server answers
+    build: { outDir: 'build-e2e' },
   } satisfies UserConfig);
 });
