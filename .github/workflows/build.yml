@@ -76,8 +76,12 @@ jobs:
     - name: Install playwright chromium
       run: npx playwright install --with-deps chromium
 
+    # against the build above: it is the bundle `yarn build:e2e` would make again
     - name: Run end-to-end tests
-      run: yarn test:e2e
+      run: npx playwright test
+      env:
+        E2E_PREVIEW: '1'
+        E2E_OUTDIR: build
 
     - name: Upload playwright report
       uses: actions/upload-artifact@v7

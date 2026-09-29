@@ -97,7 +97,8 @@ export default defineConfig(async (env) => {
     plugins: [fixtureBackend(variant)],
     server: { strictPort: true },
     preview: { strictPort: true },
-    // one build for all variants: the fixtures only change what the server answers
-    build: { outDir: 'build-e2e' },
+    // one build for all variants: the fixtures only change what the server answers. CI previews
+    // the production build it has made anyway (E2E_OUTDIR=build), as the bundle is the same
+    build: { outDir: process.env.E2E_OUTDIR ?? 'build-e2e' },
   } satisfies UserConfig);
 });
