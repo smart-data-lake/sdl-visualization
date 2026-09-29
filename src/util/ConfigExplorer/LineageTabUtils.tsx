@@ -18,8 +18,8 @@ import { ACTION_NODE_WIDTH_WITH_PORTS, columnHandleId, nodeHeightFor, nodeRelati
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
 import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, ExpandSides, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, expandSidesFrom, isColumnLineageEdge, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
-import { LayoutDirection, LayoutMode, NodePlacement, assignCoordinates, fitGroupBoxes, forceCentreOf, forceModelOf, forceModelOfFlow, layoutModelOf, placementOf } from './LineageLayout';
-import { GROUP_BOX_TYPE, GROUP_EDGE_PREFIX, GroupAxis, GroupBoxData, Grouping, NodeGroups, boxDataOf, groupBoxId, groupingKey, groupsOf, groupsOfGraph, isGroupBox, isGroupCollapsed, isGroupEdge, isGrouping, setGroupCollapsed, singleAxisOf, singleGrouping } from './Grouping';
+import { LayoutDirection, LayoutMode, NodePlacement, assignCoordinates, collapsedForceCentreOf, fitGroupBoxes, forceCentreOf, forceModelOf, forceModelOfFlow, layoutModelOf, manualOffsetOf, placementOf } from './LineageLayout';
+import { GROUP_BOX_TYPE, GROUP_EDGE_PREFIX, GroupAxis, GroupBoxData, Grouping, NodeGroups, boxDataOf, groupBoxId, groupingKey, groupsOf, groupsOfGraph, isGroupBox, isGroupCollapsed, isGroupEdge, isGrouping, isHullBox, setGroupCollapsed, singleAxisOf, singleGrouping } from './Grouping';
 
 
 /*
@@ -1569,11 +1569,8 @@ export function groupFlowNodes(nodes: ReactFlowNode[]): ReactFlowNode[] {
             groups: collapsed && otherKeys.size === 1 ? {[other]: [...otherKeys][0]} : undefined,
             hull: hulls && !collapsed ? existing.get(id)?.data?.box?.hull ?? [] : undefined,
         };
-        // collapsed in a force layout: where its members are on average
-        const centres = inside.map(forceCentreOf).filter((c): c is {x: number, y: number} => c !== undefined);
-        const forceCentre = hulls && collapsed && centres.length > 0
-            ? {x: centres.reduce((sum, c) => sum + c.x, 0) / centres.length, y: centres.reduce((sum, c) => sum + c.y, 0) / centres.length}
-            : undefined;
+        // collapsed in a force layout: in the middle of the hull its members make
+        const forceCentre = hulls && collapsed ? collapsedForceCentreOf(inside, nodeHeightFor(0)) : undefined;
         const placement: NodePlacement | undefined = collapsed && middle ? {
             rank: middle.rank,
             order: middle.order,
@@ -1665,7 +1662,8 @@ export function layoutFlow(nodes: ReactFlowNode[], edges: ReactFlowEdge[], layou
                            options: {anchorId?: string} = {}): ReactFlowNode[] {
     const grouped = groupFlowNodes(nodes);
     const anchor = grouped.find(node => node.id === options.anchorId);
-    const placedAnchor = anchor && placementOf(anchor) ? anchor.id : undefined;
+    // a force layout places by centre rather than by placement, and keeps the anchor fixed in its final pass too
+    const placedAnchor = anchor && (placementOf(anchor) || forceCentreOf(anchor)) ? anchor.id : undefined;
     const laidOut = fitGroupBoxes(assignCoordinates(grouped, edges, layoutDirection,
         {anchorId: placedAnchor, defaultWidth: nodeWidth, defaultHeight: nodeHeight}), nodeWidth, nodeHeight);
     if (!anchor || placedAnchor) return laidOut;
@@ -1697,13 +1695,35 @@ export function moveGroupBoxMembers(rfi: ReactFlowInstance, boxId: string, delta
 /* Collapse or expand one box, which stays where it is. */
 export function setGroupBoxCollapsed(rfi: ReactFlowInstance, boxId: string, collapsed: boolean, layoutDirection: LayoutDirection): void {
     setGroupCollapsed(boxId, collapsed);
-    relayoutGroups(rfi, layoutDirection, boxId);
+    if (collapsed) forgetBoxMoves(rfi, [boxId]);
+    // a hull collapses onto its middle rather than onto its corner, so what stays put is a node outside it
+    const box = rfi.getNode(boxId);
+    const force = !!box && (isHullBox(box) || !!forceCentreOf(box));
+    relayoutGroups(rfi, layoutDirection, force ? outsideAnchorOf(rfi, [boxId]) : boxId);
 }
 
 /* Collapse or expand every box in the flow. */
 export function setAllGroupBoxesCollapsed(rfi: ReactFlowInstance, collapsed: boolean, layoutDirection: LayoutDirection): void {
-    rfi.getNodes().filter(isGroupBox).forEach(box => setGroupCollapsed(box.id, collapsed));
-    relayoutGroups(rfi, layoutDirection);
+    const boxes = rfi.getNodes().filter(isGroupBox).map(box => box.id);
+    boxes.forEach(id => setGroupCollapsed(id, collapsed));
+    if (collapsed) forgetBoxMoves(rfi, boxes);
+    const force = rfi.getNodes().some(node => forceCentreOf(node));
+    relayoutGroups(rfi, layoutDirection, force ? outsideAnchorOf(rfi, boxes) : undefined);
+}
+
+// a collapsed group goes where its members are, wherever it was dragged before
+function forgetBoxMoves(rfi: ReactFlowInstance, boxIds: string[]): void {
+    const ids = new Set(boxIds);
+    rfi.setNodes(nodes => nodes.map(node => ids.has(node.id) && node.data.manualOffset
+        ? {...node, data: {...node.data, manualOffset: undefined}} : node));
+}
+
+// a shown node in none of the boxes, the centre node first
+function outsideAnchorOf(rfi: ReactFlowInstance, boxIds: string[]): string | undefined {
+    const boxes = boxIds.map(id => rfi.getNode(id)).filter((box): box is ReactFlowNode => !!box && isGroupBox(box));
+    const inside = (node: ReactFlowNode) => boxes.some(box => groupsOf(node)?.[boxDataOf(box).axis] === boxDataOf(box).key);
+    const outside = rfi.getNodes().filter(node => !node.hidden && !isGroupBox(node) && !inside(node));
+    return (outside.find(node => node.data?.graphNodeProps?.isCenterNode) ?? [...outside].sort((a, b) => a.id.localeCompare(b.id))[0])?.id;
 }
 
 function relayoutGroups(rfi: ReactFlowInstance, layoutDirection: LayoutDirection, anchorId?: string): void {
@@ -1770,27 +1790,35 @@ export function scheduleRelayout(rfi: ReactFlowInstance, layoutDirection: Layout
 */
 /*
     Run the force simulation again on what is shown now - which groups are collapsed, which nodes are
-    expanded - forgetting the manual moves. A collapsed group's hidden members move along with it,
-    as its place is their mean centre (groupFlowNodes).
+    expanded. keepMoved: the moved nodes stay where they are and the rest settles around them, from
+    where it is; otherwise it starts from scratch and forgets the moves. A collapsed group's hidden
+    members move along with it, as its place is their mean centre (groupFlowNodes).
 */
-export function rerunForceLayout(rfi: ReactFlowInstance): void {
+export function rerunForceLayout(rfi: ReactFlowInstance, keepMoved: boolean): void {
     const nodes = rfi.getNodes();
-    const centres = forceModelOfFlow(nodes, rfi.getEdges());
-    if (centres.size === 0) return;
+    const {centres: simulated, anchorId} = forceModelOfFlow(nodes, rfi.getEdges(), {keepMoved});
+    if (simulated.size === 0) return;
+    // a moved node keeps its offset, so its centre is where it is shown less that offset
+    const keeps = (node: ReactFlowNode) => keepMoved && manualOffsetOf(node) !== undefined;
+    const centreOf = (node: ReactFlowNode) => {
+        const at = simulated.get(node.id)!, offset = manualOffsetOf(node)!;
+        return keeps(node) ? {x: at.x - offset.x, y: at.y - offset.y} : at;
+    };
     const shiftOf = new Map<string, {x: number, y: number}>();
-    nodes.filter(node => isGroupBox(node) && boxDataOf(node).collapsed && centres.has(node.id)).forEach(box => {
-        const was = forceCentreOf(box)!, is = centres.get(box.id)!;
+    nodes.filter(node => isGroupBox(node) && boxDataOf(node).collapsed && simulated.has(node.id)).forEach(box => {
+        const was = forceCentreOf(box)!, is = centreOf(box);
         boxDataOf(box).memberIds.forEach(id => shiftOf.set(id, {x: is.x - was.x, y: is.y - was.y}));
     });
     rfi.setNodes(nds => nds.map(node => {
-        const centre = centres.get(node.id);
         const shift = shiftOf.get(node.id);
         const was = forceCentreOf(node);
-        const forceCentre = centre ?? (shift && was ? {x: was.x + shift.x, y: was.y + shift.y} : was);
-        if (forceCentre === was && node.data.manualOffset === undefined) return node;
-        return {...node, data: {...node.data, forceCentre, manualOffset: undefined}};
+        const forceCentre = simulated.has(node.id) ? centreOf(node) : shift && was ? {x: was.x + shift.x, y: was.y + shift.y} : was;
+        const manualOffset = keeps(node) ? manualOffsetOf(node) : undefined;
+        if (forceCentre === was && node.data.manualOffset === manualOffset) return node;
+        return {...node, data: {...node.data, forceCentre, manualOffset}};
     }));
-    recomputeLayout(rfi, 'LR');
+    // anchored on the node the simulation kept in place, so that nothing is translated away from where it was put
+    recomputeLayout(rfi, 'LR', anchorId);
 }
 
 /* Lay out the nodes shown again from scratch: every node closed, and none where the user has moved it. */

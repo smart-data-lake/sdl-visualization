@@ -7,6 +7,7 @@ import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import RocketLaunchOutlined from '@mui/icons-material/RocketLaunchOutlined';
 import HubOutlined from '@mui/icons-material/HubOutlined';
 import Replay from '@mui/icons-material/Replay';
+import RestartAlt from '@mui/icons-material/RestartAlt';
 import SchemaIcon from '@mui/icons-material/Schema';
 import TableViewTwoTone from '@mui/icons-material/TableViewTwoTone';
 import WorkspacesIcon from '@mui/icons-material/Workspaces';
@@ -249,15 +250,37 @@ function ResetLayoutButton({graphView}: {graphView: GraphView}) {
     )
 }
 
-// the force simulation once more, on the groups and nodes as they are shown now
+// the force simulation once more, on the groups and nodes as they are shown now: a click keeps the
+// moved nodes where they are, the arrow offers starting from scratch
 function RerunForceLayoutButton() {
     const rfi = useReactFlow();
+    const [open, setOpen] = React.useState(false);
+    const handleOpenChange = React.useCallback((_event: React.SyntheticEvent | null, isOpen: boolean) => setOpen(isOpen), []);
+    const {buttonRef, menuRef} = useCloseOnPressOutside(open, React.useCallback(() => setOpen(false), []));
+    const rerun = (keepMoved: boolean) => { setOpen(false); rerunForceLayout(rfi, keepMoved); };
+
     return (
-        <Tooltip arrow title='Re-run the force layout on what is shown' enterDelay={500} enterNextDelay={500} placement='top'>
-            <IconButton onClick={() => rerunForceLayout(rfi)} aria-label='Re-run force layout'>
-                <Replay />
-            </IconButton>
-        </Tooltip>
+        <Box sx={{display: 'flex', alignItems: 'center'}}>
+            <Tooltip arrow title='Re-run the force layout on what is shown, keeping moved nodes where they are' enterDelay={500} enterNextDelay={500} placement='top'>
+                <IconButton onClick={() => rerun(true)} aria-label='Re-run force layout' sx={{pr: 0.25}}>
+                    <Replay />
+                </IconButton>
+            </Tooltip>
+            <Dropdown open={open} onOpenChange={handleOpenChange}>
+                <MenuButton ref={buttonRef} slots={{root: IconButton}} slotProps={{root: {variant: 'plain', size: 'sm'}}}
+                            aria-label='Re-run options' sx={{minWidth: 0, px: 0, outline: '0 !important'}}>
+                    <ArrowDropDown />
+                </MenuButton>
+                <Menu ref={menuRef} size="sm" sx={denseMenuSx}>
+                    <MenuItem onClick={() => rerun(true)}>
+                        <ListItemDecorator><Replay/></ListItemDecorator>Re-run, keep moved nodes
+                    </MenuItem>
+                    <MenuItem onClick={() => rerun(false)}>
+                        <ListItemDecorator><RestartAlt/></ListItemDecorator>Re-run from scratch
+                    </MenuItem>
+                </Menu>
+            </Dropdown>
+        </Box>
     );
 }
 

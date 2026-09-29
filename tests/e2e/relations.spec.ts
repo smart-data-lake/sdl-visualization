@@ -626,5 +626,73 @@ test.describe('grouping the force layout into hulls', () => {
     expect(moved.x).toBeCloseTo(outline.x - 80, 0);
     expect(moved.y).toBeCloseTo(outline.y + 50, 0);
   });
+
+  test('re-running keeps a moved node where it was put, unless started from scratch', async ({ page }) => {
+    await openForce(page);
+    const moved = node(page, 'int-departures');
+    const title = moved.getByText('int-departures', { exact: true });
+    const from = (await title.boundingBox())!;
+    await page.mouse.move(from.x + 5, from.y + 5);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 125, from.y + 85, { steps: 8 });
+    await page.mouse.up();
+    const placed = (await moved.boundingBox())!;
+
+    await page.getByRole('button', { name: 'Re-run force layout' }).click();
+    await page.waitForTimeout(300);
+    const kept = (await moved.boundingBox())!;
+    expect(kept.x).toBeCloseTo(placed.x, 0);
+    expect(kept.y).toBeCloseTo(placed.y, 0);
+
+    // and clicking again changes nothing, the result depends only on what is shown and what was moved
+    const transforms = () => nodes(page).evaluateAll((els) => els.map((e) => (e as HTMLElement).style.transform).join('|'));
+    const once = await transforms();
+    await page.getByRole('button', { name: 'Re-run force layout' }).click();
+    await page.getByRole('button', { name: 'Re-run force layout' }).click();
+    await page.waitForTimeout(300);
+    expect(await transforms()).toBe(once);
+
+    await page.getByRole('button', { name: 'Re-run options' }).click();
+    await page.getByRole('menuitem', { name: 'Re-run from scratch' }).click();
+    await expect.poll(async () => {
+      const box = (await moved.boundingBox())!;
+      return Math.abs(box.x - placed.x) + Math.abs(box.y - placed.y);
+    }).toBeGreaterThan(1);
+  });
+
+  test('a collapsed group goes to the middle of its hull, also after it was dragged', async ({ page }) => {
+    await openForce(page);
+    await grouping(page).click();
+    await page.getByRole('menuitem', { name: 'Subject area' }).click();
+    await page.keyboard.press('Escape');
+    const box = page.locator('.react-flow__node[data-id="group:along:flight data"]');
+    const toggle = box.locator('button[aria-label="Collapse group"], button[aria-label="Expand group"]');
+    const middleOf = async () => {
+      const b = (await box.boundingBox())!;
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    };
+
+    const hull = await middleOf();
+    await toggle.click();
+    await expect(box.locator('[data-testid="group-box-count"]')).toBeVisible();
+    const collapsed = await middleOf();
+    expect(Math.abs(collapsed.x - hull.x)).toBeLessThan(2);
+    expect(Math.abs(collapsed.y - hull.y)).toBeLessThan(2);
+
+    // dragged while collapsed, expanded and collapsed again: back in the middle of the hull
+    const title = (await box.getByTestId('group-box-title').boundingBox())!;
+    await page.mouse.move(title.x + 2, title.y + 2);
+    await page.mouse.down();
+    await page.mouse.move(title.x + 150, title.y + 120, { steps: 8 });
+    await page.mouse.up();
+    await toggle.click();
+    await expect(box.locator('path.lineage-hull')).toBeVisible();
+    const again = await middleOf();
+    await toggle.click();
+    await expect(box.locator('[data-testid="group-box-count"]')).toBeVisible();
+    const recollapsed = await middleOf();
+    expect(Math.abs(recollapsed.x - again.x)).toBeLessThan(2);
+    expect(Math.abs(recollapsed.y - again.y)).toBeLessThan(2);
+  });
 });
 
