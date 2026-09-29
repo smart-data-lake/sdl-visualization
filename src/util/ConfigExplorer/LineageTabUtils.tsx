@@ -18,8 +18,8 @@ import { ACTION_NODE_WIDTH_WITH_PORTS, columnHandleId, nodeHeightFor, nodeRelati
 import { EdgeMetrics, NodeMetrics } from '../WorkflowsExplorer/Lineage';
 import { FlowMetric } from '../WorkflowsExplorer/metrics';
 import { ActionObject, DAGraph, DataObject, Edge as GraphEdge, ExpandSides, Node as GraphNode, NodeType, PartialDataObjectsAndActions, dfsRemoveRfElems, expandSidesFrom, isColumnLineageEdge, rfNodeSize, setRfNodeData, setRfNodeSize } from './Graphs';
-import { LayoutDirection, LayoutMode, NodePlacement, assignCoordinates, fitGroupBoxes, forceCentreOf, forceModelOf, layoutModelOf, placementOf } from './LineageLayout';
-import { GROUP_BOX_TYPE, GROUP_EDGE_PREFIX, GroupAxis, GroupBoxData, Grouping, NodeGroups, boxDataOf, groupBoxId, groupingKey, groupsOf, groupsOfGraph, isGroupBox, isGroupCollapsed, isGroupEdge, isGrouping, setGroupCollapsed } from './Grouping';
+import { LayoutDirection, LayoutMode, NodePlacement, assignCoordinates, fitGroupBoxes, forceCentreOf, forceModelOf, forceModelOfFlow, layoutModelOf, placementOf } from './LineageLayout';
+import { GROUP_BOX_TYPE, GROUP_EDGE_PREFIX, GroupAxis, GroupBoxData, Grouping, NodeGroups, boxDataOf, groupBoxId, groupingKey, groupsOf, groupsOfGraph, isGroupBox, isGroupCollapsed, isGroupEdge, isGrouping, setGroupCollapsed, singleAxisOf, singleGrouping } from './Grouping';
 
 
 /*
@@ -74,6 +74,9 @@ export interface flowProps {
     // which view a given graph is. The run view passes an action graph and no view, the configuration
     // tables pass the data resp. action graph restricted to the elements they list.
     graphView?: GraphView;
+    // further views of the elements a given graph shows, which the toolbar can switch to. The data
+    // objects table shows the relations between the data objects it lists and offers their lineage.
+    graphs?: Partial<Record<GraphView, DAGraph>>;
     // the state of each node within a run attempt, by node id. Only the run view knows these.
     nodeStatuses?: Map<string, TaskStatus>;
     // the metrics of the data flows within a run attempt, by edge id resp. by node id for the flows
@@ -146,6 +149,7 @@ export interface CustomEdgeProps {
     highlighted: boolean,
     relation?: RelationEdgeProps, // set in the relations view, where an edge is a foreign key
     groupCount?: number,          // on an edge of a collapsed box: how many edges it stands for
+    straight?: boolean,           // drawn centre to centre, as in a force layout, rather than between side handles
     columnLineage?: ColumnLineageEdgeProps, // set on the column edges of the data view
     dataObjectId?: string,        // in the action view: the data object two actions share
 }
@@ -332,7 +336,21 @@ export function getGraphFromConfig(configData: any, graphView: GraphView): DAGra
     selected view built from the config (config explorer).
 */
 export function getGraph(props: flowProps, graphView: GraphView): DAGraph {
-    return props.graph ? props.graph : getGraphFromConfig(props.configData, graphView);
+    return props.graphs?.[graphView] ?? props.graph ?? getGraphFromConfig(props.configData, graphView);
+}
+
+/** The view shown: the selected one, unless a given graph brings its own and does not offer the selected one. */
+export function shownGraphView(props: flowProps, selectedGraphView: GraphView): GraphView {
+    if (!props.graph || props.graphs?.[selectedGraphView]) return selectedGraphView;
+    return props.graphView ?? 'action';
+}
+
+/** The views the toolbar offers: all of them, or those of a given graph. */
+export function offeredGraphViews(props: flowProps): GraphView[] {
+    const all: GraphView[] = ['full', 'data', 'action', 'relations'];
+    if (!props.graph) return all;
+    const given = new Set([props.graphView ?? 'action', ...Object.keys(props.graphs ?? {})]);
+    return all.filter(view => given.has(view));
 }
 
 
@@ -379,8 +397,9 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     requestedGrouping: Grouping = {}
 ): ReactFlowNode[] {
     const dataObjectsAndActions = getGraph(props, graphView);
-    // foreign keys are not a flow, and a force layout has no lanes or columns to keep boxes apart in
-    const grouping: Grouping = graphView === 'relations' ? {} : requestedGrouping;
+    // foreign keys are not a flow: the relations view groups only in the force layout, into hulls of one level
+    const force = graphView === 'relations' && layoutMode === 'force';
+    const grouping: Grouping = force ? singleGrouping(requestedGrouping) : graphView === 'relations' ? {} : requestedGrouping;
     const groups = isGrouping(grouping) ? groupsOfGraph(dataObjectsAndActions, props.configData, grouping) : undefined;
     const columnsOf = makeColumnsOf(props);
     const isHorizontal = layoutDirection === 'LR';
@@ -407,9 +426,11 @@ export function createReactFlowNodes(selectedNodes: GraphNode[],
     // just add more fields to the flowProps interface and access it in the custom node component.
     // The additional props can be passed in ElementDetails where the LineageTab is opened.
     const layoutModel = layoutModelOf(dataObjectsAndActions, layoutDirection,
-        groups && {key: groupingKey(grouping), of: groups, along: !!grouping.along, across: !!grouping.across});
+        groups && !force ? {key: groupingKey(grouping), of: groups, along: !!grouping.along, across: !!grouping.across} : undefined);
     // only the relations view offers a force layout, see LineageLayout.ts
-    const forceModel = graphView === 'relations' && layoutMode === 'force' ? forceModelOf(dataObjectsAndActions) : undefined;
+    const forceAxis = singleAxisOf(grouping);
+    const forceModel = force ? forceModelOf(dataObjectsAndActions, groups && forceAxis
+        ? {key: groupingKey(grouping), of: new Map([...groups].map(([id, g]) => [id, g[forceAxis]]))} : undefined) : undefined;
 
     var result: ReactFlowNode[] = [];
     selectedNodes.forEach((node) => {
@@ -971,11 +992,11 @@ function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: Gra
 /*
     Renders the whole graph, without a center node and without expand/collapse handles on the nodes.
 */
-function prepareGraphComplete(rfi: ReactFlowInstance, doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection, grouping?: Grouping): [ReactFlowNode[], ReactFlowEdge[]] {
+function prepareGraphComplete(rfi: ReactFlowInstance, doa: DAGraph, graphView: GraphView, props: flowProps, layout: LayoutDirection, layoutMode?: LayoutMode, grouping?: Grouping): [ReactFlowNode[], ReactFlowEdge[]] {
     // no node is the center node, otherwise a previously selected one would still be colored
     doa.nodes.forEach((node) => node.setIsCenterNode(false));
 
-    const nodes = createReactFlowNodes(doa.nodes, layout, true, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props, 'layered', grouping);
+    const nodes = createReactFlowNodes(doa.nodes, layout, true, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props, layoutMode, grouping);
     const edges = createReactFlowEdges(doa.edges, props, graphView, undefined);
     return [nodes, edges];
 }
@@ -988,7 +1009,7 @@ export function prepareAndRenderGraph(rfi: ReactFlowInstance, lineageState: line
 
     // a graph given through the props is shown as a whole, there is no element to center it on
     if (props.graph) {
-        const [nodes, edges] = prepareGraphComplete(rfi, props.graph, graphView, props, layout, grouping);
+        const [nodes, edges] = prepareGraphComplete(rfi, getGraph(props, graphView), graphView, props, layout, layoutMode, grouping);
         return { nodes: applyExpandSides(nodes, edges, undefined), edges };
     }
 
@@ -1522,6 +1543,8 @@ export function groupFlowNodes(nodes: ReactFlowNode[]): ReactFlowNode[] {
     const existing = new Map(nodes.filter(isGroupBox).map(box => [box.id, box]));
     const grouping: Grouping = members.find(node => node.data?.grouping)?.data.grouping ?? {};
     const direction: LayoutDirection = members[0]?.data?.layoutDirection ?? 'TB';
+    // a force layout draws its groups as hulls, see LineageLayout.ts
+    const hulls = members.some(node => forceCentreOf(node));
 
     const byBox = new Map<string, {axis: GroupAxis, key: string, members: ReactFlowNode[]}>();
     members.forEach(node => AXES.forEach(axis => {
@@ -1544,7 +1567,13 @@ export function groupFlowNodes(nodes: ReactFlowNode[]): ReactFlowNode[] {
             axis, attribute: grouping[axis]!, key, collapsed,
             memberIds: inside.map(node => node.id).sort(),
             groups: collapsed && otherKeys.size === 1 ? {[other]: [...otherKeys][0]} : undefined,
+            hull: hulls && !collapsed ? existing.get(id)?.data?.box?.hull ?? [] : undefined,
         };
+        // collapsed in a force layout: where its members are on average
+        const centres = inside.map(forceCentreOf).filter((c): c is {x: number, y: number} => c !== undefined);
+        const forceCentre = hulls && collapsed && centres.length > 0
+            ? {x: centres.reduce((sum, c) => sum + c.x, 0) / centres.length, y: centres.reduce((sum, c) => sum + c.y, 0) / centres.length}
+            : undefined;
         const placement: NodePlacement | undefined = collapsed && middle ? {
             rank: middle.rank,
             order: middle.order,
@@ -1560,13 +1589,15 @@ export function groupFlowNodes(nodes: ReactFlowNode[]): ReactFlowNode[] {
             position: kept?.position ?? {x: 0, y: 0},
             data: {
                 ...kept?.data,
-                label: id, box, groups: box.groups, placement,
+                label: id, box, groups: box.groups, placement, forceCentre,
                 layoutDirection: direction,
                 graphNodeProps: {isCenterNode: false, isSink: false, isSource: false},
             },
             style: {...kept?.style, width: size?.width, height: size?.height},
             // dragging an open box drags its members, see moveGroupBoxMembers
             draggable: true, selectable: false,
+            // a hull takes the pointer only where it is drawn, not in the corners of its bounds
+            className: box.hull ? 'lineage-hull-box' : undefined,
             sourcePosition: direction === 'LR' ? Position.Right : Position.Bottom,
             targetPosition: direction === 'LR' ? Position.Left : Position.Top,
         };
@@ -1594,24 +1625,30 @@ export function groupFlowEdges(nodes: ReactFlowNode[], edges: ReactFlowEdge[]): 
     const existing = new Map(edges.filter(isGroupEdge).map(edge => [edge.id, edge]));
     const flowEdges = edges.filter(edge => !isGroupEdge(edge));
 
-    const merged = new Map<string, {source: string, target: string, count: number}>();
+    const merged = new Map<string, {source: string, target: string, sourceHandle: string, targetHandle: string, count: number}>();
     flowEdges.forEach(edge => {
-        if (isColumnLineageEdge(edge) || edge.data?.relation) return;
+        if (isColumnLineageEdge(edge)) return;
         if (!repOf.has(edge.source) && !repOf.has(edge.target)) return;
         const source = repOf.get(edge.source) ?? edge.source, target = repOf.get(edge.target) ?? edge.target;
         if (source === target) return;
         const id = `${GROUP_EDGE_PREFIX}${source}->${target}`;
-        merged.set(id, {source, target, count: (merged.get(id)?.count ?? 0) + 1});
+        // a relation ends on a data object's relation handles, a flow on its node level ones
+        const relation = !!edge.data?.relation;
+        const sourceHandle = repOf.has(edge.source) || !relation ? source : nodeRelationHandleId('source', source);
+        const targetHandle = repOf.has(edge.target) || !relation ? target : nodeRelationHandleId('target', target);
+        merged.set(id, {source, target, sourceHandle, targetHandle, count: (merged.get(id)?.count ?? 0) + 1});
     });
     if (merged.size === 0 && existing.size === 0) return edges;
+    // a force layout has no sides for an edge to leave from
+    const straight = nodes.some(node => forceCentreOf(node));
 
-    const groupEdges = [...merged.entries()].map(([id, {source, target, count}]) => {
+    const groupEdges = [...merged.entries()].map(([id, {source, target, sourceHandle, targetHandle, count}]) => {
         const kept = existing.get(id);
-        if (kept) return kept.data.groupCount === count ? kept : {...kept, data: {...kept.data, groupCount: count}};
+        if (kept) return kept.data.groupCount === count && kept.data.straight === straight ? kept : {...kept, data: {...kept.data, groupCount: count, straight}};
         return {
-            type: 'customEdge', id, source, target, sourceHandle: source, targetHandle: target,
+            type: 'customEdge', id, source, target, sourceHandle, targetHandle,
             markerEnd: {type: MarkerType.ArrowClosed, width: 10, height: 10, color: EDGE_COLOR_DEFAULT},
-            data: {outputIndex: 0, inputIndex: 0, highlighted: false, groupCount: count} as CustomEdgeProps,
+            data: {outputIndex: 0, inputIndex: 0, highlighted: false, groupCount: count, straight} as CustomEdgeProps,
             style: {stroke: EDGE_COLOR_DEFAULT, strokeWidth: EDGE_STROKE_WIDTH_DEFAULT},
         } as ReactFlowEdge;
     });
@@ -1731,6 +1768,31 @@ export function scheduleRelayout(rfi: ReactFlowInstance, layoutDirection: Layout
     anchorId names the node that must not move - the one the user just acted on. Without it the
     result is anchored on the center node, so that a change nobody asked for does not shift the view.
 */
+/*
+    Run the force simulation again on what is shown now - which groups are collapsed, which nodes are
+    expanded - forgetting the manual moves. A collapsed group's hidden members move along with it,
+    as its place is their mean centre (groupFlowNodes).
+*/
+export function rerunForceLayout(rfi: ReactFlowInstance): void {
+    const nodes = rfi.getNodes();
+    const centres = forceModelOfFlow(nodes, rfi.getEdges());
+    if (centres.size === 0) return;
+    const shiftOf = new Map<string, {x: number, y: number}>();
+    nodes.filter(node => isGroupBox(node) && boxDataOf(node).collapsed && centres.has(node.id)).forEach(box => {
+        const was = forceCentreOf(box)!, is = centres.get(box.id)!;
+        boxDataOf(box).memberIds.forEach(id => shiftOf.set(id, {x: is.x - was.x, y: is.y - was.y}));
+    });
+    rfi.setNodes(nds => nds.map(node => {
+        const centre = centres.get(node.id);
+        const shift = shiftOf.get(node.id);
+        const was = forceCentreOf(node);
+        const forceCentre = centre ?? (shift && was ? {x: was.x + shift.x, y: was.y + shift.y} : was);
+        if (forceCentre === was && node.data.manualOffset === undefined) return node;
+        return {...node, data: {...node.data, forceCentre, manualOffset: undefined}};
+    }));
+    recomputeLayout(rfi, 'LR');
+}
+
 /* Lay out the nodes shown again from scratch: every node closed, and none where the user has moved it. */
 export function resetLayout(rfi: ReactFlowInstance, layoutDirection: LayoutDirection) {
     closeAllColumns(rfi);

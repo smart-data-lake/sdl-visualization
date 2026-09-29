@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { ACTIONS, DATA_OBJECTS } from './fixture';
+import { ACTIONS, DATA_OBJECTS, RELATIONS } from './fixture';
 import { chooseLayout, layoutInUse } from './layoutSelector';
 
 /**
@@ -351,7 +351,7 @@ test.describe('lineage graph', () => {
 
 /**
  * The lineage of everything a configuration table lists (ElementTable), which is shown as a whole:
- * no center node, no expansion and no graph view to switch.
+ * no center node and no expansion. The data objects table shows their relations and can switch to their lineage.
  */
 test.describe('lineage of the listed elements', () => {
   const openTableLineage = async (page: Page, url: string) => {
@@ -364,13 +364,12 @@ test.describe('lineage of the listed elements', () => {
     await openTableLineage(page, '/#/config/dataObjects');
 
     expect(await nodeIds(page)).toEqual([...DATA_OBJECTS].sort());
-    // the whole graph is shown, so there is nothing to expand, center or switch the view of - and
+    // the whole graph is shown, so there is nothing to expand or center - and
     // an expand button is only rendered where it can act, never empty
     await expect(nodes(page).locator('.react-flow__handle svg')).toHaveCount(0);
     await expect(nodes(page).locator('.react-flow__handle button')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Expand graph' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Focus on central node' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Show graph view options' })).toHaveCount(0);
     // but it is a panel of the config explorer, so it can be closed
     await page.getByRole('button', { name: 'Close lineage' }).click();
     await expect(nodes(page)).toHaveCount(0);
@@ -380,6 +379,29 @@ test.describe('lineage of the listed elements', () => {
     await openTableLineage(page, '/#/config/actions');
 
     expect(await nodeIds(page)).toEqual([...ACTIONS].sort());
+  });
+
+  test('the data objects table shows their relations, and switches to their lineage', async ({ page }) => {
+    await openTableLineage(page, '/#/config/dataObjects');
+    const graphViewMenu = page.locator('.react-flow .MuiMenuButton-root').nth(1);
+
+    // every listed data object, related or not, joined by the foreign keys alone, force directed
+    await expect(page.locator('.react-flow__edge')).toHaveCount(RELATIONS.length);
+    expect(await nodeIds(page)).toEqual([...DATA_OBJECTS].sort());
+    await expect(layoutInUse(page, 'force')).toBeVisible();
+
+    // the view is kept while the filter narrows the list
+    await page.getByPlaceholder('Search element').fill('int-');
+    await expect.poll(() => nodeIds(page)).toEqual(['int-airports', 'int-departures']);
+    await expect(page.locator('.react-flow__edge')).toHaveCount(2);
+
+    await graphViewMenu.click();
+    // the data graph and the relations, nothing that would show actions
+    await expect(page.getByRole('menuitem')).toHaveCount(2);
+    await page.getByRole('menuitem').nth(0).click();
+    await expect(page.locator('.react-flow__edge')).toHaveCount(0); // no action between the two
+    // the data graph is a flow, in the layout the flows share
+    await expect(layoutInUse(page, 'TB')).toBeVisible();
   });
 
   test('switching the tab switches between the data and the action graph', async ({ page }) => {

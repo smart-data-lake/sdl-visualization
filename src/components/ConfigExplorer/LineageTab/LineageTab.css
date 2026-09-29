@@ -298,3 +298,15 @@ svg.lineage-column-toggle-icon {
   color: #555;
   pointer-events: none;
 }
+
+/* a grouping hull of the force layout takes the pointer where it is drawn, not in the corners of its bounds */
+.react-flow__node.lineage-hull-box {
+  pointer-events: none !important;
+}
+.lineage-hull-box .lineage-hull {
+  pointer-events: visiblePainted;
+  cursor: grab;
+}
+.lineage-hull-box .lineage-hull-header {
+  pointer-events: auto;
+}

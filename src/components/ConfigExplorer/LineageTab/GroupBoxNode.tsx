@@ -6,9 +6,9 @@ import AltRouteIcon from '@mui/icons-material/AltRoute';
 import { IconButton, Tooltip, Typography } from '@mui/joy';
 import Box from '@mui/joy/Box';
 
-import { GROUP_ATTRIBUTE_LABELS, GROUP_HEADER, GroupAttribute, GroupAxis, GroupBoxData } from '../../../util/ConfigExplorer/Grouping';
+import { GROUP_ATTRIBUTE_LABELS, GROUP_HEADER, GROUP_PADDING, GroupAttribute, GroupAxis, GroupBoxData, HULL_INSET } from '../../../util/ConfigExplorer/Grouping';
+import { Point, boundsOf, roundedPath } from '../../../util/ConfigExplorer/Hull';
 import { setGroupBoxCollapsed } from '../../../util/ConfigExplorer/LineageTabUtils';
-import { useLineageGraph } from '../../../hooks/useLineage';
 
 // the icons the configuration tab marks these attributes with
 export const GROUP_ATTRIBUTE_ICONS: Record<GroupAttribute, typeof LayersOutlined> = {
@@ -34,10 +34,20 @@ function handleOnBorder(position: Position): CSSProperties {
     }
 }
 
+// the flat top every hull has, above its highest member: where the header goes, in coordinates relative to the hull's bounds
+function hullTop(hull: Point[], origin: Point): {left: number, width: number} {
+    const top = Math.min(...hull.map(p => p.y));
+    const xs = hull.filter(p => Math.abs(p.y - top) < 0.5).map(p => p.x - origin.x);
+    return {left: Math.min(...xs), width: Math.max(...xs) - Math.min(...xs)};
+}
+
+// the rounding of a hull's corners, which the header keeps clear of
+const HULL_CORNER = GROUP_PADDING;
+
 export const GroupBoxNode = ({id, data, sourcePosition, targetPosition}: NodeProps) => {
     const box: GroupBoxData = data.box;
     const rfi = useReactFlow();
-    const { layout } = useLineageGraph();
+    const layout = data.layoutDirection;
     const updateNodeInternals = useUpdateNodeInternals();
     // the handles only exist while collapsed
     useEffect(() => { updateNodeInternals(id); }, [box.collapsed]);
@@ -64,6 +74,25 @@ export const GroupBoxNode = ({id, data, sourcePosition, targetPosition}: NodePro
             </Tooltip>
         </Box>
     );
+
+    if (!box.collapsed && box.hull) {
+        // relative to the hull's own bounds, which are the node's: so it moves with the node while that is dragged
+        const origin = boundsOf(box.hull);
+        const top = box.hull.length >= 3 ? hullTop(box.hull, origin) : {left: 0, width: 0};
+        return (
+            <Box sx={{width: '100%', height: '100%', position: 'relative'}}>
+                <svg width="100%" height="100%" style={{position: 'absolute', inset: 0, overflow: 'visible'}}>
+                    <path className="lineage-hull" d={roundedPath(box.hull, origin, HULL_CORNER)}
+                          fill={colors.background} stroke={colors.border} strokeWidth={2} strokeDasharray="6 4"/>
+                </svg>
+                <Box className="lineage-hull-header"
+                     sx={{position: 'absolute', top: 3, left: top.left + HULL_CORNER, width: Math.max(0, top.width - 2 * HULL_CORNER),
+                          height: `${HULL_INSET.top - GROUP_PADDING / 2 - 3}px`, display: 'flex', alignItems: 'center'}}>
+                    {header}
+                </Box>
+            </Box>
+        );
+    }
 
     if (!box.collapsed) {
         return (

@@ -388,6 +388,12 @@ test.describe('relations graph', () => {
     expect(await nodeIds(page)).toEqual(['int-airports', 'int-departures']);
   });
 
+  test('a data object without relations is shown on its own', async ({ page }) => {
+    // the view is offered whether or not anything is related, e.g. in a project without foreign keys
+    await openRelations(page, '/#/config/dataObjects/btl-distances');
+    expect(await nodeIds(page)).toEqual(['btl-distances']);
+  });
+
   test('expanding the graph shows everything related to the selected data object', async ({ page }) => {
     await openRelations(page, '/#/config/dataObjects/int-airports');
     await page.getByRole('button', { name: 'Expand graph' }).click();
@@ -396,14 +402,21 @@ test.describe('relations graph', () => {
     await expect.poll(() => nodeIds(page)).toEqual(RELATED_DATA_OBJECTS);
   });
 
-  test('switching to the relations view lays it out left to right', async ({ page }) => {
+  test('the relations view keeps a layout of its own, force directed by default', async ({ page }) => {
     await openLineage(page, '/#/config/dataObjects/int-departures');
     await expect(layoutInUse(page, 'TB')).toBeVisible();
 
     await graphViewMenu(page).click();
     await page.getByRole('menuitem').nth(3).click();
+    await expect(layoutInUse(page, 'force')).toBeVisible();
+    await chooseLayout(page, 'LR');
 
-    // an entity relation diagram is drawn left to right
+    // the flows come back in theirs, and the relations in the one chosen for them
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(0).click();
+    await expect(layoutInUse(page, 'TB')).toBeVisible();
+    await graphViewMenu(page).click();
+    await page.getByRole('menuitem').nth(3).click();
     await expect(layoutInUse(page, 'LR')).toBeVisible();
   });
 
@@ -487,12 +500,17 @@ test.describe('relations graph', () => {
     await openLineage(page, '/#/config/dataObjects/int-airports');
     await layoutSelector(page).click();
     await expect(page.getByTestId('layout-force')).toHaveAttribute('aria-disabled', 'true');
+    // a disabled item still takes the hover, to say why it is disabled
+    await page.getByTestId('layout-force').locator('svg').hover();
+    await expect(page.getByRole('tooltip')).toContainText('only available in the relations view');
     await page.keyboard.press('Escape');
 
     await graphViewMenu(page).click();
     await page.getByRole('menuitem').nth(3).click(); // relations
     await page.getByRole('button', { name: 'Expand graph' }).click();
     await expect.poll(() => nodeIds(page)).toEqual(RELATED_DATA_OBJECTS);
+    await chooseLayout(page, 'LR');
+    await expect(layoutInUse(page, 'LR')).toBeVisible();
     const positions = () => nodes(page).evaluateAll((els) => els.map((e) => (e as HTMLElement).style.transform).join('|'));
     const layered = await positions();
 
@@ -512,9 +530,101 @@ test.describe('relations graph', () => {
     await node(page, RELATED_DATA_OBJECTS[0]).click();
     expect(await positions()).toBe(before);
 
-    // the lineage views are a flow, which only a layered layout draws
+    // the lineage views are a flow, which comes back in the layered layout the flows share
     await graphViewMenu(page).click();
     await page.getByRole('menuitem').nth(1).click();
-    await expect(layoutInUse(page, 'LR')).toBeVisible();
+    await expect(layoutInUse(page, 'TB')).toBeVisible();
   });
 });
+
+test.describe('grouping the force layout into hulls', () => {
+  const openForce = async (page: Page) => {
+    await openRelations(page, '/#/config/dataObjects/int-airports');
+    await page.getByRole('button', { name: 'Expand graph' }).click();
+    await expect(layoutInUse(page, 'force')).toBeVisible(); // the relations view's default
+  };
+  const grouping = (page: Page) => page.getByRole('button', { name: 'Grouping' });
+  const hulls = (page: Page) => page.locator('.react-flow__node.lineage-hull-box');
+
+  test('the layered relations view says why it cannot group', async ({ page }) => {
+    await openRelations(page, '/#/config/dataObjects/int-airports');
+    await chooseLayout(page, 'LR');
+    await expect(grouping(page)).toBeDisabled();
+    await grouping(page).getByTestId('WorkspacesIcon').hover();
+    await expect(page.getByRole('tooltip')).toContainText('grouping needs the force directed layout');
+  });
+
+  test('groups by one attribute, into hulls around their members', async ({ page }) => {
+    await openForce(page);
+    await grouping(page).click();
+    // one level: the attributes along and across the flow are one list
+    await expect(page.getByRole('menuitem', { name: 'Layer' })).toBeVisible();
+    await page.getByRole('menuitem', { name: 'Subject area' }).click();
+    await page.keyboard.press('Escape');
+
+    await expect(hulls(page)).toHaveCount(2);
+    await expect(hulls(page).getByTestId('group-box-title')).toHaveText(['airports', 'flight data']);
+    // a hull is drawn as a path, not as a box border
+    await expect(hulls(page).locator('path.lineage-hull')).toHaveCount(2);
+
+    // choosing another attribute replaces the first
+    await grouping(page).click();
+    await page.getByRole('menuitem', { name: 'Layer' }).click();
+    await page.keyboard.press('Escape');
+    await expect(hulls(page).getByTestId('group-box-title')).toHaveText(['btl', 'integration']);
+  });
+
+  test('a collapsed hull is a node its members\' relations end on', async ({ page }) => {
+    await openForce(page);
+    await grouping(page).click();
+    await page.getByRole('menuitem', { name: 'Subject area' }).click();
+    await page.keyboard.press('Escape');
+
+    await hulls(page).filter({ hasText: 'airports' }).locator('button[aria-label="Collapse group"]').click();
+    await expect(hulls(page)).toHaveCount(1);
+    await expect(node(page, 'int-airports')).toBeHidden();
+    await expect(page.locator('.react-flow__edge[data-testid^="rf__edge-group-edge:"]')).not.toHaveCount(0);
+  });
+
+  test('the force layout can be re-run on what is shown, e.g. with a group collapsed', async ({ page }) => {
+    await openForce(page);
+    const rerun = page.getByRole('button', { name: 'Re-run force layout' });
+    await grouping(page).click();
+    await page.getByRole('menuitem', { name: 'Subject area' }).click();
+    await page.keyboard.press('Escape');
+    await hulls(page).filter({ hasText: 'airports' }).locator('button[aria-label="Collapse group"]').click();
+
+    const positions = () => nodes(page).evaluateAll((els) => els.map((e) => (e as HTMLElement).style.transform).join('|'));
+    const before = await positions();
+    await rerun.click();
+    await expect.poll(positions).not.toBe(before);
+    await expect(hulls(page)).toHaveCount(1);
+
+    // a layered layout has nothing to simulate
+    await chooseLayout(page, 'LR');
+    await expect(rerun).toHaveCount(0);
+  });
+
+  test('dragging a hull moves its outline with its members', async ({ page }) => {
+    await openForce(page);
+    await grouping(page).click();
+    await page.getByRole('menuitem', { name: 'Subject area' }).click();
+    await page.keyboard.press('Escape');
+    const hull = hulls(page).filter({ hasText: 'flight data' });
+    const path = hull.locator('path.lineage-hull');
+    const header = (await hull.locator('.lineage-hull-header').boundingBox())!;
+    const outline = (await path.boundingBox())!;
+
+    // on the outline's flat top, next to the header, where no node is
+    const x = header.x + 4, y = header.y + header.height + 4;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x - 80, y + 50, { steps: 8 });
+    const moved = (await path.boundingBox())!;
+    await page.mouse.up();
+
+    expect(moved.x).toBeCloseTo(outline.x - 80, 0);
+    expect(moved.y).toBeCloseTo(outline.y + 50, 0);
+  });
+});
+
