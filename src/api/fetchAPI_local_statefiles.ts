@@ -35,7 +35,6 @@ export class fetchAPI_local_statefiles implements fetchAPI {
         .then(runs => runs
             .map(raw => {
                 // convert date strings to date
-                console.log("run", raw)
                 const run = processRun<WorkflowRun>(raw);
                 run.attemptStartTimeMillis = run.attemptStartTime?.getTime(); // needed for HistorBarChart
                 run.duration = run.runEndTime!.getTime() - run.attemptStartTime!.getTime();
