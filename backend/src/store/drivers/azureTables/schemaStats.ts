@@ -17,6 +17,11 @@ interface TstampEntity {
   sizeBytes: number;
 }
 
+// The stored property, falling back to the key it was encoded into - rows written
+// before tstamp was recorded separately carry it only in the key.
+const tstampOf = (entity: Pick<TstampEntity, 'tstamp' | 'rowKey'>): number =>
+  entity.tstamp ?? uninv(entity.rowKey);
+
 export function schemaStatsRepository(tables: TableStore): SchemaStatsRepository {
   return {
     async put(
@@ -37,9 +42,25 @@ export function schemaStatsRepository(tables: TableStore): SchemaStatsRepository
         TABLES.tstamps,
         keys.tstamps(scope, subtype, dataObjectId),
       );
-      // The stored property, falling back to the key it was encoded into - rows written
-      // before tstamp was recorded separately carry it only in the key.
-      return entities.map((entity) => entity.tstamp ?? uninv(entity.rowKey));
+      return entities.map(tstampOf);
+    },
+
+    async listAllTstamps(
+      scope: Scope,
+      subtype: Subtype,
+      latestOnly: boolean,
+    ): Promise<Record<string, number[]>> {
+      const prefix = keys.tstampsPrefix(scope, subtype);
+      const entities = await tables.listPartitionsWithPrefix<TstampEntity>(TABLES.tstamps, prefix, {
+        select: ['PartitionKey', 'RowKey', 'tstamp'],
+      });
+      // rows arrive by partition and then by row key, i.e. newest first per data object
+      const result: Record<string, number[]> = {};
+      for (const entity of entities) {
+        const tstamps = (result[entity.partitionKey.slice(prefix.length)] ??= []);
+        if (!latestOnly || tstamps.length === 0) tstamps.push(tstampOf(entity));
+      }
+      return result;
     },
   };
 }

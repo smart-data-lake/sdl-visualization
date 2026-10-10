@@ -82,6 +82,8 @@ export interface SchemaStatsRepository {
    * schema by default.
    */
   listTstamps(scope: Scope, subtype: Subtype, dataObjectId: string): Promise<number[]>;
+  /** listTstamps of every data object of the scope at once, or only each one's newest with `latestOnly`. */
+  listAllTstamps(scope: Scope, subtype: Subtype, latestOnly: boolean): Promise<Record<string, number[]>>;
 }
 
 export interface ConfigRepository {

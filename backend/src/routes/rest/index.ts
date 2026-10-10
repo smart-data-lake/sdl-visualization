@@ -216,6 +216,24 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
   );
 
   for (const subtype of ['schema', 'stats', 'lineage'] as const) {
+    // An extension for SDLB's ExportSync (#147). Plural, as /dataobject/{subtype}/tstamps would
+    // shadow a data object named "tstamps".
+    app.get<{ Querystring: ScopeQuery & { latest?: boolean } }>(
+      `/dataobjects/${subtype}/tstamps`,
+      {
+        schema: {
+          querystring: {
+            ...schemas.scope,
+            properties: { ...schemas.scope.properties, latest: { type: 'boolean' } },
+          },
+        },
+      },
+      async (request) => {
+        const { scope } = await scopedRequest(request);
+        return schemaStats.allTstamps(scope, subtype, request.query.latest ?? false);
+      },
+    );
+
     app.get<{ Params: { dataObjectId: string }; Querystring: ScopeQuery }>(
       `/dataobject/${subtype}/:dataObjectId/tstamps`,
       { schema: { params: schemas.dataObjectParam, querystring: schemas.scope } },

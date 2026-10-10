@@ -78,6 +78,7 @@ export const keys = {
   elements: (scope: Scope, elementType: string) => `${scopeKey(scope)}|${elementType}`,
   tstamps: (scope: Scope, subtype: Subtype, elementName: string) =>
     `${scopeKey(scope)}|${subtype}|${assertKeyPart(elementName, 'dataObjectId')}`,
+  tstampsPrefix: (scope: Scope, subtype: Subtype) => `${scopeKey(scope)}|${subtype}|`,
   mcpTokens: (scope: Scope) => scopeKey(scope),
   workspaces: () => 'WS',
   metaRepos: () => 'REPO',

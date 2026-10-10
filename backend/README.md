@@ -387,6 +387,17 @@ cannot skip rows, and because a run uploaded between two pages would shift every
 Both drivers already store runs in this order, so a page is a range read: `RowKey gt
 runKey(…)` on Azure, a `WHERE` in front of the `ORDER BY` on SQLite.
 
+### Timestamps of every DataObject at once
+
+`ExportSync` also compares the schema, statistics and lineage versions of every DataObject,
+which per DataObject (`GET /dataobject/{subtype}/{id}/tstamps`) is one request each
+(issue #147). `GET /api/v1/dataobjects/{schema|stats|lineage}/tstamps?…[&latest=true]` answers
+for all of them: `{"<dataObjectId>": [tstamp, …]}`, newest first, only the newest of each with
+`latest=true`, `{}` for a scope without exports. The path is plural because
+`/dataobject/{subtype}/tstamps` would be read as a DataObject named `tstamps`. On Azure it is
+one scan over the partition key range `<repo>|<env>|<subtype>|` to `…}`, `}` being the
+character after the key separator. Not in `spec/upstream-openapi.json`.
+
 ## What gets deployed, and cold start
 
 `yarn build` runs esbuild (`scripts/bundle.ts`), not `tsc`, and `yarn package`

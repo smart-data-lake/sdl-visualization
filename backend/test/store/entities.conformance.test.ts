@@ -247,6 +247,30 @@ describe.each(DRIVERS)('$name', ({ create }) => {
       ]);
     });
 
+    test('every data object\'s timestamps at once, newest first, or only the newest', async () => {
+      const scope = freshScope();
+      const put = (subtype: 'schema' | 'stats', id: string, tstamp: number) =>
+        store.schemaStats.put(scope, subtype, id, { tstamp, blobPath: 'p', sizeBytes: 1 });
+      await put('schema', 'a', 1700000000);
+      await put('schema', 'a', 1800000000);
+      await put('schema', 'b', 1600000000);
+      await put('stats', 'c', 1500000000);
+      // a neighbouring scope whose key would sort right after this one's
+      await store.schemaStats.put({ ...scope, env: `${scope.env}x` }, 'schema', 'z', {
+        tstamp: 1, blobPath: 'p', sizeBytes: 1,
+      });
+
+      expect(await store.schemaStats.listAllTstamps(scope, 'schema', false)).toEqual({
+        a: [1800000000, 1700000000],
+        b: [1600000000],
+      });
+      expect(await store.schemaStats.listAllTstamps(scope, 'schema', true)).toEqual({
+        a: [1800000000],
+        b: [1600000000],
+      });
+      expect(await store.schemaStats.listAllTstamps(scope, 'lineage', false)).toEqual({});
+    });
+
     test('the series are separate', async () => {
       const scope = freshScope();
       await store.schemaStats.put(scope, 'schema', 'obj', { tstamp: 1, blobPath: 'p', sizeBytes: 1 });

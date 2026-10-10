@@ -228,6 +228,29 @@ function schemaStatsRepository(db: Db): SchemaStatsRepository {
         )
         .map((row) => row.tstamp);
     },
+
+    async listAllTstamps(
+      scope: Scope,
+      subtype: Subtype,
+      latestOnly: boolean,
+    ): Promise<Record<string, number[]>> {
+      const { repo, env } = scopeOf(scope);
+      const rows = db.all<{ data_object_id: string; tstamp: number }>(
+        latestOnly
+          ? `SELECT data_object_id, MAX(tstamp) AS tstamp FROM tstamps
+               WHERE repo = ? AND env = ? AND subtype = ?
+               GROUP BY data_object_id`
+          : `SELECT data_object_id, tstamp FROM tstamps
+               WHERE repo = ? AND env = ? AND subtype = ?
+               ORDER BY data_object_id, tstamp DESC`,
+        repo,
+        env,
+        subtype,
+      );
+      const result: Record<string, number[]> = {};
+      for (const row of rows) (result[row.data_object_id] ??= []).push(row.tstamp);
+      return result;
+    },
   };
 }
 

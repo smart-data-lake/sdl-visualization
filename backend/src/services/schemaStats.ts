@@ -46,6 +46,15 @@ export async function tstamps(
   return (await repositories()).schemaStats.listTstamps(scope, subtype, dataObjectId);
 }
 
+/** The timestamps of every data object of the scope, keyed by its id; only the newest of each with `latestOnly`. */
+export async function allTstamps(
+  scope: Scope,
+  subtype: Subtype,
+  latestOnly = false,
+): Promise<Record<string, number[]>> {
+  return (await repositories()).schemaStats.listAllTstamps(scope, subtype, latestOnly);
+}
+
 export async function getSchema(
   scope: Scope,
   dataObjectId: string,
