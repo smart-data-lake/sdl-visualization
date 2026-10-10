@@ -370,6 +370,23 @@ Things that are easy to get wrong, and fail quietly:
   instead of a failed job, and it is free. Raising `global.uiBackend.timeouts` or
   keeping an instance warm are the more expensive answers to the same problem.
 
+### Paging the run list
+
+`GET /api/v1/workflow?…&application=` returns the newest 200 attempts. SDLB's `ExportSync`
+uploads only runs the backend does not have, so it needs to see older ones too (issue #146).
+Three optional parameters, not in `spec/upstream-openapi.json`, page through them newest first:
+
+| parameter | meaning |
+|---|---|
+| `limit` | at most this many attempts, 1 to 1000, default 200 |
+| `beforeRunId`, `beforeAttemptId` | only attempts strictly older than this one; both or neither |
+
+A client passes the oldest attempt of one page as the cursor of the next, and stops at a
+page shorter than `limit`. It is a keyset rather than an offset because Table Storage
+cannot skip rows, and because a run uploaded between two pages would shift every offset.
+Both drivers already store runs in this order, so a page is a range read: `RowKey gt
+runKey(…)` on Azure, a `WHERE` in front of the `ORDER BY` on SQLite.
+
 ## What gets deployed, and cold start
 
 `yarn build` runs esbuild (`scripts/bundle.ts`), not `tsc`, and `yarn package`

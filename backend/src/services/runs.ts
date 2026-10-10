@@ -1,6 +1,7 @@
 import { repositories } from '../store/repositories.js';
 import type {
   ElementRef,
+  RunCursor,
   RunElementRecord,
   RunRecord,
   Scope,
@@ -25,8 +26,9 @@ import { badRequest, notFound } from '../errors.js';
  * methods unimplemented for REST backends, so this is also where that gap closes.
  */
 
-/** Runs are read newest-first, and nobody needs more than a page of them at once. */
-const DEFAULT_RUN_LIMIT = 200;
+/** Runs are read newest-first, a page at a time; older pages are reached with a cursor. */
+export const DEFAULT_RUN_LIMIT = 200;
+export const MAX_RUN_LIMIT = 1000;
 
 /* ------------------------------------------------------------------ writing */
 
@@ -166,8 +168,9 @@ export async function getWorkflowRuns(
   scope: Scope,
   application: string,
   limit = DEFAULT_RUN_LIMIT,
+  before?: RunCursor,
 ): Promise<WorkflowRun[]> {
-  const records = await (await repositories()).runs.listRuns(scope, application, limit);
+  const records = await (await repositories()).runs.listRuns(scope, application, limit, before);
   return records.map(toWire);
 }
 

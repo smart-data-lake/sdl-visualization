@@ -4,6 +4,7 @@ import type {
   ElementRef,
   ConfigVersionRecord,
   LatestElementRecord,
+  RunCursor,
   RunElementRecord,
   RunRecord,
   Scope,
@@ -108,8 +109,8 @@ export interface RunRepository {
     runId: number,
     attemptId: number,
   ): Promise<RunRecord | undefined>;
-  /** Attempts of one workflow, newest first. */
-  listRuns(scope: Scope, workflow: string, limit: number): Promise<RunRecord[]>;
+  /** Attempts of one workflow, newest first, and only those strictly older than `before`. */
+  listRuns(scope: Scope, workflow: string, limit: number, before?: RunCursor): Promise<RunRecord[]>;
   /**
    * Count a workflow's attempts and its distinct runs.
    *

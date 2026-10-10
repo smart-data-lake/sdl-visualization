@@ -13,6 +13,7 @@ import type {
   ElementRef,
   LatestElementRecord,
   RunElementRecord,
+  RunCursor,
   RunRecord,
   Scope,
   StoredToken,
@@ -505,16 +506,24 @@ function runRepository(db: Db): RunRepository {
       return row && toRunRecord(row);
     },
 
-    async listRuns(scope: Scope, workflow: string, limit: number): Promise<RunRecord[]> {
+    async listRuns(
+      scope: Scope,
+      workflow: string,
+      limit: number,
+      before?: RunCursor,
+    ): Promise<RunRecord[]> {
       const { repo, env } = scopeOf(scope);
+      const olderThan = before ? ' AND (run_id < ? OR (run_id = ? AND attempt_id < ?))' : '';
+      const cursor = before ? [before.runId, before.runId, before.attemptId] : [];
       return db
         .all<RunRow>(
           `SELECT ${RUN_COLUMNS} FROM runs
-             WHERE repo = ? AND env = ? AND workflow = ?
+             WHERE repo = ? AND env = ? AND workflow = ?${olderThan}
              ORDER BY run_id DESC, attempt_id DESC${limitClause(limit)}`,
           repo,
           env,
           workflow,
+          ...cursor,
         )
         .map(toRunRecord);
     },

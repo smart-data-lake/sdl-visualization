@@ -2,6 +2,7 @@ import type { RunRepository } from '../../repositories.js';
 import type {
   ElementRef,
   RunElementRecord,
+  RunCursor,
   RunRecord,
   Scope,
   WorkflowRunAction,
@@ -203,9 +204,16 @@ export function runRepository(tables: TableStore): RunRepository {
       return entity && toRunRecord(entity);
     },
 
-    async listRuns(scope: Scope, workflow: string, limit: number): Promise<RunRecord[]> {
+    async listRuns(
+      scope: Scope,
+      workflow: string,
+      limit: number,
+      before?: RunCursor,
+    ): Promise<RunRecord[]> {
+      // the keys are inverted, so an older attempt has a greater row key
       const entities = await tables.listPartition<RunEntity>(TABLES.runs, keys.runs(scope, workflow), {
         limit,
+        rowKeyAfter: before && runKey(before.runId, before.attemptId),
       });
       return entities.map(toRunRecord);
     },

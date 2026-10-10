@@ -70,12 +70,39 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  app.get<{ Querystring: ScopeQuery & { application: string } }>(
+  // limit and the before* cursor extend the upstream contract (#146): keyset paging, which a
+  // run uploaded between two pages cannot shift the way it would shift an offset.
+  app.get<{
+    Querystring: ScopeQuery & {
+      application: string;
+      limit?: number;
+      beforeRunId?: number;
+      beforeAttemptId?: number;
+    };
+  }>(
     '/workflow',
-    { schema: { querystring: schemas.scopeWithApplication } },
+    {
+      schema: {
+        querystring: {
+          ...schemas.scopeWithApplication,
+          properties: {
+            ...schemas.scopeWithApplication.properties,
+            limit: { type: 'integer', minimum: 1, maximum: runs.MAX_RUN_LIMIT },
+            beforeRunId: { type: 'integer', minimum: 0 },
+            beforeAttemptId: { type: 'integer', minimum: 0 },
+          },
+          dependencies: { beforeRunId: ['beforeAttemptId'], beforeAttemptId: ['beforeRunId'] },
+        },
+      },
+    },
     async (request) => {
       const { scope } = await scopedRequest(request);
-      return runs.getWorkflowRuns(scope, request.query.application);
+      const { application, limit, beforeRunId, beforeAttemptId } = request.query;
+      const before =
+        beforeRunId === undefined || beforeAttemptId === undefined
+          ? undefined
+          : { runId: beforeRunId, attemptId: beforeAttemptId };
+      return runs.getWorkflowRuns(scope, application, limit ?? runs.DEFAULT_RUN_LIMIT, before);
     },
   );
 

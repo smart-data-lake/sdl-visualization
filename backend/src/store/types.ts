@@ -166,4 +166,10 @@ export interface ElementRef {
   id: string;
 }
 
+/** A position in a workflow's newest-first run order: listRuns returns only attempts older than it. */
+export interface RunCursor {
+  runId: number;
+  attemptId: number;
+}
+
 export type { WorkflowRunAction };
