@@ -94,6 +94,30 @@ describe('workflows and runs match what the state index derived from the same st
     expect(order).toEqual([...order].sort(byRunDescending));
   });
 
+  test('paging with limit and a before cursor walks every attempt exactly once', async () => {
+    const all = await json(`/api/v1/workflow?${Q}&application=getting-started`);
+    const paged: any[] = [];
+    let cursor = '';
+    for (;;) {
+      const page = await json(`/api/v1/workflow?${Q}&application=getting-started&limit=2${cursor}`);
+      paged.push(...page);
+      if (page.length < 2) break;
+      const oldest = page[page.length - 1];
+      cursor = `&beforeRunId=${oldest.runId}&beforeAttemptId=${oldest.attemptId}`;
+    }
+    expect(paged.map((r) => `${r.runId}.${r.attemptId}`)).toEqual(
+      all.map((r: any) => `${r.runId}.${r.attemptId}`),
+    );
+  });
+
+  test('a cursor needs both halves, and the limit is bounded', async () => {
+    const base = `/api/v1/workflow?${Q}&application=getting-started`;
+    expect((await get(`${base}&beforeRunId=24`)).statusCode).toBe(422);
+    expect((await get(`${base}&beforeAttemptId=1`)).statusCode).toBe(422);
+    expect((await get(`${base}&limit=0`)).statusCode).toBe(422);
+    expect((await get(`${base}&limit=1001`)).statusCode).toBe(422);
+  });
+
   test('each attempt carries the status, feed and action states the index has', async () => {
     const index = await fixtureIndex();
     const runs = await json(`/api/v1/workflow?${Q}&application=getting-started`);

@@ -43,6 +43,8 @@ export interface ListOptions {
   limit?: number;
   /** Restrict to these properties, as OData names. PartitionKey and RowKey always come back. */
   select?: string[];
+  /** Only entities whose RowKey sorts strictly after this one. */
+  rowKeyAfter?: string;
 }
 
 /** What this driver's repositories are handed instead of a client of their own. */
@@ -196,7 +198,13 @@ export function createTableStore(storage: AzureStorageAuth): TableStore {
 
       const results: T[] = [];
       const iterator = client.listEntities<T>({
-        queryOptions: { filter: odata`PartitionKey eq ${partitionKey}`, select: options.select },
+        queryOptions: {
+          filter:
+            options.rowKeyAfter === undefined
+              ? odata`PartitionKey eq ${partitionKey}`
+              : odata`PartitionKey eq ${partitionKey} and RowKey gt ${options.rowKeyAfter}`,
+          select: options.select,
+        },
       });
       for await (const entity of iterator) {
         results.push(entity as unknown as T);

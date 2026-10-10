@@ -260,6 +260,21 @@ describe.each(DRIVERS)('$name', ({ create }) => {
       expect((await store.runs.listRuns(scope, 'wf', 2)).map((r) => r.runId)).toEqual([5, 4]);
     });
 
+    test('a cursor returns only strictly older attempts, across a run boundary', async () => {
+      const scope = freshScope();
+      for (const [runId, attemptId] of [[1, 1], [2, 1], [2, 2], [3, 1]]) {
+        await store.runs.putRun(scope, run({ runId, attemptId }));
+      }
+      const page = async (before: { runId: number; attemptId: number }, limit = 10) =>
+        (await store.runs.listRuns(scope, 'wf', limit, before)).map((r) => `${r.runId}.${r.attemptId}`);
+
+      expect(await page({ runId: 2, attemptId: 2 })).toEqual(['2.1', '1.1']);
+      expect(await page({ runId: 3, attemptId: 1 }, 2)).toEqual(['2.2', '2.1']);
+      expect(await page({ runId: 1, attemptId: 1 })).toEqual([]);
+      // a cursor need not name a stored attempt
+      expect(await page({ runId: 2, attemptId: 9 })).toEqual(['2.2', '2.1', '1.1']);
+    });
+
     test('a limit above the count is not an error', async () => {
       const scope = freshScope();
       await store.runs.putRun(scope, run({ runId: 1, attemptId: 0 }));
