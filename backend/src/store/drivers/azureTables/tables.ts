@@ -41,7 +41,7 @@ export type TableName = (typeof TABLES)[keyof typeof TABLES];
 export interface ListOptions {
   /** Stop after this many entities. Omit to read the whole partition. */
   limit?: number;
-  /** Restrict to these properties, as OData names. PartitionKey and RowKey always come back. */
+  /** Restrict to these properties, as OData names; name PartitionKey and RowKey too if they are read. */
   select?: string[];
   /** Only entities whose RowKey sorts strictly after this one. */
   rowKeyAfter?: string;
@@ -60,6 +60,12 @@ export interface TableStore {
   listPartition<T extends object>(
     name: TableName,
     partitionKey: string,
+    options?: ListOptions,
+  ): Promise<T[]>;
+  /** Every partition whose key starts with `prefix`, in key order. The prefix must end in the key separator. */
+  listPartitionsWithPrefix<T extends object>(
+    name: TableName,
+    prefix: string,
     options?: ListOptions,
   ): Promise<T[]>;
 }
@@ -203,6 +209,30 @@ export function createTableStore(storage: AzureStorageAuth): TableStore {
             options.rowKeyAfter === undefined
               ? odata`PartitionKey eq ${partitionKey}`
               : odata`PartitionKey eq ${partitionKey} and RowKey gt ${options.rowKeyAfter}`,
+          select: options.select,
+        },
+      });
+      for await (const entity of iterator) {
+        results.push(entity as unknown as T);
+        if (options.limit !== undefined && results.length >= options.limit) break;
+      }
+      return results;
+    },
+
+    async listPartitionsWithPrefix<T extends object>(
+      name: TableName,
+      prefix: string,
+      options: ListOptions = {},
+    ): Promise<T[]> {
+      if (!prefix.endsWith('|')) throw new Error(`a partition prefix must end in '|': ${prefix}`);
+      const client = await ensureTable(name);
+      // '}' is the character after '|', so this range holds exactly the keys starting with prefix
+      const end = `${prefix.slice(0, -1)}}`;
+
+      const results: T[] = [];
+      const iterator = client.listEntities<T>({
+        queryOptions: {
+          filter: odata`PartitionKey ge ${prefix} and PartitionKey lt ${end}`,
           select: options.select,
         },
       });

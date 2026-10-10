@@ -269,6 +269,21 @@ describe('schema and statistics', () => {
     expect(tstamps).toEqual([1710144919, 1702279427, 1702279395]);
   });
 
+  test('every data object\'s timestamps come in one request, agreeing with the per-object route', async () => {
+    const all = await json(`/api/v1/dataobjects/schema/tstamps?${Q}`);
+    expect(all['int-airports']).toEqual(await json(`/api/v1/dataobject/schema/int-airports/tstamps?${Q}`));
+    expect(Object.keys(all).length).toBeGreaterThan(1);
+
+    const latest = await json(`/api/v1/dataobjects/schema/tstamps?${Q}&latest=true`);
+    expect(latest).toEqual(Object.fromEntries(Object.entries<number[]>(all).map(([id, t]) => [id, [t[0]]])));
+  });
+
+  test('a scope with nothing exported lists no data objects rather than a 404', async () => {
+    const response = await get('/api/v1/dataobjects/stats/tstamps?tenant=t&repo=nothing-here&env=dev');
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({});
+  });
+
   test('statistics are wrapped in a stats field, as the SPA expects', async () => {
     const body = await json(`/api/v1/dataobject/stats/int-airports?${Q}&tstamp=1710144922`);
     expect(body.stats).toBeDefined();
