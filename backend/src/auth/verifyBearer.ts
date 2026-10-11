@@ -114,6 +114,23 @@ function assertAllowed(allowlist: string | undefined, value: string, what: strin
   }
 }
 
+/**
+ * Whether the caller administers access tokens: a member of SDLB_ADMIN_GROUP, signed in through
+ * Databricks. With authentication disabled there is no one to tell apart, so everyone is.
+ */
+export function isAdmin(principal: Principal): boolean {
+  if (principal.via === 'anonymous') return true;
+  const group = settings().adminGroup;
+  return principal.via === 'databricks' && !!group && principal.groups.includes(group);
+}
+
+/** Refuse a caller holding an access token: managing tokens needs a person signed in. */
+export function requireInteractive(principal: Principal): void {
+  if (principal.via === 'mcp-token') {
+    throw new AuthError(403, 'Access tokens cannot be managed with an access token - sign in instead');
+  }
+}
+
 /** "https://adb-1.2.azuredatabricks.net" has a slash, which is illegal in a row key. */
 export function encodeWorkspaceRowKey(host: string): string {
   return validateWorkspaceHost(host).replace(/^https:\/\//, '');

@@ -1,12 +1,14 @@
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import {
   Box,
+  Chip,
   CircularProgress,
-  Grid,
   List,
   ListItem,
   ListItemButton,
   Sheet,
   Stack,
+  Tooltip,
   Typography,
   colors,
 } from "@mui/joy";
@@ -14,7 +16,8 @@ import PageHeader from "../../layouts/PageHeader";
 import { Link, Navigate, Route, Routes, useLocation, useMatch } from "react-router-dom";
 import Users from "./Users";
 import AccessTokens from "./AccessTokens";
-import { useFetchLicenses } from "../../hooks/useFetchData";
+import Indexes from "./Indexes";
+import { useFetchLicenses, useFetchMe } from "../../hooks/useFetchData";
 import { fetcher } from "../../api/Fetcher";
 
 /**
@@ -38,10 +41,13 @@ const backendCapabilities = () =>
 const NavLink = ({ base, to, title }) => {
   const path = `${base}/${to}`;
   const activated = useMatch(path);
+  // the scope query (see goToSetting) is for every page, not only the first one
+  const { search } = useLocation();
 
   return (
-    <ListItemButton selected={!!activated}>
-      <Link to={path}>{title}</Link>
+    // the whole button is the link, not only its text
+    <ListItemButton component={Link} to={`${path}${search}`} selected={!!activated}>
+      {title}
     </ListItemButton>
   );
 };
@@ -79,6 +85,23 @@ const TenantLicenses = () => {
   );
 };
 
+/** The page title, marked when the user is in the admin group - what decides the admin functions offered here. */
+const SettingTitle = () => {
+  const { data: me } = useFetchMe();
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <Typography level="h4">Setting</Typography>
+      {me?.admin && (
+        <Tooltip title={`${me.email} is a member of the admin group`} variant="solid" size="sm">
+          <Chip size="sm" variant="soft" color="primary" startDecorator={<AdminPanelSettingsIcon fontSize="small" />}>
+            Admin
+          </Chip>
+        </Tooltip>
+      )}
+    </Stack>
+  );
+};
+
 export default function Setting() {
   // Always matches - this component is that route's element. See NavLink above.
   const base = useMatch(":tenant/settings/*")?.pathnameBase ?? "";
@@ -89,42 +112,33 @@ export default function Setting() {
   const settingMenuItems = [
     ...(capabilities.userManagement ? [{ title: "User Management", path: "users" }] : []),
     ...(capabilities.mcpTokens ? [{ title: "Access Token", path: "tokens" }] : []),
+    ...(capabilities.indexes ? [{ title: "Indexes", path: "indexes" }] : []),
   ];
   const landingPath = settingMenuItems[0]?.path ?? "users";
 
   return (
-    <Sheet
-      sx={{
-        display: "flex",
-        width: "100%",
-        height: "100%",
-        p: "0.1rem 1rem",
-        flexDirection: "column",
-      }}
-    >
-      <PageHeader title={"Setting"} corner={capabilities.userManagement ? <TenantLicenses /> : undefined} />
-      <Sheet sx={{ display: "flex", width: "100%", minHeight: 0, flexGrow: 1 }}>
-        <Grid container height="100%">
-          <Grid xs={2}>
-            <Box borderRight={`1px solid ${colors.grey[200]}`} pr={2} mr={2} height="100%">
-              <List>
-                {settingMenuItems.map((x) => (
-                  <ListItem key={x.path}>
-                    <NavLink base={base} to={x.path} title={x.title}></NavLink>
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          </Grid>
-          <Grid xs={10}>
-            <Routes>
-              {capabilities.userManagement && <Route path="users" element={<Users />} />}
-              {capabilities.mcpTokens && <Route path="tokens" element={<AccessTokens />} />}
-              <Route path="*" element={<Navigate to={`${base}/${landingPath}${search}`} replace={true} />} />
-            </Routes>
-          </Grid>
-        </Grid>
-      </Sheet>
+    // Bounded to the viewport, so only the content column below scrolls and never the whole page.
+    <Sheet sx={{ display: "flex", width: "100%", height: "100%", minHeight: 0, p: "0.1rem 1rem", flexDirection: "column" }}>
+      <PageHeader title={<SettingTitle />} corner={capabilities.userManagement ? <TenantLicenses /> : undefined} />
+      <Box sx={{ display: "flex", flexGrow: 1, minHeight: 0 }}>
+        <Box sx={{ flex: "0 0 16.67%", borderRight: `1px solid ${colors.grey[200]}`, pr: 2, mr: 2, overflowY: "auto" }}>
+          <List>
+            {settingMenuItems.map((x) => (
+              <ListItem key={x.path}>
+                <NavLink base={base} to={x.path} title={x.title}></NavLink>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+        <Box sx={{ flex: 1, minWidth: 0, overflowY: "auto" }}>
+          <Routes>
+            {capabilities.userManagement && <Route path="users" element={<Users />} />}
+            {capabilities.mcpTokens && <Route path="tokens" element={<AccessTokens />} />}
+            {capabilities.indexes && <Route path="indexes" element={<Indexes />} />}
+            <Route path="*" element={<Navigate to={`${base}/${landingPath}${search}`} replace={true} />} />
+          </Routes>
+        </Box>
+      </Box>
     </Sheet>
   );
 }

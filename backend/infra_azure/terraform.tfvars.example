@@ -13,6 +13,9 @@ databricks_hosts = [
   "https://adb-0000000000000000.0.azuredatabricks.net"
 ]
 
+# Members of this Databricks group see and revoke every user's access tokens.
+# admin_group = "sdlb-admins"
+
 # The origin the SPA is served from. Empty on the first apply - the Static Web App
 # does not exist yet, so its hostname cannot be known. Fill it in afterwards from
 # `terraform output -raw static_site_url`, apply again, and restart the function app;

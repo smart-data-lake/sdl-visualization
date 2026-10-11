@@ -44,7 +44,10 @@ export interface fetchAPI {
 
     /**** MCP access tokens, for backends that serve an MCP endpoint ****/
 
+    /** Every user's tokens for an admin, otherwise the caller's own. */
     listMcpTokens?: (tenant: string, repo: string, env: string) => Promise<McpToken[]>;
+    /** The signed-in user, and whether they administer everyone's tokens. */
+    whoAmI?: () => Promise<{ email: string; admin: boolean }>;
     /** The only time the token itself is returned; it cannot be read again. */
     createMcpToken?: (tenant: string, repo: string, env: string, label: string, ttlDays?: number) => Promise<McpToken & { token: string }>;
     revokeMcpToken?: (tenant: string, repo: string, env: string, id: string) => Promise<void>;
@@ -81,6 +84,34 @@ export interface fetchAPI {
     getColumnLineage?: (lineageTstampEntry: TstampEntry | undefined, tenant: string, repo: string, env: string) => Promise<ColumnLineage[] | undefined>;
     /** Every column dependency of the scope, or undefined where no index was built - a normal state. */
     getColumnLineageIndex?: (tenant: string, repo: string, env: string) => Promise<ColumnLineageIndex | undefined>;
+
+    /**** Index rebuilds, for backends that build their indexes themselves (capabilities().indexes) ****/
+
+    /** Without force, an unchanged configuration is left as it is. version undefined means the newest. */
+    rebuildSearchIndex?: (tenant: string, repo: string, env: string, version: string | undefined, force: boolean) => Promise<SearchIndexRebuild>;
+    /** Re-derives the run index from the stored state files. */
+    rebuildStateIndex?: (tenant: string, repo: string, env: string) => Promise<StateIndexRebuild>;
+    rebuildLineageIndex?: (tenant: string, repo: string, env: string) => Promise<LineageIndexRebuild>;
+}
+
+export interface SearchIndexRebuild extends SearchIndexMeta {
+    built: boolean;
+    /** Why nothing was built: unchanged, rebuilt moments ago, or a rebuild already running. */
+    reason?: 'fresh' | 'debounced' | 'inflight';
+    durationMs: number;
+}
+
+export interface StateIndexRebuild {
+    workflows: number;
+    attempts: number;
+    failed: { path: string; error: string }[];
+    durationMs: number;
+}
+
+export interface LineageIndexRebuild {
+    builtAt: string;
+    documents: number;
+    edges: number;
 }
 
 /** The notification the backend publishes per upload: which attempt to refetch, not its content. */
@@ -113,6 +144,8 @@ export interface BackendCapabilities {
     userManagement: boolean;
     /** Whether agents can be given access to this backend over MCP. */
     mcpTokens: boolean;
+    /** Whether the search, state and lineage indexes can be rebuilt from the UI. */
+    indexes?: boolean;
 }
 
 export interface McpToken {

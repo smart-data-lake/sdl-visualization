@@ -1,6 +1,6 @@
 import { getAuthHeaders } from "../auth/tokenProvider";
 import { LicenseInfo, User, WorkflowRun } from "../types";
-import { BackendCapabilities, McpToken, RunChange } from "./fetchAPI";
+import { BackendCapabilities, LineageIndexRebuild, McpToken, RunChange, SearchIndexRebuild, StateIndexRebuild } from "./fetchAPI";
 import { LiveRegistration, LiveStatus, subscribeLive } from "./liveUpdates";
 import { fetchAPI_rest, processWorkflowHistory } from "./fetchAPI_rest";
 
@@ -116,7 +116,7 @@ export class fetchAPI_bundled extends fetchAPI_rest {
 
     getLicenses = async (): Promise<LicenseInfo> => ({});
 
-    capabilities = (): BackendCapabilities => ({ userManagement: false, mcpTokens: true });
+    capabilities = (): BackendCapabilities => ({ userManagement: false, mcpTokens: true, indexes: true });
 
     /**** Live updates ****/
 
@@ -125,6 +125,23 @@ export class fetchAPI_bundled extends fetchAPI_rest {
         const register = (): Promise<LiveRegistration> =>
             this.fetch(`${this.url}/live/register?${query}`, this.getRequestInfo("POST"));
         return subscribeLive(register, onChange, onStatus);
+    };
+
+    /**** Index rebuilds ****/
+
+    rebuildSearchIndex = async (tenant: string, repo: string, env: string, version: string | undefined, force: boolean): Promise<SearchIndexRebuild> => {
+        const query = new URLSearchParams({ tenant, repo, env, ...(version ? { version } : {}) });
+        const requestInfo = await this.getRequestInfo("POST", { "Content-Type": "application/json" });
+        requestInfo.body = JSON.stringify({ force });
+        return this.fetch(`${this.url}/search/index?${query}`, Promise.resolve(requestInfo));
+    };
+
+    rebuildStateIndex = async (tenant: string, repo: string, env: string): Promise<StateIndexRebuild> => {
+        return this.fetch(`${this.url}/state/index?${scopeQuery(tenant, repo, env)}`, this.getRequestInfo("POST"));
+    };
+
+    rebuildLineageIndex = async (tenant: string, repo: string, env: string): Promise<LineageIndexRebuild> => {
+        return this.fetch(`${this.url}/lineage/index?${scopeQuery(tenant, repo, env)}`, this.getRequestInfo("POST"));
     };
 
     /**** MCP access ****/
@@ -139,6 +156,11 @@ export class fetchAPI_bundled extends fetchAPI_rest {
         const requestInfo = await this.getRequestInfo("POST", { "Content-Type": "application/json" });
         requestInfo.body = JSON.stringify({ label, ttlDays });
         return this.fetch(`${this.url}/mcp-tokens?${scopeQuery(tenant, repo, env)}`, Promise.resolve(requestInfo));
+    };
+
+    whoAmI = async (): Promise<{ email: string; admin: boolean }> => {
+        const me = await this.fetch(`${this.url}/me`);
+        return { email: me.email, admin: me.admin === true };
     };
 
     listMcpTokens = async (tenant: string, repo: string, env: string): Promise<McpToken[]> => {

@@ -112,8 +112,19 @@ export async function registerUploadRoutes(app: FastifyInstance): Promise<void> 
     { schema: { querystring: schemas.scope }, preHandler: rebuildRateLimit },
     async (request) => {
       const { scope } = await scopedRequest(request);
-      await columnLineage.readLineageIndex(scope, { force: true });
-      return {};
+      const { body } = await columnLineage.readLineageIndex(scope, { force: true });
+      const index = JSON.parse(body.toString('utf8'));
+      return { builtAt: index.builtAt, documents: index.documents.length, edges: index.edges.length };
+    },
+  );
+
+  // The run index, re-derived from the stored state files. An extension like the two above.
+  app.post<{ Querystring: ScopeQuery }>(
+    '/state/index',
+    { schema: { querystring: schemas.scope }, preHandler: rebuildRateLimit },
+    async (request) => {
+      const { scope } = await scopedRequest(request);
+      return runs.rebuildStateIndex(scope);
     },
   );
 

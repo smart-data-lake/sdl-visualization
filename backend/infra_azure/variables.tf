@@ -270,6 +270,12 @@ variable "log_retention_days" {
   default     = 30
 }
 
+variable "admin_group" {
+  description = "Databricks group whose members see and revoke every user's access tokens. Direct membership only, as SCIM reports it. Empty: everybody manages only their own."
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Tags applied to every resource."
   type        = map(string)

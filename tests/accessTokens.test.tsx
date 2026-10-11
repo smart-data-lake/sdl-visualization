@@ -32,11 +32,12 @@ vi.mock('../src/hooks/useWorkspace', () => ({
 
 // What the backend has. Mutable, because a component re-renders and asks again -
 // mockReturnValueOnce would answer the first render only.
-let known = { repos: ['getting-started'], envs: ['dev'] };
-beforeEach(() => (known = { repos: ['getting-started'], envs: ['dev'] }));
+let known = { repos: ['getting-started'], envs: ['dev'], admin: false };
+beforeEach(() => (known = { repos: ['getting-started'], envs: ['dev'], admin: false }));
 vi.mock('../src/hooks/useFetchData', () => ({
   useFetchRepos: () => ({ data: known.repos }),
   useFetchEnvs: () => ({ data: known.envs }),
+  useFetchMe: () => ({ data: { email: 'me@example.com', admin: known.admin } }),
 }));
 
 const createMcpToken = vi.fn(async () => ({
@@ -52,7 +53,10 @@ vi.mock('../src/api/Fetcher', () => ({
     capabilities: () => ({ userManagement: false, mcpTokens: true }),
     mcpUrl: () => MCP,
     uploadUrl: () => UPLOAD,
-    listMcpTokens: async () => [],
+    listMcpTokens: async () => [
+      { id: 'mine', label: 'my laptop', email: 'me@example.com', createdAt: '2026-01-01T00:00:00Z' },
+      { id: 'theirs', label: 'their job', email: 'other@example.com', createdAt: '2026-01-01T00:00:00Z' },
+    ],
     createMcpToken,
     revokeMcpToken: async () => undefined,
   }),
@@ -94,6 +98,21 @@ describe('the access token page on the route it is actually mounted at', () => {
     show(['/PrivateTenant/settings/tokens?repo=other-repo&env=prod']);
     await waitFor(() => expect((field('Repository') as HTMLInputElement).value).toBe('other-repo'));
     expect((field('Environment') as HTMLInputElement).value).toBe('prod');
+  });
+});
+
+describe('whose tokens are listed', () => {
+  test('a user sees no owner column, as every token listed is their own', async () => {
+    show();
+    await screen.findByText('my laptop');
+    expect(screen.queryByRole('columnheader', { name: 'Owner' })).toBeNull();
+  });
+
+  test('an admin is told whose each token is', async () => {
+    known.admin = true;
+    show();
+    expect(await screen.findByText('other@example.com')).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: 'Owner' })).toBeTruthy();
   });
 });
 

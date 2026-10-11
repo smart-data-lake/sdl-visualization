@@ -58,6 +58,16 @@ export async function listTokens(scope: Scope, email?: string): Promise<McpToken
   return tokens.filter((token) => email === undefined || token.email === email);
 }
 
+/** Revoke a token on behalf of `email`, or of an admin when undefined. False if there was none to revoke. */
+export async function revokeTokenOf(scope: Scope, id: string, email: string | undefined): Promise<boolean> {
+  const tokens = (await repositories()).tokens;
+  const stored = await tokens.get(scope, id);
+  // someone else's token answers like a missing one, so its existence is not disclosed
+  if (!stored || (email !== undefined && stored.email !== email)) return false;
+  await tokens.delete(scope, id);
+  return true;
+}
+
 export async function revokeToken(scope: Scope, id: string): Promise<void> {
   await (await repositories()).tokens.delete(scope, id);
 }

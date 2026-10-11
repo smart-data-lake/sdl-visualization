@@ -311,6 +311,16 @@ export const useRemoveUser = () => {
   return useMutation(({ email }: any) => fetcher().removeUser(tenant!, email));
 }
 
+/** The signed-in user, for backends that say so (fetchAPI.whoAmI). Quiet: the page works without it. */
+export const useFetchMe = () =>
+  useQuery({
+    queryKey: ["me"],
+    queryFn: () => fetcher().whoAmI!(),
+    enabled: !!fetcher().whoAmI,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+
 export const useFetchTenants = () => {
   const { status: authStatus } = useAuth();
   return handleError(useQuery({

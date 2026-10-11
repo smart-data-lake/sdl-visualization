@@ -78,6 +78,7 @@ Copy `local.settings.json.example` to `local.settings.json`.
 | `SDLB_AUTH_MODE` | `databricks`, or `disabled` for local work |
 | `SDLB_DATABRICKS_HOSTS` | comma-separated workspace origins that may use this deployment |
 | `SDLB_AUTH_CACHE_TTL_SECONDS` | how long a verified token is trusted, default 300 |
+| `SDLB_ADMIN_GROUP` | Databricks group whose members see and revoke every user's access tokens; unset, nobody does |
 | `SDLB_LIVE_UPDATES` | `webpubsub`, `sse` or `none`: where upload notifications go, see [Live updates](#live-updates). Default `webpubsub` when an endpoint is set, otherwise `none`; `yarn serve` defaults to `sse` |
 | `SDLB_WEBPUBSUB_ENDPOINT` | `https://<name>.webpubsub.azure.com`, reached with the managed identity |
 | `SDLB_WEBPUBSUB_HUB` | default `sdlb` |
@@ -113,6 +114,14 @@ not accept tokens minted for another resource. An access token is scoped to one
 repository and environment at the moment it is minted, so it needs no `dbxHost` and
 no SCIM call. Only the hash is stored; the SPA mints, lists and revokes them under
 Settings → Access Token.
+
+Managing tokens needs a person signed in through Databricks: `/mcp-tokens` refuses a caller
+holding an access token with a 403, so a leaked token cannot mint its own successor. Everyone
+sees and revokes only the tokens they minted - revoking someone else's answers 404, like a
+missing one - except members of the Databricks group named by `SDLB_ADMIN_GROUP`, who see and
+revoke everyone's. `GET /me` says which one the caller is (`admin`). Group membership is SCIM's
+direct membership, so a nested group does not count. With `SDLB_AUTH_MODE=disabled` everyone is
+an admin, as there is nobody to tell apart.
 
 They carry no groups, so the `requiredGroup` rule above applies to Databricks callers
 only.
@@ -264,13 +273,24 @@ It is stored beside the schemas and statistics, as a third timestamp series.
 | `PUT /api/v1/dataobject/lineage?…&tstamp=` | an array of documents, e.g. every action of a dry-run in one request |
 | `GET /api/v1/dataobject/lineage/{id}[/tstamps]?…` | a stored document, and its timestamps newest first |
 | `GET /api/v1/lineage/index?…` | every column dependency, without the transformation text; `ETag` follows the blobs |
-| `POST /api/v1/lineage/index?…` | forces a rebuild |
+| `POST /api/v1/lineage/index?…` | forces a rebuild; answers `{builtAt, documents, edges}` |
 
 In a batch, documents naming the same DataObject are stored together as an array, so one
 action's document does not replace another's; a batch with one malformed document is refused as
 a whole. The index is **rebuilt lazily**, on the first read after the newest blob of any
 DataObject changed, so a dry-run uploading two hundred single documents costs one rebuild, not
 two hundred. Like the search index, none of this is in `spec/upstream-openapi.json`.
+
+## Rebuilding the run index
+
+`POST /api/v1/state/index?…` re-derives the run index - `Runs`, `RunElements` and the workflow
+summaries - from the state files in Blob, e.g. after the index record gained a field that older
+attempts were indexed without. It answers `{workflows, attempts, failed, durationMs}`; a state
+file that cannot be read is listed in `failed` and skipped. Each workflow's attempts are indexed
+oldest first and its summary written afresh from the newest, so an outdated summary cannot
+outrank it. It only adds and overwrites: the record of an attempt whose state file is gone stays.
+No live update is published. The SPA's Settings → Indexes page calls it, together with the two
+rebuilds above.
 
 ## Code copied from the frontend
 
