@@ -6,7 +6,7 @@ import * as descriptions from '../../services/descriptions.js';
 import * as schemaStats from '../../services/schemaStats.js';
 import * as scopes from '../../services/scope.js';
 import { listTokens, mintToken, revokeTokenOf } from '../../auth/mcpTokens.js';
-import { isAdmin, requireInteractive } from '../../auth/verifyBearer.js';
+import { AuthError, isAdmin, requireInteractive } from '../../auth/verifyBearer.js';
 import { relayTokenRequest } from '../../auth/databricks.js';
 import { RateLimiter, rateLimit } from '../rateLimit.js';
 import * as search from '../../services/search.js';
@@ -115,6 +115,19 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
       const { scope } = await scopedRequest(request);
       const { application, runId, attemptId } = request.query;
       return runs.getRun(scope, application, runId, attemptId);
+    },
+  );
+
+  // beyond the upstream contract: an admin removes an attempt, state file and index alike
+  app.delete<{ Querystring: ScopeQuery & { application: string; runId: number; attemptId: number } }>(
+    '/state',
+    { schema: { querystring: schemas.scopeWithAttempt } },
+    async (request, reply) => {
+      const { scope, principal } = await scopedRequest(request);
+      if (!isAdmin(principal)) throw new AuthError(403, 'Only an admin can delete workflow runs');
+      const { application, runId, attemptId } = request.query;
+      await runs.deleteRun(scope, application, runId, attemptId);
+      reply.code(204);
     },
   );
 

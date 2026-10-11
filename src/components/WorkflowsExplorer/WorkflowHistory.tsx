@@ -1,10 +1,10 @@
-import { ZoomOutOutlined } from "@mui/icons-material";
-import { Box, IconButton, Sheet, Tooltip, Typography } from "@mui/joy";
+import { DeleteOutlined, ZoomOutOutlined } from "@mui/icons-material";
+import { Alert, Box, Button, DialogActions, DialogContent, DialogTitle, IconButton, Modal, ModalDialog, Sheet, Tooltip, Typography } from "@mui/joy";
 import { SortDirection } from 'ka-table';
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetcher } from "../../api/Fetcher";
-import { useFetchWorkflowRuns } from "../../hooks/useFetchData";
+import { useFetchMe, useFetchWorkflowRuns } from "../../hooks/useFetchData";
 import { useUser } from "../../hooks/useUser";
 import { useLiveWorkflowUpdates } from "../../hooks/useLiveWorkflowUpdates";
 import { useWorkspace } from "../../hooks/useWorkspace";
@@ -17,6 +17,7 @@ import DataTable, { cellIconRenderer, dateRenderer, durationRenderer, fallbackRe
 import HistoryBarChart from "./HistoryChart/HistoryBarChart";
 import ToolBar from "./ToolBar/ToolBar";
 import { useQueryClient } from "react-query";
+import { WorkflowRun } from "../../types";
 
 
 export type FilterParams = {
@@ -107,7 +108,8 @@ const columns = [{
 }, {
 	title: 'App Version',
 	property: 'appVersionInfo.version',
-	renderer: fallbackRenderer('appVersion')
+	renderer: fallbackRenderer('appVersion'),
+	flex: true // otherwise the delete column, being last, would take the remaining width
 }, {
 	// what the first action in the DAG selected, precalculated when the attempt is indexed
 	title: 'Selected Partition Values',
@@ -116,6 +118,67 @@ const columns = [{
 	width: '250px',
 	visible: false
 }]
+
+function deleteColumn(onDelete: (run: WorkflowRun) => void) {
+	return {
+		title: 'Delete',
+		property: 'delete',
+		width: '50px',
+		minWidth: 50,
+		isSortable: false,
+		isResizable: false,
+		headRenderer: () => <></>,
+		renderer: (prop: any) => (
+			<Tooltip title="Delete this attempt" placement="left" enterDelay={500}>
+				<IconButton size="sm" variant="plain" color="danger" sx={{'--IconButton-size': '26px', my: -0.5}}
+					// the row navigates to the attempt on click
+					onMouseDown={e => e.stopPropagation()}
+					onClick={e => { e.stopPropagation(); onDelete(prop.rowData); }}>
+					<DeleteOutlined/>
+				</IconButton>
+			</Tooltip>
+		)
+	}
+}
+
+/** Asks before deleting an attempt, as nothing can bring its state file back. */
+function DeleteRunDialog(props: { run?: WorkflowRun, onClose: () => void, onDeleted: () => void }) {
+	const { run, onClose, onDeleted } = props;
+	const { tenant, repo, env } = useWorkspace();
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<string>();
+
+	const close = () => { setError(undefined); onClose(); };
+	const remove = async () => {
+		setBusy(true);
+		setError(undefined);
+		try {
+			await fetcher().deleteRun!(tenant!, repo!, env!, run!.name, run!.runId, run!.attemptId);
+			onDeleted();
+			close();
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : String(caught));
+		} finally {
+			setBusy(false);
+		}
+	};
+
+	return (
+		<Modal open={!!run} onClose={busy ? undefined : close}>
+			<ModalDialog role="alertdialog" sx={{maxWidth: '30rem'}}>
+				<DialogTitle>Delete attempt {run?.runId}.{run?.attemptId}?</DialogTitle>
+				<DialogContent>
+					Its state file and everything derived from it are removed from {run?.name}. This cannot be undone.
+					{error && <Alert color="danger" variant="soft" sx={{mt: 1}}>{error}</Alert>}
+				</DialogContent>
+				<DialogActions>
+					<Button color="danger" loading={busy} onClick={remove}>Delete</Button>
+					<Button variant="plain" color="neutral" disabled={busy} onClick={close}>Cancel</Button>
+				</DialogActions>
+			</ModalDialog>
+		</Modal>
+	);
+}
 
 /**
  * The WorkflowHistory component is the page that displays the history of a workflow as a table.
@@ -132,6 +195,11 @@ export default function WorkflowHistory() {
     const [[additionalLeftToolbarElements, additionalRightToolbarElements], setAdditionalToolbarElements] = useState<[JSX.Element?, JSX.Element?]>([]);
 	const {navigateRel} = useWorkspace();
 	const queryClient = useQueryClient();
+	const [toDelete, setToDelete] = useState<WorkflowRun>();
+	// only offered to an admin, and only by a backend that can delete
+	const me = useFetchMe();
+	const canDelete = !!fetcher().deleteRun && me.data?.admin === true;
+	const tableColumns = useMemo(() => canDelete ? [...columns, deleteColumn(setToDelete)] : columns, [canDelete]);
 		
     const selData = useMemo(() => {
         if (data && data.length>0) {
@@ -200,11 +268,12 @@ export default function WorkflowHistory() {
                     leftElements={additionalLeftToolbarElements}
                     rightElements={additionalRightToolbarElements}/>
 				<Box sx={{height: '100%', width: '100%', overflow: 'auto', mb: '1rem'}}>
-					<DataTable data={selData} columns={columns} minColumnWidth={50} name="workflowHistory"
+					<DataTable data={selData} columns={tableColumns} minColumnWidth={50} name="workflowHistory"
 						navigate={(row) => navigateRel(`${row.runId}.${row.attemptId}/timeline`)} keyAttr='path'
 						setToolbarElements={(elements: JSX.Element) => setAdditionalToolbarElements([undefined, elements])}
 					/>
 				</Box>
+				<DeleteRunDialog run={toDelete} onClose={() => setToDelete(undefined)} onDeleted={refreshData}/>
 			</Sheet>   
 		):(<NotFound errorType={500}/>)
 	}

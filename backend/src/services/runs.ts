@@ -8,7 +8,7 @@ import type {
   WorkflowSummary,
 } from '../store/types.js';
 import { assertKeyPart } from '../store/limits.js';
-import { blobPaths, list, readJson, writeJson } from '../store/blobs.js';
+import { blobPaths, list, readJson, remove, writeJson } from '../store/blobs.js';
 import type { StateFile, TaskStatus, Workflow, WorkflowRun } from '../domain/types.js';
 import { aggregateRunStatus, normalizeStateFile, runElementFacts, toWorkflowRun } from '../domain/stateFile.js';
 import { registerScope } from './scope.js';
@@ -108,8 +108,35 @@ async function indexState(scope: Scope, stateFile: StateFile, options: { summary
   return run;
 }
 
+/**
+ * Remove one attempt: its state file, its index rows, and the workflow's summary once nothing
+ * is left of it. The summary is rederived from the newest attempt left, whichever was removed.
+ */
+export async function deleteRun(scope: Scope, name: string, runId: number, attemptId: number): Promise<void> {
+  const runs = (await repositories()).runs;
+  const path = blobPaths.state(scope, name, runId, attemptId);
+  const record = await runs.getRun(scope, name, runId, attemptId);
+  const raw = await readJson<unknown>(path);
+  if (!record && raw === undefined) throw notFound(`attempt ${runId}.${attemptId} of ${name}`);
+
+  // the state file names the element rows; without it the Azure driver leaves them behind
+  const stateFile = raw === undefined ? undefined : normalizeStateFile(raw);
+  const elements = stateFile ? runElementRecords(stateFile, toWorkflowRun(stateFile)) : [];
+  await runs.deleteRun(scope, name, runId, attemptId, elements);
+  await remove(path);
+
+  const [newest] = await runs.listRuns(scope, name, 1);
+  if (newest) await updateWorkflowSummary(scope, toWire(newest), true, true);
+  else await runs.deleteWorkflowSummary(scope, name);
+  await notifyRunChanged(scope, name, runId, attemptId);
+}
+
 async function indexRunElements(scope: Scope, stateFile: StateFile, run: WorkflowRun): Promise<void> {
-  const elements: RunElementRecord[] = runElementFacts(stateFile).map((facts) => ({
+  await (await repositories()).runs.putRunElements(scope, runElementRecords(stateFile, run));
+}
+
+function runElementRecords(stateFile: StateFile, run: WorkflowRun): RunElementRecord[] {
+  return runElementFacts(stateFile).map((facts) => ({
     workflow: run.name,
     runId: run.runId,
     attemptId: run.attemptId,
@@ -123,7 +150,6 @@ async function indexRunElements(scope: Scope, stateFile: StateFile, run: Workflo
     outputIds: facts.outputIds,
     msg: truncate(facts.msg, 8_000),
   }));
-  await (await repositories()).runs.putRunElements(scope, elements);
 }
 
 async function updateWorkflowSummary(

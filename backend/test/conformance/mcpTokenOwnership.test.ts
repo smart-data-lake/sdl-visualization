@@ -108,3 +108,16 @@ describe('a caller holding an access token', () => {
     expect(workflows.statusCode).toBe(200);
   });
 });
+
+describe('deleting a workflow run', () => {
+  const del = (who: string) =>
+    app.inject({ method: 'DELETE', url: `/api/v1/state?${Q}&application=nothing&runId=1&attemptId=1`, headers: as(who) });
+
+  test('is refused to a user who is not an admin', async () => {
+    expect((await del('alice')).statusCode).toBe(403);
+  });
+
+  test('is allowed to an admin, who is told the attempt does not exist', async () => {
+    expect((await del('admin')).statusCode).toBe(404);
+  });
+});

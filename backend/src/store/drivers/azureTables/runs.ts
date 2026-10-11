@@ -233,6 +233,26 @@ export function runRepository(tables: TableStore): RunRepository {
       return { numRuns: runIds.size, numAttempts: rows.length };
     },
 
+    async deleteRun(
+      scope: Scope,
+      workflow: string,
+      runId: number,
+      attemptId: number,
+      elements: RunElementRecord[],
+    ): Promise<void> {
+      // the element rows first: a run record left behind is still deletable, orphaned rows are not
+      const rows: [string, string][] = [];
+      for (const element of elements) {
+        const rowKey = runElementKey(runId, attemptId, element.actionId);
+        rows.push([keys.runsByAction(scope, element.actionId), rowKey]);
+        for (const dataObjectId of new Set([...element.inputIds, ...element.outputIds])) {
+          rows.push([keys.runsByDataObject(scope, dataObjectId), rowKey]);
+        }
+      }
+      await Promise.all(rows.map(([partitionKey, rowKey]) => tables.deleteEntity(TABLES.runElements, partitionKey, rowKey)));
+      await tables.deleteEntity(TABLES.runs, keys.runs(scope, workflow), runKey(runId, attemptId));
+    },
+
     async putWorkflowSummary(scope: Scope, summary: WorkflowSummary): Promise<void> {
       const { name, ...rest } = summary;
       await tables.upsert(TABLES.workflows, {
@@ -252,6 +272,10 @@ export function runRepository(tables: TableStore): RunRepository {
         workflow,
       );
       return entity && toWorkflowSummary(entity);
+    },
+
+    async deleteWorkflowSummary(scope: Scope, workflow: string): Promise<void> {
+      await tables.deleteEntity(TABLES.workflows, keys.workflows(scope), workflow);
     },
 
     async listWorkflows(scope: Scope): Promise<WorkflowSummary[]> {

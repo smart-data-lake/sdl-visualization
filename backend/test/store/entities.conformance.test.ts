@@ -446,6 +446,40 @@ describe.each(DRIVERS)('$name', ({ create }) => {
     });
   });
 
+  describe('deleting an attempt', () => {
+    test('removes the attempt and its element rows, and leaves its siblings alone', async () => {
+      const scope = freshScope();
+      for (const attemptId of [0, 1]) {
+        await store.runs.putRun(scope, run({ runId: 1, attemptId }));
+        await store.runs.putRunElements(scope, [
+          element({ runId: 1, attemptId, actionId: 'act', inputIds: ['in'], outputIds: ['out'] }),
+        ]);
+      }
+      const doomed = element({ runId: 1, attemptId: 1, actionId: 'act', inputIds: ['in'], outputIds: ['out'] });
+      await store.runs.deleteRun(scope, 'wf', 1, 1, [doomed]);
+
+      expect(await store.runs.getRun(scope, 'wf', 1, 1)).toBeUndefined();
+      expect((await store.runs.listRuns(scope, 'wf', 10)).map((r) => r.attemptId)).toEqual([0]);
+      for (const ref of [{ kind: 'action', id: 'act' }, { kind: 'dataObject', id: 'in' }, { kind: 'dataObject', id: 'out' }] as const) {
+        expect((await store.runs.listRunElements(scope, ref, 10)).map((r) => r.attemptId)).toEqual([0]);
+      }
+      expect(await store.runs.countRunsAndAttempts(scope, 'wf')).toEqual({ numRuns: 1, numAttempts: 1 });
+    });
+
+    test('deleting an absent attempt or summary is not an error', async () => {
+      const scope = freshScope();
+      await expect(store.runs.deleteRun(scope, 'wf', 9, 9, [])).resolves.toBeUndefined();
+      await expect(store.runs.deleteWorkflowSummary(scope, 'wf')).resolves.toBeUndefined();
+    });
+
+    test('a deleted workflow summary is no longer listed', async () => {
+      const scope = freshScope();
+      for (const name of ['a', 'b']) await store.runs.putWorkflowSummary(scope, { name, numRuns: 1, numAttempts: 1 });
+      await store.runs.deleteWorkflowSummary(scope, 'a');
+      expect((await store.runs.listWorkflows(scope)).map((w) => w.name)).toEqual(['b']);
+    });
+  });
+
   describe('live registrations', () => {
     test('a registration is renewed in place and kept apart per workflow', async () => {
       const scope = freshScope();
