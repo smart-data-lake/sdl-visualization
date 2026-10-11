@@ -292,6 +292,17 @@ outrank it. It only adds and overwrites: the record of an attempt whose state fi
 No live update is published. The SPA's Settings → Indexes page calls it, together with the two
 rebuilds above.
 
+## Deleting an attempt
+
+`DELETE /api/v1/state?…&application=&runId=&attemptId=` removes one attempt: its state file, its
+`Runs` record and its `RunElements` rows. The workflow summary is rewritten from the newest attempt
+left, or removed with the last one, and a `runChanged` live update is published. Only an admin may
+(403 otherwise, see above), and it answers 204, or 404 if neither the record nor the state file
+exists. The Azure driver finds an attempt's element rows through the state file, so deleting an
+attempt whose state file is already gone leaves those rows behind: `/runs/byAction` and
+`/runs/byDataObject` skip them, as their run record is gone, but an element's history still lists them. The SPA offers it as the last column of a workflow's run table, to an
+admin only. Like the rebuilds, it is not in `spec/upstream-openapi.json`.
+
 ## Code copied from the frontend
 
 Eight pieces of logic exist twice, in `src/domain/`, and must not drift:

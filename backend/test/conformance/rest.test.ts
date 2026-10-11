@@ -441,6 +441,46 @@ describe('parameter validation follows the upstream contract', () => {
   });
 });
 
+// last, as it removes what the tests above read
+describe('deleting an attempt', () => {
+  const del = (runId: number, attemptId: number) =>
+    app.inject({ method: 'DELETE', url: `/api/v1/state?${Q}&application=getting-started&runId=${runId}&attemptId=${attemptId}` });
+  const attempts = async () =>
+    (await json(`/api/v1/workflow?${Q}&application=getting-started`)).map((r: any) => `${r.runId}.${r.attemptId}`);
+
+  test('removes it from the runs, the element lookups and the state files', async () => {
+    const before = await json(`/api/v1/workflow?${Q}&application=getting-started`);
+    const [newest, next] = before;
+    expect((await del(newest.runId, newest.attemptId)).statusCode).toBe(204);
+
+    const key = `${newest.runId}.${newest.attemptId}`;
+    expect(await attempts()).not.toContain(key);
+    expect((await get(`/api/v1/state?${Q}&application=getting-started&runId=${newest.runId}&attemptId=${newest.attemptId}`)).statusCode).toBe(404);
+    const byAction = await json(`/api/v1/runs/byAction?${Q}&name=download-deduplicate-departures`);
+    expect(byAction.map((r: any) => `${r.runId}.${r.attemptId}`)).not.toContain(key);
+
+    // the summary falls back to the newest attempt left
+    const workflow = (await json(`/api/v1/workflows?${Q}`)).find((w: any) => w.name === 'getting-started');
+    expect(workflow).toMatchObject({ numAttempts: before.length - 1, lastAttemptStartTime: next.attemptStartTime, lastStatus: next.status });
+
+    // and a rebuild from the state files does not bring it back
+    expect((await app.inject({ method: 'POST', url: `/api/v1/state/index?${Q}` })).statusCode).toBe(200);
+    expect(await attempts()).not.toContain(key);
+  });
+
+  test('an attempt that does not exist is a 404', async () => {
+    expect((await del(999, 1)).statusCode).toBe(404);
+  });
+
+  test('deleting every attempt removes the workflow', async () => {
+    for (const key of await attempts()) {
+      const [runId, attemptId] = key.split('.').map(Number);
+      expect((await del(runId, attemptId)).statusCode).toBe(204);
+    }
+    expect((await json(`/api/v1/workflows?${Q}`)).map((w: any) => w.name)).not.toContain('getting-started');
+  });
+});
+
 function byRunDescending(a: string, b: string): number {
   const [runA, attemptA] = a.split('.').map(Number);
   const [runB, attemptB] = b.split('.').map(Number);

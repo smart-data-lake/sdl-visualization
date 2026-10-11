@@ -127,7 +127,19 @@ export interface RunRepository {
     scope: Scope,
     workflow: string,
   ): Promise<{ numRuns: number; numAttempts: number }>;
+  /**
+   * Remove one attempt and its element rows. `elements` are the rows as putRunElements was
+   * given them: the Azure driver cannot find a data object's rows otherwise, SQLite ignores them.
+   */
+  deleteRun(
+    scope: Scope,
+    workflow: string,
+    runId: number,
+    attemptId: number,
+    elements: RunElementRecord[],
+  ): Promise<void>;
   putWorkflowSummary(scope: Scope, summary: WorkflowSummary): Promise<void>;
+  deleteWorkflowSummary(scope: Scope, workflow: string): Promise<void>;
   getWorkflowSummary(scope: Scope, workflow: string): Promise<WorkflowSummary | undefined>;
   /** Every workflow of a scope, in name order. */
   listWorkflows(scope: Scope): Promise<WorkflowSummary[]>;

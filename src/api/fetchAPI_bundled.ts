@@ -127,6 +127,11 @@ export class fetchAPI_bundled extends fetchAPI_rest {
         return subscribeLive(register, onChange, onStatus);
     };
 
+    deleteRun = async (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number): Promise<void> => {
+        const query = new URLSearchParams({ tenant, repo, env, application, runId: String(runId), attemptId: String(attemptId) });
+        await this.fetch(`${this.url}/state?${query}`, this.getRequestInfo("DELETE"));
+    };
+
     /**** Index rebuilds ****/
 
     rebuildSearchIndex = async (tenant: string, repo: string, env: string, version: string | undefined, force: boolean): Promise<SearchIndexRebuild> => {

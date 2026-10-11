@@ -46,6 +46,8 @@ export interface fetchAPI {
 
     /** Every user's tokens for an admin, otherwise the caller's own. */
     listMcpTokens?: (tenant: string, repo: string, env: string) => Promise<McpToken[]>;
+    /** Removes one attempt, state file and index alike; the backend allows it to an admin only. */
+    deleteRun?: (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number) => Promise<void>;
     /** The signed-in user, and whether they administer everyone's tokens. */
     whoAmI?: () => Promise<{ email: string; admin: boolean }>;
     /** The only time the token itself is returned; it cannot be read again. */

@@ -594,6 +594,20 @@ function runRepository(db: Db): RunRepository {
       return { numRuns: row?.runs ?? 0, numAttempts: row?.attempts ?? 0 };
     },
 
+    async deleteRun(scope: Scope, workflow: string, runId: number, attemptId: number): Promise<void> {
+      const { repo, env } = scopeOf(scope);
+      for (const table of ['run_element_data_objects', 'run_elements', 'runs']) {
+        db.run(
+          `DELETE FROM ${table} WHERE repo = ? AND env = ? AND workflow = ? AND run_id = ? AND attempt_id = ?`,
+          repo,
+          env,
+          workflow,
+          runId,
+          attemptId,
+        );
+      }
+    },
+
     async putWorkflowSummary(scope: Scope, summary: WorkflowSummary): Promise<void> {
       db.upsert('workflows', ['repo', 'env', 'workflow'], {
         ...scopeOf(scope),
@@ -621,6 +635,11 @@ function runRepository(db: Db): RunRepository {
         workflow,
       );
       return row && toWorkflowSummary(row);
+    },
+
+    async deleteWorkflowSummary(scope: Scope, workflow: string): Promise<void> {
+      const { repo, env } = scopeOf(scope);
+      db.run('DELETE FROM workflows WHERE repo = ? AND env = ? AND workflow = ?', repo, env, workflow);
     },
 
     async listWorkflows(scope: Scope): Promise<WorkflowSummary[]> {
