@@ -1,4 +1,4 @@
-import { Box, Sheet } from "@mui/joy";
+import { Box, Sheet, Typography } from "@mui/joy";
 import { SortDirection } from "ka-table";
 import { useMemo, useState } from "react";
 import { fetcher } from "../../api/Fetcher";
@@ -89,6 +89,7 @@ export default function Workflows() {
             {data ? (
                 <Sheet sx={{ display: 'flex', flexDirection: 'column', p: '0.1rem 1rem', gap: '1rem', width: '100%', height: '100%' }}>
                     <PageHeader title={'Workflows'} refresh={refreshData}/>
+                    {data.length === 0 ? <NoWorkflowRuns/> : <>
                     <ToolBar 
                         data={data} 
                         filterParams={filterParams}
@@ -105,8 +106,25 @@ export default function Workflows() {
                             setToolbarElements={(elements: JSX.Element) => setAdditionalToolbarElements([undefined, elements])}
                         />
                     </Box>
+                    </>}
                 </Sheet>
             ):(<NotFound/>)}
         </>
+    );
+}
+
+// DataTable shows its spinner until it gets a first row, so an empty list needs its own message
+function NoWorkflowRuns() {
+    const { repo, env } = useWorkspace();
+    const scope = repo && env ? ` for repository ${repo} and environment ${env}` : '';
+    return (
+        <Box sx={{display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+            <Sheet variant='soft' color='neutral' sx={{p: '2rem', borderRadius: '0.5rem', maxWidth: '40rem', textAlign: 'center'}}>
+                <Typography level='title-lg' sx={{mb: 1}}>No workflow runs yet</Typography>
+                <Typography level='body-md'>
+                    No SDLB state file has been recorded{scope}. Runs appear here once an SDLB job has run and its state has been recorded.
+                </Typography>
+            </Sheet>
+        </Box>
     );
 }
