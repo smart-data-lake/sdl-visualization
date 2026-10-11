@@ -60,12 +60,14 @@ export class fetchAPI_rest implements fetchAPI {
 
     protected async fetch(url: string, init: Promise<RequestInit> = this.getRequestInfo()) {
         const response = await fetch(url, await init);
+        // a 204, or an error a proxy answered with no body or HTML, has nothing to parse
+        const text = await response.text();
         if (!response.ok) {
-            const json = await response.json()
-            const msg = (json['message'] || json['detail']) + ` (${response.status})`;
-            throw new Error(msg);
+            let json: any;
+            try { json = text ? JSON.parse(text) : undefined; } catch { json = undefined; }
+            throw new Error(`${json?.message || json?.detail || response.statusText || 'Request failed'} (${response.status})`);
         }
-        return await response.json();
+        return text ? JSON.parse(text) : undefined;
     }
 
     /** Lets a subclass fill in a scope the caller did not supply - see fetchAPI_bundled. */

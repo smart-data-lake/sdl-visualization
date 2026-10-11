@@ -15,8 +15,10 @@ import type { FastifyInstance } from 'fastify';
  *  - light-my-request defaults `remoteAddress` to 127.0.0.1, so `request.ip` is
  *    wrong unless it is passed in. Azure only adds X-Forwarded-For when deployed,
  *    and includes a port in it.
- *  - HEAD must not carry a body.
+ *  - HEAD must not carry a body, nor a 204 or 304.
  */
+
+const NO_BODY_STATUS = new Set([204, 304]);
 
 /**
  * Strip the port Azure attaches to a forwarded address.
@@ -80,7 +82,7 @@ export async function handleWithFastify(
   return {
     status: response.statusCode,
     headers: responseHeaders,
-    body: request.method.toUpperCase() === 'HEAD' ? undefined : response.rawPayload,
+    body: request.method.toUpperCase() === 'HEAD' || NO_BODY_STATUS.has(response.statusCode) ? undefined : response.rawPayload,
   };
 }
 
