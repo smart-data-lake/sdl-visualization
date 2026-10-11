@@ -120,6 +120,26 @@ describe('routing a request into Fastify', () => {
     expect(response.body).toBeUndefined();
   });
 
+  test('a 204 answers without a body', async () => {
+    const scope = 'tenant=t&repo=bridge&env=dev';
+    const minted = await handleWithFastify(
+      app,
+      azureRequest({
+        method: 'POST',
+        url: `https://example.azurewebsites.net/api/v1/mcp-tokens?${scope}`,
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      }),
+    );
+    const { id } = JSON.parse(String(minted.body));
+    const response = await handleWithFastify(
+      app,
+      azureRequest({ method: 'DELETE', url: `https://example.azurewebsites.net/api/v1/mcp-tokens?${scope}&id=${id}` }),
+    );
+    expect(response.status).toBe(204);
+    expect(response.body).toBeUndefined();
+  });
+
   test('an unknown path is a 404 in the shape the SPA can read', async () => {
     const response = await handleWithFastify(
       app,
