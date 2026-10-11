@@ -25,7 +25,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetcher } from "../../api/Fetcher";
 import { McpToken } from "../../api/fetchAPI";
-import { useFetchEnvs, useFetchRepos } from "../../hooks/useFetchData";
+import { useFetchEnvs, useFetchMe, useFetchRepos } from "../../hooks/useFetchData";
 import { useWorkspace } from "../../hooks/useWorkspace";
 
 /**
@@ -101,6 +101,8 @@ export default function AccessTokens() {
 
   const api = fetcher();
   const { data: repos = [] } = useFetchRepos(tenant!);
+  // an admin is listed everyone's tokens, so the table then says whose each one is
+  const admin = useFetchMe().data?.admin === true;
 
   // Derived, not seeded: the defaults depend on lists that arrive asynchronously,
   // which useState cannot see and an effect would race the typing for.
@@ -182,15 +184,20 @@ export default function AccessTokens() {
   };
 
   const revoke = async (id: string) => {
-    await api.revokeMcpToken?.(scope.tenant, repo, env, id);
-    await refresh();
+    setError(undefined);
+    try {
+      await api.revokeMcpToken?.(scope.tenant, repo, env, id);
+      await refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
   };
 
   return (
-    <Sheet sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2, overflow: "auto" }}>
+    <Sheet sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
       <Typography level="h4">Access token</Typography>
       <Typography level="body-sm">
-        Tokens to authenticate an SDLB job for uploading, and coding agent to retrieve information over MCP.
+        Tokens to authenticate an SDLB job for uploading, and coding agent to retrieve information over MCP.<br/>
         A token is scoped to one repository and environment.
         It shows once when created, and can be revoked here at any time.
       </Typography>
@@ -243,10 +250,11 @@ export default function AccessTokens() {
       </Card>
 
       <Card variant="outlined">
-        <Typography level="title-md">Your tokens</Typography>
+        <Typography level="title-md">Existing tokens</Typography>
         <Typography level="body-xs">
-          The tokens of the repository and environment chosen above - change either to see the
-          tokens of another scope.
+          {admin
+            ? "Every user's tokens of the repository and environment chosen above - you are a member of the admin group."
+            : "Your tokens of the repository and environment chosen above."}
         </Typography>
         {!scopeValid ? (
           <Typography level="body-sm">Enter a repository and environment under "Create a token" to list their tokens.</Typography>
@@ -259,6 +267,7 @@ export default function AccessTokens() {
             <thead>
               <tr>
                 <th>Label</th>
+                {admin && <th>Owner</th>}
                 <th>Created</th>
                 <th>Last used</th>
                 <th style={{ width: "3rem" }} />
@@ -268,6 +277,7 @@ export default function AccessTokens() {
               {tokens.map((token) => (
                 <tr key={token.id}>
                   <td>{token.label}</td>
+                  {admin && <td>{token.email}</td>}
                   <td>{new Date(token.createdAt).toLocaleString()}</td>
                   <td>{token.lastUsedAt ? new Date(token.lastUsedAt).toLocaleString() : "never"}</td>
                   <td>

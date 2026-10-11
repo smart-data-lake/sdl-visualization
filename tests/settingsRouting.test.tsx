@@ -19,15 +19,21 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 
 afterEach(cleanup);
 
-// The Azure backend's shape: no user directory, but it does serve MCP.
+// The Azure backend's shape: no user directory, but it does serve MCP and rebuild indexes.
 vi.mock('../src/api/Fetcher', () => ({
-  fetcher: () => ({ capabilities: () => ({ userManagement: false, mcpTokens: true }) }),
+  fetcher: () => ({ capabilities: () => ({ userManagement: false, mcpTokens: true, indexes: true }) }),
 }));
 
 // The pages themselves are not what is under test, and they want the workspace and
 // query contexts the whole app supplies. What matters here is where the nav points.
+vi.mock('../src/hooks/useFetchData', () => ({
+  useFetchMe: () => ({ data: { email: 'me@example.com', admin: true } }),
+  useFetchLicenses: () => ({}),
+}));
+
 vi.mock('../src/components/Settings/AccessTokens', () => ({ default: () => null }));
 vi.mock('../src/components/Settings/Users', () => ({ default: () => null }));
+vi.mock('../src/components/Settings/Indexes', () => ({ default: () => null }));
 
 import Setting from '../src/components/Settings/Setting';
 
@@ -43,6 +49,7 @@ function navTargetsAt(pathname: string): string[] {
 }
 
 const TOKENS = '/PrivateTenant/settings/tokens';
+const INDEXES = '/PrivateTenant/settings/indexes';
 
 /** A real render: renderToString does not act on a Navigate, so it proves nothing. */
 function redirectFrom(pathname: string): string {
@@ -75,20 +82,40 @@ describe('the scope the header hands over', () => {
   test('and a redirect with no scope to carry still lands on the page', () => {
     expect(redirectFrom('/PrivateTenant/settings')).toBe(TOKENS);
   });
+
+  test('is carried by the nav to every other page', () => {
+    expect(navTargetsAt(`${TOKENS}?repo=getting-started&env=dev`)).toEqual([
+      `${TOKENS}?repo=getting-started&amp;env=dev`,
+      `${INDEXES}?repo=getting-started&amp;env=dev`,
+    ]);
+  });
+});
+
+describe('the page title', () => {
+  test('says when the user is an admin', () => {
+    const html = renderToString(
+      <MemoryRouter initialEntries={[TOKENS]}>
+        <Routes>
+          <Route path=":tenant/settings/*" element={<Setting />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(html).toContain('Admin');
+  });
 });
 
 describe('settings navigation', () => {
   test('points at the same place from the settings index', () => {
-    expect(navTargetsAt('/PrivateTenant/settings')).toEqual([TOKENS]);
+    expect(navTargetsAt('/PrivateTenant/settings')).toEqual([TOKENS, INDEXES]);
   });
 
   test('points at the same place from the page it links to', () => {
     // The click that used to append: already on agents, the link must not grow.
-    expect(navTargetsAt(TOKENS)).toEqual([TOKENS]);
+    expect(navTargetsAt(TOKENS)).toEqual([TOKENS, INDEXES]);
   });
 
   test('recovers from an already-doubled path instead of extending it', () => {
-    expect(navTargetsAt(`${TOKENS}/tokens`)).toEqual([TOKENS]);
-    expect(navTargetsAt(`${TOKENS}/tokens/tokens`)).toEqual([TOKENS]);
+    expect(navTargetsAt(`${TOKENS}/tokens`)).toEqual([TOKENS, INDEXES]);
+    expect(navTargetsAt(`${TOKENS}/tokens/tokens`)).toEqual([TOKENS, INDEXES]);
   });
 });

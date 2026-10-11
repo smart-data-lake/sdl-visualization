@@ -242,6 +242,30 @@ describe('the two lookups the REST fetcher leaves unimplemented', () => {
   });
 });
 
+describe('rebuilding the indexes', () => {
+  const post = (url: string) => app.inject({ method: 'POST', url });
+
+  test('the run index rebuilt from the state files is the one the uploads built', async () => {
+    const workflows = await json(`/api/v1/workflows?${Q}`);
+    const runs = await json(`/api/v1/workflow?${Q}&application=getting-started`);
+    const attempts = workflows.reduce((sum: number, w: any) => sum + w.numAttempts, 0);
+
+    const response = await post(`/api/v1/state/index?${Q}`);
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({ workflows: workflows.length, attempts, failed: [] });
+
+    expect(await json(`/api/v1/workflows?${Q}`)).toEqual(workflows);
+    expect(await json(`/api/v1/workflow?${Q}&application=getting-started`)).toEqual(runs);
+  });
+
+  test('the lineage index rebuild says what it covers', async () => {
+    const response = await post(`/api/v1/lineage/index?${Q}`);
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().documents).toBeGreaterThan(0);
+    expect(response.json().edges).toBeGreaterThan(0);
+  });
+});
+
 describe('configuration', () => {
   test('the configuration is wrapped in a config field, as the SPA expects', async () => {
     const body = await json(`/api/v1/config?${Q}&version=${SEED_VERSION}`);

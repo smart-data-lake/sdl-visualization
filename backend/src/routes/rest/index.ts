@@ -5,7 +5,8 @@ import * as config from '../../services/config.js';
 import * as descriptions from '../../services/descriptions.js';
 import * as schemaStats from '../../services/schemaStats.js';
 import * as scopes from '../../services/scope.js';
-import { listTokens, mintToken, revokeToken } from '../../auth/mcpTokens.js';
+import { listTokens, mintToken, revokeTokenOf } from '../../auth/mcpTokens.js';
+import { isAdmin, requireInteractive } from '../../auth/verifyBearer.js';
 import { relayTokenRequest } from '../../auth/databricks.js';
 import { RateLimiter, rateLimit } from '../rateLimit.js';
 import * as search from '../../services/search.js';
@@ -55,6 +56,7 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
       email: principal.email,
       groups: principal.groups,
       via: principal.via,
+      admin: isAdmin(principal),
       workspaceHost: principal.workspaceHost,
     };
   });
@@ -370,7 +372,10 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  /* ---------------------------------------------------------------- MCP tokens */
+  /*
+    MCP tokens. Only for a person signed in, never for a token: one would otherwise mint its own
+    successors. A member of SDLB_ADMIN_GROUP sees and revokes everyone's, anybody else their own.
+  */
 
   app.post<{ Querystring: ScopeQuery; Body: { label?: string; ttlDays?: number } }>(
     '/mcp-tokens',
@@ -390,6 +395,7 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
     },
     async (request, reply) => {
       const { scope, principal } = await scopedRequest(request);
+      requireInteractive(principal);
       const { token, info } = await mintToken(
         scope,
         principal.email,
@@ -407,7 +413,8 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
     { schema: { querystring: schemas.scopeRequired } },
     async (request) => {
       const { scope, principal } = await scopedRequest(request);
-      return listTokens(scope, principal.email);
+      requireInteractive(principal);
+      return listTokens(scope, isAdmin(principal) ? undefined : principal.email);
     },
   );
 
@@ -423,8 +430,10 @@ export async function registerRestRoutes(app: FastifyInstance): Promise<void> {
       },
     },
     async (request, reply) => {
-      const { scope } = await scopedRequest(request);
-      await revokeToken(scope, request.query.id);
+      const { scope, principal } = await scopedRequest(request);
+      requireInteractive(principal);
+      const owner = isAdmin(principal) ? undefined : principal.email;
+      if (!(await revokeTokenOf(scope, request.query.id, owner))) throw notFound(`access token ${request.query.id}`);
       reply.code(204);
     },
   );

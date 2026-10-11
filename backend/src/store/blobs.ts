@@ -48,6 +48,8 @@ export const blobPaths = {
   state: (scope: Scope, workflow: string, runId: number, attemptId: number) =>
     `${prefix(scope)}/state/${assertPathSegment(workflow, 'workflow')}` +
     `/${assertPathNumber(runId, 'runId')}/${assertPathNumber(attemptId, 'attemptId')}.json`,
+  /** Every state file of the scope in one listing, for rebuilding the run index from them. */
+  statePrefix: (scope: Scope) => `${prefix(scope)}/state/`,
   config: (scope: Scope, version: string) =>
     `${prefix(scope)}/config/${assertPathSegment(version, 'version')}/exportedConfig.json`,
   /** `filename` is the API's path segment verbatim, slashes and all - assertSafeFilename guards it. */

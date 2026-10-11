@@ -214,6 +214,7 @@ resource "azurerm_function_app_flex_consumption" "this" {
     "SDLB_DATABRICKS_HOSTS"           = join(",", var.databricks_hosts)
     "SDLB_AUTH_CACHE_TTL_SECONDS"     = tostring(var.auth_cache_ttl_seconds)
     "SDLB_AUTH_RATE_LIMIT_PER_MINUTE" = tostring(var.auth_rate_limit_per_minute)
+    "SDLB_ADMIN_GROUP"                = var.admin_group
   })
 
   tags = local.tags

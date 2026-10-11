@@ -62,6 +62,8 @@ export interface Settings {
    * see routes/rateLimit.ts.
    */
   authRateLimitPerMinute: number;
+  /** Databricks group whose members administer every user's access tokens; none if unset. */
+  adminGroup?: string;
   liveUpdates: LiveUpdatesConfig;
 }
 
@@ -172,6 +174,7 @@ function readSettings(): Settings {
       .filter((h) => h.length > 0),
     authCacheTtlMs: Number(optional('SDLB_AUTH_CACHE_TTL_SECONDS', '300')) * 1000,
     authRateLimitPerMinute: Number(optional('SDLB_AUTH_RATE_LIMIT_PER_MINUTE', '10')),
+    adminGroup: process.env.SDLB_ADMIN_GROUP?.trim() || undefined,
     liveUpdates: readLiveUpdates(),
   };
 }

@@ -8,13 +8,14 @@ import type {
   WorkflowSummary,
 } from '../store/types.js';
 import { assertKeyPart } from '../store/limits.js';
-import { blobPaths, readJson, writeJson } from '../store/blobs.js';
+import { blobPaths, list, readJson, writeJson } from '../store/blobs.js';
 import type { StateFile, TaskStatus, Workflow, WorkflowRun } from '../domain/types.js';
 import { aggregateRunStatus, normalizeStateFile, runElementFacts, toWorkflowRun } from '../domain/stateFile.js';
 import { registerScope } from './scope.js';
 import { notifyRunChanged } from '../notify/index.js';
 import { truncate } from '../store/limits.js';
 import { badRequest, notFound } from '../errors.js';
+import { mapLimit } from './search.js';
 
 /**
  * Runs: storing what SDLB pushes, and answering the four questions the SPA and the
@@ -84,7 +85,7 @@ export async function patchState(
   await notifyRunChanged(scope, name, runId, attemptId);
 }
 
-async function indexState(scope: Scope, stateFile: StateFile): Promise<void> {
+async function indexState(scope: Scope, stateFile: StateFile, options: { summary?: boolean } = {}): Promise<WorkflowRun> {
   const run = toWorkflowRun(stateFile);
   const runs = (await repositories()).runs;
 
@@ -103,7 +104,8 @@ async function indexState(scope: Scope, stateFile: StateFile): Promise<void> {
   await runs.putRun(scope, record);
 
   await indexRunElements(scope, stateFile, run);
-  await updateWorkflowSummary(scope, run, isNewAttempt);
+  if (options.summary !== false) await updateWorkflowSummary(scope, run, isNewAttempt);
+  return run;
 }
 
 async function indexRunElements(scope: Scope, stateFile: StateFile, run: WorkflowRun): Promise<void> {
@@ -128,9 +130,11 @@ async function updateWorkflowSummary(
   scope: Scope,
   run: WorkflowRun,
   recount: boolean,
+  fresh = false,
 ): Promise<void> {
   const runs = (await repositories()).runs;
-  const existing = await runs.getWorkflowSummary(scope, run.name);
+  // fresh: a rebuild names the newest attempt itself, so a stale summary must not outrank it
+  const existing = fresh ? undefined : await runs.getWorkflowSummary(scope, run.name);
   const counts =
     recount || !existing
       ? await runs.countRunsAndAttempts(scope, run.name)
@@ -156,6 +160,56 @@ async function updateWorkflowSummary(
     lastAttemptId: isNewest ? run.attemptId : existing?.lastAttemptId,
   };
   await runs.putWorkflowSummary(scope, summary);
+}
+
+/* ---------------------------------------------------------------- rebuilding */
+
+export interface StateIndexRebuild {
+  workflows: number;
+  attempts: number;
+  failed: { path: string; error: string }[];
+  durationMs: number;
+}
+
+const STATE_BLOB = /^([^/]+)\/(\d+)\/(\d+)\.json$/;
+
+/**
+ * Re-derive the run index from the stored state files, e.g. after the index record gained a
+ * field. Attempts whose state file is gone keep their record; nothing is notified.
+ */
+export async function rebuildStateIndex(scope: Scope): Promise<StateIndexRebuild> {
+  const started = Date.now();
+  const perWorkflow = new Map<string, { runId: number; attemptId: number }[]>();
+  for (const blob of await list(blobPaths.statePrefix(scope))) {
+    const match = STATE_BLOB.exec(blob.name);
+    if (!match) continue;
+    const attempts = perWorkflow.get(match[1]) ?? [];
+    attempts.push({ runId: Number(match[2]), attemptId: Number(match[3]) });
+    perWorkflow.set(match[1], attempts);
+  }
+
+  const failed: StateIndexRebuild['failed'] = [];
+  let attempts = 0;
+  // workflows in parallel, each one's attempts oldest first so the newest ends up in the summary
+  await mapLimit([...perWorkflow], 4, async ([workflow, ofWorkflow]) => {
+    ofWorkflow.sort((a, b) => a.runId - b.runId || a.attemptId - b.attemptId);
+    let newest: WorkflowRun | undefined;
+    for (const { runId, attemptId } of ofWorkflow) {
+      const path = blobPaths.state(scope, workflow, runId, attemptId);
+      try {
+        const raw = await readJson<unknown>(path);
+        if (!raw) continue;
+        newest = await indexState(scope, normalizeStateFile(raw), { summary: false });
+        attempts++;
+      } catch (caught) {
+        failed.push({ path, error: caught instanceof Error ? caught.message : String(caught) });
+      }
+    }
+    if (newest) await updateWorkflowSummary(scope, newest, true, true);
+  });
+
+  if (attempts > 0) await registerScope(scope);
+  return { workflows: perWorkflow.size, attempts, failed, durationMs: Date.now() - started };
 }
 
 /* ------------------------------------------------------------------ reading */
