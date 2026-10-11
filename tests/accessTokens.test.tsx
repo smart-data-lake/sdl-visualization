@@ -74,7 +74,7 @@ describe('the access token page on the route it is actually mounted at', () => {
   test('offers the form rather than refusing for want of a repository', async () => {
     show();
     expect(screen.queryByText(/Choose a repository and environment first/)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Issue' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeTruthy();
   });
 
   test('seeds from what the backend has, so the common case needs no typing', async () => {
@@ -109,7 +109,7 @@ describe('issuing against a repository that does not exist yet', () => {
 
     await user.clear(field('Repository'));
     await user.type(field('Repository'), 'brand-new');
-    await user.click(screen.getByRole('button', { name: 'Issue' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(createMcpToken).toHaveBeenCalled());
     expect(createMcpToken.mock.calls[0].slice(0, 3)).toEqual(['PrivateTenant', 'brand-new', 'dev']);
@@ -126,8 +126,8 @@ describe('issuing against a repository that does not exist yet', () => {
     await user.clear(field('Repository'));
     await user.type(field('Repository'), 'not a name');
 
-    expect(screen.getByRole('button', { name: 'Issue' })).toHaveProperty('disabled', true);
-    await user.click(screen.getByRole('button', { name: 'Issue' }));
+    expect(screen.getByRole('button', { name: 'Create' })).toHaveProperty('disabled', true);
+    await user.click(screen.getByRole('button', { name: 'Create' }));
     expect(createMcpToken).not.toHaveBeenCalled();
   });
 });
@@ -137,6 +137,14 @@ describe('where to point the two things that have no browser', () => {
     show();
     expect(screen.getByText(MCP)).toBeTruthy();
     expect(screen.getByText(UPLOAD)).toBeTruthy();
+  });
+
+  test('shows both examples before any scope is named, with placeholders', () => {
+    known = { repos: [], envs: [] };
+    show();
+    expect(screen.getByText('MCP endpoint configuration example')).toBeTruthy();
+    expect(screen.getByText('SDLB job configuration example')).toBeTruthy();
+    expect(screen.getByText(/repo = <repository>/)).toBeTruthy();
   });
 
   test('still tells an agent how to connect', () => {

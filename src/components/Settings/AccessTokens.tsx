@@ -1,6 +1,9 @@
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Autocomplete,
   Box,
@@ -18,7 +21,7 @@ import {
   Typography,
 } from "@mui/joy";
 import copy from "copy-to-clipboard";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetcher } from "../../api/Fetcher";
 import { McpToken } from "../../api/fetchAPI";
@@ -149,8 +152,14 @@ export default function AccessTokens() {
   }
 
   const scope: TokenScope = { tenant: tenant ?? "", repo, env };
-  const url = scopeValid ? api.mcpUrl(scope.tenant, repo, env) : "";
-  const upload = scopeValid ? api.uploadUrl?.(scope.tenant, repo, env) : undefined;
+  // Placeholders until a valid scope is named, so the examples show from the start.
+  const example: TokenScope = {
+    tenant: scope.tenant,
+    repo: isValidName(repo) ? repo : "<repository>",
+    env: isValidName(env) ? env : "<environment>",
+  };
+  const url = api.mcpUrl(example.tenant, example.repo, example.env);
+  const upload = api.uploadUrl?.(example.tenant, example.repo, example.env);
 
   const refresh = async () => {
     if (!api.listMcpTokens || !scopeValid) return;
@@ -181,9 +190,9 @@ export default function AccessTokens() {
     <Sheet sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2, overflow: "auto" }}>
       <Typography level="h4">Access token</Typography>
       <Typography level="body-sm">
-        One token for both things that reach this backend without a browser: a coding agent over
-        MCP, and an SDLB job uploading its configuration and run history. It is scoped to one
-        repository and environment, shown once, and can be revoked here at any time.
+        Tokens to authenticate an SDLB job for uploading, and coding agent to retrieve information over MCP.
+        A token is scoped to one repository and environment.
+        It shows once when created, and can be revoked here at any time.
       </Typography>
 
       {error && (
@@ -193,7 +202,7 @@ export default function AccessTokens() {
       )}
 
       <Card variant="outlined" sx={{ gap: 1 }}>
-        <Typography level="title-md">Issue a token</Typography>
+        <Typography level="title-md">Create a token</Typography>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="flex-start">
           <ScopeField label="Repository" value={repo} options={repos} onChange={changeScope("repo")} />
           <ScopeField label="Environment" value={env} options={envs} onChange={changeScope("env")} />
@@ -205,15 +214,18 @@ export default function AccessTokens() {
               onChange={(e) => setLabel(e.target.value)}
             />
           </FormControl>
-          <Button onClick={create} loading={busy} disabled={!scopeValid} sx={{ mt: "1.5rem" }}>
-            Issue
-          </Button>
+          {/* An invisible label gives the button the fields' label offset, so it lines up with their inputs. */}
+          <FormControl>
+            <FormLabel sx={{ visibility: "hidden" }} aria-hidden>
+              &nbsp;
+            </FormLabel>
+            <Button onClick={create} loading={busy} disabled={!scopeValid}>
+              Create
+            </Button>
+          </FormControl>
         </Stack>
         <Typography level="body-xs">
-          The repository and environment do not have to exist yet - on a new installation they
-          cannot, because nothing creates one until SDLB uploads to it, and this token is what lets
-          it. They appear in the switcher above after that first upload; reload the page to see
-          them here.
+          The repository and environment do not have to exist yet, they are created on the first upload.
         </Typography>
         {issued && (
           <Alert color="success" variant="soft" sx={{ alignItems: "flex-start" }}>
@@ -230,47 +242,14 @@ export default function AccessTokens() {
         )}
       </Card>
 
-      <Card variant="outlined" sx={{ gap: 1 }}>
-        <Typography level="title-md">MCP endpoint - for a coding agent</Typography>
-        <CodeBlock title="URL" text={url} />
-        <Typography level="body-xs">
-          An agent connected here can search this configuration, follow lineage and analyse runs. It
-          cannot change anything - every tool is read-only. The repository and environment are part
-          of the URL, so the agent never has to name them; change the last two segments to connect
-          to a different environment.
-        </Typography>
-        <CodeBlock title=".mcp.json" text={mcpClientConfig(url, issued)} />
-        <CodeBlock
-          title="or, in Claude Code"
-          text={`claude mcp add --transport http sdlb ${url} --header "Authorization: Bearer ${issued ?? "<your token>"}"`}
-        />
-      </Card>
-
-      {upload && (
-        <Card variant="outlined" sx={{ gap: 1 }}>
-          <Typography level="title-md">Upload API - for an SDLB job</Typography>
-          <CodeBlock title="URL" text={upload} />
-          <Typography level="body-xs">
-            Where SDLB pushes its exported configuration, schemas, statistics and run state. Unlike
-            MCP the scope is not in the URL: SDLB names the tenant, repository and environment as
-            configuration keys of its own.
-          </Typography>
-          <CodeBlock
-            title="global.uiBackend, in the SDLB configuration"
-            text={uiBackendHocon(upload, scope)}
-          />
-          <Typography level="body-xs">
-            Put the token in the job's <code>SDLB_UI_TOKEN</code> environment variable rather than in
-            the file. Set <code>stagePath</code> too: without it a failed upload fails the whole job,
-            and with it the run is simply retried next time.
-          </Typography>
-        </Card>
-      )}
-
       <Card variant="outlined">
         <Typography level="title-md">Your tokens</Typography>
+        <Typography level="body-xs">
+          The tokens of the repository and environment chosen above - change either to see the
+          tokens of another scope.
+        </Typography>
         {!scopeValid ? (
-          <Typography level="body-sm">Name a repository and environment to list their tokens.</Typography>
+          <Typography level="body-sm">Enter a repository and environment under "Create a token" to list their tokens.</Typography>
         ) : tokens === undefined ? (
           <CircularProgress size="sm" />
         ) : tokens.length === 0 ? (
@@ -302,6 +281,41 @@ export default function AccessTokens() {
           </Table>
         )}
       </Card>
+
+      <ExampleSection title="MCP endpoint configuration example">
+        <CodeBlock title="URL" text={url} />
+        <Typography level="body-xs">
+          An agent connected here can search this configuration, follow lineage and analyse runs. It
+          cannot change anything - every tool is read-only. The repository and environment are part
+          of the URL, so the agent never has to name them; change the last two segments to connect
+          to a different environment.
+        </Typography>
+        <CodeBlock title=".mcp.json" text={mcpClientConfig(url, issued)} />
+        <CodeBlock
+          title="or, in Claude Code"
+          text={`claude mcp add --transport http sdlb ${url} --header "Authorization: Bearer ${issued ?? "<your token>"}"`}
+        />
+      </ExampleSection>
+
+      {upload && (
+        <ExampleSection title="SDLB job configuration example">
+          <CodeBlock title="URL" text={upload} />
+          <Typography level="body-xs">
+            Where SDLB pushes its exported configuration, schemas, statistics and run state. Unlike
+            MCP the scope is not in the URL: SDLB names the tenant, repository and environment as
+            configuration keys of its own.
+          </Typography>
+          <CodeBlock
+            title="global.uiBackend, in the SDLB configuration"
+            text={uiBackendHocon(upload, example)}
+          />
+          <Typography level="body-xs">
+            Put the token in the job's <code>SDLB_UI_TOKEN</code> environment variable rather than in
+            the file. Set <code>stagePath</code> too: without it a failed upload fails the whole job,
+            and with it the run is simply retried next time.
+          </Typography>
+        </ExampleSection>
+      )}
     </Sheet>
   );
 }
@@ -335,6 +349,23 @@ function ScopeField({
       />
       {invalid && <FormHelperText>Up to 50 characters: letters, digits, underscore, hyphen.</FormHelperText>}
     </FormControl>
+  );
+}
+
+/** Collapsed by default: the snippets are needed once per client or job, the tokens every visit. */
+function ExampleSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Card variant="outlined" sx={{ p: 0, overflow: "hidden" }}>
+      {/* The card's own padding is moved inside, so the summary's hover fills the whole header. */}
+      <Accordion>
+        <AccordionSummary slotProps={{ button: { sx: { px: 2, py: 1.5 } } }}>
+          <Typography level="title-md">{title}</Typography>
+        </AccordionSummary>
+        <AccordionDetails slotProps={{ content: { sx: { px: 2, pb: 2 } } }}>
+          <Stack spacing={1}>{children}</Stack>
+        </AccordionDetails>
+      </Accordion>
+    </Card>
   );
 }
 
