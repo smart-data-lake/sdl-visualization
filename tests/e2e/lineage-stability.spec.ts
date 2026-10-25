@@ -212,6 +212,17 @@ test.describe('layout stability', () => {
     Object.keys(before).forEach((id) => expect(`${id}: ${after[id]}`).toBe(`${id}: ${before[id]}`));
   });
 
+  test('a chain spliced in for a selection reads as expanded where it connects to what was shown', async ({ page }) => {
+    await openLineage(page, '/#/config/actions/compute-distances');
+    await page.goto('/#/config/dataObjects/int-airports');
+    await expect.poll(() => nodeIds(page)).toContain('join-departures-airports');
+
+    // both lead on to nodes that are shown, so their forward handles offer to collapse
+    for (const id of ['join-departures-airports', 'btl-departures-arrivals-airports']) {
+      await expect(expandForward(page, id).getByTestId('IndeterminateCheckBoxOutlinedIcon')).toBeVisible();
+    }
+  });
+
   test('expanding a node keeps the order of what is already shown', async ({ page }) => {
     await openLineage(page, '/#/config/dataObjects/int-airports');
     const before = await placed(page);
