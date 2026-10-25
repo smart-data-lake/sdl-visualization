@@ -196,6 +196,14 @@ svg.data-node-partition-state-icon {
   margin-right: var(--lineage-node-padding-x, 10px);
 }
 
+.lineage-port-lead-hit {
+  fill: transparent;
+}
+
+.lineage-port-output:not(.lineage-column-traced) .lineage-port-lead:hover .lineage-port-connection-line {
+  stroke: #555;
+}
+
 .lineage-column-traced .lineage-port-lead .lineage-port-connection-line {
   stroke: #096bde;
   stroke-width: 2.5;
