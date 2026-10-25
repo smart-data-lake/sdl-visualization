@@ -928,11 +928,11 @@ export function dagreLayout(nodes: Node[], edges: Edge[], direction: string = 'T
 /*
     Which sides of a node may extend the graph: the ones facing away from the selected node.
 
-    Breadth first from the selected node over the edges that are shown, so the last step of a node's
-    shortest path says which of its sides faces outwards - a node reached by following an edge
-    forwards can only lead further forwards. The selected node itself faces both ways, and so does a
-    node no path reaches, which nothing constrains. Without a selection nothing may extend: the run
-    view shows its graph whole.
+    A descendant of the selected node faces forwards and an ancestor backwards, however short a path
+    against the edges is - an edge drawn between two shown nodes must not turn a descendant around.
+    Any other node faces away from the last step of its shortest path, breadth first from those. The
+    selected node faces both ways, and so does a node no path reaches. Without a selection nothing may
+    extend: the run view shows its graph whole.
 */
 export type ExpandSides = 'forward' | 'backward' | 'both';
 
@@ -940,20 +940,41 @@ export function expandSidesFrom(nodes: ReactFlowNode[], edges: ReactFlowEdge[], 
     const sides = new Map<string, ExpandSides>();
     if (!selectedId || !nodes.some(node => node.id === selectedId)) return sides;
 
+    const links = edges.filter(edge => edge.source !== edge.target);
+    // breadth first from the starts, along the edges for 'forward', against them for 'backward', both ways for 'both'
+    const walk = (starts: string[], follow: ExpandSides, reach: (nodeId: string, forward: boolean, depth: number) => boolean) => {
+        var frontier = starts, depth = 0;
+        while (frontier.length > 0) {
+            depth++;
+            const next: string[] = [];
+            frontier.forEach(nodeId => links.forEach(edge => {
+                const forward = edge.source === nodeId && follow !== 'backward';
+                const reached = forward ? edge.target : edge.target === nodeId && follow !== 'forward' ? edge.source : undefined;
+                if (reached !== undefined && reach(reached, forward, depth)) next.push(reached);
+            }));
+            frontier = next;
+        }
+    };
+    const distances = (follow: ExpandSides) => {
+        const distance = new Map<string, number>([[selectedId, 0]]);
+        walk([selectedId], follow, (nodeId, _, depth) => {
+            if (distance.has(nodeId)) return false;
+            distance.set(nodeId, depth);
+            return true;
+        });
+        return distance;
+    };
+    const downstream = distances('forward'), upstream = distances('backward');
+    // on a cycle a node is both, and faces away from the nearer way round
+    downstream.forEach((depth, nodeId) => sides.set(nodeId, depth < (upstream.get(nodeId) ?? Infinity) ? 'forward' : 'both'));
+    upstream.forEach((depth, nodeId) => { if (depth < (downstream.get(nodeId) ?? Infinity)) sides.set(nodeId, 'backward'); });
     sides.set(selectedId, 'both');
-    var frontier = [selectedId];
-    while (frontier.length > 0) {
-        const next: string[] = [];
-        frontier.forEach(nodeId => edges.forEach(edge => {
-            if (edge.source === edge.target) return;
-            const reached = edge.source === nodeId ? edge.target : edge.target === nodeId ? edge.source : undefined;
-            if (reached === undefined || sides.has(reached)) return;
-            sides.set(reached, edge.source === nodeId ? 'forward' : 'backward');
-            next.push(reached);
-        }));
-        frontier = next;
-    }
 
+    walk([...sides.keys()], 'both', (nodeId, forward) => {
+        if (sides.has(nodeId)) return false;
+        sides.set(nodeId, forward ? 'forward' : 'backward');
+        return true;
+    });
     nodes.forEach(node => { if (!sides.has(node.id)) sides.set(node.id, 'both'); });
     return sides;
 }

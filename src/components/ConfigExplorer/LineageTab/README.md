@@ -386,10 +386,11 @@ inwards by the same amount so that it keeps straddling the border. In the `LR` l
 also where the node level *relation* handles sit, so they take the same offset.
 
 An **expand handle only carries a button on the side that can extend the graph**, and that side is
-the one facing *away from the selected element*: `expandSidesFrom` (`Graphs.ts`) walks the shown
-edges breadth first from the selection, and the last step of a node's shortest path says which of
-its sides faces outwards - a node reached by following an edge forwards can only lead further
-forwards. The selected node itself faces both ways; so does a node no path reaches, and a source or
+the one facing *away from the selected element*: `expandSidesFrom` (`Graphs.ts`) gives a descendant
+of the selection its forward side and an ancestor its backward side, even where an edge between shown
+nodes makes a path against the edges shorter. Any other node - an ancestor of a descendant, say -
+faces away from the last step of its shortest path, walked breadth first over the shown edges. The
+selected node itself faces both ways; so does a node no path reaches, and a source or
 a sink never has a button on the side where the graph ends. The result is written onto
 `rfNode.data.expandSides` by `applyExpandSides` (when a node set is built) resp. `updateExpandSides`
 (when the selection or the shown nodes change), because the node itself cannot see the graph.

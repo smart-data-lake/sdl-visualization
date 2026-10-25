@@ -566,6 +566,15 @@ describe('expandSidesFrom', () => {
         expect(sides.get('d')).toBe('backward');
     });
 
+    it('a descendant faces forwards although a shorter path reaches it against an edge', () => {
+        // s feeds x directly and, through a and o, a longer way round: o is a descendant of s
+        const sides = expandSidesFrom(['s', 'a', 'o', 'x'].map(node),
+            [edge('s', 'x'), edge('s', 'a'), edge('a', 'o'), edge('o', 'x')], 's');
+
+        expect(sides.get('o')).toBe('forward');
+        expect(sides.get('a')).toBe('forward');
+    });
+
     it('leaves a node no path reaches unconstrained', () => {
         const sides = expandSidesFrom([...nodes, node('lonely')], edges, 'a');
 
