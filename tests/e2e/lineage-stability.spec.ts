@@ -16,6 +16,7 @@ const nodeIds = async (page: Page) =>
 
 const graphViewMenu = (page: Page) => page.locator('.react-flow .MuiMenuButton-root').nth(1);
 const expandColumns = (page: Page, id: string) => page.getByTestId(`columns-expand-${id}`);
+const collapseColumns = (page: Page, id: string) => page.getByTestId(`columns-collapse-${id}`);
 const expandForward = (page: Page, id: string) =>
   page.locator(`.react-flow__node[data-id="${id}"] .react-flow__handle-bottom button`);
 
@@ -319,6 +320,10 @@ test.describe('layout stability', () => {
     await openLineage(page, '/#/config/dataObjects/int-airports');
     await expandForward(page, 'join-departures-airports').click();
     await expect.poll(() => nodeIds(page)).toContain('btl-departures-arrivals-airports');
+    // opening the action brings in its other input; that is not what reset has to keep
+    await expandColumns(page, 'join-departures-airports').click();
+    await expect.poll(() => nodeIds(page)).toContain('int-departures');
+    await collapseColumns(page, 'join-departures-airports').click();
     // relative to the center node, which the layout keeps where it is, so the view does not jump
     const relative = async () => {
       const all = await placed(page);

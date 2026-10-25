@@ -227,6 +227,23 @@ test.describe('the ports of an action in the full view', () => {
     await expect(edge(page, 'join-departures-airports_from_int-airports')).toHaveCount(1);
   });
 
+  test('opening an action brings in the data objects its ports connect to, and collapsing takes them away', async ({ page }) => {
+    // around int-airports only that one input of join-departures-airports is shown, and no output
+    await page.goto('/#/config/dataObjects/int-airports');
+    await page.getByRole('button', { name: 'Open lineage' }).click();
+    await expect(node(page, 'join-departures-airports')).toBeVisible();
+    await expect(node(page, 'int-departures')).toHaveCount(0);
+
+    await expandColumns(page, 'join-departures-airports').click();
+    await expect(node(page, 'int-departures')).toBeVisible();
+    await expect(node(page, 'btl-departures-arrivals-airports')).toBeVisible();
+    await expect(edge(page, 'int-departures.estdepartureairport->join-departures-airports::port')).toHaveCount(1);
+
+    // brought in like an expansion, so the expand handle takes them away again
+    await node(page, 'join-departures-airports').locator('.react-flow__handle-bottom button').click();
+    await expect(node(page, 'btl-departures-arrivals-airports')).toHaveCount(0);
+  });
+
   test('the line to an output column tells its transformation once, however many inputs feed it', async ({ page }) => {
     await page.goto('/#/config/actions/compute-distances');
     await page.getByRole('button', { name: 'Open lineage' }).click();
