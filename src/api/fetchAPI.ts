@@ -8,7 +8,7 @@ import type { ColumnLineage, ColumnLineageIndex } from "../util/ConfigExplorer/c
  * @param getWorkflows: returns a summary of all workflows of a repository/environment, see Workflow
  * @param getWorkflowRuns: given a workflow name, the simplified history of that workflow is returned. It includes runId, attemptId, as well as other metrics used to display charts in the UI, see WorkflowRun
  * @param getRun: returns a statefile uniquely identified by workflow name, run ID and attempt ID, see StateFile
- * @param getConfig: returns the parsed SDLB configuration, see ConfigData
+ * @param getConfig: returns the parsed SDLB configuration, see ConfigData, or undefined if none was uploaded
  *
  * A specific implementation must return the data that is needed by the UI. For an example, see the "fetchAPI_local_statefiles.ts" implementation
  */
@@ -18,7 +18,7 @@ export interface fetchAPI {
     getWorkflowRunsByAction: (name: string) => Promise<WorkflowRun[]>;
     getRun: (tenant: string, repo: string, env: string, application: string, runId: number, attemptId: number) => Promise<StateFile>;
     getWorkflowRunsByDataObject: (name: string) => Promise<WorkflowRun[]>;
-    getConfig: (tenant: string, repo: string, env: string, version: string | undefined) => Promise<ConfigData>;
+    getConfig: (tenant: string, repo: string, env: string, version: string | undefined) => Promise<ConfigData | undefined>;
     getConfigVersions: (tenant: string, repo: string, env: string) => Promise<string[] | undefined>;
     /** returns the description of an element as Markdown text */
     getDescription: (elementType: string | undefined, elementName: string | undefined, tenant: string, repo: string, env: string, version: string | undefined) => Promise<string | undefined>;

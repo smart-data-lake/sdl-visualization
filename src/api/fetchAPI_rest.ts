@@ -108,7 +108,8 @@ export class fetchAPI_rest implements fetchAPI {
     };
 
     getConfig = async (tenant: string, repo: string, env: string, version: string|undefined) => {
-        if (!version) throw new Error("fetchAPI for REST does not support getting config without version specified, but parameter version was undefined");
+        // the REST backend has no unversioned configuration, so no version means none was uploaded
+        if (!version) return undefined;
         return this.fetch(`${this.url}/config?tenant=${tenant}&repo=${repo}&env=${env}&version=${version}`)
         .then((parsedJson) => new ConfigData(parsedJson?.config ?? {}))
     };

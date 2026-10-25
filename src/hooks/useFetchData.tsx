@@ -99,8 +99,8 @@ export function useFetchConfigVersions(enabled: boolean) {
     queryFn: () => fetcher().getConfigVersions(tenant!, repo!, env!),
     enabled: enabled,
     retry: false,
-    staleTime: 1000 * 60 * 60 * 24,
-  })); //24h
+    staleTime: 1000 * 60 * 60,
+  })); //1h, so a newly uploaded version shows up without a reload
 }
 
 /**
@@ -125,7 +125,7 @@ export function useFetchConfigVersionsQuiet(enabled: boolean) {
     queryFn: () => fetcher().getConfigVersions(tenant!, repo!, env!),
     enabled: enabled,
     retry: false,
-    staleTime: 1000 * 60 * 60 * 24,
+    staleTime: 1000 * 60 * 60, //1h, like useFetchConfigVersions, as they share the query key
   });
 }
 
