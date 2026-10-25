@@ -520,7 +520,8 @@ The converse holds too: **every edge of the graph whose ends are both shown is d
 render, expanding and splicing a path only create the edges they walk, so `withEdgesBetweenShown` adds
 the rest - two neighbours of the selected element that feed each other, a node spliced in next to one
 already shown - and counts them as active on both ends, so that collapsing takes them away again
-(`tests/lineageEdgesBetweenShown.test.ts`).
+(`tests/lineageEdgesBetweenShown.test.ts`). A side of a node whose neighbours are then all shown is
+marked expanded, so that its handle offers to collapse rather than to expand what is already there.
 
 ## Column lineage
 

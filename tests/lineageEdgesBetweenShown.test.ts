@@ -31,4 +31,11 @@ describe('the edges between the nodes shown', () => {
     expect(data('p').numFwdActiveEdges).toBe(2);
     expect(data('s').numBwdActiveEdges).toBe(2);
   });
+
+  test('a side whose neighbours it connects are all shown is expanded, so its handle offers to collapse', () => {
+    const { nodes } = render('c', false);
+    const data = (id: string) => nodes.find(node => node.id === id)!.data;
+    expect(data('p').isExpandedForward).toBe(true);
+    expect(data('s').isExpandedBackward).toBe(true);
+  });
 });
