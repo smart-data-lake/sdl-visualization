@@ -435,6 +435,11 @@ export const CustomDataNode = ( {data} ) => {
     rememberColumnDisplay(nodeType, label, display);
     setRfNodeData(rfi, {nodeId: label, path: 'columnDisplay', value: display});
     setRfNodeSize(rfi, label, nodeSizeFor({columns, columnDisplay: display, ports}));
+    // opened ports connect to their data objects, so those have to be shown, see expandNodeFunc
+    if (isPortAction && columnDisplay === 'none' && display !== 'none') {
+      expandNodeFunc(label, false, 'backward', graphView, layoutDirection);
+      expandNodeFunc(label, false, 'forward', graphView, layoutDirection);
+    }
     // the edges have to move onto, resp. off, the column handles in the same go - ReactFlow drops
     // an edge whose handle does not exist, so this cannot wait for a later render
     updateColumnEdges(rfi);

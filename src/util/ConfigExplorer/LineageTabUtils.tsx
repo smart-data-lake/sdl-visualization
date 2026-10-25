@@ -982,7 +982,7 @@ function prepareGraphDirect(rfi: ReactFlowInstance, doa: DAGraph, graphView: Gra
         let newNodes = createReactFlowNodes(partialGraphPair[0], layout, isExpanded, false, undefined, graphView, makeExpandNodeFunc(rfi, props), props, layoutMode, grouping);
         let newEdges = createReactFlowEdges(partialGraphPair[1], props, graphView, undefined);
 
-        return [newNodes, newEdges];
+        return withEdgesBetweenShown(newNodes, newEdges, props, graphView);
     } else {
         console.warn(`Central node ${centralNodeId} not found in current graph`);
         return [[], []];
@@ -1117,19 +1117,21 @@ function expandNodeFunc(rfi: ReactFlowInstance, props: flowProps,
             flowLayoutMode(rfi),
             flowGrouping(rfi));
 
+        // an edge already shown is already counted as active on both ends
+        const shownEdgeIds = new Set(rfi.getEdges().map(edge => edge.id));
         let rfEdges = createReactFlowEdges(neighbourEdges,
             props,
             graphView,
             undefined,
-        );
+        ).filter(edge => !shownEdgeIds.has(edge.id));
 
         updateLineageGraphOnExpand(rfi, rfEdges, rfNodes, {
             isFwd,
             currRfNodeIds,
             currRfNode,
-            neighbourEdges,
             layoutDirection,
         });
+        connectShownNodes(rfi, props, graphView);
         // the new edges were built for collapsed nodes; point them at the columns of the ones that
         // are not, so that a neighbour expanded into an already expanded node connects to its rows
         updateColumnEdges(rfi);
@@ -1204,16 +1206,44 @@ export function spliceNodePath(rfi: ReactFlowInstance, props: flowProps, nodeId:
         setRfNodeData(rfi, {nodeId: edge.fromNode.id, path: 'numFwdActiveEdges', value: 1, fromOwnProps: 'data.numFwdActiveEdges', combine: add});
         setRfNodeData(rfi, {nodeId: edge.toNode.id, path: 'numBwdActiveEdges', value: 1, fromOwnProps: 'data.numBwdActiveEdges', combine: add});
     });
+    connectShownNodes(rfi, props, graphView);
 
     rfi.setNodes(nds => layoutFlow(nds, rfi.getEdges(), layoutDirection, {anchorId}));
     updateColumnEdges(rfi);
+}
+
+/*
+    Add the edges of the graph between nodes that are both shown. Expanding, splicing and the first
+    render only add the edges they walked, so two shown nodes could stay unconnected.
+*/
+export function withEdgesBetweenShown(nodes: ReactFlowNode[], edges: ReactFlowEdge[], props: flowProps, graphView: GraphView): [ReactFlowNode[], ReactFlowEdge[]] {
+    const shown = new Set(nodes.map(node => node.id));
+    const present = new Set(edges.map(edge => edge.id));
+    const between = getGraph(props, graphView).edges.filter(edge => shown.has(edge.fromNode.id) && shown.has(edge.toNode.id));
+    const missing = createReactFlowEdges(between, props, graphView, undefined).filter(edge => !present.has(edge.id));
+    if (missing.length === 0) return [nodes, edges];
+
+    // counted like the edges of an expansion, so that collapsing either end takes them away again
+    const count = (id: string, key: 'source' | 'target') => missing.filter(edge => edge[key] === id).length;
+    const counted = nodes.map(node => {
+        const fwd = count(node.id, 'source'), bwd = count(node.id, 'target');
+        return fwd + bwd === 0 ? node : {...node, data: {...node.data,
+            numFwdActiveEdges: node.data.numFwdActiveEdges + fwd, numBwdActiveEdges: node.data.numBwdActiveEdges + bwd}};
+    });
+    return [counted, [...edges, ...missing]];
+}
+
+function connectShownNodes(rfi: ReactFlowInstance, props: flowProps, graphView: GraphView) {
+    const [nodes, edges] = withEdgesBetweenShown(rfi.getNodes(), rfi.getEdges(), props, graphView);
+    if (edges.length === rfi.getEdges().length) return;
+    rfi.setEdges(edges);
+    rfi.setNodes(nodes);
 }
 
 function updateLineageGraphOnExpand(rfi: ReactFlowInstance, rfEdges: ReactFlowEdge[], rfNodes: ReactFlowNode[], props: any) {
     const { isFwd,
         currRfNodeIds,
         currRfNode,
-        neighbourEdges,
         layoutDirection,
     } = props;
 
@@ -1248,20 +1278,20 @@ function updateLineageGraphOnExpand(rfi: ReactFlowInstance, rfEdges: ReactFlowEd
     });
 
     if (isFwd) {
-        //currRfNode!.data.numFwdActiveEdges += neighbourEdges.length;
+        //currRfNode!.data.numFwdActiveEdges += rfEdges.length;
         setRfNodeData(rfi, {
                 nodeId: currRfNode.id,
                 path: 'numFwdActiveEdges',
-                value: neighbourEdges.length,
+                value: rfEdges.length,
                 fromOwnProps: 'data.numFwdActiveEdges',
                 combine: add
             });
     } else {
-        // currRfNode!.data.numBwdActiveEdges += neighbourEdges.length;
+        // currRfNode!.data.numBwdActiveEdges += rfEdges.length;
         setRfNodeData(rfi, {
                 nodeId: currRfNode.id,
                 path: 'numBwdActiveEdges',
-                value: neighbourEdges.length,
+                value: rfEdges.length,
                 fromOwnProps: 'data.numBwdActiveEdges',
                 combine: add
             });

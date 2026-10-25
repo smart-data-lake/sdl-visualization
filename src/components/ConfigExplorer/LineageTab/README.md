@@ -516,6 +516,12 @@ edge that reached a removed node from another branch stays. `dropDanglingEdges` 
 and `tests/e2e/lineage-stability.spec.ts` asserts that every rendered edge starts and ends on a
 node.
 
+The converse holds too: **every edge of the graph whose ends are both shown is drawn**. The first
+render, expanding and splicing a path only create the edges they walk, so `withEdgesBetweenShown` adds
+the rest - two neighbours of the selected element that feed each other, a node spliced in next to one
+already shown - and counts them as active on both ends, so that collapsing takes them away again
+(`tests/lineageEdgesBetweenShown.test.ts`).
+
 ## Column lineage
 
 The data view draws SDLB's exported column lineage (issue #141, `src/util/ConfigExplorer/columnLineage.ts`)
@@ -559,6 +565,10 @@ when all its inputs agree, as SDLB repeats the same expression for every input c
 one line per input. The tooltip sits there rather than on the curves, which bunch up and cross where
 many inputs feed one output, so that a curve was hard to point at and its tooltip hard to attribute.
 Hovering a port tells the column and, for an output, the expression creating it.
+
+Opening an action **expands it both ways**, as its handles would, because a port only connects to a
+data object (resp., in the action view, an action) that is shown. `expandNodeFunc` counts only the
+edges it actually adds, as some of those neighbours are usually shown already.
 
 The ports are ordered so that the edges to the data objects cross as little as possible: the groups
 follow the cross axis order of their data object nodes in the layout (`data.placement`; in the action
