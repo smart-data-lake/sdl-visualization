@@ -553,8 +553,12 @@ grouped under their data objects, the columns it writes on the right, and a curv
 feeding an output column in between - dashed where the column is transformed, solid where it is
 taken over. The ports come from the lineage of the data objects the action *writes*
 (`useFetchNewestLineageOf`, `buildActionPorts` in `src/util/ConfigExplorer/ActionPorts.ts`), since
-SDLB exports lineage per output; an action without any offers nothing to open. Hovering a curve
-tells only the transformation (or `unchanged`), hovering a port the column and, for an output, the expression creating it.
+SDLB exports lineage per output; an action without any offers nothing to open. Hovering the
+straight line leading to an output port tells how that column is computed (or `unchanged`): once
+when all its inputs agree, as SDLB repeats the same expression for every input column, otherwise
+one line per input. The tooltip sits there rather than on the curves, which bunch up and cross where
+many inputs feed one output, so that a curve was hard to point at and its tooltip hard to attribute.
+Hovering a port tells the column and, for an output, the expression creating it.
 
 The ports are ordered so that the edges to the data objects cross as little as possible: the groups
 follow the cross axis order of their data object nodes in the layout (`data.placement`; in the action

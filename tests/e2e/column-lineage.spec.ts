@@ -207,8 +207,11 @@ test.describe('the ports of an action in the full view', () => {
     // one input feeds two outputs
     await expect(connection(page, 'int-airports.name', 'btl-departures-arrivals-airports.arr_name')).toHaveCount(1);
     await expect(connection(page, 'int-airports.name', 'btl-departures-arrivals-airports.dep_name')).toHaveCount(1);
+    // the transformation is told on the line to the output column, not on the curves
     await hoverLine(connection(page, 'int-departures.estdepartureairport', 'btl-departures-arrivals-airports.estdepartureairport')
       .locator('.lineage-port-connection-line'));
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+    await node(page, 'join-departures-airports').getByTestId('transformation-btl-departures-arrivals-airports.estdepartureairport').hover();
     await expect(page.getByRole('tooltip')).toHaveText('unchanged');
     // a port edge names the two nodes it runs between, the port names the column
     await expect(await edgeTooltip(page, 'int-airports.name->join-departures-airports::port'))
@@ -222,6 +225,15 @@ test.describe('the ports of an action in the full view', () => {
     await collapseColumns(page, 'join-departures-airports').click();
     await expect(page.locator('.react-flow__edge[data-testid$="::port"]')).toHaveCount(0);
     await expect(edge(page, 'join-departures-airports_from_int-airports')).toHaveCount(1);
+  });
+
+  test('the line to an output column tells its transformation once, however many inputs feed it', async ({ page }) => {
+    await page.goto('/#/config/actions/compute-distances');
+    await page.getByRole('button', { name: 'Open lineage' }).click();
+    await expandColumns(page, 'compute-distances').click();
+    await node(page, 'compute-distances').getByTestId('transformation-btl-distances.distance').hover();
+    await expect(page.getByRole('tooltip'))
+      .toHaveText('calculateDistanceInKilometer(dep_latitude_deg, dep_longitude_deg, arr_latitude_deg, arr_longitude_deg)');
   });
 
   test('a node title and a data object caption have a tooltip only where they are cut off', async ({ page }) => {
