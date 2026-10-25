@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { ReactFlowInstance } from 'reactflow';
 import { DAGraph, DataObject, Edge as GraphEdge } from '../src/util/ConfigExplorer/Graphs';
-import { prepareAndRenderGraph } from '../src/util/ConfigExplorer/LineageTabUtils';
+import { prepareAndRenderGraph, withExpandedSides } from '../src/util/ConfigExplorer/LineageTabUtils';
 
 // p feeds c and, through another action, s directly; c feeds s - two paths from p to s
 const [p, c, s] = ['p', 'c', 's'].map(id => new DataObject(id));
@@ -37,5 +37,15 @@ describe('the edges between the nodes shown', () => {
     const data = (id: string) => nodes.find(node => node.id === id)!.data;
     expect(data('p').isExpandedForward).toBe(true);
     expect(data('s').isExpandedBackward).toBe(true);
+  });
+
+  test('a side is expanded where every edge on it is shown, however it came to be shown', () => {
+    // e.g. selecting p spliced in the chain to c, which was shown before without p->c
+    const node = (id: string) => ({id, data: {}} as any);
+    const sides = withExpandedSides(['p', 'c', 's'].map(node), [{id: 'p->c'}, {id: 'c->s'}] as any, graph);
+    const of = (id: string) => sides.find(n => n.id === id)!.data;
+    expect(of('c')).toMatchObject({isExpandedForward: true, isExpandedBackward: true});
+    expect(of('p').isExpandedForward).toBe(false); // p->s is not shown
+    expect(of('s').isExpandedBackward).toBe(false);
   });
 });

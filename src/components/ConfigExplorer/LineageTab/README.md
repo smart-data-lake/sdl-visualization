@@ -122,7 +122,10 @@ graph and silently loses every one of those overrides — handle cursors and off
   every column; what is rendered is that list narrowed by `filterColumns`.
 - **Whether a node's neighbours are shown** is `rfNode.data.isExpandedForward` / `isExpandedBackward`,
   for the same reason: a node is expanded by its own handles *and* by selecting it, and the handles
-  have to show what is actually there. Undefined means "as the node was created".
+  have to show what is actually there. So it is derived rather than tracked: a side is expanded where
+  every edge of the graph on that side is shown (`withExpandedSides`), recomputed after every build,
+  expansion, collapse and splice - a chain spliced in for a selection completes the sides of nodes
+  that were shown before.
 - **Which element is selected** is `rfNode.data.isSelectedElement`, and it is deliberately *not*
   `graphNodeProps.isCenterNode`. The center node is the one the current node set was built around,
   which decides which expand handles start out open; the selected element is what the config
@@ -521,8 +524,7 @@ The converse holds too: **every edge of the graph whose ends are both shown is d
 render, expanding and splicing a path only create the edges they walk, so `withEdgesBetweenShown` adds
 the rest - two neighbours of the selected element that feed each other, a node spliced in next to one
 already shown - and counts them as active on both ends, so that collapsing takes them away again
-(`tests/lineageEdgesBetweenShown.test.ts`). A side of a node whose neighbours are then all shown is
-marked expanded, so that its handle offers to collapse rather than to expand what is already there.
+(`tests/lineageEdgesBetweenShown.test.ts`).
 
 ## Column lineage
 

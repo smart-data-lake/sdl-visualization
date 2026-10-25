@@ -1145,10 +1145,9 @@ function expandNodeFunc(rfi: ReactFlowInstance, props: flowProps,
         });
         //resetViewPortCentered(rfi, [currRfNode]);
     }
-    // the node's own handles read this, so that expanding it from elsewhere keeps them in step
-    setRfNodeData(rfi, {nodeId: id, path: isFwd ? 'isExpandedForward' : 'isExpandedBackward', value: !isExpanded});
     setSelectedNode(rfi, selectedId); // the new nodes were built from the props of their creator
     dropDanglingEdges(rfi);
+    syncExpandedSides(rfi, props, graphView);
     syncGroupEdges(rfi);
     updateExpandSides(rfi, selectedId);
 }
@@ -1166,15 +1165,11 @@ export function expandNeighbours(rfi: ReactFlowInstance, props: flowProps, nodeI
 
     (['forward', 'backward'] as ExpandDirection[]).forEach(direction => {
         const [neighbours] = direction === 'forward' ? graph.getOutElems(nodeId) : graph.getInElems(nodeId);
-        const path = direction === 'forward' ? 'isExpandedForward' : 'isExpandedBackward';
-        // expanding what is already expanded would only inflate the active edge counts collapse
-        // reads - but its neighbours are shown either way, which is what the handle has to say
-        if (neighbours.length === 0 || neighbours.every(node => shown.has(node.id))) {
-            if (neighbours.length > 0) setRfNodeData(rfi, {nodeId, path, value: true});
-            return;
-        }
+        // expanding what is already expanded would only inflate the active edge counts collapse reads
+        if (neighbours.every(node => shown.has(node.id))) return;
         expandNodeFunc(rfi, props, nodeId, false, direction, graphView, layoutDirection);
     });
+    syncExpandedSides(rfi, props, graphView);
 }
 
 /*
@@ -1207,6 +1202,7 @@ export function spliceNodePath(rfi: ReactFlowInstance, props: flowProps, nodeId:
         setRfNodeData(rfi, {nodeId: edge.toNode.id, path: 'numBwdActiveEdges', value: 1, fromOwnProps: 'data.numBwdActiveEdges', combine: add});
     });
     connectShownNodes(rfi, props, graphView);
+    syncExpandedSides(rfi, props, graphView);
 
     rfi.setNodes(nds => layoutFlow(nds, rfi.getEdges(), layoutDirection, {anchorId}));
     updateColumnEdges(rfi);
@@ -1222,22 +1218,36 @@ export function withEdgesBetweenShown(nodes: ReactFlowNode[], edges: ReactFlowEd
     const present = new Set(edges.map(edge => edge.id));
     const between = graph.edges.filter(edge => shown.has(edge.fromNode.id) && shown.has(edge.toNode.id));
     const missing = createReactFlowEdges(between, props, graphView, undefined).filter(edge => !present.has(edge.id));
-    if (missing.length === 0) return [nodes, edges];
+    if (missing.length === 0) return [withExpandedSides(nodes, edges, graph), edges];
 
     // counted like the edges of an expansion, so that collapsing either end takes them away again
     const count = (id: string, key: 'source' | 'target') => missing.filter(edge => edge[key] === id).length;
-    // and a side whose neighbours are now all shown is expanded, so its handle offers to collapse
-    const allShown = ([neighbours]: [GraphNode[], GraphEdge[]]) => neighbours.every(node => shown.has(node.id));
     const counted = nodes.map(node => {
         const fwd = count(node.id, 'source'), bwd = count(node.id, 'target');
-        if (fwd + bwd === 0) return node;
-        const data = {...node.data,
-            numFwdActiveEdges: node.data.numFwdActiveEdges + fwd, numBwdActiveEdges: node.data.numBwdActiveEdges + bwd};
-        if (fwd > 0 && allShown(graph.getOutElems(node.id))) data.isExpandedForward = true;
-        if (bwd > 0 && allShown(graph.getInElems(node.id))) data.isExpandedBackward = true;
-        return {...node, data};
+        return fwd + bwd === 0 ? node : {...node, data: {...node.data,
+            numFwdActiveEdges: node.data.numFwdActiveEdges + fwd, numBwdActiveEdges: node.data.numBwdActiveEdges + bwd}};
     });
-    return [counted, [...edges, ...missing]];
+    const allEdges = [...edges, ...missing];
+    return [withExpandedSides(counted, allEdges, graph), allEdges];
+}
+
+/*
+    A side of a node is expanded where every edge of the graph on that side is shown. Expanding,
+    collapsing, splicing and connecting all change that, so the handles are derived, not tracked.
+*/
+export function withExpandedSides(nodes: ReactFlowNode[], edges: ReactFlowEdge[], graph: DAGraph): ReactFlowNode[] {
+    const shown = new Set(edges.map(edge => edge.id));
+    const allShown = ([, sideEdges]: [GraphNode[], GraphEdge[]]) => sideEdges.length > 0 && sideEdges.every(edge => shown.has(edge.id));
+    return nodes.map(node => {
+        if (isGroupBox(node) || !graph.getNodeById(node.id)) return node;
+        const fwd = allShown(graph.getOutElems(node.id)), bwd = allShown(graph.getInElems(node.id));
+        return node.data.isExpandedForward === fwd && node.data.isExpandedBackward === bwd ? node
+            : {...node, data: {...node.data, isExpandedForward: fwd, isExpandedBackward: bwd}};
+    });
+}
+
+function syncExpandedSides(rfi: ReactFlowInstance, props: flowProps, graphView: GraphView) {
+    rfi.setNodes(withExpandedSides(rfi.getNodes(), rfi.getEdges(), getGraph(props, graphView)));
 }
 
 function connectShownNodes(rfi: ReactFlowInstance, props: flowProps, graphView: GraphView) {
