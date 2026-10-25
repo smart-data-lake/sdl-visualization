@@ -1217,18 +1217,25 @@ export function spliceNodePath(rfi: ReactFlowInstance, props: flowProps, nodeId:
     render only add the edges they walked, so two shown nodes could stay unconnected.
 */
 export function withEdgesBetweenShown(nodes: ReactFlowNode[], edges: ReactFlowEdge[], props: flowProps, graphView: GraphView): [ReactFlowNode[], ReactFlowEdge[]] {
+    const graph = getGraph(props, graphView);
     const shown = new Set(nodes.map(node => node.id));
     const present = new Set(edges.map(edge => edge.id));
-    const between = getGraph(props, graphView).edges.filter(edge => shown.has(edge.fromNode.id) && shown.has(edge.toNode.id));
+    const between = graph.edges.filter(edge => shown.has(edge.fromNode.id) && shown.has(edge.toNode.id));
     const missing = createReactFlowEdges(between, props, graphView, undefined).filter(edge => !present.has(edge.id));
     if (missing.length === 0) return [nodes, edges];
 
     // counted like the edges of an expansion, so that collapsing either end takes them away again
     const count = (id: string, key: 'source' | 'target') => missing.filter(edge => edge[key] === id).length;
+    // and a side whose neighbours are now all shown is expanded, so its handle offers to collapse
+    const allShown = ([neighbours]: [GraphNode[], GraphEdge[]]) => neighbours.every(node => shown.has(node.id));
     const counted = nodes.map(node => {
         const fwd = count(node.id, 'source'), bwd = count(node.id, 'target');
-        return fwd + bwd === 0 ? node : {...node, data: {...node.data,
-            numFwdActiveEdges: node.data.numFwdActiveEdges + fwd, numBwdActiveEdges: node.data.numBwdActiveEdges + bwd}};
+        if (fwd + bwd === 0) return node;
+        const data = {...node.data,
+            numFwdActiveEdges: node.data.numFwdActiveEdges + fwd, numBwdActiveEdges: node.data.numBwdActiveEdges + bwd};
+        if (fwd > 0 && allShown(graph.getOutElems(node.id))) data.isExpandedForward = true;
+        if (bwd > 0 && allShown(graph.getInElems(node.id))) data.isExpandedBackward = true;
+        return {...node, data};
     });
     return [counted, [...edges, ...missing]];
 }
