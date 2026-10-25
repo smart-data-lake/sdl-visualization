@@ -4,6 +4,7 @@ import { Panel, PanelGroup } from "react-resizable-panels";
 import { Route, Routes } from "react-router-dom";
 import { useFetchConfig, useFetchConfigVersions } from '../../hooks/useFetchData';
 import { useConfigVersion } from '../../hooks/useConfigVersion';
+import { useWorkspace } from '../../hooks/useWorkspace';
 import { useUser } from '../../hooks/useUser';
 import ErrorBoundary from '../../layouts/ErrorBoundary';
 import PageHeader from '../../layouts/PageHeader';
@@ -75,13 +76,28 @@ function ConfigVersionSelector({
   );
 }
 
+// the REST backends have no unversioned configuration, so an environment without versions has none
+function NoConfiguration() {
+  const { repo, env } = useWorkspace();
+  const scope = repo && env ? ` for repository ${repo} and environment ${env}` : '';
+  return (
+    <Box sx={{display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+      <Sheet variant='soft' color='neutral' sx={{p: '2rem', borderRadius: '0.5rem', maxWidth: '40rem', textAlign: 'center'}}>
+        <Typography level='title-lg' sx={{mb: 1}}>No configuration yet</Typography>
+        <Typography level='body-md'>
+          No SDLB configuration has been uploaded{scope}. It appears here once an SDLB job has exported its configuration.
+        </Typography>
+      </Sheet>
+    </Box>
+  );
+}
 
 function ConfigExplorer() {
   const userContext = useUser();
   // in a context, so the global search in the title bar looks at the same version
   const { version, setVersion } = useConfigVersion();
 	const { data: configVersionData, isFetching: isFetchingConfigVersion } = useFetchConfigVersions(!userContext || userContext.authenticated);
-	const { data: configData, isFetching: isFetchingConfig } = useFetchConfig(version, configVersionData?.length==0 || version!=undefined);
+	const { data: configData, isFetching: isFetchingConfig, isFetched: isFetchedConfig } = useFetchConfig(version, configVersionData?.length==0 || version!=undefined);
 	const listRef = useRef<HTMLDivElement>(null);
 	const parentRef = useRef<HTMLDivElement>(null);  
 	const [filter, setFilter] = useState<SearchFilterDef>();
@@ -111,8 +127,10 @@ function ConfigExplorer() {
         title={<ConfigVersionSelector data={configVersionData} value={version} setValue={setVersion} />}
       />
 			<Sheet sx={{ display: 'flex', width: '100%', flex: 1, minHeight: 0 }} ref={parentRef}>
-			{!configData || isFetching ? (
+			{isFetching || (!configData && !isFetchedConfig) ? (
           		<CenteredCirularProgress />
+        	) : !configData ? (
+          <NoConfiguration/>
         	) : ( 
           <PanelGroup direction="horizontal">
             <Panel defaultSize={15} minSize={8} collapsible={true}>
